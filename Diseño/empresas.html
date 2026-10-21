@@ -1,0 +1,2594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototipo UX ERP ETT — Empresas y Clientes</title>
+  <!-- Tailwind v4 via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.7"></script>
+  <!-- Babel standalone -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js"></script>
+  <!-- Importmap -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/": "https://esm.sh/react@18.3.1/",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "lucide-react": "https://esm.sh/lucide-react@0.474.0?external=react"
+    }
+  }
+  </script>
+  <style>
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .animate-drawer {
+      animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module" data-presets="react">
+    import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { 
+      Building2, Users, MapPin, CreditCard, FileText, History, Plus, Search, 
+      Filter, ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, Clock, 
+      Lock, X, Edit3, ArrowRight, Sparkles, Phone, Mail, Globe, Shield, 
+      Info, Trash2, Check, AlertCircle, Eye, ExternalLink, HelpCircle, 
+      Building, Briefcase, FileCheck, Layers, ArrowLeft, RefreshCw, BookmarkCheck
+    } from 'lucide-react';
+
+    // DATOS DEMO INICIALES
+    const INITIAL_COMPANIES = [
+      {
+        id: 'comp-1',
+        cif: 'B-87654321',
+        name: 'Trans-Logística Ibérica Norte, S.L.',
+        tradeName: 'TransLog Norte',
+        status: 'active',
+        readiness: {
+          basic: true,
+          quote: true,
+          operations: false, // falta centros
+          billing: false     // faltan datos facturación
+        },
+        readinessLabel: 'Lista para presupuestar',
+        readinessStep: 2,
+        owner: 'Carlos Mendoza (Consultor ETT)',
+        country: 'España',
+        email: 'contacto@translog-norte.es',
+        phone: '+34 944 123 456',
+        address: 'Polígono Industrial Artunduaga, Pabellón 14',
+        postalCode: '48970',
+        city: 'Basauri',
+        province: 'Bizkaia',
+        sector: 'Logística, Almacenaje y Transporte',
+        notes: 'Cliente con alta demanda en picos de campaña Black Friday y verano. Exige perfiles carretilleros con carnet vigente.',
+        lastActivity: 'Hace 2 horas — Presupuesto PRE-2026-0048 en borrador',
+        createdAt: '2026-03-15',
+        contacts: [
+          {
+            id: 'cont-1',
+            name: 'Marta Gómez Arana',
+            email: 'marta.gomez@translog-norte.es',
+            phone: '+34 654 987 321',
+            role: 'Responsable de RRHH y Selección',
+            types: ['RR. HH.', 'Solicitante', 'Destinatario de Presupuestos'],
+            isMain: true,
+            isQuoteRecipient: true,
+            notes: 'Contacto principal para firma de presupuestos y gestión de altas de personal.'
+          },
+          {
+            id: 'cont-2',
+            name: 'Javier Ugarte Elorza',
+            email: 'j.ugarte@translog-norte.es',
+            phone: '+34 611 223 344',
+            role: 'Jefe de Planta / Operaciones',
+            types: ['Operativo', 'Prevención / PRL'],
+            isMain: false,
+            isQuoteRecipient: false,
+            notes: 'Gestiona la entrada a muelle y la entrega de EPIs a carretilleros.'
+          }
+        ],
+        centers: [], // VACÍO INTENCIONAL PARA DEMO DE PENDIENTE
+        billing: {
+          taxName: 'Trans-Logística Ibérica Norte, S.L.',
+          taxAddress: 'Polígono Industrial Artunduaga, Pabellón 14, 48970 Basauri (Bizkaia)',
+          vatRegime: 'Régimen General 21%',
+          paymentMethod: 'Transferencia a 60 días',
+          billingContactEmail: 'facturacion@translog-norte.es',
+          iban: '',
+          swift: '',
+          riskLimit: '30.000 € (Pendiente scoring Coface)',
+          specialVat: false,
+          fixedPayDays: 'Día 10 y 25',
+          isComplete: false
+        },
+        activity: [
+          { id: 'act-1', date: '2026-04-12 11:30', user: 'Carlos Mendoza', action: 'Presupuesto PRE-2026-0048 generado en borrador', type: 'quote' },
+          { id: 'act-2', date: '2026-04-10 16:45', user: 'Marta Gómez (Cliente)', action: 'Contacto añadido y validado como destinatario de presupuestos', type: 'contact' },
+          { id: 'act-3', date: '2026-04-09 10:15', user: 'Carlos Mendoza', action: 'Alta rápida completada desde llamada comercial inicial', type: 'system' }
+        ]
+      },
+      {
+        id: 'comp-2',
+        cif: 'A-28193847',
+        name: 'Manufacturas Metálicas del Henares, S.A.',
+        tradeName: 'MetalHenares',
+        status: 'active',
+        readiness: { basic: true, quote: true, operations: true, billing: true },
+        readinessLabel: 'Facturación y Operativa listas',
+        readinessStep: 4,
+        owner: 'Elena Rivas',
+        country: 'España',
+        email: 'info@metalhenares.com',
+        phone: '+34 918 765 432',
+        address: 'C/ del Torno 8, Alcalá de Henares',
+        postalCode: '28806',
+        city: 'Madrid',
+        province: 'Madrid',
+        sector: 'Industria Metalúrgica',
+        notes: 'Cliente consolidado. 4 centros activos y facturación mensual agrupada.',
+        lastActivity: 'Ayer — Petición PET-2026-102 confirmada',
+        createdAt: '2026-01-20',
+        contacts: [
+          { id: 'cont-201', name: 'Alfonso Serrano', email: 'aserrano@metalhenares.com', phone: '+34 600 112 233', role: 'Dir. Financiero', types: ['Facturación', 'Dirección'], isMain: true, isQuoteRecipient: true }
+        ],
+        centers: [
+          { id: 'cent-201', name: 'Planta Principal Alcalá', address: 'C/ del Torno 8', postalCode: '28806', city: 'Alcalá de Henares', country: 'España', notes: 'Sede central' }
+        ],
+        billing: { taxName: 'Manufacturas Metálicas del Henares, S.A.', taxAddress: 'C/ del Torno 8', vatRegime: 'Régimen General 21%', paymentMethod: 'Confirming bancario', iban: 'ES91 2100 **** **** **** 4432', isComplete: true },
+        activity: []
+      },
+      {
+        id: 'comp-3',
+        cif: 'B-65432198',
+        name: 'Mediterránea Agrícola y Envasado, S.L.',
+        tradeName: 'AgroMediterráneo',
+        status: 'prospect',
+        readiness: { basic: true, quote: false, operations: false, billing: false },
+        readinessLabel: 'Alta básica (Falta contacto)',
+        readinessStep: 1,
+        owner: 'Carlos Mendoza',
+        country: 'España',
+        email: 'info@agromediterranea-demo.es',
+        phone: '+34 968 112 233',
+        address: 'Carretera del Palmar km 3',
+        postalCode: '30120',
+        city: 'Murcia',
+        province: 'Murcia',
+        sector: 'Agroalimentario y Envasado',
+        notes: 'Lead entrante feria Fruit Attraction. Pendiente validar contacto de contratación.',
+        lastActivity: 'Hace 3 días — Alta básica registrada',
+        createdAt: '2026-04-05',
+        contacts: [],
+        centers: [],
+        billing: { isComplete: false },
+        activity: []
+      },
+      {
+        id: 'comp-4',
+        cif: 'B-99887766',
+        name: 'Hostelería & Eventos Premium BCN, S.L.',
+        tradeName: 'Premium Events BCN',
+        status: 'active',
+        readiness: { basic: true, quote: true, operations: true, billing: false },
+        readinessLabel: 'Petición operativa lista',
+        readinessStep: 3,
+        owner: 'Laura Vidal',
+        country: 'España',
+        email: 'rrhh@premiumeventsbcn.cat',
+        phone: '+34 932 456 789',
+        address: 'Passeig de Gràcia 112, 4º',
+        postalCode: '08008',
+        city: 'Barcelona',
+        province: 'Barcelona',
+        sector: 'Hostelería y Grandes Eventos',
+        notes: 'Requieren camareros con idiomas y protocolo para hoteles 5* GL.',
+        lastActivity: 'Hace 5 días — Centro "Palau de Congressos" añadido',
+        createdAt: '2026-02-14',
+        contacts: [
+          { id: 'cont-401', name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.cat', phone: '+34 688 990 011', role: 'Coordinador de Eventos', types: ['Comercial', 'Operativo'], isMain: true, isQuoteRecipient: true }
+        ],
+        centers: [
+          { id: 'cent-401', name: 'Palau de Congressos BCN', address: 'Av. Diagonal 661', postalCode: '08028', city: 'Barcelona', country: 'España', notes: 'Acceso puerta de proveedores c/ Martí i Franquès' }
+        ],
+        billing: { isComplete: false },
+        activity: []
+      }
+    ];
+
+    function App() {
+      // Estado de datos
+      const [companies, setCompanies] = useState(INITIAL_COMPANIES);
+      const [selectedCompanyId, setSelectedCompanyId] = useState('comp-1');
+      const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'datos' | 'contactos' | 'centros' | 'facturacion' | 'documentos' | 'actividad'
+      
+      // Filtros del listado
+      const [searchTerm, setSearchTerm] = useState('');
+      const [filterStatus, setFilterStatus] = useState('all');
+      const [filterOwner, setFilterOwner] = useState('all');
+      const [filterReadiness, setFilterReadiness] = useState('all');
+
+      // Contexto simulado (ej: abierto desde Presupuesto)
+      const [simulationContext, setSimulationContext] = useState({
+        active: true,
+        code: 'Presupuesto PRE-2026-0048',
+        role: 'Consultor Comercial ETT',
+        origin: 'Negociación tarifa carretilleros turno noche'
+      });
+
+      // Drawers / Modales
+      const [drawerState, setDrawerState] = useState({
+        isOpen: false,
+        type: null, // 'new-company' | 'edit-company' | 'new-contact' | 'edit-contact' | 'new-center' | 'edit-center'
+        data: null,
+        hasUnsavedChanges: false
+      });
+
+      const [discardModalOpen, setDiscardModalOpen] = useState(false);
+      const [toast, setToast] = useState(null);
+      const [showRulesDrawer, setShowRulesDrawer] = useState(false);
+      const [viewMode, setViewMode] = useState('detail'); // 'list' | 'detail'
+
+      // Obtener empresa activa
+      const currentCompany = useMemo(() => {
+        return companies.find(c => c.id === selectedCompanyId) || companies[0];
+      }, [companies, selectedCompanyId]);
+
+      // Toast helper
+      const showToast = (message, type = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3800);
+      };
+
+      // Manejar cierre de panel con confirmación si hay cambios
+      const handleCloseDrawer = (force = false) => {
+        if (!force && drawerState.hasUnsavedChanges) {
+          setDiscardModalOpen(true);
+        } else {
+          setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+          setDiscardModalOpen(false);
+        }
+      };
+
+      // Guardado de empresa rápida
+      const handleSaveCompany = (formData, isEdit = false) => {
+        if (isEdit) {
+          setCompanies(prev => prev.map(c => {
+            if (c.id === currentCompany.id) {
+              return {
+                ...c,
+                ...formData,
+                activity: [
+                  {
+                    id: 'act-' + Date.now(),
+                    date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                    user: 'Carlos Mendoza',
+                    action: 'Datos de empresa actualizados desde el panel lateral',
+                    type: 'system'
+                  },
+                  ...c.activity
+                ]
+              };
+            }
+            return c;
+          }));
+          showToast('Empresa actualizada correctamente');
+        } else {
+          const newId = 'comp-' + Date.now();
+          const newComp = {
+            id: newId,
+            cif: formData.cif,
+            name: formData.name,
+            tradeName: formData.tradeName || formData.name,
+            status: 'active',
+            readiness: { basic: true, quote: false, operations: false, billing: false },
+            readinessLabel: 'Alta básica (Falta contacto)',
+            readinessStep: 1,
+            owner: formData.owner || 'Carlos Mendoza',
+            country: formData.country || 'España',
+            email: formData.email || '',
+            phone: formData.phone || '',
+            address: formData.address || '',
+            postalCode: formData.postalCode || '',
+            city: formData.city || '',
+            province: formData.province || '',
+            sector: formData.sector || 'General',
+            notes: formData.notes || '',
+            lastActivity: 'Ahora — Alta rápida creada',
+            createdAt: new Date().toISOString().substring(0, 10),
+            contacts: [],
+            centers: [],
+            billing: { isComplete: false },
+            activity: [
+              {
+                id: 'act-' + Date.now(),
+                date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                user: formData.owner || 'Carlos Mendoza',
+                action: 'Alta rápida inicial registrada en ERP',
+                type: 'system'
+              }
+            ]
+          };
+          setCompanies(prev => [newComp, ...prev]);
+          setSelectedCompanyId(newId);
+          setViewMode('detail');
+          setActiveTab('resumen');
+          showToast('Empresa creada con éxito (Borrador inicial)');
+        }
+        setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+      };
+
+      // Guardar Contacto
+      const handleSaveContact = (contactData, isEdit = false) => {
+        setCompanies(prev => prev.map(c => {
+          if (c.id === currentCompany.id) {
+            let updatedContacts;
+            if (isEdit) {
+              updatedContacts = c.contacts.map(ct => ct.id === contactData.id ? contactData : (contactData.isMain ? { ...ct, isMain: false } : ct));
+            } else {
+              const newContact = { ...contactData, id: 'cont-' + Date.now() };
+              updatedContacts = contactData.isMain 
+                ? [newContact, ...c.contacts.map(ct => ({ ...ct, isMain: false }))]
+                : [...c.contacts, newContact];
+            }
+
+            // Actualizar readiness si ya tiene contacto principal
+            const hasQuoteContact = updatedContacts.some(ct => ct.isQuoteRecipient || ct.isMain);
+            const newReadiness = {
+              ...c.readiness,
+              quote: hasQuoteContact
+            };
+
+            let label = c.readinessLabel;
+            if (newReadiness.quote && !newReadiness.operations) {
+              label = 'Lista para presupuestar';
+            }
+
+            return {
+              ...c,
+              contacts: updatedContacts,
+              readiness: newReadiness,
+              readinessLabel: label,
+              activity: [
+                {
+                  id: 'act-' + Date.now(),
+                  date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                  user: 'Carlos Mendoza',
+                  action: isEdit ? `Contacto modificado: ${contactData.name}` : `Nuevo contacto añadido: ${contactData.name} (${contactData.types.join(', ')})`,
+                  type: 'contact'
+                },
+                ...c.activity
+              ]
+            };
+          }
+          return c;
+        }));
+        showToast(isEdit ? 'Contacto actualizado' : 'Contacto añadido y vinculado a presupuesto');
+        setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+      };
+
+      // Guardar Centro
+      const handleSaveCenter = (centerData, isEdit = false) => {
+        setCompanies(prev => prev.map(c => {
+          if (c.id === currentCompany.id) {
+            let updatedCenters;
+            if (isEdit) {
+              updatedCenters = c.centers.map(ct => ct.id === centerData.id ? centerData : ct);
+            } else {
+              const newCenter = { ...centerData, id: 'cent-' + Date.now() };
+              updatedCenters = [...c.centers, newCenter];
+            }
+
+            const hasCenters = updatedCenters.length > 0;
+            const newReadiness = {
+              ...c.readiness,
+              operations: hasCenters
+            };
+
+            let label = c.readinessLabel;
+            if (newReadiness.operations && newReadiness.quote) {
+              label = newReadiness.billing ? 'Facturación y Operativa listas' : 'Petición operativa lista';
+            }
+
+            return {
+              ...c,
+              centers: updatedCenters,
+              readiness: newReadiness,
+              readinessLabel: label,
+              activity: [
+                {
+                  id: 'act-' + Date.now(),
+                  date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                  user: 'Carlos Mendoza',
+                  action: isEdit ? `Centro de trabajo modificado: ${centerData.name}` : `Nuevo centro operativo añadido: ${centerData.name}`,
+                  type: 'center'
+                },
+                ...c.activity
+              ]
+            };
+          }
+          return c;
+        }));
+        showToast(isEdit ? 'Centro actualizado' : 'Centro operativo creado (desbloquea Petición)');
+        setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+      };
+
+      // Filtrado en tabla
+      const filteredCompanies = useMemo(() => {
+        return companies.filter(c => {
+          const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.cif.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (c.tradeName && c.tradeName.toLowerCase().includes(searchTerm.toLowerCase()));
+          const matchStatus = filterStatus === 'all' || c.status === filterStatus;
+          const matchOwner = filterOwner === 'all' || c.owner.toLowerCase().includes(filterOwner.toLowerCase());
+          const matchReadiness = filterReadiness === 'all' || 
+            (filterReadiness === 'quote' && c.readiness.quote) ||
+            (filterReadiness === 'operations' && c.readiness.operations) ||
+            (filterReadiness === 'billing' && c.readiness.billing);
+          return matchSearch && matchStatus && matchOwner && matchReadiness;
+        });
+      }, [companies, searchTerm, filterStatus, filterOwner, filterReadiness]);
+
+      return (
+        <div className="flex h-screen bg-slate-100 overflow-hidden text-sm">
+          {/* TOAST FLOTANTE */}
+          {toast && (
+            <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-xl border border-slate-800 animate-bounce">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span className="font-medium text-xs md:text-sm">{toast.message}</span>
+              <button onClick={() => setToast(null)} className="text-slate-400 hover:text-white ml-2">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* BARRA LATERAL DEL SISTEMA ERP (SaaS Navigation) */}
+          <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800">
+            {/* Logo ETT */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 font-black tracking-tight text-base shadow-sm">
+                  ETT
+                </div>
+                <div>
+                  <h1 className="font-bold text-white text-sm leading-tight">Gestión ETT Cloud</h1>
+                  <span className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider">Módulo Comercial v2.4</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Menú principal de la app */}
+            <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
+              <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                Área Comercial & ETT
+              </div>
+
+              <button 
+                onClick={() => { setViewMode('list'); }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md font-medium transition ${
+                  viewMode === 'list' 
+                    ? 'bg-emerald-600 text-white shadow-sm' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="w-4 h-4" />
+                  <span>Empresas / Clientes</span>
+                </div>
+                <span className="text-xs bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">
+                  {companies.length}
+                </span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  setSelectedCompanyId('comp-1');
+                  setViewMode('detail');
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md font-medium transition ${
+                  viewMode === 'detail' 
+                    ? 'bg-slate-800 text-emerald-400 font-semibold' 
+                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span className="truncate text-xs">Ficha activa: Trans-Logística</span>
+              </button>
+
+              <div className="pt-3 px-3 py-1.5 text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                Flujo Operativo
+              </div>
+
+              <div className="px-3 py-1.5 text-xs text-slate-300 flex items-center gap-2 opacity-90 cursor-not-allowed">
+                <FileCheck className="w-4 h-4" />
+                <span>1. Presupuestos ETT</span>
+              </div>
+              <div className="px-3 py-1.5 text-xs text-slate-300 flex items-center gap-2 opacity-90 cursor-not-allowed">
+                <Layers className="w-4 h-4" />
+                <span>2. Peticiones de personal</span>
+              </div>
+              <div className="px-3 py-1.5 text-xs text-slate-300 flex items-center gap-2 opacity-90 cursor-not-allowed">
+                <Users className="w-4 h-4" />
+                <span>3. Candidatos & Contratos</span>
+              </div>
+              <div className="px-3 py-1.5 text-xs text-slate-300 flex items-center gap-2 opacity-90 cursor-not-allowed">
+                <CreditCard className="w-4 h-4" />
+                <span>4. Facturación & Nóminas</span>
+              </div>
+            </nav>
+
+            {/* Widget de Reglas UX & Ayuda al usuario */}
+            <div className="p-3 border-t border-slate-800 bg-slate-950/40">
+              <button
+                onClick={() => setShowRulesDrawer(true)}
+                className="w-full bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white p-2.5 rounded-md border border-slate-700/60 text-left flex items-start gap-2.5 transition group"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
+                <div>
+                  <div className="text-xs font-semibold text-slate-200">Reglas UX Aplicadas</div>
+                  <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                    Descubre por qué solo pedimos 5 campos al inicio.
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Usuario actual */}
+            <div className="p-3 border-t border-slate-800 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-200">
+                CM
+              </div>
+              <div className="overflow-hidden">
+                <div className="text-xs font-semibold text-slate-200 truncate">Carlos Mendoza</div>
+                <div className="text-[10px] text-slate-400 truncate">Consultor Comercial ETT</div>
+              </div>
+            </div>
+          </aside>
+
+          {/* CONTENIDO PRINCIPAL */}
+          <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            
+            {/* BANDA DE CONTEXTO ACTIVO (Simulación de Presupuesto) */}
+            {simulationContext.active && (
+              <div className="bg-amber-500/10 border-b border-amber-200/80 px-4 py-1.5 flex items-center justify-between text-xs text-amber-900 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                  <span className="font-medium text-amber-950">Contexto activo:</span>
+                  <span className="bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
+                    {simulationContext.code}
+                  </span>
+                  <span className="text-amber-800 hidden md:inline">
+                    — Editando empresa sin salir del flujo de venta
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setSimulationContext(prev => ({ ...prev, active: false }))}
+                    className="text-amber-700 hover:text-amber-950 text-[11px] underline font-medium"
+                  >
+                    Ocultar aviso de contexto
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TOP HEADER */}
+            <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                {viewMode === 'detail' && (
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className="p-1.5 hover:bg-slate-100 rounded-md text-slate-500 hover:text-slate-800 transition mr-1"
+                    title="Volver al listado de empresas"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-slate-900">
+                      {viewMode === 'list' ? 'Directorio de Empresas & Clientes' : currentCompany.name}
+                    </h2>
+                    {viewMode === 'detail' && (
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[11px] font-medium flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Cliente activo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {viewMode === 'list' 
+                      ? 'Base de clientes, prospectos y estado de preparación comercial/operativa.'
+                      : `CIF: ${currentCompany.cif} • Responsable: ${currentCompany.owner} • ${currentCompany.city || 'Ubicación sin definir'}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {viewMode === 'detail' ? (
+                  <>
+                    <button
+                      onClick={() => setDrawerState({ isOpen: true, type: 'edit-company', data: currentCompany, hasUnsavedChanges: false })}
+                      className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-md text-xs flex items-center gap-1.5 transition"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                      Editar Ficha
+                    </button>
+
+                    <button
+                      onClick={() => setDrawerState({ isOpen: true, type: 'new-contact', data: null, hasUnsavedChanges: false })}
+                      className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-md text-xs flex items-center gap-1.5 transition"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-slate-500" />
+                      Contacto
+                    </button>
+
+                    <button
+                      onClick={() => setDrawerState({ isOpen: true, type: 'new-center', data: null, hasUnsavedChanges: false })}
+                      className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-md text-xs flex items-center gap-1.5 transition"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-slate-500" />
+                      Centro
+                    </button>
+
+                    <button
+                      onClick={() => showToast(`Iniciando presupuesto para ${currentCompany.name}...`)}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md text-xs flex items-center gap-1.5 shadow-sm transition"
+                    >
+                      <FileCheck className="w-3.5 h-3.5" />
+                      Crear Presupuesto
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setDrawerState({ isOpen: true, type: 'new-company', data: null, hasUnsavedChanges: false })}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md text-xs flex items-center gap-1.5 shadow-sm transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    + Nueva Empresa (Alta Rápida)
+                  </button>
+                )}
+              </div>
+            </header>
+
+            {/* VISTA 1: LISTADO DE EMPRESAS */}
+            {viewMode === 'list' && (
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                
+                {/* BARRA DE FILTROS */}
+                <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                      <input 
+                        type="text" 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Buscar por Razón Social, Nombre Comercial o CIF..."
+                        className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <select 
+                        value={filterReadiness}
+                        onChange={(e) => setFilterReadiness(e.target.value)}
+                        className="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                        <option value="all">Estado preparación: Todos</option>
+                        <option value="quote">Listas para presupuestar</option>
+                        <option value="operations">Listas para operativa</option>
+                        <option value="billing">Listas para facturar</option>
+                      </select>
+
+                      <select 
+                        value={filterOwner}
+                        onChange={(e) => setFilterOwner(e.target.value)}
+                        className="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                        <option value="all">Responsable: Todos</option>
+                        <option value="carlos">Carlos Mendoza</option>
+                        <option value="elena">Elena Rivas</option>
+                        <option value="laura">Laura Vidal</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-slate-500">
+                    Mostrando <strong className="text-slate-800">{filteredCompanies.length}</strong> de {companies.length} empresas
+                  </div>
+                </div>
+
+                {/* TABLA PRINCIPAL DE EMPRESAS */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+                        <tr>
+                          <th className="py-3 px-4">Empresa / Razón Social</th>
+                          <th className="py-3 px-4">CIF / NIF</th>
+                          <th className="py-3 px-4">Contacto Principal</th>
+                          <th className="py-3 px-4">Estado de Preparación</th>
+                          <th className="py-3 px-4">Responsable ETT</th>
+                          <th className="py-3 px-4">Última Actividad</th>
+                          <th className="py-3 px-4 text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-slate-700">
+                        {filteredCompanies.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="py-12 text-center text-slate-400">
+                              <Building2 className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                              No se encontraron empresas con los filtros aplicados.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredCompanies.map(company => {
+                            const mainContact = company.contacts.find(c => c.isMain) || company.contacts[0];
+                            return (
+                              <tr 
+                                key={company.id}
+                                className="hover:bg-slate-50/80 transition group cursor-pointer"
+                                onClick={() => {
+                                  setSelectedCompanyId(company.id);
+                                  setViewMode('detail');
+                                }}
+                              >
+                                <td className="py-3.5 px-4">
+                                  <div className="font-bold text-slate-900 group-hover:text-emerald-700 flex items-center gap-1.5">
+                                    {company.name}
+                                    {company.id === 'comp-1' && (
+                                      <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.2 rounded font-normal">
+                                        Empresa Caso Demo
+                                      </span>
+                                    )}
+                                  </div>
+                                  {company.tradeName && company.tradeName !== company.name && (
+                                    <div className="text-[11px] text-slate-400">Nombre com.: {company.tradeName}</div>
+                                  )}
+                                  <div className="text-[11px] text-slate-500 mt-0.5">{company.sector}</div>
+                                </td>
+
+                                <td className="py-3.5 px-4 font-mono text-slate-600 font-medium">
+                                  {company.cif}
+                                </td>
+
+                                <td className="py-3.5 px-4">
+                                  {mainContact ? (
+                                    <div>
+                                      <div className="font-medium text-slate-800">{mainContact.name}</div>
+                                      <div className="text-[11px] text-slate-400">{mainContact.email || mainContact.phone}</div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-amber-600 italic flex items-center gap-1 text-[11px]">
+                                      <AlertTriangle className="w-3 h-3" /> Sin contacto aún
+                                    </span>
+                                  )}
+                                </td>
+
+                                <td className="py-3.5 px-4">
+                                  <div className="space-y-1">
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+                                      company.readiness.quote 
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                                    }`}>
+                                      {company.readiness.quote ? (
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                      ) : (
+                                        <Clock className="w-3 h-3 text-amber-600" />
+                                      )}
+                                      {company.readinessLabel}
+                                    </span>
+
+                                    {/* Indicadores visuales de paso */}
+                                    <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                                      <span className="text-emerald-600 font-semibold">Alta ✓</span>
+                                      <span>•</span>
+                                      <span className={company.readiness.quote ? 'text-emerald-600 font-semibold' : 'text-slate-400'}>Presupuesto {company.readiness.quote ? '✓' : '...'}</span>
+                                      <span>•</span>
+                                      <span className={company.readiness.operations ? 'text-emerald-600 font-semibold' : 'text-slate-400'}>Operativa {company.readiness.operations ? '✓' : '...'}</span>
+                                      <span>•</span>
+                                      <span className={company.readiness.billing ? 'text-emerald-600 font-semibold' : 'text-slate-400'}>Factura {company.readiness.billing ? '✓' : '...'}</span>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="py-3.5 px-4 text-slate-600">
+                                  {company.owner}
+                                </td>
+
+                                <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                                  {company.lastActivity}
+                                </td>
+
+                                <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedCompanyId(company.id);
+                                        setViewMode('detail');
+                                      }}
+                                      className="px-2.5 py-1 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 rounded text-xs font-medium transition"
+                                    >
+                                      Abrir Ficha 360º
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* CALLOUT INFORMATIVO */}
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3.5 flex items-start gap-3 text-xs text-emerald-900">
+                  <Info className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-semibold">Filosofía de Alta Progresiva ETT:</span> Puedes crear un presupuesto de tarifas y márgenes para <strong>Trans-Logística Ibérica Norte, S.L.</strong> de inmediato con los datos actuales. No bloqueamos la venta pidiendo centros operativos, IBAN ni convenios hasta que el cliente realmente acepte la propuesta.
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* VISTA 2: FICHA 360º DE LA EMPRESA */}
+            {viewMode === 'detail' && (
+              <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
+                
+                {/* HEADER DE LA FICHA 360º */}
+                <div className="bg-white border-b border-slate-200 px-6 pt-4 pb-0 shrink-0">
+                  <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                        {currentCompany.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h1 className="text-lg font-bold text-slate-900 leading-tight">
+                            {currentCompany.name}
+                          </h1>
+                          <span className="font-mono text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 font-semibold">
+                            CIF: {currentCompany.cif}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                            {currentCompany.city ? `${currentCompany.city} (${currentCompany.province})` : 'Sin dirección fiscal'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                            {currentCompany.sector || 'Sector no especificado'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                            Responsable: <strong>{currentCompany.owner}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Resumen rápido de Readiness */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Estado funcional</div>
+                        <div className="text-xs font-bold text-slate-800">{currentCompany.readinessLabel}</div>
+                      </div>
+                      <div className="h-7 w-[1px] bg-slate-200"></div>
+                      <div className="flex items-center gap-1">
+                        <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold" title="Alta básica OK">1</span>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${currentCompany.readiness.quote ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`} title="Presupuesto">2</span>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${currentCompany.readiness.operations ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`} title="Operativa / Centros">3</span>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${currentCompany.readiness.billing ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-400'}`} title="Facturación">4</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PESTAÑAS FUNCIONALES */}
+                  <div className="flex items-center space-x-1 border-t border-slate-200 -mb-[1px] overflow-x-auto">
+                    {[
+                      { id: 'resumen', label: 'Resumen Funcional', icon: Layers },
+                      { id: 'datos', label: 'Datos Generales', icon: Building },
+                      { id: 'contactos', label: `Contactos (${currentCompany.contacts.length})`, icon: Users },
+                      { id: 'centros', label: `Centros / Sucursales (${currentCompany.centers.length})`, icon: MapPin },
+                      { id: 'facturacion', label: 'Facturación & Financiero', icon: CreditCard, locked: false },
+                      { id: 'documentos', label: 'Documentos & Contratos', icon: FileText },
+                      { id: 'actividad', label: 'Historial & Trazabilidad', icon: History }
+                    ].map(tab => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
+                            isActive
+                              ? 'border-emerald-600 text-emerald-700 bg-emerald-50/40'
+                              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+                          }`}
+                        >
+                          <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* CONTENIDO DE LA PESTAÑA SELECCIONADA */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  
+                  {/* TAB 1: RESUMEN FUNCIONAL */}
+                  {activeTab === 'resumen' && (
+                    <div className="max-w-5xl space-y-6">
+                      
+                      {/* ESTADOS FUNCIONALES DESCRIPTIVOS (Sin porcentajes vacíos) */}
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-900">Estado Operativo y Desbloqueo de Acciones</h3>
+                            <p className="text-xs text-slate-500">Explicación clara de qué datos faltan y qué operativa habilitan.</p>
+                          </div>
+                          <span className="text-xs bg-emerald-100 text-emerald-800 font-medium px-2.5 py-1 rounded-md">
+                            Flujo ETT Progresivo
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          
+                          {/* ESTADO 1: ALTA BÁSICA */}
+                          <div className="p-4 rounded-lg border border-emerald-200 bg-emerald-50/40 flex items-start gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                              <div className="text-xs font-bold text-emerald-950">1. Alta Básica Completada</div>
+                              <p className="text-xs text-slate-600">
+                                Razón social, CIF (<strong className="font-mono">{currentCompany.cif}</strong>), país, teléfono de contacto y asesor comercial asignado.
+                              </p>
+                              <div className="text-[11px] text-emerald-700 font-medium">✓ Empresa registrada en el sistema</div>
+                            </div>
+                          </div>
+
+                          {/* ESTADO 2: LISTA PARA PRESUPUESTAR */}
+                          <div className="p-4 rounded-lg border border-emerald-200 bg-emerald-50/40 flex items-start gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-emerald-950">2. Lista para Presupuestar</span>
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">HABILITADO</span>
+                              </div>
+                              <p className="text-xs text-slate-600">
+                                Tiene contacto destinatario (<strong>{currentCompany.contacts[0]?.name || 'Marta Gómez'}</strong>) listo para recibir propuestas de tarifa/hora.
+                              </p>
+                              <div className="pt-1">
+                                <button
+                                  onClick={() => showToast(`Iniciando presupuesto para ${currentCompany.name}...`)}
+                                  className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 underline"
+                                >
+                                  Crear Presupuesto Comercial ahora →
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ESTADO 3: PETICIÓN OPERATIVA (Falta centro) */}
+                          <div className={`p-4 rounded-lg border ${
+                            currentCompany.centers.length > 0 
+                              ? 'border-emerald-200 bg-emerald-50/40' 
+                              : 'border-amber-200 bg-amber-50/50'
+                          } flex items-start gap-3`}>
+                            {currentCompany.centers.length > 0 ? (
+                              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                            ) : (
+                              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                            )}
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-900">3. Petición Operativa de Personal</span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                  currentCompany.centers.length > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {currentCompany.centers.length > 0 ? 'DESBLOQUEADO' : 'PENDIENTE'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-600">
+                                {currentCompany.centers.length > 0 
+                                  ? `Tiene ${currentCompany.centers.length} centro(s) configurado(s). Ya se pueden asignar trabajadores y turnos.`
+                                  : 'Falta centro de trabajo para crear una petición operativa. No bloquea el presupuesto comercial.'}
+                              </p>
+                              {currentCompany.centers.length === 0 && (
+                                <div className="flex items-center gap-2 pt-1">
+                                  <button
+                                    onClick={() => setDrawerState({ isOpen: true, type: 'new-center', data: null, hasUnsavedChanges: false })}
+                                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium transition"
+                                  >
+                                    Completar centro ahora
+                                  </button>
+                                  <span className="text-[11px] text-slate-400">o hacerlo más tarde al cerrar el contrato</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* ESTADO 4: FACTURACIÓN */}
+                          <div className={`p-4 rounded-lg border ${
+                            currentCompany.billing.isComplete 
+                              ? 'border-emerald-200 bg-emerald-50/40' 
+                              : 'border-slate-200 bg-slate-50'
+                          } flex items-start gap-3`}>
+                            {currentCompany.billing.isComplete ? (
+                              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                            ) : (
+                              <Clock className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+                            )}
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-900">4. Facturación Mensual / Nóminas</span>
+                                <span className="text-[10px] font-semibold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">
+                                  {currentCompany.billing.isComplete ? 'CONFIGURADO' : 'PENDIENTE'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500">
+                                Faltan datos fiscales avanzados (IBAN, días de pago y scoring de riesgo). Se requerirán antes de la primera factura mensual.
+                              </p>
+                              <div className="pt-1">
+                                <button
+                                  onClick={() => setActiveTab('facturacion')}
+                                  className="text-xs font-medium text-slate-700 hover:text-slate-900 flex items-center gap-1 underline"
+                                >
+                                  Revisar requisitos de facturación →
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+
+                      {/* DATOS RÁPIDOS & ÚLTIMA ACTIVIDAD */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        {/* Tarjeta Contacto Principal */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                              <Users className="w-4 h-4 text-emerald-600" />
+                              Contacto Destinatario
+                            </span>
+                            <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded font-medium">
+                              Principal
+                            </span>
+                          </div>
+                          
+                          {currentCompany.contacts.length > 0 ? (
+                            <div className="space-y-1.5 text-xs">
+                              <div className="font-bold text-slate-800">{currentCompany.contacts[0].name}</div>
+                              <div className="text-slate-500">{currentCompany.contacts[0].role}</div>
+                              <div className="pt-1 text-slate-600 flex items-center gap-1.5">
+                                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                {currentCompany.contacts[0].email}
+                              </div>
+                              <div className="text-slate-600 flex items-center gap-1.5">
+                                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                {currentCompany.contacts[0].phone}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-amber-600">No hay contactos registrados.</div>
+                          )}
+
+                          <button
+                            onClick={() => setActiveTab('contactos')}
+                            className="w-full text-center text-xs text-slate-600 hover:text-emerald-700 font-medium pt-2 border-t border-slate-100 block"
+                          >
+                            Ver todos los contactos ({currentCompany.contacts.length}) →
+                          </button>
+                        </div>
+
+                        {/* Tarjeta Centros de Trabajo */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                              <MapPin className="w-4 h-4 text-emerald-600" />
+                              Centros Operativos ETT
+                            </span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                              currentCompany.centers.length > 0 ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {currentCompany.centers.length} centro(s)
+                            </span>
+                          </div>
+
+                          {currentCompany.centers.length > 0 ? (
+                            <div className="space-y-1 text-xs">
+                              <div className="font-bold text-slate-800">{currentCompany.centers[0].name}</div>
+                              <div className="text-slate-500">{currentCompany.centers[0].address}</div>
+                              <div className="text-slate-500">{currentCompany.centers[0].city}</div>
+                            </div>
+                          ) : (
+                            <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-900 space-y-2">
+                              <div>Ningún centro registrado aún. Es necesario para asignar carretilleros o peones a una nave física.</div>
+                              <button
+                                onClick={() => setDrawerState({ isOpen: true, type: 'new-center', data: null, hasUnsavedChanges: false })}
+                                className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-medium"
+                              >
+                                + Añadir primer centro
+                              </button>
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() => setActiveTab('centros')}
+                            className="w-full text-center text-xs text-slate-600 hover:text-emerald-700 font-medium pt-2 border-t border-slate-100 block"
+                          >
+                            Gestionar centros y accesos PRL →
+                          </button>
+                        </div>
+
+                        {/* Tarjeta de Acciones Rápidas ETT */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 rounded-xl text-white space-y-3 shadow-sm">
+                          <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                            Operativa de Venta ETT
+                          </div>
+                          <div className="text-xs text-slate-300">
+                            ¿Listo para enviar la propuesta económica de carretilleros / mozos?
+                          </div>
+
+                          <div className="space-y-2 pt-1">
+                            <button
+                              onClick={() => showToast(`Creando propuesta comercial para ${currentCompany.name}`)}
+                              className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded text-xs transition flex items-center justify-center gap-1.5"
+                            >
+                              <FileCheck className="w-3.5 h-3.5" />
+                              Nuevo Presupuesto ETT
+                            </button>
+
+                            <button
+                              onClick={() => setDrawerState({ isOpen: true, type: 'new-contact', data: null, hasUnsavedChanges: false })}
+                              className="w-full py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition"
+                            >
+                              + Añadir otro contacto comercial
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  )}
+
+                  {/* TAB 2: DATOS GENERALES */}
+                  {activeTab === 'datos' && (
+                    <div className="max-w-4xl bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Identificación y Datos Fiscales Básicos</h3>
+                          <p className="text-xs text-slate-500">Datos registrados en el alta rápida inicial.</p>
+                        </div>
+                        <button
+                          onClick={() => setDrawerState({ isOpen: true, type: 'edit-company', data: currentCompany, hasUnsavedChanges: false })}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded text-xs flex items-center gap-1.5"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Modificar datos
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                        <div className="space-y-4">
+                          <div>
+                            <div className="text-slate-400 text-[11px] font-semibold uppercase">Razón Social</div>
+                            <div className="font-bold text-slate-800 text-sm mt-0.5">{currentCompany.name}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-400 text-[11px] font-semibold uppercase">Nombre Comercial</div>
+                            <div className="text-slate-700 mt-0.5">{currentCompany.tradeName || 'Igual a la razón social'}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-400 text-[11px] font-semibold uppercase">CIF / NIF</div>
+                            <div className="font-mono font-bold text-slate-800 text-sm mt-0.5">{currentCompany.cif}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-400 text-[11px] font-semibold uppercase">País</div>
+                            <div className="text-slate-700 mt-0.5">{currentCompany.country}</div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <div className="text-slate-400 text-[11px] font-semibold uppercase">Dirección Fiscal</div>
+                            <div className="text-slate-700 mt-0.5">{currentCompany.address || 'No especificada'}</div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <div className="text-slate-400 text-[11px] font-semibold uppercase">C.P.</div>
+                              <div className="text-slate-700 mt-0.5">{currentCompany.postalCode || '-'}</div>
+                            </div>
+                            <div>
+                              <div className="text-slate-400 text-[11px] font-semibold uppercase">Localidad</div>
+                              <div className="text-slate-700 mt-0.5">{currentCompany.city || '-'}</div>
+                            </div>
+                            <div>
+                              <div className="text-slate-400 text-[11px] font-semibold uppercase">Provincia</div>
+                              <div className="text-slate-700 mt-0.5">{currentCompany.province || '-'}</div>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-slate-400 text-[11px] font-semibold uppercase">Sector / Actividad Principal</div>
+                            <div className="text-slate-700 mt-0.5">{currentCompany.sector || 'General'}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-400 text-[11px] font-semibold uppercase">Responsable ETT Asignado</div>
+                            <div className="text-emerald-700 font-semibold mt-0.5">{currentCompany.owner}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-100">
+                        <div className="text-slate-400 text-[11px] font-semibold uppercase mb-1">Observaciones Comerciales</div>
+                        <div className="bg-slate-50 p-3 rounded-md text-slate-700 text-xs leading-relaxed border border-slate-200">
+                          {currentCompany.notes || 'Sin observaciones registradas.'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3: CONTACTOS */}
+                  {activeTab === 'contactos' && (
+                    <div className="max-w-5xl space-y-4">
+                      <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Directorio de Contactos de la Empresa</h3>
+                          <p className="text-xs text-slate-500">
+                            Solo se exige nombre y teléfono/email. No pedimos DNI.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setDrawerState({ isOpen: true, type: 'new-contact', data: null, hasUnsavedChanges: false })}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Plus className="w-4 h-4" />
+                          + Añadir Contacto
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {currentCompany.contacts.map(contact => (
+                          <div 
+                            key={contact.id}
+                            className={`bg-white p-5 rounded-xl border transition shadow-sm space-y-3 ${
+                              contact.isMain ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ${
+                                  contact.isMain ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {contact.name.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                    {contact.name}
+                                    {contact.isMain && (
+                                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.2 rounded-full">
+                                        Principal
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-slate-500">{contact.role || 'Sin cargo especificado'}</div>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => setDrawerState({ isOpen: true, type: 'edit-contact', data: contact, hasUnsavedChanges: false })}
+                                className="text-slate-400 hover:text-slate-700 p-1 rounded"
+                                title="Editar contacto"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* Etiquetas de tipo */}
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {contact.types.map((type, idx) => (
+                                <span 
+                                  key={idx}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                    type === 'Destinatario de Presupuestos' 
+                                      ? 'bg-purple-50 text-purple-700 border border-purple-200 font-semibold'
+                                      : type === 'RR. HH.' || type === 'Dirección'
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                  }`}
+                                >
+                                  {type}
+                                </span>
+                              ))}
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 text-xs space-y-1.5">
+                              {contact.email && (
+                                <div className="flex items-center gap-2 text-slate-700">
+                                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                  <a href={`mailto:${contact.email}`} className="hover:underline text-emerald-700 font-medium">
+                                    {contact.email}
+                                  </a>
+                                </div>
+                              )}
+                              {contact.phone && (
+                                <div className="flex items-center gap-2 text-slate-700">
+                                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>{contact.phone}</span>
+                                </div>
+                              )}
+                              {contact.notes && (
+                                <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded mt-2">
+                                  {contact.notes}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 4: CENTROS */}
+                  {activeTab === 'centros' && (
+                    <div className="max-w-5xl space-y-4">
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Centros de Trabajo / Naves Operativas</h3>
+                          <p className="text-xs text-slate-500">
+                            Requeridos únicamente para <strong>Peticiones Operativas</strong> (asignar trabajadores al centro y turno).
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setDrawerState({ isOpen: true, type: 'new-center', data: null, hasUnsavedChanges: false })}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Plus className="w-4 h-4" />
+                          + Añadir Centro
+                        </button>
+                      </div>
+
+                      {currentCompany.centers.length === 0 ? (
+                        <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-8 text-center space-y-3">
+                          <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto">
+                            <MapPin className="w-6 h-6" />
+                          </div>
+                          <div className="max-w-md mx-auto">
+                            <h4 className="text-sm font-bold text-amber-950">No hay centros de trabajo configurados</h4>
+                            <p className="text-xs text-amber-800 mt-1">
+                              Esta empresa puede recibir y firmar presupuestos comerciales sin problemas. Solo necesitarás registrar el centro cuando vayas a tramitar la petición operativa de incorporación de carretilleros.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setDrawerState({ isOpen: true, type: 'new-center', data: null, hasUnsavedChanges: false })}
+                            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-md shadow-sm transition"
+                          >
+                            + Añadir Centro Operativo (Pabellón / Sede)
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {currentCompany.centers.map(center => (
+                            <div key={center.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2.5">
+                                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                                    <MapPin className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-slate-900 text-sm">{center.name}</h4>
+                                    <p className="text-xs text-slate-500">{center.address}, {center.postalCode} {center.city}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setDrawerState({ isOpen: true, type: 'edit-center', data: center, hasUnsavedChanges: false })}
+                                  className="text-slate-400 hover:text-slate-700 p-1"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100 space-y-1">
+                                <div className="font-semibold text-slate-700 text-[11px] uppercase">Datos Operativos</div>
+                                <div>Convenio aplicación: {center.laborAgreement || 'General ETT Sectorial'}</div>
+                                {center.notes && <div className="text-slate-500 italic">"{center.notes}"</div>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 5: FACTURACIÓN & FINANCIERO */}
+                  {activeTab === 'facturacion' && (
+                    <div className="max-w-4xl space-y-6">
+                      
+                      {/* BANNER RESTRINGIDO / EXPLICATIVO */}
+                      <div className="bg-slate-900 text-white p-5 rounded-xl flex items-start justify-between gap-4 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-slate-800 text-emerald-400 flex items-center justify-center shrink-0">
+                            <CreditCard className="w-5 h-5" />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-bold text-white">Módulo Financiero y Facturación ETT</h3>
+                              <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
+                                Área Avanzada
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-300 max-w-2xl">
+                              Estos datos no bloquean la creación de presupuestos comerciales ni las llamadas de prospección. Solo serán requeridos y validados por el departamento de Administración antes de la emisión de la primera factura mensual.
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-xs font-semibold whitespace-nowrap">
+                          Estado: Pendiente de scoring
+                        </span>
+                      </div>
+
+                      {/* CHECKLIST DE REQUISITOS PARA FACTURAR */}
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                          Requisitos Previos a la Emisión de Facturas
+                        </h4>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 flex items-center gap-2.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <div>
+                              <span className="font-semibold text-slate-900">Razón Social y CIF Fiscal</span>
+                              <div className="text-[11px] text-slate-500">{currentCompany.name} ({currentCompany.cif})</div>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 flex items-center gap-2.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <div>
+                              <span className="font-semibold text-slate-900">Dirección Fiscal Completa</span>
+                              <div className="text-[11px] text-slate-500">Basauri (Bizkaia)</div>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center gap-2.5">
+                            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                            <div>
+                              <span className="font-semibold text-slate-900">IBAN / Mandato SEPA B2B</span>
+                              <div className="text-[11px] text-amber-700">Pendiente de recibir firmado</div>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center gap-2.5">
+                            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                            <div>
+                              <span className="font-semibold text-slate-900">Límite de Riesgo / Crédito ETT</span>
+                              <div className="text-[11px] text-amber-700">Límite propuesto 30.000 € (Pendiente riesgo)</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* DETALLE DE CAMPOS FINANCIEROS */}
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                          <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                            Condiciones Comerciales & Días de Pago
+                          </h4>
+                          <span className="text-[11px] text-slate-400">Editable por rol Administración</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <label className="text-slate-500 text-[11px] font-semibold">Forma de Pago Acordada</label>
+                            <input 
+                              type="text" 
+                              disabled 
+                              value={currentCompany.billing.paymentMethod || 'Transferencia a 60 días'} 
+                              className="mt-1 w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-slate-700 font-medium"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-slate-500 text-[11px] font-semibold">Días Fijos de Pago Cliente</label>
+                            <input 
+                              type="text" 
+                              disabled 
+                              value={currentCompany.billing.fixedPayDays || 'Día 10 y 25 de cada mes'} 
+                              className="mt-1 w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-slate-700 font-medium"
+                            />
+                          </div>
+
+                          <div className="relative">
+                            <div className="flex items-center justify-between">
+                              <label className="text-slate-500 text-[11px] font-semibold">IBAN Bancario Cliente</label>
+                              <span className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold">
+                                <Lock className="w-3 h-3" /> Requiere Rol Financiero
+                              </span>
+                            </div>
+                            <div className="mt-1 relative">
+                              <input 
+                                type="text" 
+                                disabled 
+                                value="ES91 2100 •••• •••• •••• 4890 (Bloqueado)" 
+                                className="w-full bg-slate-100 border border-slate-200 rounded px-3 py-1.5 text-slate-400 font-mono"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-slate-500 text-[11px] font-semibold">Régimen IVA Aplicable</label>
+                            <input 
+                              type="text" 
+                              disabled 
+                              value={currentCompany.billing.vatRegime || 'Régimen General 21%'} 
+                              className="mt-1 w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-slate-700 font-medium"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="pt-3 text-right">
+                          <button
+                            onClick={() => showToast('Solicitud de revisión de riesgo enviada al Dpto. Financiero')}
+                            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-semibold"
+                          >
+                            Solicitar Validación a Administración
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+
+                  {/* TAB 6: DOCUMENTOS */}
+                  {activeTab === 'documentos' && (
+                    <div className="max-w-4xl bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Documentación Mercantil & Contratos ETT</h3>
+                          <p className="text-xs text-slate-500">Contratos mercantiles, acuerdos de confidencialidad y CIF digitalizado.</p>
+                        </div>
+                        <button 
+                          onClick={() => showToast('Simulación: selector de archivo abierto')}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium"
+                        >
+                          + Subir Documento
+                        </button>
+                      </div>
+
+                      <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 text-xs">
+                        <div className="p-3.5 flex items-center justify-between hover:bg-slate-50">
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-emerald-600" />
+                            <div>
+                              <div className="font-bold text-slate-800">Contrato Marco ETT - TransLogística 2026.pdf</div>
+                              <div className="text-slate-400 text-[11px]">Subido por Carlos Mendoza • 1.4 MB • Versión Borrador</div>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => showToast('Descargando archivo demo...')}
+                            className="text-emerald-700 hover:underline font-medium"
+                          >
+                            Descargar
+                          </button>
+                        </div>
+
+                        <div className="p-3.5 flex items-center justify-between hover:bg-slate-50">
+                          <div className="flex items-center gap-3">
+                            <FileCheck className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <div className="font-bold text-slate-800">Tarjeta CIF B-87654321.pdf</div>
+                              <div className="text-slate-400 text-[11px]">Validado por sistema • 420 KB</div>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => showToast('Visualizando CIF demo...')}
+                            className="text-emerald-700 hover:underline font-medium"
+                          >
+                            Ver
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 7: HISTORIAL Y ACTIVIDAD */}
+                  {activeTab === 'actividad' && (
+                    <div className="max-w-4xl bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">Historial y Trazabilidad de Cambios</h3>
+                        <p className="text-xs text-slate-500">Registro inmutable de acciones realizadas sobre esta empresa.</p>
+                      </div>
+
+                      <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200 text-xs">
+                        {currentCompany.activity.map(act => (
+                          <div key={act.id} className="relative">
+                            <span className="absolute -left-6 top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white"></span>
+                            <div className="font-semibold text-slate-800">{act.action}</div>
+                            <div className="text-slate-400 text-[11px] mt-0.5">
+                              {act.date} • Por <strong className="text-slate-600">{act.user}</strong>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            )}
+
+          </main>
+
+          {/* DRAWER / PANEL LATERAL: ALTA RÁPIDA & EDICIÓN */}
+          {drawerState.isOpen && (
+            <div className="fixed inset-0 z-50 overflow-hidden flex justify-end bg-slate-950/40 backdrop-blur-xs transition-opacity">
+              <div className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col animate-drawer border-l border-slate-200">
+                
+                {/* RENDER FORMULARIOS DEL DRAWER */}
+                {drawerState.type === 'new-company' && (
+                  <DrawerCompanyForm
+                    title="Alta Rápida de Empresa / Cliente"
+                    subtitle="Solo 5 campos indispensables para empezar a presupuestar de inmediato."
+                    initialData={null}
+                    onClose={() => handleCloseDrawer()}
+                    onSave={(data) => handleSaveCompany(data, false)}
+                    onChange={() => setDrawerState(prev => ({ ...prev, hasUnsavedChanges: true }))}
+                  />
+                )}
+
+                {drawerState.type === 'edit-company' && (
+                  <DrawerCompanyForm
+                    title="Editar Datos de Empresa"
+                    subtitle={`Modificando ficha de ${drawerState.data?.name || currentCompany.name}`}
+                    initialData={drawerState.data || currentCompany}
+                    isEdit={true}
+                    onClose={() => handleCloseDrawer()}
+                    onSave={(data) => handleSaveCompany(data, true)}
+                    onChange={() => setDrawerState(prev => ({ ...prev, hasUnsavedChanges: true }))}
+                  />
+                )}
+
+                {drawerState.type === 'new-contact' && (
+                  <DrawerContactForm
+                    title="Añadir Contacto a la Empresa"
+                    subtitle={`Vinculado automáticamente a: ${currentCompany.name}`}
+                    companyName={currentCompany.name}
+                    initialData={null}
+                    onClose={() => handleCloseDrawer()}
+                    onSave={(data) => handleSaveContact(data, false)}
+                    onChange={() => setDrawerState(prev => ({ ...prev, hasUnsavedChanges: true }))}
+                  />
+                )}
+
+                {drawerState.type === 'edit-contact' && (
+                  <DrawerContactForm
+                    title="Editar Contacto"
+                    subtitle={`Editando contacto de ${currentCompany.name}`}
+                    companyName={currentCompany.name}
+                    initialData={drawerState.data}
+                    isEdit={true}
+                    onClose={() => handleCloseDrawer()}
+                    onSave={(data) => handleSaveContact(data, true)}
+                    onChange={() => setDrawerState(prev => ({ ...prev, hasUnsavedChanges: true }))}
+                  />
+                )}
+
+                {drawerState.type === 'new-center' && (
+                  <DrawerCenterForm
+                    title="Nuevo Centro / Nave Operativa"
+                    subtitle="Datos de la ubicación donde trabajarán los carretilleros o mozos."
+                    companyFiscalAddress={currentCompany.address}
+                    companyCity={currentCompany.city}
+                    companyPostalCode={currentCompany.postalCode}
+                    initialData={null}
+                    onClose={() => handleCloseDrawer()}
+                    onSave={(data) => handleSaveCenter(data, false)}
+                    onChange={() => setDrawerState(prev => ({ ...prev, hasUnsavedChanges: true }))}
+                  />
+                )}
+
+                {drawerState.type === 'edit-center' && (
+                  <DrawerCenterForm
+                    title="Editar Centro Operativo"
+                    subtitle="Modificación de ubicación o reglas laborales particulares."
+                    initialData={drawerState.data}
+                    isEdit={true}
+                    onClose={() => handleCloseDrawer()}
+                    onSave={(data) => handleSaveCenter(data, true)}
+                    onChange={() => setDrawerState(prev => ({ ...prev, hasUnsavedChanges: true }))}
+                  />
+                )}
+
+              </div>
+            </div>
+          )}
+
+          {/* MODAL DE CAMBIOS SIN GUARDAR (Microinteracción UX) */}
+          {discardModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 animate-in fade-in zoom-in-95">
+                <div className="flex items-center gap-3 text-amber-600">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">¿Descartar cambios sin guardar?</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Tienes modificaciones pendientes en el formulario.</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  Si cierras ahora perderás los datos que has introducido. Puedes continuar editando para no perder tu trabajo.
+                </p>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setDiscardModalOpen(false)}
+                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-md transition"
+                  >
+                    Seguir editando
+                  </button>
+                  <button
+                    onClick={() => handleCloseDrawer(true)}
+                    className="px-3.5 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-md transition shadow-sm"
+                  >
+                    Descartar cambios
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PANEL EXPLICATIVO: REGLAS UX APLICADAS */}
+          {showRulesDrawer && (
+            <div className="fixed inset-0 z-50 overflow-hidden flex justify-end bg-slate-950/40 backdrop-blur-xs">
+              <div className="w-full max-w-md bg-slate-900 text-slate-200 h-full shadow-2xl flex flex-col p-6 animate-drawer border-l border-slate-800 space-y-6 overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                  <div className="flex items-center gap-2 text-emerald-400">
+                    <Sparkles className="w-5 h-5" />
+                    <h3 className="font-bold text-sm text-white">Reglas UX Diseñadas para ETT</h3>
+                  </div>
+                  <button 
+                    onClick={() => setShowRulesDrawer(false)}
+                    className="text-slate-400 hover:text-white p-1 rounded"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-2">
+                    <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" /> 1. Alta Rápida en 5 Campos Obligatorios
+                    </div>
+                    <p className="text-slate-300 leading-relaxed">
+                      El consultor comercial puede dar de alta un prospecto en 30 segundos mientras habla por teléfono. Solo se exigen: <strong>Razón Social, CIF/NIF, País, Email/Teléfono</strong> y <strong>Responsable</strong>.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-2">
+                    <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" /> 2. Desacople Total: Presupuesto vs Operativa
+                    </div>
+                    <p className="text-slate-300 leading-relaxed">
+                      Para emitir una oferta comercial (precio/hora de carretillero o peón), <strong>NO se requiere</strong> centros de trabajo, convenios nómina, turnos ni datos bancarios. No bloqueamos la venta con burocracia técnica.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-2">
+                    <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" /> 3. Petición Operativa Requiere Centro
+                    </div>
+                    <p className="text-slate-300 leading-relaxed">
+                      Cuando el cliente aprueba la propuesta y se inicia la <strong>Petición de Personal</strong>, el sistema solicita el Centro Operativo para coordinar la entrada de los trabajadores y prevención PRL.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-2">
+                    <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" /> 4. Facturación & IBAN como Paso Final
+                    </div>
+                    <p className="text-slate-300 leading-relaxed">
+                      Los datos de pago e IBAN quedan restringidos al departamento de facturación y se piden antes de emitir la primera factura mensual, con estados "Pendiente" y avisos transparentes.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800 text-center">
+                  <button
+                    onClick={() => setShowRulesDrawer(false)}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs"
+                  >
+                    Entendido, continuar probando
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    // COMPONENTE: FORMULARIO DE ALTA RÁPIDA / EDICIÓN DE EMPRESA
+    function DrawerCompanyForm({ title, subtitle, initialData, isEdit = false, onClose, onSave, onChange }) {
+      const [name, setName] = useState(initialData?.name || '');
+      const [cif, setCif] = useState(initialData?.cif || '');
+      const [country, setCountry] = useState(initialData?.country || 'España');
+      const [email, setEmail] = useState(initialData?.email || '');
+      const [phone, setPhone] = useState(initialData?.phone || '');
+      const [owner, setOwner] = useState(initialData?.owner || 'Carlos Mendoza (Consultor ETT)');
+
+      // Campos opcionales (Más datos)
+      const [showMore, setShowMore] = useState(isEdit || false);
+      const [tradeName, setTradeName] = useState(initialData?.tradeName || '');
+      const [address, setAddress] = useState(initialData?.address || '');
+      const [postalCode, setPostalCode] = useState(initialData?.postalCode || '');
+      const [city, setCity] = useState(initialData?.city || '');
+      const [province, setProvince] = useState(initialData?.province || '');
+      const [sector, setSector] = useState(initialData?.sector || '');
+      const [notes, setNotes] = useState(initialData?.notes || '');
+
+      // Validación & Duplicados Demo
+      const [errors, setErrors] = useState({});
+      const [duplicateWarning, setDuplicateWarning] = useState(null);
+      const [isSubmitting, setIsSubmitting] = useState(false);
+
+      const handleCifChange = (val) => {
+        setCif(val);
+        onChange();
+        if (val.trim().toUpperCase() === 'B-87654321' && !isEdit) {
+          setDuplicateWarning('Aviso: Ya existe una empresa registrada con CIF B-87654321 ("Trans-Logística Ibérica Norte, S.L.").');
+        } else {
+          setDuplicateWarning(null);
+        }
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const errs = {};
+
+        if (!name.trim()) errs.name = 'La Razón Social es obligatoria';
+        if (!cif.trim()) errs.cif = 'El CIF/NIF es obligatorio';
+        if (!country.trim()) errs.country = 'El país es obligatorio';
+        if (!email.trim() && !phone.trim()) {
+          errs.contact = 'Indica al menos un Email o un Teléfono de contacto inicial';
+        }
+        if (!owner.trim()) errs.owner = 'Asigna un responsable interno';
+
+        if (Object.keys(errs).length > 0) {
+          setErrors(errs);
+          return;
+        }
+
+        setIsSubmitting(true);
+        setTimeout(() => {
+          onSave({
+            name,
+            cif: cif.toUpperCase(),
+            country,
+            email,
+            phone,
+            owner,
+            tradeName: tradeName || name,
+            address,
+            postalCode,
+            city,
+            province,
+            sector,
+            notes
+          });
+        }, 400);
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-white">
+          {/* Header */}
+          <div className="p-5 border-b border-slate-200 flex items-start justify-between bg-slate-50/70">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">{title}</h2>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
+                  {isEdit ? 'Edición' : '5 Campos Clave'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-md"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Form Body */}
+          <form id="company-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
+            
+            {/* Aviso de duplicados si aplica */}
+            {duplicateWarning && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 flex items-start gap-3 text-amber-900 animate-in fade-in">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <div className="font-bold text-xs">{duplicateWarning}</div>
+                  <div className="text-[11px] text-amber-800">
+                    Puedes revisar la ficha existente o continuar si se trata de otra filial con NIF específico.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SECCIÓN OBLIGATORIA (MÁXIMO 5 CAMPOS) */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Datos Indispensables (Alta Rápida)
+                </span>
+                <span className="text-[10px] text-slate-400">* Campos obligatorios</span>
+              </div>
+
+              {/* 1. Razón Social */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Razón Social *
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); onChange(); }}
+                  placeholder="Ej. Trans-Logística Ibérica Norte, S.L."
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs ${
+                    errors.name ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300'
+                  }`}
+                />
+                {errors.name && <p className="text-rose-600 text-[11px] mt-1">{errors.name}</p>}
+              </div>
+
+              {/* 2. CIF / NIF */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    CIF / NIF *
+                  </label>
+                  <input
+                    type="text"
+                    value={cif}
+                    onChange={(e) => handleCifChange(e.target.value)}
+                    placeholder="Ej. B-87654321"
+                    className={`w-full px-3 py-2 border rounded-md font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs uppercase ${
+                      errors.cif ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300'
+                    }`}
+                  />
+                  {errors.cif && <p className="text-rose-600 text-[11px] mt-1">{errors.cif}</p>}
+                </div>
+
+                {/* 3. País */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    País *
+                  </label>
+                  <select
+                    value={country}
+                    onChange={(e) => { setCountry(e.target.value); onChange(); }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white"
+                  >
+                    <option value="España">España</option>
+                    <option value="Portugal">Portugal</option>
+                    <option value="Francia">Francia</option>
+                    <option value="Otro">Otro (Internacional)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 4. Teléfono y Email (Al menos uno) */}
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3">
+                <div className="font-semibold text-slate-800 text-[11px]">
+                  Contacto Rápido de la Empresa (indica al menos uno) *
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-600 text-[11px] mb-1">Teléfono principal</label>
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); onChange(); }}
+                      placeholder="Ej. +34 944 123 456"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 text-[11px] mb-1">Email general</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); onChange(); }}
+                      placeholder="contacto@empresa.es"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+                {errors.contact && <p className="text-rose-600 text-[11px] font-medium">{errors.contact}</p>}
+              </div>
+
+              {/* 5. Responsable Interno */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Responsable ETT Asignado *
+                </label>
+                <select
+                  value={owner}
+                  onChange={(e) => { setOwner(e.target.value); onChange(); }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white"
+                >
+                  <option value="Carlos Mendoza (Consultor ETT)">Carlos Mendoza (Consultor ETT)</option>
+                  <option value="Elena Rivas (Consultora Senior)">Elena Rivas (Consultora Senior)</option>
+                  <option value="Laura Vidal (Key Account Manager)">Laura Vidal (Key Account Manager)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* SECCIÓN OPCIONAL COLAPSABLE (MÁS DATOS) */}
+            <div className="pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setShowMore(!showMore)}
+                className="w-full flex items-center justify-between text-xs font-bold text-slate-700 p-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-slate-500" />
+                  Más datos recomendados (Dirección fiscal, sector, notas...)
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showMore && (
+                <div className="pt-4 space-y-4 animate-in fade-in">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Nombre Comercial (si difiere)</label>
+                    <input
+                      type="text"
+                      value={tradeName}
+                      onChange={(e) => { setTradeName(e.target.value); onChange(); }}
+                      placeholder="Ej. TransLog Norte"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Dirección Fiscal</label>
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={(e) => { setAddress(e.target.value); onChange(); }}
+                      placeholder="Calle, Polígono, Nave..."
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">C. Postal</label>
+                      <input
+                        type="text"
+                        value={postalCode}
+                        onChange={(e) => { setPostalCode(e.target.value); onChange(); }}
+                        placeholder="48970"
+                        className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Localidad</label>
+                      <input
+                        type="text"
+                        value={city}
+                        onChange={(e) => { setCity(e.target.value); onChange(); }}
+                        placeholder="Basauri"
+                        className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Provincia</label>
+                      <input
+                        type="text"
+                        value={province}
+                        onChange={(e) => { setProvince(e.target.value); onChange(); }}
+                        placeholder="Bizkaia"
+                        className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Sector o Actividad ETT</label>
+                    <input
+                      type="text"
+                      value={sector}
+                      onChange={(e) => { setSector(e.target.value); onChange(); }}
+                      placeholder="Logística, Metalurgia, Hostelería, Agro..."
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Observaciones Comerciales</label>
+                    <textarea
+                      rows="3"
+                      value={notes}
+                      onChange={(e) => { setNotes(e.target.value); onChange(); }}
+                      placeholder="Detalles sobre picos de campaña, requerimientos de carnet de carretillero, etc."
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                    ></textarea>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </form>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-md text-xs font-semibold"
+            >
+              Cancelar
+            </button>
+
+            <div className="flex items-center gap-2">
+              {!isEdit && (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-md text-xs font-semibold"
+                >
+                  Guardar borrador
+                </button>
+              )}
+              <button
+                type="submit"
+                form="company-form"
+                disabled={isSubmitting}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold shadow-sm transition flex items-center gap-1.5"
+              >
+                {isSubmitting ? 'Guardando...' : (isEdit ? 'Actualizar Empresa' : 'Crear Empresa')}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // COMPONENTE: FORMULARIO DE CONTACTO
+    function DrawerContactForm({ title, subtitle, companyName, initialData, isEdit = false, onClose, onSave, onChange }) {
+      const [name, setName] = useState(initialData?.name || '');
+      const [email, setEmail] = useState(initialData?.email || '');
+      const [phone, setPhone] = useState(initialData?.phone || '');
+      const [role, setRole] = useState(initialData?.role || '');
+      const [isMain, setIsMain] = useState(initialData?.isMain || false);
+      const [isQuoteRecipient, setIsQuoteRecipient] = useState(initialData?.isQuoteRecipient || true);
+      const [types, setTypes] = useState(initialData?.types || ['Comercial', 'Solicitante']);
+      const [notes, setNotes] = useState(initialData?.notes || '');
+      const [errors, setErrors] = useState({});
+
+      const availableTypes = ['Comercial', 'Solicitante', 'Operativo', 'Facturación', 'RR. HH.', 'Prevención / PRL', 'Dirección'];
+
+      const toggleType = (t) => {
+        onChange();
+        if (types.includes(t)) {
+          setTypes(types.filter(item => item !== t));
+        } else {
+          setTypes([...types, t]);
+        }
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const errs = {};
+        if (!name.trim()) errs.name = 'El nombre y apellidos son obligatorios';
+        if (!email.trim() && !phone.trim()) {
+          errs.contact = 'Indica al menos un email o teléfono para este contacto';
+        }
+
+        if (Object.keys(errs).length > 0) {
+          setErrors(errs);
+          return;
+        }
+
+        const finalTypes = [...types];
+        if (isQuoteRecipient && !finalTypes.includes('Destinatario de Presupuestos')) {
+          finalTypes.push('Destinatario de Presupuestos');
+        }
+
+        onSave({
+          id: initialData?.id,
+          name,
+          email,
+          phone,
+          role,
+          isMain,
+          isQuoteRecipient,
+          types: finalTypes,
+          notes
+        });
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-white">
+          <div className="p-5 border-b border-slate-200 flex items-start justify-between bg-slate-50">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">{title}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form id="contact-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+            
+            {/* Empresa vinculada automáticamente */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
+              <span className="text-slate-400 font-semibold text-[11px] block">Empresa vinculada:</span>
+              <span className="font-bold text-slate-800">{companyName}</span>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Nombre y Apellidos *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => { setName(e.target.value); onChange(); }}
+                placeholder="Ej. Marta Gómez Arana"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs ${
+                  errors.name ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300'
+                }`}
+              />
+              {errors.name && <p className="text-rose-600 text-[11px] mt-1">{errors.name}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Email directo</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); onChange(); }}
+                  placeholder="marta.gomez@empresa.es"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Teléfono / Móvil</label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value); onChange(); }}
+                  placeholder="+34 654 987 321"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                />
+              </div>
+            </div>
+            {errors.contact && <p className="text-rose-600 text-[11px]">{errors.contact}</p>}
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Cargo o Área (Opcional)</label>
+              <input
+                type="text"
+                value={role}
+                onChange={(e) => { setRole(e.target.value); onChange(); }}
+                placeholder="Ej. Responsable de RRHH / Jefe de Planta"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+              />
+            </div>
+
+            {/* Tipos / Etiquetas */}
+            <div>
+              <label className="block font-semibold text-slate-700 mb-2">Rol / Perfil del Contacto</label>
+              <div className="flex flex-wrap gap-1.5">
+                {availableTypes.map(t => {
+                  const selected = types.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleType(t)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${
+                        selected 
+                          ? 'bg-emerald-600 text-white border-emerald-600' 
+                          : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      {selected ? '✓ ' : '+ '}{t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Opciones de Presupuesto y Principal */}
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-2.5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isQuoteRecipient}
+                  onChange={(e) => { setIsQuoteRecipient(e.target.checked); onChange(); }}
+                  className="rounded text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="font-semibold text-slate-800">
+                  Marcar como destinatario habitual de presupuestos
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isMain}
+                  onChange={(e) => { setIsMain(e.target.checked); onChange(); }}
+                  className="rounded text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-slate-700">
+                  Establecer como Contacto Principal de la ficha de empresa
+                </span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Notas / Observaciones del contacto</label>
+              <textarea
+                rows="2"
+                value={notes}
+                onChange={(e) => { setNotes(e.target.value); onChange(); }}
+                placeholder="Horario preferente de contacto, disponibilidad..."
+                className="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+              ></textarea>
+            </div>
+
+          </form>
+
+          <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-md text-xs font-semibold hover:bg-slate-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="contact-form"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold shadow-sm"
+            >
+              {isEdit ? 'Actualizar Contacto' : 'Añadir Contacto'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // COMPONENTE: FORMULARIO DE CENTRO OPERATIVO
+    function DrawerCenterForm({ title, subtitle, companyFiscalAddress, companyCity, companyPostalCode, initialData, isEdit = false, onClose, onSave, onChange }) {
+      const [name, setName] = useState(initialData?.name || '');
+      const [address, setAddress] = useState(initialData?.address || '');
+      const [postalCode, setPostalCode] = useState(initialData?.postalCode || '');
+      const [city, setCity] = useState(initialData?.city || '');
+      const [country, setCountry] = useState(initialData?.country || 'España');
+      
+      // Opciones avanzadas
+      const [showAdvanced, setShowAdvanced] = useState(false);
+      const [laborAgreement, setLaborAgreement] = useState(initialData?.laborAgreement || 'Convenio Logística y Transporte');
+      const [notes, setNotes] = useState(initialData?.notes || '');
+      const [errors, setErrors] = useState({});
+
+      const handleUseFiscalAddress = () => {
+        if (companyFiscalAddress) setAddress(companyFiscalAddress);
+        if (companyCity) setCity(companyCity);
+        if (companyPostalCode) setPostalCode(companyPostalCode);
+        onChange();
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const errs = {};
+        if (!name.trim()) errs.name = 'El nombre del centro es obligatorio';
+        if (!address.trim()) errs.address = 'La dirección es obligatoria';
+        if (!postalCode.trim()) errs.postalCode = 'El código postal es obligatorio';
+        if (!city.trim()) errs.city = 'La localidad es obligatoria';
+
+        if (Object.keys(errs).length > 0) {
+          setErrors(errs);
+          return;
+        }
+
+        onSave({
+          id: initialData?.id,
+          name,
+          address,
+          postalCode,
+          city,
+          country,
+          laborAgreement,
+          notes
+        });
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-white">
+          <div className="p-5 border-b border-slate-200 flex items-start justify-between bg-slate-50">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">{title}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form id="center-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+            
+            <div className="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200 text-xs text-emerald-950 flex items-start justify-between gap-2">
+              <div>
+                <span className="font-bold block">Alta mínima de centro:</span>
+                Solo requerimos ubicación física para habilitar <strong>Peticiones Operativas</strong>.
+              </div>
+              <button
+                type="button"
+                onClick={handleUseFiscalAddress}
+                className="px-2.5 py-1 bg-white hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded font-semibold text-[11px] shrink-0"
+              >
+                Usar dirección fiscal
+              </button>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Nombre del Centro / Sede *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => { setName(e.target.value); onChange(); }}
+                placeholder="Ej. Pabellón 14 - Muelle de Carga"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs ${
+                  errors.name ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300'
+                }`}
+              />
+              {errors.name && <p className="text-rose-600 text-[11px] mt-1">{errors.name}</p>}
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Dirección física *</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => { setAddress(e.target.value); onChange(); }}
+                placeholder="Polígono Industrial Artunduaga, Pabellón 14"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs ${
+                  errors.address ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300'
+                }`}
+              />
+              {errors.address && <p className="text-rose-600 text-[11px] mt-1">{errors.address}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Código Postal *</label>
+                <input
+                  type="text"
+                  value={postalCode}
+                  onChange={(e) => { setPostalCode(e.target.value); onChange(); }}
+                  placeholder="48970"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs ${
+                    errors.postalCode ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300'
+                  }`}
+                />
+                {errors.postalCode && <p className="text-rose-600 text-[11px] mt-1">{errors.postalCode}</p>}
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Localidad *</label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => { setCity(e.target.value); onChange(); }}
+                  placeholder="Basauri"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs ${
+                    errors.city ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300'
+                  }`}
+                />
+                {errors.city && <p className="text-rose-600 text-[11px] mt-1">{errors.city}</p>}
+              </div>
+            </div>
+
+            {/* OPCIONALES: DATOS OPERATIVOS Y LABORALES */}
+            <div className="pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full flex items-center justify-between text-xs font-semibold text-slate-700 p-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200"
+              >
+                <span>Datos Operativos y Laborales (Opcional)</span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showAdvanced && (
+                <div className="pt-3 space-y-3 animate-in fade-in">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Convenio Colectivo Aplicable</label>
+                    <input
+                      type="text"
+                      value={laborAgreement}
+                      onChange={(e) => { setLaborAgreement(e.target.value); onChange(); }}
+                      placeholder="Convenio Provincial de Logística"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Instrucciones de Acceso / PRL</label>
+                    <textarea
+                      rows="2"
+                      value={notes}
+                      onChange={(e) => { setNotes(e.target.value); onChange(); }}
+                      placeholder="Entrada por garita 2, botas de seguridad obligatorias..."
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs"
+                    ></textarea>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </form>
+
+          <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-md text-xs font-semibold hover:bg-slate-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="center-form"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold shadow-sm"
+            >
+              {isEdit ? 'Actualizar Centro' : 'Crear Centro Operativo'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

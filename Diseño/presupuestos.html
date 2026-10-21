@@ -1,0 +1,2666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presupuestos y Cotización — Editor de presupuestos (v3)</title>
+  
+  <!-- Tailwind CSS v4 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.7"></script>
+  
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js"></script>
+  
+  <!-- Importmap -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/": "https://esm.sh/react@18.3.1/",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "lucide-react": "https://esm.sh/lucide-react@0.474.0?external=react"
+    }
+  }
+  </script>
+  <style>
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    /* Custom scrollbar for drawers and preview tables */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module" data-presets="react">
+    import React, { useState, useEffect, useMemo, useRef } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import {
+      Calculator, FileText, CheckCircle2, Clock, AlertTriangle, ChevronRight, 
+      ArrowLeft, Plus, Copy, Trash2, Edit3, Save, X, RotateCcw, AlertCircle,
+      TrendingUp, DollarSign, ShieldCheck, Download, History, Send, Layers,
+      Building2, User, Calendar, Briefcase, FileSignature, Check, Eye, Lock,
+      Unlock, HelpCircle, Sparkles, Filter, Search, ArrowUpRight, ChevronDown,
+      Info, RefreshCw, SlidersHorizontal, BookOpen, FileSpreadsheet, GitBranch,
+      UserCheck, ExternalLink, ShieldAlert, Award
+    } from 'lucide-react';
+
+    // ==========================================
+    // CATÁLOGOS ESTRUCTURADOS CON "OTRO / PERSONALIZADO"
+    // ==========================================
+    const CATALOGOS = {
+      convenios: [
+        { id: 'logistica_madrid', label: 'Convenio Colectivo Logística y Paquetería (Com. Madrid)' },
+        { id: 'logistica_bcn', label: 'Convenio Sectorial Transporte de Mercancías y Logística (Barcelona)' },
+        { id: 'metal_madrid', label: 'Convenio Industria del Metal (Madrid)' },
+        { id: 'hosteleria_estatal', label: 'ALEH - Convenio Estatal Hostelería' },
+        { id: 'quimicas_estatal', label: 'Convenio General de la Industria Química' },
+        { id: 'comercio_alimentacion', label: 'Convenio Comercio y Almacenistas Alimentación' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ],
+      categorias: {
+        logistica_madrid: [
+          { id: 'op_almacen', label: 'Operario/a de Almacén (Nivel IV)' },
+          { id: 'mozo_esp', label: 'Mozo/a Especialista - Carretillero/a (Nivel III)' },
+          { id: 'prep_pedidos', label: 'Preparador/a de Pedidos / Picking (Nivel IV)' },
+          { id: 'jefe_equipo', label: 'Jefe/a de Equipo / Capataz (Nivel II)' },
+          { id: 'administrativo_log', label: 'Administrativo/a de Tráfico y Logística (Nivel III)' },
+          { id: 'otro', label: 'Otro / Personalizado...' }
+        ],
+        metal_madrid: [
+          { id: 'peon_metal', label: 'Peón / Auxiliar Producción' },
+          { id: 'oficial_3_metal', label: 'Oficial 3ª Metal' },
+          { id: 'oficial_1_cnc', label: 'Oficial 1ª Mecanizado CNC' },
+          { id: 'soldador_tuv', label: 'Soldador/a Homologado TIG/MIG' },
+          { id: 'otro', label: 'Otro / Personalizado...' }
+        ],
+        hosteleria_estatal: [
+          { id: 'camarero_sala', label: 'Camarero/a de Sala (Nivel II)' },
+          { id: 'ayudante_cocina', label: 'Ayudante de Cocina (Nivel III)' },
+          { id: 'cocinero_partida', label: 'Cocinero/a de Partida (Nivel I)' },
+          { id: 'office_limpieza', label: 'Auxiliar de Office y Limpieza' },
+          { id: 'otro', label: 'Otro / Personalizado...' }
+        ],
+        default: [
+          { id: 'perfil_estandar', label: 'Operador / Auxiliar Estándar' },
+          { id: 'tecnico_especialista', label: 'Técnico Especialista' },
+          { id: 'responsable_turno', label: 'Responsable de Turno' },
+          { id: 'otro', label: 'Otro / Personalizado...' }
+        ]
+      },
+      gruposNivel: [
+        { id: 'g1', label: 'Grupo I / Directivos y Titulados Superiores' },
+        { id: 'g2', label: 'Grupo II / Técnicos Medios y Mandos Intermedios' },
+        { id: 'g3', label: 'Grupo III / Oficiales y Especialistas de Oficio' },
+        { id: 'g4', label: 'Grupo IV / Operarios, Mozos y Peonaje Cualificado' },
+        { id: 'g5', label: 'Grupo V / Auxiliares y Aprendices' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ],
+      modalidades: [
+        { id: 'puesta_disposicion_estandar', label: 'Puesta a Disposición Estándar (CPD Ordinario)' },
+        { id: 'pico_produccion', label: 'Picos de Producción / Circunstancial (Art. 15.2 ET)' },
+        { id: 'sustitucion_it', label: 'Sustitución de Persona Trabajadora (IT / Excedencia / Maternidad)' },
+        { id: 'servicio_continuado', label: 'Servicio Continuado con Retainer Mensual' },
+        { id: 'master_vendor', label: 'Modelo On-Site / Master Vendor ETT' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ],
+      formasPago: [
+        { id: 'confirming_60', label: 'Confirming bancario a 60 días fecha factura' },
+        { id: 'transfer_30', label: 'Transferencia bancaria a 30 días' },
+        { id: 'transfer_15', label: 'Transferencia bancaria quincenal (15 días)' },
+        { id: 'domiciliacion_30', label: 'Recibo domiciliado SEPA B2B a 30 días' },
+        { id: 'prepago_semanal', label: 'Prepago semanal con liquidación mensual' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ],
+      garantiasSustitucion: [
+        { id: 'garantia_4h', label: '4 horas de respuesta operativa sin coste' },
+        { id: 'garantia_24h', label: '24 horas de periodo de prueba con reemplazo bonificado' },
+        { id: 'garantia_48h', label: '48 horas de sustitución garantizada sin cargo de gestión' },
+        { id: 'garantia_express_2h', label: 'Sustitución Express en menos de 2 horas (Retainer Crítico)' },
+        { id: 'sin_garantia', label: 'Sin garantía extendida (Condiciones estándar ETT)' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ],
+      tiposConcepto: [
+        { id: 'porcentaje', label: 'Porcentaje (%) sobre Base' },
+        { id: 'fijo_hora', label: 'Importe Fijo por Hora (€/h)' },
+        { id: 'fijo_mes', label: 'Importe Fijo Mensual (€/mes)' },
+        { id: 'fijo_jornada', label: 'Importe Fijo por Jornada (€/día)' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ],
+      basesCalculo: [
+        { id: 'salario_bruto_hora', label: 'Salario Bruto por Hora' },
+        { id: 'coste_salarial_total', label: 'Coste Salarial Total (Bruto + Prorratas)' },
+        { id: 'base_ss_total', label: 'Base de Cotización SSSS Total' },
+        { id: 'tarifa_venta_hora', label: 'Tarifa Hora Ofertada (PVP)' },
+        { id: 'horas_reales_efectivas', label: 'Horas Reales Efectivas Trabajadas' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ],
+      tiposIva: [
+        { id: '21', label: '21% (IVA General Península y Baleares)' },
+        { id: '10', label: '10% (IVA Reducido aplicable)' },
+        { id: '7', label: '7% (IGIC Canarias General)' },
+        { id: '0_exento', label: '0% (Exento / Inversión de Sujeto Pasivo / Intracomunitario)' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ],
+      monedas: [
+        { id: 'EUR', label: 'EUR (€) — Euro' },
+        { id: 'USD', label: 'USD ($) — Dólar Estadounidense' },
+        { id: 'GBP', label: 'GBP (£) — Libra Esterlina' },
+        { id: 'otro', label: 'Otro / Personalizado...' }
+      ]
+    };
+
+    // ==========================================
+    // DATOS DE DEMO INICIALES (v3 fiel a v2)
+    // ==========================================
+    const DEMO_PRESUPUESTO_INICIAL = {
+      id: 'PRE-2026-0048',
+      codigoVersion: 'PRE-2026-0048-v1',
+      versionNumero: 1,
+      titulo: 'Servicio ETT Campaña Logística Primavera & Refuerzo HUB Central',
+      cliente: 'Trans-Logística Ibérica Norte S.A.',
+      cif: 'A-28941029',
+      contacto: 'Carlos Mendoza (Director de Operaciones & RRHH)',
+      emailContacto: 'c.mendoza@translogistica.es',
+      telefonoContacto: '+34 672 901 234',
+      comercial: 'Elena Navarro (Key Account Manager)',
+      estado: 'Borrador', // Borrador | En preparación | Enviado a Cliente | Pendiente de Firma | Firmado / Aceptado | Rechazado | Sustituido
+      esEditableDirecto: true,
+      fechaEmision: '2026-03-24',
+      fechaValidez: '2026-04-24',
+      fechaInicioPrevista: '2026-05-01',
+      duracionMeses: 3,
+      moneda: 'EUR',
+      modalidad: 'pico_produccion',
+      modalidadCustom: '',
+      iva: '21',
+      ivaCustom: '',
+      formaPago: 'confirming_60',
+      formaPagoCustom: '',
+      garantiaSustitucion: 'garantia_4h',
+      garantiaSustitucionCustom: '',
+      observacionesComerciales: 'Se contempla cláusula de absorción por plantilla cliente sin coste de traspaso tras superar las 900 horas efectivas de CPD. La ETT asume la gestión documental completa en CAE y portal de PRL.',
+      
+      // Posiciones cotizadas
+      posiciones: [
+        {
+          id: 'pos-1',
+          nombre: 'Operario/a de Almacén',
+          convenio: 'logistica_madrid',
+          convenioCustom: '',
+          categoria: 'op_almacen',
+          categoriaCustom: '',
+          grupoNivel: 'g4',
+          grupoNivelCustom: '',
+          salarioBaseAnual: 17200.00,
+          plusConvenioMes: 120.00,
+          pagasAnuales: 14,
+          horasAnuales: 1784,
+          horasDiaCalculo: 8,
+          coeficienteParcialidad: 1.0,
+          tarifaHoraOfertada: 17.65,
+          tarifaJornadaManual: null,
+          vacacionesDiasAnio: 30,
+          descripcionTareas: 'Recepción, control de bultos, picking por radiofrecuencia, preparación de pedidos e inventario rotativo.'
+        },
+        {
+          id: 'pos-2',
+          nombre: 'Mozo/a Especialista — Carretillero/a Frontal/Retráctil',
+          convenio: 'logistica_madrid',
+          convenioCustom: '',
+          categoria: 'mozo_esp',
+          categoriaCustom: '',
+          grupoNivel: 'g3',
+          grupoNivelCustom: '',
+          salarioBaseAnual: 19450.00,
+          plusConvenioMes: 180.00,
+          pagasAnuales: 14,
+          horasAnuales: 1784,
+          horasDiaCalculo: 8,
+          coeficienteParcialidad: 1.0,
+          tarifaHoraOfertada: 19.80,
+          tarifaJornadaManual: null,
+          vacacionesDiasAnio: 30,
+          descripcionTareas: 'Ubicación en altura en estanterías dinámicas (hasta 9m), descarga de trailers y abastecimiento de líneas.'
+        }
+      ],
+
+      // Conceptos del Escandallo Económico
+      conceptosEscandallo: [
+        {
+          id: 'c-ss',
+          nombre: 'Seguridad Social Patronal (Común + AT/EP 4.10% + Desempleo + FOGASA + FP)',
+          tipo: 'porcentaje',
+          tipoCustom: '',
+          valor: 32.85,
+          baseCalculo: 'coste_salarial_total',
+          baseCalculoCustom: '',
+          esObligatorioLegal: true,
+          descripcion: 'Aportación legal obligatoria a la TGSS según tarifa CNAE Transporte y Almacenamiento.'
+        },
+        {
+          id: 'c-indem',
+          nombre: 'Indemnización Fin de Contrato Puesta a Disposición (12 días/año)',
+          tipo: 'porcentaje',
+          tipoCustom: '',
+          valor: 4.54,
+          baseCalculo: 'coste_salarial_total',
+          baseCalculoCustom: '',
+          esObligatorioLegal: true,
+          descripcion: 'Prorrateo de indemnización legal obligatoria por cese de contrato de puesta a disposición.'
+        },
+        {
+          id: 'c-abs',
+          nombre: 'Provisión Absentismo & Contingencias de Personal ETT',
+          tipo: 'porcentaje',
+          tipoCustom: '',
+          valor: 2.15,
+          baseCalculo: 'salario_bruto_hora',
+          baseCalculoCustom: '',
+          esObligatorioLegal: false,
+          descripcion: 'Cobertura estimada de bajas de corta duración y permisos retribuidos según convenio.'
+        },
+        {
+          id: 'c-epi',
+          nombre: 'Dotación EPIs Homologados (Calzado S3 + Chaleco + Guantes Anticorte)',
+          tipo: 'fijo_hora',
+          tipoCustom: '',
+          valor: 0.18,
+          baseCalculo: 'horas_reales_efectivas',
+          baseCalculoCustom: '',
+          esObligatorioLegal: false,
+          descripcion: 'Amortización del kit de protección individual y reposición de consumibles.'
+        },
+        {
+          id: 'c-prl',
+          nombre: 'Reconocimiento Médico Inicial & Formación Específica PRL ETT',
+          tipo: 'fijo_hora',
+          tipoCustom: '',
+          valor: 0.22,
+          baseCalculo: 'horas_reales_efectivas',
+          baseCalculoCustom: '',
+          esObligatorioLegal: false,
+          descripcion: 'Acreditación según Art. 19 LPRL y vigilancia médica para trabajo en altura y almacén.'
+        }
+      ],
+
+      // Historial de auditoría
+      auditoria: [
+        {
+          id: 'aud-1',
+          fecha: '2026-03-24 10:15:20',
+          usuario: 'Elena Navarro (KAM)',
+          accion: 'Creación de presupuesto',
+          detalle: 'Alta de presupuesto PRE-2026-0048 en estado Borrador.'
+        },
+        {
+          id: 'aud-2',
+          fecha: '2026-03-24 10:28:44',
+          usuario: 'Elena Navarro (KAM)',
+          accion: 'Incorporación de puesto',
+          detalle: 'Se añade puesto Mozo/a Especialista - Carretillero/a con tarifa inicial 19.80 €/h.'
+        }
+      ]
+    };
+
+    // Historial de versiones del presupuesto para demo
+    const DEMO_HISTORIAL_VERSIONES = [
+      {
+        version: 'PRE-2026-0048-v1',
+        numero: 1,
+        fecha: '2026-03-24',
+        creador: 'Elena Navarro',
+        estado: 'Borrador activo',
+        tarifaMedia: '18.72 €/h',
+        margenMedio: '17.4%',
+        comentario: 'Versión actual en edición.'
+      },
+      {
+        version: 'PRE-2026-0032-v2',
+        numero: 2,
+        fecha: '2026-02-15',
+        creador: 'Marcos Rubio',
+        estado: 'Firmado / Activo',
+        tarifaMedia: '17.20 €/h',
+        margenMedio: '16.8%',
+        comentario: 'Campaña invierno finalizada con éxito.'
+      }
+    ];
+
+    // Otros presupuestos para la vista de listado
+    const DEMO_LISTADO_PRESUPUESTOS = [
+      {
+        id: 'PRE-2026-0048',
+        titulo: 'Servicio ETT Campaña Logística Primavera HUB Central',
+        cliente: 'Trans-Logística Ibérica Norte S.A.',
+        comercial: 'Elena Navarro',
+        estado: 'Borrador',
+        puestosCount: 2,
+        tarifaMedia: 18.72,
+        margenPct: 17.4,
+        fechaValidez: '2026-04-24',
+        esEditableDirecto: true
+      },
+      {
+        id: 'PRE-2026-0047',
+        titulo: 'Refuerzo Líneas de Envasado & Picking Alimentario',
+        cliente: 'Conservas & Alimentos del Valle SL',
+        comercial: 'Elena Navarro',
+        estado: 'En preparación',
+        puestosCount: 3,
+        tarifaMedia: 16.90,
+        margenPct: 18.2,
+        fechaValidez: '2026-04-18',
+        esEditableDirecto: true
+      },
+      {
+        id: 'PRE-2026-0045',
+        titulo: 'Operarios/as Soldadura & Mecanizado Metal 24/7',
+        cliente: 'Talleres Metalmecánicos Getafe S.A.',
+        comercial: 'Raúl Santana',
+        estado: 'Enviado a Cliente',
+        puestosCount: 1,
+        tarifaMedia: 22.40,
+        margenPct: 19.5,
+        fechaValidez: '2026-04-10',
+        esEditableDirecto: false
+      },
+      {
+        id: 'PRE-2026-0041',
+        titulo: 'Servicio ETT Camareros/as y Cocina Fiestas Locales',
+        cliente: 'Grupo Restauración Castellana',
+        comercial: 'Marta Prieto',
+        estado: 'Firmado / Aceptado',
+        puestosCount: 4,
+        tarifaMedia: 18.10,
+        margenPct: 21.0,
+        fechaValidez: '2026-03-30',
+        esEditableDirecto: false
+      }
+    ];
+
+    // ==========================================
+    // UTILIDADES DE CÁLCULO ECONÓMICO ETT
+    // ==========================================
+    function calcularEconomiaPosicion(pos, conceptos) {
+      const horasAnuales = pos.horasAnuales > 0 ? pos.horasAnuales : 1784;
+      const salarioBase = Number(pos.salarioBaseAnual) || 0;
+      const plusMensual = Number(pos.plusConvenioMes) || 0;
+      const pagas = Number(pos.pagasAnuales) || 12;
+      const horasDia = Number(pos.horasDiaCalculo) || 8;
+      const parcialidad = Number(pos.coeficienteParcialidad) || 1.0;
+      const tarifaPVP = Number(pos.tarifaHoraOfertada) || 0;
+
+      // Salario Bruto Anual Total = Salario Base + (Plus Mensual * 12 o Pagas)
+      const plusAnual = plusMensual * 12;
+      const salarioBrutoAnual = salarioBase + plusAnual;
+
+      // Salario Bruto por Hora Efectiva
+      const salarioBrutoHora = (salarioBrutoAnual / horasAnuales) * parcialidad;
+
+      // Prorrata de Pagas Extras y Vacaciones integrada en hora efectiva
+      const costeSalarialHora = salarioBrutoHora; 
+
+      // Calcular conceptos de escandallo
+      let totalCosteSocialHora = 0;
+      let desgloseConceptos = [];
+
+      conceptos.forEach(c => {
+        let base = salarioBrutoHora;
+        if (c.baseCalculo === 'coste_salarial_total' || c.baseCalculo === 'base_ss_total') {
+          base = costeSalarialHora;
+        } else if (c.baseCalculo === 'tarifa_venta_hora') {
+          base = tarifaPVP;
+        } else if (c.baseCalculo === 'horas_reales_efectivas') {
+          base = 1.0; // Fijo por hora
+        }
+
+        let importeHora = 0;
+        if (c.tipo === 'porcentaje') {
+          importeHora = (base * Number(c.valor)) / 100;
+        } else if (c.tipo === 'fijo_hora') {
+          importeHora = Number(c.valor);
+        } else if (c.tipo === 'fijo_jornada') {
+          importeHora = Number(c.valor) / horasDia;
+        } else if (c.tipo === 'fijo_mes') {
+          importeHora = Number(c.valor) / (horasAnuales / 12);
+        }
+
+        totalCosteSocialHora += importeHora;
+        desgloseConceptos.push({
+          id: c.id,
+          nombre: c.nombre,
+          importeHora: importeHora,
+          esLegal: c.esObligatorioLegal
+        });
+      });
+
+      // Coste Total Empresa ETT por Hora
+      const costeTotalEmpresaHora = salarioBrutoHora + totalCosteSocialHora;
+
+      // Margen Bruto
+      const margenEuroHora = tarifaPVP - costeTotalEmpresaHora;
+      const margenPorcentaje = tarifaPVP > 0 ? (margenEuroHora / tarifaPVP) * 100 : 0;
+
+      // Tarifa Jornada
+      const tarifaJornadaCalculada = tarifaPVP * horasDia;
+      const costeJornada = costeTotalEmpresaHora * horasDia;
+
+      return {
+        salarioBrutoHora,
+        salarioBrutoAnual,
+        costeTotalEmpresaHora,
+        totalCosteSocialHora,
+        margenEuroHora,
+        margenPorcentaje,
+        tarifaJornadaCalculada,
+        costeJornada,
+        desgloseConceptos,
+        tarifaPVP,
+        horasDia
+      };
+    }
+
+    // ==========================================
+    // COMPONENTE PRINCIPAL
+    // ==========================================
+    function App() {
+      // Estado de navegación
+      const [vistaActual, setVistaActual] = useState('detalle'); // 'detalle' | 'listado'
+      const [pestanaActiva, setPestanaActiva] = useState('resumen'); // 'resumen' | 'posiciones' | 'escandallo' | 'condiciones' | 'historial' | 'documentos' | 'auditoria'
+
+      // Rol de usuario (Dirección con costes/márgenes, Comercial con datos sensibles ocultos/limitados)
+      const [rolUsuario, setRolUsuario] = useState('direccion'); // 'direccion' | 'comercial'
+
+      // Estado del presupuesto principal
+      const [presupuesto, setPresupuesto] = useState(DEMO_PRESUPUESTO_INICIAL);
+      
+      // Estado de edición global
+      const [modoEdicion, setModoEdicion] = useState(false);
+      const [formularioPresupuesto, setFormularioPresupuesto] = useState(DEMO_PRESUPUESTO_INICIAL);
+      const [cambiosPendientes, setCambiosPendientes] = useState([]);
+      const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
+      const [estadoGuardado, setEstadoGuardado] = useState('guardado'); // 'guardado' | 'guardando' | 'incompleto' | 'revision' | 'error'
+      
+      // Paneles laterales (Drawers) y Modales
+      const [drawerPosicionAbierto, setDrawerPosicionAbierto] = useState(false);
+      const [posicionEnEdicion, setPosicionEnEdicion] = useState(null); // null = nuevo
+      
+      const [drawerConceptoAbierto, setDrawerConceptoAbierto] = useState(false);
+      const [conceptoEnEdicion, setConceptoEnEdicion] = useState(null);
+
+      const [modalResumenCambiosAbierto, setModalResumenCambiosAbierto] = useState(false);
+      const [modalConfirmarEliminarPosicion, setModalConfirmarEliminarPosicion] = useState(null);
+      const [modalConfirmarConvenio, setModalConfirmarConvenio] = useState(null);
+      const [modalNuevaVersionAbierto, setModalNuevaVersionAbierto] = useState(false);
+
+      // Toast feedback
+      const [toast, setToast] = useState(null);
+
+      const mostrarToast = (mensaje, tipo = 'exito') => {
+        setToast({ mensaje, tipo });
+        setTimeout(() => setToast(null), 4000);
+      };
+
+      // Control de autoguardado simulado cuando hay cambios
+      useEffect(() => {
+        if (modoEdicion && hayCambiosSinGuardar) {
+          const timer = setTimeout(() => {
+            // simular guardado en borrador en background
+            setEstadoGuardado('borrador_auto');
+          }, 5000);
+          return () => clearTimeout(timer);
+        }
+      }, [hayCambiosSinGuardar, modoEdicion, formularioPresupuesto]);
+
+      // Comprobar si el presupuesto está completo para emitir
+      const estaCompleto = useMemo(() => {
+        const p = formularioPresupuesto;
+        if (!p.titulo || !p.cliente || !p.comercial || !p.fechaValidez) return false;
+        if (!p.posiciones || p.posiciones.length === 0) return false;
+        return p.posiciones.every(pos => pos.tarifaHoraOfertada > 0 && pos.salarioBaseAnual > 0);
+      }, [formularioPresupuesto]);
+
+      // Iniciar edición
+      const handleIniciarEdicion = () => {
+        if (presupuesto.estado === 'Enviado a Cliente' || presupuesto.estado === 'Pendiente de Firma' || presupuesto.estado === 'Firmado / Aceptado') {
+          // Si está cerrado o enviado, abrir flujo de nueva versión editable
+          setModalNuevaVersionAbierto(true);
+        } else {
+          setFormularioPresupuesto(JSON.parse(JSON.stringify(presupuesto)));
+          setModoEdicion(true);
+          setHayCambiosSinGuardar(false);
+          setEstadoGuardado('guardado');
+          mostrarToast('Modo edición activado. Modifica datos, posiciones o conceptos.', 'info');
+        }
+      };
+
+      // Crear nueva versión editable a partir de uno cerrado
+      const handleCrearNuevaVersion = () => {
+        const nuevoNum = presupuesto.versionNumero + 1;
+        const nuevoId = `${presupuesto.id}-v${nuevoNum}`;
+        const nuevaCopia = {
+          ...presupuesto,
+          codigoVersion: nuevoId,
+          versionNumero: nuevoNum,
+          estado: 'Borrador',
+          esEditableDirecto: true,
+          titulo: `${presupuesto.titulo} (v${nuevoNum})`,
+          auditoria: [
+            {
+              id: `aud-${Date.now()}`,
+              fecha: new Date().toISOString().replace('T', ' ').substring(0, 19),
+              usuario: 'Elena Navarro (KAM)',
+              accion: 'Creación de versión editable',
+              detalle: `Generada nueva versión ${nuevoId} a partir de la versión sustituida.`
+            },
+            ...presupuesto.auditoria
+          ]
+        };
+        setPresupuesto(nuevaCopia);
+        setFormularioPresupuesto(JSON.parse(JSON.stringify(nuevaCopia)));
+        setModoEdicion(true);
+        setModalNuevaVersionAbierto(false);
+        setHayCambiosSinGuardar(false);
+        mostrarToast(`Nueva versión editable creada: ${nuevoId}`, 'exito');
+      };
+
+      // Cancelar edición
+      const handleCancelarEdicion = () => {
+        if (hayCambiosSinGuardar) {
+          if (confirm('Tienes cambios sin guardar. ¿Deseas descartarlos y volver a la versión anterior?')) {
+            setFormularioPresupuesto(JSON.parse(JSON.stringify(presupuesto)));
+            setModoEdicion(false);
+            setHayCambiosSinGuardar(false);
+            mostrarToast('Edición cancelada.', 'info');
+          }
+        } else {
+          setModoEdicion(false);
+        }
+      };
+
+      // Detectar diferencias para el Diff Modal
+      const calcularDiferencias = () => {
+        const diffs = [];
+        const orig = presupuesto;
+        const edit = formularioPresupuesto;
+
+        if (orig.titulo !== edit.titulo) diffs.push({ campo: 'Título del servicio', anterior: orig.titulo, nuevo: edit.titulo });
+        if (orig.cliente !== edit.cliente) diffs.push({ campo: 'Empresa Cliente', anterior: orig.cliente, nuevo: edit.cliente });
+        if (orig.contacto !== edit.contacto) diffs.push({ campo: 'Contacto destinatario', anterior: orig.contacto, nuevo: edit.contacto });
+        if (orig.comercial !== edit.comercial) diffs.push({ campo: 'Responsable Comercial', anterior: orig.comercial, nuevo: edit.comercial });
+        if (orig.fechaValidez !== edit.fechaValidez) diffs.push({ campo: 'Fecha de Validez', anterior: orig.fechaValidez, nuevo: edit.fechaValidez });
+        if (orig.modalidad !== edit.modalidad) diffs.push({ campo: 'Modalidad ETT', anterior: orig.modalidad, nuevo: edit.modalidad });
+        if (orig.formaPago !== edit.formaPago) diffs.push({ campo: 'Forma de Pago', anterior: orig.formaPago, nuevo: edit.formaPago });
+        if (orig.garantiaSustitucion !== edit.garantiaSustitucion) diffs.push({ campo: 'Garantía sustitución', anterior: orig.garantiaSustitucion, nuevo: edit.garantiaSustitucion });
+
+        // Diferencias en posiciones
+        if (orig.posiciones.length !== edit.posiciones.length) {
+          diffs.push({
+            campo: 'Número de puestos',
+            anterior: `${orig.posiciones.length} puesto(s)`,
+            nuevo: `${edit.posiciones.length} puesto(s)`
+          });
+        }
+
+        edit.posiciones.forEach((pos, idx) => {
+          const posOrig = orig.posiciones.find(p => p.id === pos.id);
+          if (!posOrig) {
+            diffs.push({ campo: `Nuevo puesto añadido`, anterior: '—', nuevo: `${pos.nombre} (${pos.tarifaHoraOfertada} €/h)` });
+          } else {
+            if (posOrig.tarifaHoraOfertada !== pos.tarifaHoraOfertada) {
+              diffs.push({ campo: `Tarifa [${pos.nombre}]`, anterior: `${posOrig.tarifaHoraOfertada} €/h`, nuevo: `${pos.tarifaHoraOfertada} €/h` });
+            }
+            if (posOrig.salarioBaseAnual !== pos.salarioBaseAnual) {
+              diffs.push({ campo: `Salario Base [${pos.nombre}]`, anterior: `${posOrig.salarioBaseAnual} €`, nuevo: `${pos.salarioBaseAnual} €` });
+            }
+            if (posOrig.convenio !== pos.convenio) {
+              diffs.push({ campo: `Convenio [${pos.nombre}]`, anterior: posOrig.convenio, nuevo: pos.convenio });
+            }
+          }
+        });
+
+        // Diferencias en conceptos
+        if (orig.conceptosEscandallo.length !== edit.conceptosEscandallo.length) {
+          diffs.push({
+            campo: 'Conceptos del escandallo',
+            anterior: `${orig.conceptosEscandallo.length} conceptos`,
+            nuevo: `${edit.conceptosEscandallo.length} conceptos`
+          });
+        }
+
+        return diffs;
+      };
+
+      // Solicitar guardar cambios (abre diff modal)
+      const handleSolicitarGuardar = () => {
+        const diffs = calcularDiferencias();
+        setCambiosPendientes(diffs);
+        setModalResumenCambiosAbierto(true);
+      };
+
+      // Confirmar y aplicar guardado definitivo
+      const handleConfirmarGuardar = (guardarComoBorrador = false) => {
+        setEstadoGuardado('guardando');
+        
+        setTimeout(() => {
+          const nuevosLogs = cambiosPendientes.map(diff => ({
+            id: `aud-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            fecha: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            usuario: rolUsuario === 'direccion' ? 'Dirección de Operaciones' : 'Elena Navarro (KAM)',
+            accion: 'Modificación de presupuesto',
+            detalle: `${diff.campo}: de "${diff.anterior}" a "${diff.nuevo}"`
+          }));
+
+          const updated = {
+            ...formularioPresupuesto,
+            estado: guardarComoBorrador ? 'Borrador' : (estaCompleto ? 'En preparación' : 'Borrador'),
+            auditoria: [
+              ...(nuevosLogs.length > 0 ? nuevosLogs : [{
+                id: `aud-${Date.now()}`,
+                fecha: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                usuario: 'Elena Navarro (KAM)',
+                accion: 'Guardado de presupuesto',
+                detalle: 'Revisión y actualización de datos.'
+              }]),
+              ...formularioPresupuesto.auditoria
+            ]
+          };
+
+          setPresupuesto(updated);
+          setFormularioPresupuesto(updated);
+          setModoEdicion(false);
+          setHayCambiosSinGuardar(false);
+          setEstadoGuardado('guardado');
+          setModalResumenCambiosAbierto(false);
+          mostrarToast('Presupuesto guardado correctamente y registrado en auditoría.', 'exito');
+        }, 600);
+      };
+
+      // Guardar directamente como borrador (permite datos incompletos)
+      const handleGuardarComoBorradorDirecto = () => {
+        const updated = {
+          ...formularioPresupuesto,
+          estado: 'Borrador',
+          auditoria: [
+            {
+              id: `aud-${Date.now()}`,
+              fecha: new Date().toISOString().replace('T', ' ').substring(0, 19),
+              usuario: 'Elena Navarro (KAM)',
+              accion: 'Guardado en Borrador',
+              detalle: 'Guardado manual en estado borrador (puede contener datos provisionales).'
+            },
+            ...formularioPresupuesto.auditoria
+          ]
+        };
+        setPresupuesto(updated);
+        setFormularioPresupuesto(updated);
+        setModoEdicion(false);
+        setHayCambiosSinGuardar(false);
+        mostrarToast('Presupuesto guardado como Borrador.', 'info');
+      };
+
+      // Actualizar campos del presupuesto en formulario
+      const handleActualizarCampoPresupuesto = (campo, valor) => {
+        setFormularioPresupuesto(prev => ({
+          ...prev,
+          [campo]: valor
+        }));
+        setHayCambiosSinGuardar(true);
+      };
+
+      // ==========================================
+      // GESTIÓN DE POSICIONES
+      // ==========================================
+      const handleAbrirDrawerPosicion = (pos = null) => {
+        if (!modoEdicion) {
+          setFormularioPresupuesto(JSON.parse(JSON.stringify(presupuesto)));
+          setModoEdicion(true);
+        }
+        if (pos) {
+          setPosicionEnEdicion(JSON.parse(JSON.stringify(pos)));
+        } else {
+          // Nueva posición default
+          setPosicionEnEdicion({
+            id: `pos-${Date.now()}`,
+            nombre: '',
+            convenio: 'logistica_madrid',
+            convenioCustom: '',
+            categoria: 'op_almacen',
+            categoriaCustom: '',
+            grupoNivel: 'g4',
+            grupoNivelCustom: '',
+            salarioBaseAnual: 18000,
+            plusConvenioMes: 100,
+            pagasAnuales: 14,
+            horasAnuales: 1784,
+            horasDiaCalculo: 8,
+            coeficienteParcialidad: 1.0,
+            tarifaHoraOfertada: 18.50,
+            tarifaJornadaManual: null,
+            vacacionesDiasAnio: 30,
+            descripcionTareas: ''
+          });
+        }
+        setDrawerPosicionAbierto(true);
+      };
+
+      const handleGuardarPosicion = (posData) => {
+        if (!posData.nombre || !posData.tarifaHoraOfertada) {
+          alert('Por favor indica al menos el nombre del puesto y la tarifa ofertada.');
+          return;
+        }
+
+        const existe = formularioPresupuesto.posiciones.some(p => p.id === posData.id);
+        let nuevasPosiciones;
+        if (existe) {
+          nuevasPosiciones = formularioPresupuesto.posiciones.map(p => p.id === posData.id ? posData : p);
+        } else {
+          nuevasPosiciones = [...formularioPresupuesto.posiciones, posData];
+        }
+
+        setFormularioPresupuesto(prev => ({
+          ...prev,
+          posiciones: nuevasPosiciones
+        }));
+        setHayCambiosSinGuardar(true);
+        setDrawerPosicionAbierto(false);
+        setPosicionEnEdicion(null);
+        mostrarToast(existe ? 'Puesto actualizado.' : 'Nuevo puesto añadido al presupuesto.', 'exito');
+      };
+
+      const handleDuplicarPosicion = (pos) => {
+        if (!modoEdicion) {
+          setFormularioPresupuesto(JSON.parse(JSON.stringify(presupuesto)));
+          setModoEdicion(true);
+        }
+        const copia = {
+          ...pos,
+          id: `pos-${Date.now()}`,
+          nombre: `${pos.nombre} (Copia)`
+        };
+        setFormularioPresupuesto(prev => ({
+          ...prev,
+          posiciones: [...prev.posiciones, copia]
+        }));
+        setHayCambiosSinGuardar(true);
+        mostrarToast(`Puesto "${pos.nombre}" duplicado con éxito.`, 'exito');
+      };
+
+      const handleEliminarPosicion = (posId) => {
+        if (formularioPresupuesto.posiciones.length <= 1) {
+          alert('No es posible eliminar la única posición del presupuesto. Debe existir al menos un puesto cotizado.');
+          return;
+        }
+        setModalConfirmarEliminarPosicion(posId);
+      };
+
+      const confirmarEliminacionPosicion = () => {
+        const nuevasPos = formularioPresupuesto.posiciones.filter(p => p.id !== modalConfirmarEliminarPosicion);
+        setFormularioPresupuesto(prev => ({
+          ...prev,
+          posiciones: nuevasPos
+        }));
+        setHayCambiosSinGuardar(true);
+        setModalConfirmarEliminarPosicion(null);
+        mostrarToast('Posición eliminada del presupuesto.', 'info');
+      };
+
+      // ==========================================
+      // GESTIÓN DE CONCEPTOS DE ESCANDALLO
+      // ==========================================
+      const handleAbrirDrawerConcepto = (concepto = null) => {
+        if (!modoEdicion) {
+          setFormularioPresupuesto(JSON.parse(JSON.stringify(presupuesto)));
+          setModoEdicion(true);
+        }
+        if (concepto) {
+          setConceptoEnEdicion(JSON.parse(JSON.stringify(concepto)));
+        } else {
+          setConceptoEnEdicion({
+            id: `c-${Date.now()}`,
+            nombre: '',
+            tipo: 'porcentaje',
+            tipoCustom: '',
+            valor: 1.5,
+            baseCalculo: 'salario_bruto_hora',
+            baseCalculoCustom: '',
+            esObligatorioLegal: false,
+            descripcion: ''
+          });
+        }
+        setDrawerConceptoAbierto(true);
+      };
+
+      const handleGuardarConcepto = (conceptoData) => {
+        if (!conceptoData.nombre || conceptoData.valor === '' || isNaN(Number(conceptoData.valor))) {
+          alert('Por favor ingresa un nombre y un valor numérico válido para el concepto.');
+          return;
+        }
+        const existe = formularioPresupuesto.conceptosEscandallo.some(c => c.id === conceptoData.id);
+        let nuevosConceptos;
+        if (existe) {
+          nuevosConceptos = formularioPresupuesto.conceptosEscandallo.map(c => c.id === conceptoData.id ? conceptoData : c);
+        } else {
+          nuevosConceptos = [...formularioPresupuesto.conceptosEscandallo, conceptoData];
+        }
+
+        setFormularioPresupuesto(prev => ({
+          ...prev,
+          conceptosEscandallo: nuevosConceptos
+        }));
+        setHayCambiosSinGuardar(true);
+        setDrawerConceptoAbierto(false);
+        setConceptoEnEdicion(null);
+        mostrarToast(existe ? 'Concepto económico actualizado.' : 'Nuevo concepto añadido al escandallo.', 'exito');
+      };
+
+      const handleEliminarConcepto = (conceptoId) => {
+        const concepto = formularioPresupuesto.conceptosEscandallo.find(c => c.id === conceptoId);
+        if (concepto && concepto.esObligatorioLegal) {
+          alert('Este concepto es de cumplimiento legal obligatorio para ETT (Seguridad Social o Indemnización legal) y no puede eliminarse.');
+          return;
+        }
+        if (confirm(`¿Deseas eliminar el concepto "${concepto?.nombre}"?`)) {
+          const nuevos = formularioPresupuesto.conceptosEscandallo.filter(c => c.id !== conceptoId);
+          setFormularioPresupuesto(prev => ({
+            ...prev,
+            conceptosEscandallo: nuevos
+          }));
+          setHayCambiosSinGuardar(true);
+          mostrarToast('Concepto eliminado del escandallo.', 'info');
+        }
+      };
+
+      // Cálculos globales agregados
+      const datosActivos = modoEdicion ? formularioPresupuesto : presupuesto;
+      const calculosPosiciones = useMemo(() => {
+        return datosActivos.posiciones.map(pos => ({
+          pos,
+          eco: calcularEconomiaPosicion(pos, datosActivos.conceptosEscandallo)
+        }));
+      }, [datosActivos]);
+
+      const totalesAgregados = useMemo(() => {
+        if (calculosPosiciones.length === 0) return { tarifaMedia: 0, costeMedio: 0, margenMedioPct: 0, margenMedioEur: 0 };
+        const sumaTarifas = calculosPosiciones.reduce((acc, item) => acc + item.eco.tarifaPVP, 0);
+        const sumaCostes = calculosPosiciones.reduce((acc, item) => acc + item.eco.costeTotalEmpresaHora, 0);
+        const mediaTarifa = sumaTarifas / calculosPosiciones.length;
+        const mediaCoste = sumaCostes / calculosPosiciones.length;
+        const margenEur = mediaTarifa - mediaCoste;
+        const margenPct = mediaTarifa > 0 ? (margenEur / mediaTarifa) * 100 : 0;
+        return {
+          tarifaMedia: mediaTarifa,
+          costeMedio: mediaCoste,
+          margenMedioEur: margenEur,
+          margenMedioPct: margenPct
+        };
+      }, [calculosPosiciones]);
+
+      // Render de etiqueta de estado
+      const renderBadgeEstado = (estado) => {
+        const estilos = {
+          'Borrador': 'bg-amber-50 text-amber-700 border-amber-200',
+          'En preparación': 'bg-sky-50 text-sky-700 border-sky-200',
+          'Enviado a Cliente': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+          'Pendiente de Firma': 'bg-purple-50 text-purple-700 border-purple-200',
+          'Firmado / Aceptado': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          'Rechazado': 'bg-rose-50 text-rose-700 border-rose-200',
+          'Sustituido': 'bg-slate-100 text-slate-600 border-slate-300'
+        };
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${estilos[estado] || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+            {estado}
+          </span>
+        );
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col bg-slate-100/70">
+          
+          {/* ==========================================
+              CABECERA SUPERIOR (Fiel a v2 ERP)
+             ========================================== */}
+          <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+              
+              {/* Logo / Módulo */}
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-inner">
+                  <Calculator className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-100 tracking-tight text-base">ERP ETT</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">v3 Cotización</span>
+                  </div>
+                  <h1 className="text-xs text-slate-400 font-normal">Presupuestos y Cotización — Editor de presupuestos</h1>
+                </div>
+              </div>
+
+              {/* Centro: Selector de Rol y Estado de Guardado */}
+              <div className="hidden md:flex items-center gap-4">
+                
+                {/* Indicador de cambios sin guardar / autoguardado */}
+                {modoEdicion && (
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-slate-800/90 border border-slate-700 text-xs">
+                    {hayCambiosSinGuardar ? (
+                      <span className="flex items-center gap-1.5 text-amber-400 font-medium animate-pulse-subtle">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        Cambios sin guardar
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-emerald-400">
+                        <Check className="w-3.5 h-3.5" />
+                        Cambios guardados
+                      </span>
+                    )}
+                    <span className="text-slate-500">|</span>
+                    <span className="text-slate-400 text-[11px]">
+                      {estaCompleto ? 'Listo para emitir' : 'Borrador incompleto'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Switcher de Rol (Dirección vs Comercial) */}
+                <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-xs">
+                  <button
+                    onClick={() => setRolUsuario('direccion')}
+                    className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
+                      rolUsuario === 'direccion' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Visión completa: muestra costes, escandallo social y márgenes netos"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Rol Dirección
+                  </button>
+                  <button
+                    onClick={() => setRolUsuario('comercial')}
+                    className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
+                      rolUsuario === 'comercial' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Visión comercial: datos sensibles de costes ocultos o restringidos"
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    Rol Comercial
+                  </button>
+                </div>
+              </div>
+
+              {/* Botones de acción rápida en cabecera */}
+              <div className="flex items-center gap-2.5">
+                {vistaActual === 'detalle' && (
+                  <>
+                    <button
+                      onClick={() => setVistaActual('listado')}
+                      className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 flex items-center gap-1.5 transition-colors"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      Listado
+                    </button>
+
+                    {modoEdicion ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleCancelarEdicion}
+                          className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={handleGuardarComoBorradorDirecto}
+                          className="hidden sm:inline-flex px-3 py-1.5 text-xs text-amber-200 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-lg transition-colors font-medium items-center gap-1"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          Guardar borrador
+                        </button>
+                        <button
+                          onClick={handleSolicitarGuardar}
+                          className="px-3.5 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold shadow flex items-center gap-1.5 transition-all"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          Guardar cambios
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {presupuesto.esEditableDirecto ? (
+                          <button
+                            onClick={handleIniciarEdicion}
+                            className="px-3.5 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold shadow flex items-center gap-1.5 transition-all"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Editar presupuesto
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setModalNuevaVersionAbierto(true)}
+                            className="px-3.5 py-1.5 text-xs text-white bg-purple-600 hover:bg-purple-500 rounded-lg font-semibold shadow flex items-center gap-1.5 transition-all"
+                          >
+                            <GitBranch className="w-3.5 h-3.5" />
+                            Crear nueva versión editable
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {vistaActual === 'listado' && (
+                  <button
+                    onClick={() => {
+                      setVistaActual('detalle');
+                      handleIniciarEdicion();
+                    }}
+                    className="px-3.5 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold shadow flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Nuevo presupuesto
+                  </button>
+                )}
+              </div>
+
+            </div>
+          </header>
+
+          {/* Toast Notification */}
+          {toast && (
+            <div className="fixed bottom-5 right-5 z-50 animate-bounce shadow-2xl">
+              <div className={`px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2.5 shadow-lg border ${
+                toast.tipo === 'exito' ? 'bg-emerald-900 text-emerald-100 border-emerald-700' :
+                toast.tipo === 'error' ? 'bg-rose-900 text-rose-100 border-rose-700' :
+                'bg-slate-900 text-slate-100 border-slate-700'
+              }`}>
+                {toast.tipo === 'exito' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                {toast.tipo === 'error' && <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                {toast.tipo === 'info' && <Info className="w-4 h-4 text-sky-400" />}
+                <span>{toast.mensaje}</span>
+                <button onClick={() => setToast(null)} className="ml-2 text-slate-400 hover:text-white">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ==========================================
+              VISTA PRINCIPAL: LISTADO DE PRESUPUESTOS
+             ========================================== */}
+          {vistaActual === 'listado' && (
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+              <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Listado de Presupuestos & Cotizaciones ETT</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Control de propuestas comerciales, tarifas por puesto y márgenes de contribución.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por cliente o código..."
+                      className="pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabla de listado con badges de editable */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                  <thead className="bg-slate-50 font-semibold text-slate-700 uppercase tracking-wider">
+                    <tr>
+                      <th className="px-5 py-3">Código & Versión</th>
+                      <th className="px-5 py-3">Empresa Cliente / Título</th>
+                      <th className="px-5 py-3">Puestos</th>
+                      <th className="px-5 py-3">Tarifa Media</th>
+                      {rolUsuario === 'direccion' && <th className="px-5 py-3">Margen %</th>}
+                      <th className="px-5 py-3">Validez</th>
+                      <th className="px-5 py-3">Estado</th>
+                      <th className="px-5 py-3 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {DEMO_LISTADO_PRESUPUESTOS.map(p => (
+                      <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-5 py-3.5 whitespace-nowrap font-medium text-indigo-600">
+                          {p.id}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="font-semibold text-slate-900">{p.cliente}</div>
+                          <div className="text-[11px] text-slate-500 line-clamp-1">{p.titulo}</div>
+                        </td>
+                        <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{p.puestosCount} perfil(es)</span>
+                        </td>
+                        <td className="px-5 py-3.5 whitespace-nowrap font-semibold text-slate-800">
+                          {p.tarifaMedia.toFixed(2)} €/h
+                        </td>
+                        {rolUsuario === 'direccion' && (
+                          <td className="px-5 py-3.5 whitespace-nowrap font-semibold text-emerald-600">
+                            {p.margenPct.toFixed(1)} %
+                          </td>
+                        )}
+                        <td className="px-5 py-3.5 whitespace-nowrap text-slate-500">
+                          {p.fechaValidez}
+                        </td>
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          {renderBadgeEstado(p.estado)}
+                        </td>
+                        <td className="px-5 py-3.5 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {p.esEditableDirecto ? (
+                              <button
+                                onClick={() => {
+                                  setVistaActual('detalle');
+                                  handleIniciarEdicion();
+                                }}
+                                className="px-2.5 py-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors flex items-center gap-1"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                Abrir y editar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setVistaActual('detalle')}
+                                className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors flex items-center gap-1"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Ver detalle
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </main>
+          )}
+
+          {/* ==========================================
+              VISTA PRINCIPAL: DETALLE DEL PRESUPUESTO
+             ========================================== */}
+          {vistaActual === 'detalle' && (
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full flex flex-col gap-5">
+
+              {/* BARRA SUPERIOR DE INFORMACIÓN DE DETALLE */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  
+                  {/* Identificación y Título */}
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        {datosActivos.codigoVersion}
+                      </span>
+                      {renderBadgeEstado(datosActivos.estado)}
+                      
+                      {modoEdicion && (
+                        <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[11px] font-semibold border border-amber-200 flex items-center gap-1">
+                          <Edit3 className="w-3 h-3" /> Modo Edición Activo
+                        </span>
+                      )}
+
+                      {!datosActivos.esEditableDirecto && (
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-200 flex items-center gap-1">
+                          <Lock className="w-3 h-3" /> Versión Bloqueada (Requiere nueva versión)
+                        </span>
+                      )}
+                    </div>
+
+                    {modoEdicion ? (
+                      <div className="pt-1">
+                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block mb-1">Título del presupuesto</label>
+                        <input
+                          type="text"
+                          value={formularioPresupuesto.titulo}
+                          onChange={(e) => handleActualizarCampoPresupuesto('titulo', e.target.value)}
+                          className="w-full text-base font-bold text-slate-900 border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-amber-50/30"
+                          placeholder="Nombre del servicio o campaña..."
+                        />
+                      </div>
+                    ) : (
+                      <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                        {presupuesto.titulo}
+                      </h2>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-600 pt-0.5">
+                      <span className="flex items-center gap-1 font-medium text-slate-800">
+                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                        {datosActivos.cliente}
+                      </span>
+                      <span className="text-slate-300">•</span>
+                      <span className="flex items-center gap-1">
+                        <User className="w-3.5 h-3.5 text-slate-400" />
+                        {datosActivos.contacto}
+                      </span>
+                      <span className="text-slate-300">•</span>
+                      <span className="flex items-center gap-1 text-slate-500">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        Validez: {datosActivos.fechaValidez}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Tarjetas resumen KPI de cabecera */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200/80">
+                    <div>
+                      <div className="text-[11px] text-slate-500 font-medium">Tarifa Media</div>
+                      <div className="text-base font-bold text-slate-900">{totalesAgregados.tarifaMedia.toFixed(2)} €/h</div>
+                      <div className="text-[10px] text-slate-400">{datosActivos.posiciones.length} puesto(s)</div>
+                    </div>
+
+                    {rolUsuario === 'direccion' ? (
+                      <>
+                        <div>
+                          <div className="text-[11px] text-slate-500 font-medium">Coste ETT Medio</div>
+                          <div className="text-base font-bold text-slate-700">{totalesAgregados.costeMedio.toFixed(2)} €/h</div>
+                          <div className="text-[10px] text-slate-400">Salario + SSSS + Otros</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-slate-500 font-medium">Margen Bruto/h</div>
+                          <div className="text-base font-bold text-emerald-600">+{totalesAgregados.margenMedioEur.toFixed(2)} €/h</div>
+                          <div className="text-[10px] text-emerald-600 font-semibold">{totalesAgregados.margenMedioPct.toFixed(1)}% margen</div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="col-span-2 flex items-center justify-center bg-slate-100 rounded border border-dashed border-slate-300 p-2 text-center">
+                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                          <Lock className="w-3 h-3" /> Costes protegidos (Rol Comercial)
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col justify-center">
+                      <div className="text-[11px] text-slate-500 font-medium">Puente Operativo</div>
+                      {datosActivos.estado === 'Firmado / Aceptado' ? (
+                        <button
+                          onClick={() => alert('Redirigiendo a pantalla de Peticiones Operativas con datos de presupuesto importados...')}
+                          className="mt-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded flex items-center justify-center gap-1 shadow-sm transition-colors"
+                        >
+                          <CheckCircle2 className="w-3 h-3" /> Crear Petición
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Requiere firma</span>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* NAVEGACIÓN POR PESTAÑAS (Fiel a v2 ERP) */}
+              <div className="border-b border-slate-200 bg-white rounded-t-xl px-4 pt-2 flex flex-wrap gap-1 shadow-xs">
+                {[
+                  { id: 'resumen', label: 'Resumen Comercial', icon: FileText },
+                  { id: 'posiciones', label: `Posiciones Cotizadas (${datosActivos.posiciones.length})`, icon: Briefcase },
+                  { id: 'escandallo', label: 'Escandallo Económico & Costes', icon: Calculator, badge: rolUsuario === 'direccion' ? 'Dirección' : null },
+                  { id: 'condiciones', label: 'Condiciones Comerciales', icon: ShieldCheck },
+                  { id: 'historial', label: 'Historial de Versiones', icon: History },
+                  { id: 'documentos', label: 'Documentos & PDF', icon: Download },
+                  { id: 'auditoria', label: 'Auditoría & Actividad', icon: GitBranch }
+                ].map(tab => {
+                  const Icon = tab.icon;
+                  const activo = pestanaActiva === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setPestanaActiva(tab.id)}
+                      className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                        activo
+                          ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-lg'
+                          : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${activo ? 'text-indigo-600' : 'text-slate-400'}`} />
+                      <span>{tab.label}</span>
+                      {tab.badge && (
+                        <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-normal">
+                          {tab.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* CONTENIDO DE LAS PESTAÑAS */}
+              <div className="bg-white rounded-b-xl shadow-sm border border-slate-200 p-6">
+                
+                {/* ----------------------------------------------------
+                    PESTAÑA 1: RESUMEN COMERCIAL
+                   ---------------------------------------------------- */}
+                {pestanaActiva === 'resumen' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Datos Generales & Empresa Cliente</h3>
+                        <p className="text-xs text-slate-500">Parámetros principales de la oferta comercial y personas de contacto.</p>
+                      </div>
+                      {!modoEdicion && presupuesto.esEditableDirecto && (
+                        <button
+                          onClick={handleIniciarEdicion}
+                          className="px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1.5 self-start"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" /> Editar Datos
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      
+                      {/* Tarjeta Cliente */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <Building2 className="w-4 h-4 text-indigo-600" /> Datos de la Empresa
+                        </div>
+
+                        {modoEdicion ? (
+                          <div className="space-y-2.5">
+                            <div>
+                              <label className="text-[11px] font-medium text-slate-500 block">Razón Social Cliente</label>
+                              <input
+                                type="text"
+                                value={formularioPresupuesto.cliente}
+                                onChange={(e) => handleActualizarCampoPresupuesto('cliente', e.target.value)}
+                                className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-medium text-slate-500 block">CIF / NIF</label>
+                              <input
+                                type="text"
+                                value={formularioPresupuesto.cif}
+                                onChange={(e) => handleActualizarCampoPresupuesto('cif', e.target.value)}
+                                className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs space-y-1.5">
+                            <div><span className="text-slate-400">Cliente:</span> <span className="font-semibold text-slate-800">{presupuesto.cliente}</span></div>
+                            <div><span className="text-slate-400">CIF:</span> <span className="font-mono text-slate-700">{presupuesto.cif}</span></div>
+                            <div><span className="text-slate-400">Sector:</span> <span className="text-slate-700">Logística & Distribución</span></div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tarjeta Contacto */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <User className="w-4 h-4 text-indigo-600" /> Contacto & Interlocutor
+                        </div>
+
+                        {modoEdicion ? (
+                          <div className="space-y-2.5">
+                            <div>
+                              <label className="text-[11px] font-medium text-slate-500 block">Persona de Contacto</label>
+                              <input
+                                type="text"
+                                value={formularioPresupuesto.contacto}
+                                onChange={(e) => handleActualizarCampoPresupuesto('contacto', e.target.value)}
+                                className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-medium text-slate-500 block">Email</label>
+                              <input
+                                type="email"
+                                value={formularioPresupuesto.emailContacto}
+                                onChange={(e) => handleActualizarCampoPresupuesto('emailContacto', e.target.value)}
+                                className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs space-y-1.5">
+                            <div><span className="text-slate-400">Contacto:</span> <span className="font-semibold text-slate-800">{presupuesto.contacto}</span></div>
+                            <div><span className="text-slate-400">Email:</span> <span className="text-indigo-600">{presupuesto.emailContacto}</span></div>
+                            <div><span className="text-slate-400">Teléfono:</span> <span className="text-slate-700">{presupuesto.telefonoContacto}</span></div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tarjeta Gestión Comercial */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <Briefcase className="w-4 h-4 text-indigo-600" /> Gestión Comercial ETT
+                        </div>
+
+                        {modoEdicion ? (
+                          <div className="space-y-2.5">
+                            <div>
+                              <label className="text-[11px] font-medium text-slate-500 block">Responsable Comercial</label>
+                              <input
+                                type="text"
+                                value={formularioPresupuesto.comercial}
+                                onChange={(e) => handleActualizarCampoPresupuesto('comercial', e.target.value)}
+                                className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[11px] font-medium text-slate-500 block">Emisión</label>
+                                <input
+                                  type="date"
+                                  value={formularioPresupuesto.fechaEmision}
+                                  onChange={(e) => handleActualizarCampoPresupuesto('fechaEmision', e.target.value)}
+                                  className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-slate-500 block">Validez</label>
+                                <input
+                                  type="date"
+                                  value={formularioPresupuesto.fechaValidez}
+                                  onChange={(e) => handleActualizarCampoPresupuesto('fechaValidez', e.target.value)}
+                                  className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs space-y-1.5">
+                            <div><span className="text-slate-400">KAM Responsable:</span> <span className="font-semibold text-slate-800">{presupuesto.comercial}</span></div>
+                            <div><span className="text-slate-400">Fecha Emisión:</span> <span className="text-slate-700">{presupuesto.fechaEmision}</span></div>
+                            <div><span className="text-slate-400">Válido hasta:</span> <span className="font-semibold text-amber-700">{presupuesto.fechaValidez}</span></div>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+
+                    {/* Resumen rápido de puestos cotizados en Resumen */}
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Perfiles Cotizados en esta Oferta</h4>
+                        <button
+                          onClick={() => setPestanaActiva('posiciones')}
+                          className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
+                        >
+                          Ver detalle y fórmulas <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {calculosPosiciones.map(({ pos, eco }) => (
+                          <div key={pos.id} className="border border-slate-200 rounded-xl p-4 bg-white hover:border-indigo-300 transition-all flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-start justify-between gap-2">
+                                <h5 className="font-bold text-slate-900 text-sm">{pos.nombre}</h5>
+                                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {eco.tarifaPVP.toFixed(2)} €/h
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-1 line-clamp-2">{pos.descripcionTareas || 'Sin descripción de tareas.'}</p>
+                            </div>
+
+                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                              <span className="text-slate-500">Jornada 8h: <strong className="text-slate-800">{eco.tarifaJornadaCalculada.toFixed(2)} €/día</strong></span>
+                              {rolUsuario === 'direccion' && (
+                                <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">
+                                  Margen: +{eco.margenEuroHora.toFixed(2)} €/h ({eco.margenPorcentaje.toFixed(1)}%)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Observaciones comerciales */}
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <div className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-indigo-600" /> Observaciones y Cláusulas Comerciales Especiales
+                      </div>
+                      {modoEdicion ? (
+                        <textarea
+                          rows={3}
+                          value={formularioPresupuesto.observacionesComerciales}
+                          onChange={(e) => handleActualizarCampoPresupuesto('observacionesComerciales', e.target.value)}
+                          className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500"
+                          placeholder="Añade cláusulas específicas de traspaso a plantilla, revisiones salariales o condiciones especiales..."
+                        />
+                      ) : (
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {presupuesto.observacionesComerciales || 'Sin observaciones registradas.'}
+                        </p>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+
+                {/* ----------------------------------------------------
+                    PESTAÑA 2: POSICIONES COTIZADAS (EDITOR DINÁMICO)
+                   ---------------------------------------------------- */}
+                {pestanaActiva === 'posiciones' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Desglose de Posiciones & Perfiles ETT</h3>
+                        <p className="text-xs text-slate-500">Configura salarios base, convenio, categoría profesional y calcula la tarifa por hora ofertada.</p>
+                      </div>
+
+                      <button
+                        onClick={() => handleAbrirDrawerPosicion(null)}
+                        className="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow flex items-center gap-1.5 self-start transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Añadir posición
+                      </button>
+                    </div>
+
+                    {/* Grid de tarjetas de posiciones editables */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                      {calculosPosiciones.map(({ pos, eco }) => (
+                        <div
+                          key={pos.id}
+                          className="bg-white rounded-xl border border-slate-200 hover:border-indigo-200 shadow-xs p-5 transition-all flex flex-col justify-between"
+                        >
+                          <div>
+                            {/* Cabecera de la tarjeta de posición */}
+                            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-bold text-slate-900 text-base">{pos.nombre}</h4>
+                                </div>
+                                <div className="text-xs text-slate-500 mt-0.5">
+                                  {CATALOGOS.convenios.find(c => c.id === pos.convenio)?.label || pos.convenioCustom || pos.convenio}
+                                </div>
+                              </div>
+
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-indigo-700">{eco.tarifaPVP.toFixed(2)} €/h</div>
+                                <div className="text-[11px] text-slate-500">{eco.tarifaJornadaCalculada.toFixed(2)} €/jornada</div>
+                              </div>
+                            </div>
+
+                            {/* Desglose de Parámetros Laborales */}
+                            <div className="grid grid-cols-3 gap-2 py-3.5 text-xs border-b border-slate-100 bg-slate-50/50 rounded-lg p-2.5 my-3">
+                              <div>
+                                <span className="text-slate-400 block text-[10px]">Salario Base Anual</span>
+                                <span className="font-semibold text-slate-800">{Number(pos.salarioBaseAnual).toLocaleString('es-ES')} €</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[10px]">Plus Convenio/mes</span>
+                                <span className="font-semibold text-slate-800">{Number(pos.plusConvenioMes).toFixed(2)} €</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[10px]">Salario Bruto/hora</span>
+                                <span className="font-semibold text-slate-800">{eco.salarioBrutoHora.toFixed(2)} €/h</span>
+                              </div>
+                            </div>
+
+                            {/* Comparativa Económica (Dirección vs Comercial) */}
+                            {rolUsuario === 'direccion' ? (
+                              <div className="space-y-2 py-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-slate-500">Coste Total Empresa ETT (Salario + SSSS + Otros):</span>
+                                  <span className="font-semibold text-slate-700">{eco.costeTotalEmpresaHora.toFixed(2)} €/h</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-slate-500">Margen Neto ETT:</span>
+                                  <span className="font-bold text-emerald-600">
+                                    +{eco.margenEuroHora.toFixed(2)} €/h ({eco.margenPorcentaje.toFixed(1)}%)
+                                  </span>
+                                </div>
+                                
+                                {/* Barra visual de margen */}
+                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
+                                  <div style={{ width: `${(eco.salarioBrutoHora / eco.tarifaPVP) * 100}%` }} className="bg-sky-400" title="Salario Bruto" />
+                                  <div style={{ width: `${(eco.totalCosteSocialHora / eco.tarifaPVP) * 100}%` }} className="bg-amber-400" title="Costes TGSS & Indemnización" />
+                                  <div style={{ width: `${(eco.margenEuroHora / eco.tarifaPVP) * 100}%` }} className="bg-emerald-500" title="Margen ETT" />
+                                </div>
+                                <div className="flex justify-between text-[10px] text-slate-400 pt-0.5">
+                                  <span>Salario: {((eco.salarioBrutoHora / eco.tarifaPVP) * 100).toFixed(0)}%</span>
+                                  <span>Costes Sociales: {((eco.totalCosteSocialHora / eco.tarifaPVP) * 100).toFixed(0)}%</span>
+                                  <span className="text-emerald-600 font-semibold">Margen: {eco.margenPorcentaje.toFixed(1)}%</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="py-2 text-xs text-slate-500 flex items-center justify-between bg-slate-50 px-3 py-2 rounded">
+                                <span>Tarifa calculada conforme a convenio</span>
+                                <span className="font-medium text-indigo-600">Tarifa PVP validada</span>
+                              </div>
+                            )}
+
+                            {pos.descripcionTareas && (
+                              <p className="text-xs text-slate-500 mt-3 pt-2 border-t border-slate-100 line-clamp-2">
+                                <strong className="text-slate-700">Tareas:</strong> {pos.descripcionTareas}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Acciones de la posición */}
+                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-[11px] text-slate-400">ID: {pos.id}</span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleDuplicarPosicion(pos)}
+                                className="px-2.5 py-1 text-xs text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 flex items-center gap-1 transition-colors"
+                                title="Duplicar posición"
+                              >
+                                <Copy className="w-3 h-3" />
+                                Duplicar
+                              </button>
+                              <button
+                                onClick={() => handleAbrirDrawerPosicion(pos)}
+                                className="px-2.5 py-1 text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-200 flex items-center gap-1 font-semibold transition-colors"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleEliminarPosicion(pos.id)}
+                                className="px-2 py-1 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded border border-transparent hover:border-rose-200 transition-colors"
+                                title="Eliminar posición"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      ))}
+                    </div>
+
+                  </div>
+                )}
+
+                {/* ----------------------------------------------------
+                    PESTAÑA 3: ESCANDALLO ECONÓMICO & COSTES
+                   ---------------------------------------------------- */}
+                {pestanaActiva === 'escandallo' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Escandallo Económico & Conceptos de Coste</h3>
+                          <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded">Fórmulas ETT</span>
+                        </div>
+                        <p className="text-xs text-slate-500">Estructura de costes sociales, indemnizaciones legales obligatorias y dotaciones de servicio.</p>
+                      </div>
+
+                      <button
+                        onClick={() => handleAbrirDrawerConcepto(null)}
+                        className="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow flex items-center gap-1.5 self-start"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Añadir concepto no obligatorio
+                      </button>
+                    </div>
+
+                    {/* Tabla de conceptos de escandallo */}
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+                      <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                        <thead className="bg-slate-50 font-semibold text-slate-700">
+                          <tr>
+                            <th className="px-4 py-3">Concepto Económico</th>
+                            <th className="px-4 py-3">Tipo de Cálculo</th>
+                            <th className="px-4 py-3">Valor / Coeficiente</th>
+                            <th className="px-4 py-3">Base de Aplicación</th>
+                            <th className="px-4 py-3">Naturaleza</th>
+                            <th className="px-4 py-3 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {datosActivos.conceptosEscandallo.map(c => (
+                            <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="px-4 py-3.5">
+                                <div className="font-semibold text-slate-900">{c.nombre}</div>
+                                {c.descripcion && <div className="text-[11px] text-slate-500 mt-0.5">{c.descripcion}</div>}
+                              </td>
+                              <td className="px-4 py-3.5 text-slate-700">
+                                {CATALOGOS.tiposConcepto.find(t => t.id === c.tipo)?.label || c.tipoCustom || c.tipo}
+                              </td>
+                              <td className="px-4 py-3.5 font-bold text-indigo-700">
+                                {c.tipo === 'porcentaje' ? `${c.valor} %` : `${Number(c.valor).toFixed(2)} €`}
+                              </td>
+                              <td className="px-4 py-3.5 text-slate-600 text-[11px]">
+                                {CATALOGOS.basesCalculo.find(b => b.id === c.baseCalculo)?.label || c.baseCalculoCustom || c.baseCalculo}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {c.esObligatorioLegal ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                    <Lock className="w-3 h-3" /> Legal ETT (Bloqueado)
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                                    Operativo / Opcional
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => handleAbrirDrawerConcepto(c)}
+                                    className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                                    title="Editar concepto"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  {!c.esObligatorioLegal && (
+                                    <button
+                                      onClick={() => handleEliminarConcepto(c.id)}
+                                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded"
+                                      title="Eliminar concepto"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Explicación de recálculo dinámico */}
+                    <div className="bg-indigo-50/60 rounded-xl p-4 border border-indigo-100 flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                      <div className="text-xs text-indigo-950 space-y-1">
+                        <strong className="font-semibold text-indigo-900 block">Recálculo automático y trazabilidad económica</strong>
+                        <p className="text-slate-600">Cualquier modificación en los porcentajes o en los conceptos fijos por hora se traslada en tiempo real a todas las posiciones cotizadas, actualizando el coste empresa y recalculando el margen sin alterar la tarifa acordada con el cliente a menos que se ajuste manualmente.</p>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* ----------------------------------------------------
+                    PESTAÑA 4: CONDICIONES COMERCIALES (ESTRUCTURADO)
+                   ---------------------------------------------------- */}
+                {pestanaActiva === 'condiciones' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Condiciones Contractuales & Forma de Pago</h3>
+                        <p className="text-xs text-slate-500">Define los términos de facturación, plazos de garantía y cláusulas de servicio con catálogo normalizado.</p>
+                      </div>
+                      {!modoEdicion && presupuesto.esEditableDirecto && (
+                        <button
+                          onClick={handleIniciarEdicion}
+                          className="px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1.5"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" /> Editar Condiciones
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      
+                      {/* Forma de Pago */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <DollarSign className="w-4 h-4 text-indigo-600" /> Forma de Pago & Plazo de Facturación
+                        </label>
+                        
+                        {modoEdicion ? (
+                          <div className="space-y-2">
+                            <select
+                              value={formularioPresupuesto.formaPago}
+                              onChange={(e) => handleActualizarCampoPresupuesto('formaPago', e.target.value)}
+                              className="w-full text-xs bg-white border border-slate-300 rounded-md px-3 py-2 font-medium"
+                            >
+                              {CATALOGOS.formasPago.map(f => (
+                                <option key={f.id} value={f.id}>{f.label}</option>
+                              ))}
+                            </select>
+
+                            {formularioPresupuesto.formaPago === 'otro' && (
+                              <input
+                                type="text"
+                                placeholder="Escribe la forma de pago personalizada..."
+                                value={formularioPresupuesto.formaPagoCustom}
+                                onChange={(e) => handleActualizarCampoPresupuesto('formaPagoCustom', e.target.value)}
+                                className="w-full text-xs bg-white border border-amber-300 rounded-md px-3 py-1.5 mt-1 focus:ring-2 focus:ring-amber-500"
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200 font-medium">
+                            {formularioPresupuesto.formaPago === 'otro' 
+                              ? (formularioPresupuesto.formaPagoCustom || 'Personalizado no especificado')
+                              : CATALOGOS.formasPago.find(f => f.id === datosActivos.formaPago)?.label}
+                          </div>
+                        )}
+                        <p className="text-[11px] text-slate-500">Conforme a la Ley 15/2010 de lucha contra la morosidad en operaciones comerciales.</p>
+                      </div>
+
+                      {/* Garantía de Sustitución */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-indigo-600" /> SLA & Garantía de Sustitución de Personal
+                        </label>
+
+                        {modoEdicion ? (
+                          <div className="space-y-2">
+                            <select
+                              value={formularioPresupuesto.garantiaSustitucion}
+                              onChange={(e) => handleActualizarCampoPresupuesto('garantiaSustitucion', e.target.value)}
+                              className="w-full text-xs bg-white border border-slate-300 rounded-md px-3 py-2 font-medium"
+                            >
+                              {CATALOGOS.garantiasSustitucion.map(g => (
+                                <option key={g.id} value={g.id}>{g.label}</option>
+                              ))}
+                            </select>
+
+                            {formularioPresupuesto.garantiaSustitucion === 'otro' && (
+                              <input
+                                type="text"
+                                placeholder="Escribe la garantía personalizada..."
+                                value={formularioPresupuesto.garantiaSustitucionCustom}
+                                onChange={(e) => handleActualizarCampoPresupuesto('garantiaSustitucionCustom', e.target.value)}
+                                className="w-full text-xs bg-white border border-amber-300 rounded-md px-3 py-1.5 mt-1 focus:ring-2 focus:ring-amber-500"
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200 font-medium">
+                            {formularioPresupuesto.garantiaSustitucion === 'otro'
+                              ? (formularioPresupuesto.garantiaSustitucionCustom || 'Garantía personalizada')
+                              : CATALOGOS.garantiasSustitucion.find(g => g.id === datosActivos.garantiaSustitucion)?.label}
+                          </div>
+                        )}
+                        <p className="text-[11px] text-slate-500">Plazo máximo de respuesta ante no adecuación o baja voluntaria del trabajador puesto a disposición.</p>
+                      </div>
+
+                      {/* Modalidad de Contratación */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <Briefcase className="w-4 h-4 text-indigo-600" /> Modalidad del Contrato de Puesta a Disposición (CPD)
+                        </label>
+
+                        {modoEdicion ? (
+                          <div className="space-y-2">
+                            <select
+                              value={formularioPresupuesto.modalidad}
+                              onChange={(e) => handleActualizarCampoPresupuesto('modalidad', e.target.value)}
+                              className="w-full text-xs bg-white border border-slate-300 rounded-md px-3 py-2 font-medium"
+                            >
+                              {CATALOGOS.modalidades.map(m => (
+                                <option key={m.id} value={m.id}>{m.label}</option>
+                              ))}
+                            </select>
+
+                            {formularioPresupuesto.modalidad === 'otro' && (
+                              <input
+                                type="text"
+                                placeholder="Escribe la modalidad personalizada..."
+                                value={formularioPresupuesto.modalidadCustom}
+                                onChange={(e) => handleActualizarCampoPresupuesto('modalidadCustom', e.target.value)}
+                                className="w-full text-xs bg-white border border-amber-300 rounded-md px-3 py-1.5 mt-1"
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200 font-medium">
+                            {CATALOGOS.modalidades.find(m => m.id === datosActivos.modalidad)?.label || datosActivos.modalidadCustom}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Moneda e Impuestos */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <Layers className="w-4 h-4 text-indigo-600" /> Moneda & Régimen de IVA
+                        </label>
+
+                        {modoEdicion ? (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[11px] text-slate-500 block mb-1">Moneda</label>
+                              <select
+                                value={formularioPresupuesto.moneda}
+                                onChange={(e) => handleActualizarCampoPresupuesto('moneda', e.target.value)}
+                                className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5"
+                              >
+                                {CATALOGOS.monedas.map(mon => (
+                                  <option key={mon.id} value={mon.id}>{mon.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[11px] text-slate-500 block mb-1">Tipo de IVA</label>
+                              <select
+                                value={formularioPresupuesto.iva}
+                                onChange={(e) => handleActualizarCampoPresupuesto('iva', e.target.value)}
+                                className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5"
+                              >
+                                {CATALOGOS.tiposIva.map(iv => (
+                                  <option key={iv.id} value={iv.id}>{iv.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3 text-xs bg-white p-3 rounded-lg border border-slate-200 font-medium">
+                            <div>Moneda: <strong className="text-slate-900">{datosActivos.moneda}</strong></div>
+                            <div>IVA: <strong className="text-slate-900">{CATALOGOS.tiposIva.find(i => i.id === datosActivos.iva)?.label}</strong></div>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* ----------------------------------------------------
+                    PESTAÑA 5: HISTORIAL DE VERSIONES
+                   ---------------------------------------------------- */}
+                {pestanaActiva === 'historial' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Historial de Revisiones & Versiones del Presupuesto</h3>
+                        <p className="text-xs text-slate-500">Trazabilidad inmutable de ofertas emitidas al cliente.</p>
+                      </div>
+
+                      <button
+                        onClick={() => setModalNuevaVersionAbierto(true)}
+                        className="px-3.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1.5"
+                      >
+                        <GitBranch className="w-3.5 h-3.5" />
+                        Generar nueva versión manual
+                      </button>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                      <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                        <thead className="bg-slate-50 font-semibold text-slate-700">
+                          <tr>
+                            <th className="px-4 py-3">Código Versión</th>
+                            <th className="px-4 py-3">Fecha</th>
+                            <th className="px-4 py-3">Autor</th>
+                            <th className="px-4 py-3">Tarifa Media</th>
+                            <th className="px-4 py-3">Margen %</th>
+                            <th className="px-4 py-3">Estado</th>
+                            <th className="px-4 py-3">Comentario</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {DEMO_HISTORIAL_VERSIONES.map(v => (
+                            <tr key={v.version} className="hover:bg-slate-50">
+                              <td className="px-4 py-3 font-mono font-bold text-indigo-600">{v.version}</td>
+                              <td className="px-4 py-3 text-slate-600">{v.fecha}</td>
+                              <td className="px-4 py-3 text-slate-800 font-medium">{v.creador}</td>
+                              <td className="px-4 py-3 font-semibold text-slate-900">{v.tarifaMedia}</td>
+                              <td className="px-4 py-3 font-semibold text-emerald-600">{v.margenMedio}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium text-[11px]">{v.estado}</span>
+                              </td>
+                              <td className="px-4 py-3 text-slate-500 text-[11px]">{v.comentario}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ----------------------------------------------------
+                    PESTAÑA 6: DOCUMENTOS & PDF
+                   ---------------------------------------------------- */}
+                {pestanaActiva === 'documentos' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Documentación Comercial & Plantillas PDF</h3>
+                        <p className="text-xs text-slate-500">Genera la propuesta formal para firma digital con el cliente.</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      
+                      {/* Documento 1: Propuesta Económica Formal */}
+                      <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-4">
+                        <div className="p-3 rounded-lg bg-rose-100 text-rose-700">
+                          <FileText className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1 flex-1">
+                          <h4 className="font-bold text-slate-900 text-xs">Propuesta Comercial y Tarifario ETT ({datosActivos.codigoVersion}.pdf)</h4>
+                          <p className="text-[11px] text-slate-500">Documento de oferta comercial con desglose de puestos, tarifas PVP, SLA de sustitución y cláusulas legales.</p>
+                          <div className="pt-2 flex items-center gap-2">
+                            <button
+                              onClick={() => mostrarToast('Descargando PDF de presupuesto comercial...', 'info')}
+                              className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium flex items-center gap-1 shadow-xs"
+                            >
+                              <Download className="w-3.5 h-3.5" /> Descargar PDF
+                            </button>
+                            <button
+                              onClick={() => mostrarToast('Enviando enlace de firma electrónica DocuSign a ' + datosActivos.emailContacto, 'exito')}
+                              className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-white rounded font-medium flex items-center gap-1"
+                            >
+                              <Send className="w-3.5 h-3.5" /> Enviar para Firma
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Documento 2: Anexo Escandallo Interno */}
+                      <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-4">
+                        <div className="p-3 rounded-lg bg-emerald-100 text-emerald-700">
+                          <FileSpreadsheet className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1 flex-1">
+                          <h4 className="font-bold text-slate-900 text-xs">Hoja de Escandallo y Margen Interno (Uso Dirección)</h4>
+                          <p className="text-[11px] text-slate-500">Desglose confidencial de costes salariales brutos, cotizaciones TGSS, costes de absentismo y contribución neta.</p>
+                          <div className="pt-2">
+                            <button
+                              onClick={() => mostrarToast('Exportando escandallo en formato Excel...', 'info')}
+                              className="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded font-medium flex items-center gap-1 shadow-xs"
+                            >
+                              <Download className="w-3.5 h-3.5" /> Exportar Escandallo Excel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* ----------------------------------------------------
+                    PESTAÑA 7: AUDITORÍA & ACTIVIDAD
+                   ---------------------------------------------------- */}
+                {pestanaActiva === 'auditoria' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Registro de Auditoría & Trazabilidad de Cambios</h3>
+                        <p className="text-xs text-slate-500">Historial cronológico de modificaciones realizadas en el presupuesto.</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {datosActivos.auditoria.map(log => (
+                        <div key={log.id} className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/70 text-xs flex items-start gap-3">
+                          <div className="p-1.5 rounded-full bg-indigo-100 text-indigo-700 mt-0.5">
+                            <Clock className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="space-y-0.5 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-800">{log.accion}</span>
+                              <span className="text-[11px] text-slate-400 font-mono">{log.fecha}</span>
+                            </div>
+                            <div className="text-slate-600">{log.detalle}</div>
+                            <div className="text-[11px] text-indigo-600 font-medium pt-0.5">Por: {log.usuario}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+            </main>
+          )}
+
+          {/* ==========================================
+              DRAWER LATERAL: EDICIÓN / ALTA DE POSICIÓN
+             ========================================== */}
+          {drawerPosicionAbierto && posicionEnEdicion && (
+            <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-xs">
+              <div className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+                
+                {/* Cabecera del Drawer */}
+                <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="w-5 h-5 text-indigo-400" />
+                    <div>
+                      <h3 className="text-sm font-bold">
+                        {formularioPresupuesto.posiciones.some(p => p.id === posicionEnEdicion.id) ? 'Editar Posición Cotizada' : 'Añadir Nueva Posición'}
+                      </h3>
+                      <p className="text-[11px] text-slate-400">Convenio, categoría y cálculo de tarifas</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setDrawerPosicionAbierto(false)}
+                    className="text-slate-400 hover:text-white p-1 rounded-md"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Formulario en scroll */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
+                  
+                  {/* Nombre y Perfil */}
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-slate-800 block">Nombre del Puesto / Perfil ETT *</label>
+                    <input
+                      type="text"
+                      value={posicionEnEdicion.nombre}
+                      onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, nombre: e.target.value }))}
+                      placeholder="Ej: Operario/a de Almacén, Carretillero/a..."
+                      className="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 font-medium focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  {/* Convenio Colectivo con Selector Normalizado */}
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-slate-800 block">Convenio Colectivo de Aplicación *</label>
+                    <select
+                      value={posicionEnEdicion.convenio}
+                      onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, convenio: e.target.value }))}
+                      className="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                    >
+                      {CATALOGOS.convenios.map(c => (
+                        <option key={c.id} value={c.id}>{c.label}</option>
+                      ))}
+                    </select>
+
+                    {posicionEnEdicion.convenio === 'otro' && (
+                      <div className="pt-1">
+                        <label className="text-[11px] text-amber-700 font-medium block">Especificar Convenio Personalizado *</label>
+                        <input
+                          type="text"
+                          value={posicionEnEdicion.convenioCustom}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, convenioCustom: e.target.value }))}
+                          placeholder="Nombre exacto del convenio..."
+                          className="w-full text-xs border border-amber-300 rounded-lg px-3 py-1.5 bg-amber-50/40"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Categoría Profesional y Grupo */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-800 block">Categoría Profesional</label>
+                      <select
+                        value={posicionEnEdicion.categoria}
+                        onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, categoria: e.target.value }))}
+                        className="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                      >
+                        {(CATALOGOS.categorias[posicionEnEdicion.convenio] || CATALOGOS.categorias.default).map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.label}</option>
+                        ))}
+                      </select>
+
+                      {posicionEnEdicion.categoria === 'otro' && (
+                        <input
+                          type="text"
+                          value={posicionEnEdicion.categoriaCustom}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, categoriaCustom: e.target.value }))}
+                          placeholder="Categoría personalizada..."
+                          className="w-full text-xs border border-amber-300 rounded-lg px-2.5 py-1.5 mt-1"
+                        />
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-800 block">Grupo / Nivel</label>
+                      <select
+                        value={posicionEnEdicion.grupoNivel}
+                        onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, grupoNivel: e.target.value }))}
+                        className="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                      >
+                        {CATALOGOS.gruposNivel.map(g => (
+                          <option key={g.id} value={g.id}>{g.label}</option>
+                        ))}
+                      </select>
+
+                      {posicionEnEdicion.grupoNivel === 'otro' && (
+                        <input
+                          type="text"
+                          value={posicionEnEdicion.grupoNivelCustom}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, grupoNivelCustom: e.target.value }))}
+                          placeholder="Grupo/Nivel personalizado..."
+                          className="w-full text-xs border border-amber-300 rounded-lg px-2.5 py-1.5 mt-1"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Parámetros Salariales */}
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Parámetros Retributivos de Convenio</h4>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] text-slate-600 block mb-1">Salario Base Anual (€)</label>
+                        <input
+                          type="number"
+                          step="50"
+                          value={posicionEnEdicion.salarioBaseAnual}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, salarioBaseAnual: parseFloat(e.target.value) || 0 }))}
+                          className="w-full text-xs border border-slate-300 rounded-md px-3 py-1.5 bg-white font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-600 block mb-1">Plus Convenio / Mes (€)</label>
+                        <input
+                          type="number"
+                          step="10"
+                          value={posicionEnEdicion.plusConvenioMes}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, plusConvenioMes: parseFloat(e.target.value) || 0 }))}
+                          className="w-full text-xs border border-slate-300 rounded-md px-3 py-1.5 bg-white font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-500 block mb-1">Pagas Anuales</label>
+                        <input
+                          type="number"
+                          value={posicionEnEdicion.pagasAnuales}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, pagasAnuales: parseInt(e.target.value) || 12 }))}
+                          className="w-full text-xs border border-slate-300 rounded-md px-2 py-1.5 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 block mb-1">Horas Anuales</label>
+                        <input
+                          type="number"
+                          value={posicionEnEdicion.horasAnuales}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, horasAnuales: parseInt(e.target.value) || 1784 }))}
+                          className="w-full text-xs border border-slate-300 rounded-md px-2 py-1.5 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 block mb-1">Horas / Día</label>
+                        <input
+                          type="number"
+                          value={posicionEnEdicion.horasDiaCalculo}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, horasDiaCalculo: parseFloat(e.target.value) || 8 }))}
+                          className="w-full text-xs border border-slate-300 rounded-md px-2 py-1.5 bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tarifa Ofertada y Simulación en Vivo */}
+                  <div className="p-4 bg-indigo-50/70 rounded-xl border border-indigo-200 space-y-3">
+                    <h4 className="font-bold text-indigo-900 text-xs uppercase tracking-wider">Tarifa Ofertada & Simulación de Margen</h4>
+                    
+                    <div className="grid grid-cols-2 gap-3 items-center">
+                      <div>
+                        <label className="text-xs font-bold text-indigo-950 block mb-1">Tarifa Hora Ofertada (€/h) *</label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          value={posicionEnEdicion.tarifaHoraOfertada}
+                          onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, tarifaHoraOfertada: parseFloat(e.target.value) || 0 }))}
+                          className="w-full text-sm font-bold text-indigo-700 bg-white border border-indigo-300 rounded-lg px-3 py-2 shadow-inner focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-lg border border-indigo-100 text-xs space-y-1">
+                        {(() => {
+                          const ecoSim = calcularEconomiaPosicion(posicionEnEdicion, formularioPresupuesto.conceptosEscandallo);
+                          return (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-slate-500">Coste ETT:</span>
+                                <span className="font-semibold text-slate-800">{ecoSim.costeTotalEmpresaHora.toFixed(2)} €/h</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-500">Margen ETT:</span>
+                                <span className="font-bold text-emerald-600">
+                                  +{ecoSim.margenEuroHora.toFixed(2)} €/h ({ecoSim.margenPorcentaje.toFixed(1)}%)
+                                </span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Descripción de Tareas */}
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-slate-800 block">Descripción Operativa de Funciones</label>
+                    <textarea
+                      rows={2}
+                      value={posicionEnEdicion.descripcionTareas}
+                      onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, descripcionTareas: e.target.value }))}
+                      placeholder="Funciones principales requeridas por el cliente..."
+                      className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                    />
+                  </div>
+
+                </div>
+
+                {/* Pie del Drawer */}
+                <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setDrawerPosicionAbierto(false)}
+                    className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleGuardarPosicion(posicionEnEdicion)}
+                    className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Guardar posición
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ==========================================
+              DRAWER LATERAL: EDICIÓN / ALTA DE CONCEPTO
+             ========================================== */}
+          {drawerConceptoAbierto && conceptoEnEdicion && (
+            <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-xs">
+              <div className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+                
+                {/* Cabecera */}
+                <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-indigo-400" />
+                    <div>
+                      <h3 className="text-sm font-bold">
+                        {formularioPresupuesto.conceptosEscandallo.some(c => c.id === conceptoEnEdicion.id) ? 'Editar Concepto Económico' : 'Añadir Concepto al Escandallo'}
+                      </h3>
+                      <p className="text-[11px] text-slate-400">Parámetros de coste, provisión o dotación</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setDrawerConceptoAbierto(false)}
+                    className="text-slate-400 hover:text-white p-1 rounded-md"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Formulario */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+                  
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-slate-800 block">Nombre del Concepto *</label>
+                    <input
+                      type="text"
+                      value={conceptoEnEdicion.nombre}
+                      disabled={conceptoEnEdicion.esObligatorioLegal}
+                      onChange={(e) => setConceptoEnEdicion(prev => ({ ...prev, nombre: e.target.value }))}
+                      placeholder="Ej: Plus Turnicidad, Provisión Vestuario..."
+                      className="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 font-medium disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-800 block">Tipo de Aplicación</label>
+                      <select
+                        value={conceptoEnEdicion.tipo}
+                        disabled={conceptoEnEdicion.esObligatorioLegal}
+                        onChange={(e) => setConceptoEnEdicion(prev => ({ ...prev, tipo: e.target.value }))}
+                        className="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white disabled:bg-slate-100"
+                      >
+                        {CATALOGOS.tiposConcepto.map(t => (
+                          <option key={t.id} value={t.id}>{t.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-800 block">Valor Numérico *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={conceptoEnEdicion.valor}
+                        onChange={(e) => setConceptoEnEdicion(prev => ({ ...prev, valor: parseFloat(e.target.value) || 0 }))}
+                        className="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 font-bold text-indigo-700 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-slate-800 block">Base de Cálculo</label>
+                    <select
+                      value={conceptoEnEdicion.baseCalculo}
+                      disabled={conceptoEnEdicion.esObligatorioLegal}
+                      onChange={(e) => setConceptoEnEdicion(prev => ({ ...prev, baseCalculo: e.target.value }))}
+                      className="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white disabled:bg-slate-100"
+                    >
+                      {CATALOGOS.basesCalculo.map(b => (
+                        <option key={b.id} value={b.id}>{b.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-slate-800 block">Descripción / Justificación Técnica</label>
+                    <textarea
+                      rows={3}
+                      value={conceptoEnEdicion.descripcion}
+                      onChange={(e) => setConceptoEnEdicion(prev => ({ ...prev, descripcion: e.target.value }))}
+                      placeholder="Explica el origen normativo o la causa del coste..."
+                      className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                    />
+                  </div>
+
+                  {conceptoEnEdicion.esObligatorioLegal && (
+                    <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[11px] flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>Este concepto es legalmente preceptivo para la contratación vía ETT y solo permite ajustar el coeficiente según la tarifa aplicable de la TGSS.</span>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Pie */}
+                <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setDrawerConceptoAbierto(false)}
+                    className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleGuardarConcepto(conceptoEnEdicion)}
+                    className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Guardar concepto
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ==========================================
+              MODAL: RESUMEN DE CAMBIOS (DIFF MODAL ANTES DE GUARDAR)
+             ========================================== */}
+          {modalResumenCambiosAbierto && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+                
+                {/* Cabecera */}
+                <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <GitBranch className="w-5 h-5 text-indigo-400" />
+                    <div>
+                      <h3 className="font-bold text-sm">Resumen de Cambios a Guardar</h3>
+                      <p className="text-[11px] text-slate-400">Verifica las modificaciones que quedarán registradas en auditoría</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setModalResumenCambiosAbierto(false)} className="text-slate-400 hover:text-white">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Contenido Diff */}
+                <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto text-xs">
+                  {cambiosPendientes.length === 0 ? (
+                    <div className="text-center py-6 text-slate-500">
+                      <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                      <p className="font-semibold text-slate-700">No se han detectado modificaciones en los campos principales.</p>
+                      <p className="text-[11px] text-slate-400">Puedes guardar para refrescar la fecha de revisión técnica.</p>
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                      <table className="min-w-full divide-y divide-slate-200 text-left">
+                        <thead className="bg-slate-50 font-semibold text-slate-700">
+                          <tr>
+                            <th className="px-4 py-2.5">Campo / Sección</th>
+                            <th className="px-4 py-2.5 text-rose-700">Valor Anterior</th>
+                            <th className="px-4 py-2.5 text-emerald-700">Nuevo Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {cambiosPendientes.map((diff, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50">
+                              <td className="px-4 py-2.5 font-medium text-slate-900">{diff.campo}</td>
+                              <td className="px-4 py-2.5 text-slate-500 bg-rose-50/30 line-through">{diff.anterior}</td>
+                              <td className="px-4 py-2.5 font-semibold text-emerald-700 bg-emerald-50/30">{diff.nuevo}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-[11px] text-slate-600">
+                    <strong>Auditoría ETT:</strong> Al confirmar, se generará una entrada con tu usuario (<span className="text-indigo-600 font-medium">{rolUsuario === 'direccion' ? 'Dirección' : 'Elena Navarro'}</span>) y marca de tiempo exacta.
+                  </div>
+                </div>
+
+                {/* Pie */}
+                <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                  <button
+                    onClick={() => handleConfirmarGuardar(true)}
+                    className="px-3.5 py-2 text-xs font-medium text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors"
+                  >
+                    Guardar como Borrador Provisional
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setModalResumenCambiosAbierto(false)}
+                      className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg"
+                    >
+                      Seguir Editando
+                    </button>
+                    <button
+                      onClick={() => handleConfirmarGuardar(false)}
+                      className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow flex items-center gap-1.5"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      Confirmar y Aplicar Cambios
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ==========================================
+              MODAL: CONFIRMAR ELIMINACIÓN DE POSICIÓN
+             ========================================== */}
+          {modalConfirmarEliminarPosicion && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-full bg-rose-100 text-rose-600 shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">¿Eliminar esta posición cotizada?</h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Esta acción eliminará el puesto y todos sus cálculos salariales del presupuesto en curso.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setModalConfirmarEliminarPosicion(null)}
+                    className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarEliminacionPosicion}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-lg shadow"
+                  >
+                    Eliminar Posición
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==========================================
+              MODAL: CREAR NUEVA VERSIÓN EDITABLE
+             ========================================== */}
+          {modalNuevaVersionAbierto && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4 border border-slate-200">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-full bg-indigo-100 text-indigo-700 shrink-0">
+                    <GitBranch className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-slate-900 text-sm">Crear Nueva Versión Editable (v{presupuesto.versionNumero + 1})</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      El presupuesto actual (<span className="font-mono text-slate-700 font-semibold">{presupuesto.codigoVersion}</span>) se mantendrá en el historial para preservar la trazabilidad contractual con el cliente.
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Se abrirá automáticamente la nueva copia en estado <strong>Borrador</strong> para que puedas editar tarifas, convenios o añadir puestos libremente.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => setModalNuevaVersionAbierto(false)}
+                    className="px-3.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg"
+                  >
+                    Volver sin crear
+                  </button>
+                  <button
+                    onClick={handleCrearNuevaVersion}
+                    className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow flex items-center gap-1.5"
+                  >
+                    <GitBranch className="w-3.5 h-3.5" />
+                    Crear y Editar v{presupuesto.versionNumero + 1}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
