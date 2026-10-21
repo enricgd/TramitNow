@@ -30,7 +30,8 @@ fi
 git -C supabase fetch --depth 1 origin "$SUPABASE_REF"
 git -C supabase checkout -q "$SUPABASE_REF"
 
-mkdir -p proyecto backups
+# UGOS exige que existan todas las rutas montadas antes de crear el Proyecto.
+mkdir -p proyecto backups supabase/docker/volumes/db/data
 
 if [ ! -f proyecto/.env ]; then
   cd proyecto
