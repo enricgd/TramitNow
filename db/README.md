@@ -3,6 +3,36 @@
 PostgreSQL 17 dentro de Supabase autoalojado (ver `infra/nas/`). El esquema se gestiona con migraciones
 SQL versionadas en `migrations/`.
 
+## Cómo se accede a los datos
+
+**Solo a través de la API propia (`apps/api`, Node + Hono).** La web no lee ni escribe tablas vía PostgREST,
+que no está expuesto a internet. Supabase Auth sigue emitiendo los JWT (con el hook de abajo) y Storage
+sigue igual.
+
+La API se conecta con el rol `tramitnow_api` y, en **cada transacción**, tras verificar el JWT:
+
+```sql
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '<claims del JWT verificado, en JSON>', true);
+-- consultas...
+commit;
+```
+
+Es lo mismo que hace PostgREST, así que `auth.uid()` y `auth.jwt()` funcionan igual y las políticas RLS
+son la red de seguridad aunque la API tenga un fallo. Con `set local` / `set_config(..., true)` todo se
+deshace al acabar la transacción: nunca debe quedar un rol o unos claims pegados a una conexión del pool.
+
+`tramitnow_api` (migración `20261021000600_api_role.sql`):
+
+- No tiene ningún privilegio propio (NOINHERIT y sin grants): sin el `set role` no lee ni escribe nada.
+- Solo puede pasar a `authenticated`; no a `postgres` ni a `service_role`. Sin SUPERUSER ni BYPASSRLS.
+- Sin claims, `authenticated` no ve ninguna fila.
+- Quien tenga su contraseña puede actuar como cualquier usuario fijando sus claims: es un secreto del
+  servidor de la API, igual que la `service_role` key. La API solo debe fijar claims de un JWT verificado.
+- Las operaciones de administración (crear usuarios, invitar) van por la API de administración de
+  Supabase Auth con la `service_role` key, no con este rol.
+
 ```
 db/
   migrations/   migraciones, en orden por nombre (AAAAMMDDhhmmss_nombre.sql)
@@ -77,8 +107,8 @@ de Supabase Auth.
 
 ### RLS
 
-- Todas las tablas tienen RLS. Las políticas solo leen `auth.uid()` / `auth.jwt()` (que PostgREST saca del
-  JWT firmado) y tablas que el cliente no controla. Nada de `current_setting('app.*')`.
+- Todas las tablas tienen RLS. Las políticas solo leen `auth.uid()` / `auth.jwt()` (que la API fija a
+  partir del JWT firmado y verificado) y tablas que el cliente no controla. Nada de `current_setting('app.*')`.
 - `private.current_tenant_id()`: el `tenant_id` del JWT, solo si hay una membresía activa en esa ETT
   (y perfil y ETT activos). Si alguien manipulara el claim, no vería nada.
 - `private.is_superadmin()`: mira `platform_admins`, no el claim `app_role`.
@@ -88,8 +118,8 @@ de Supabase Auth.
   `addresses.write`, `companies.manage`, `branches.manage`, `roles.manage`, `users.manage`, `tenant.manage`).
 - El superadmin lee y escribe en todas las ETT a la vez: el cliente debe filtrar por `tenant_id`.
 - `anon` no tiene privilegios sobre ninguna tabla del núcleo, y por defecto tampoco sobre las nuevas
-  de `public` (hay que concederlos expresamente).
-- El esquema `private` no lo expone la API REST (`PGRST_DB_SCHEMAS` = public, storage, graphql_public):
+  de `public` (hay que concederlos expresamente). Aunque PostgREST no esté expuesto, así sigue sin ver nada.
+- El esquema `private` tampoco lo expondría PostgREST (`PGRST_DB_SCHEMAS` = public, storage, graphql_public):
   sus funciones no son RPC. No hay ninguna función de cambio de contexto.
 
 ### Reglas para tablas nuevas
@@ -100,7 +130,8 @@ de Supabase Auth.
 3. Índices y unicidades empiezan por `tenant_id`; las unicidades de negocio con `where deleted_at is null`.
 4. `created_at`, `updated_at` (trigger `private.touch_updated_at()`), `deleted_at`.
 5. RLS activado y políticas como las de `20261021000400_rls.sql` (lectura por ETT activa, escritura con permiso;
-   por sucursal con `private.can_access_branch`). Revocar `anon` y `truncate`.
+   por sucursal con `private.can_access_branch`). Revocar `anon` y `truncate`. `authenticated` (y por tanto
+   la API) recibe los privilegios de tabla por los default privileges de Supabase; no concedas nada a `tramitnow_api`.
 6. Si hace falta un permiso nuevo: insertarlo en `permissions` y asignarlo a los roles de serie de las ETT
    existentes y en `private.seed_tenant_roles()`.
 7. Tests en `tests/` que prueben que otra ETT no lee ni escribe.
@@ -119,10 +150,14 @@ sh db/tests/run.sh
 
 `reset.sh` borra y levanta `supabase/postgres:17.6.1.136` (contenedor `tramitnow-db-local`, puerto
 `127.0.0.1:54322`, usuario `postgres`, contraseña `postgres`), crea `auth.jwt()` como lo haría Supabase
-Auth (`local/auth-stub.sql`; esta imagen sola no lo trae) y aplica las migraciones. Cada test corre
-en una transacción que se deshace, con los datos ficticios de `tests/_fixtures.sql`.
+Auth (`local/auth-stub.sql`; esta imagen sola no lo trae), aplica las migraciones y habilita el login de
+`tramitnow_api`. Cada test corre en una transacción que se deshace, con los datos ficticios de
+`tests/_fixtures.sql`. `06_api.sql` es distinto: se conecta de verdad como `tramitnow_api` y hace lo mismo
+que la API; como otra conexión no ve datos sin confirmar, para él los datos ficticios se confirman y se
+borran al terminar (`tests/_cleanup.sql`).
 
-Para conectarse con un cliente: `postgresql://postgres:postgres@localhost:54322/postgres`.
+Para conectarse con un cliente: `postgresql://postgres:postgres@localhost:54322/postgres`
+(como la API, desde dentro del contenedor: `docker exec -it tramitnow-db-local psql -h 127.0.0.1 -U tramitnow_api -d postgres`).
 Para pararlo: `docker compose -f db/local/docker-compose.yml down -v`.
 
 ## Aplicar en el NAS
@@ -163,7 +198,20 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 
    Hazlo **después** del paso 3: si el hook está activado y la función no existe, nadie puede iniciar sesión.
 
-5. Comprueba que el hook funciona: inicia sesión y decodifica el `access_token` (debe traer `tenant_id`,
+5. Solo la primera vez, habilita el login de `tramitnow_api` con una contraseña larga (no la escribas en
+   la línea de comandos ni en el repo; va al `.env` de la API):
+
+   ```bash
+   sudo docker exec -it supabase-db psql -U postgres -d postgres -c 'alter role tramitnow_api login'
+   ```
+
+   ```bash
+   sudo docker exec -it supabase-db psql -U postgres -d postgres -c '\password tramitnow_api'
+   ```
+
+   La API se conecta por la red de Docker del proyecto: `postgresql://tramitnow_api:<contraseña>@db:5432/postgres`.
+
+6. Comprueba que el hook funciona: inicia sesión y decodifica el `access_token` (debe traer `tenant_id`,
    `app_role` y `branch_ids`).
 
 Para dar de alta la primera ETT y su superadmin, por SQL en el NAS (con `docker exec -it supabase-db psql -U postgres`):
@@ -190,4 +238,5 @@ y `insert into public.tenants (code, legal_name) values (…);`.
 - Catálogos globales (provincias, municipios y países del INE) compartidos por todas las ETT, en vez de copiarlos por ETT.
 - Comprobar que `addresses.province_id` y similares apuntan al catálogo correcto (hoy solo se exige que sea de la misma ETT).
 - Sucursal activa para los roles `branch` (`seleccion`, `comercial`): hoy el JWT lleva todas sus sucursales.
+- `apps/api`: conexión como `tramitnow_api`, verificación del JWT y el `set local role` + `set_config` por transacción.
 - Alta de usuarios e invitaciones desde la API (service_role), y portal de cliente.

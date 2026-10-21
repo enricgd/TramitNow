@@ -13,3 +13,6 @@ until docker exec tramitnow-db-local psql -U postgres -d postgres -c 'select 1' 
 
 docker exec -i tramitnow-db-local psql -q -v ON_ERROR_STOP=1 -U supabase_admin -d postgres < "$HERE/auth-stub.sql"
 PSQL="docker exec -i tramitnow-db-local psql -U postgres -d postgres" sh "$HERE/../scripts/migrate.sh"
+
+# La API se conecta como tramitnow_api. En local, sin contraseña (pg_hba confía en 127.0.0.1 dentro del contenedor).
+docker exec -i tramitnow-db-local psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'alter role tramitnow_api login'
