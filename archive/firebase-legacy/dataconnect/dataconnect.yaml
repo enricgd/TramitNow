@@ -1,0 +1,14 @@
+specVersion: "v1"
+serviceId: "tramitnow-sql-service"
+location: "us-east4"
+schemas:
+  - source: "./schema"
+    datasource:
+      postgresql:
+        database: "tramitnow-sql-database"
+        cloudSql:
+          instanceId: "tramitnow-sql-instance"
+          # The supplied documents are the only source of truth. The future
+          # deploy must remove legacy demo tables such as pedido/producto.
+          schemaValidation: "COMPATIBLE"
+connectorDirs: ["./example"]

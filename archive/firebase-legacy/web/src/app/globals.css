@@ -1,0 +1,32 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #f7f7f7;
+  color: #222;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+main {
+  max-width: 720px;
+  margin: 60px auto;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  margin-bottom: 14px;
+}
+
+button {
+  padding: 10px 16px;
+  cursor: pointer;
+}

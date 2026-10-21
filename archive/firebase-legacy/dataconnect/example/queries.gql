@@ -1,0 +1,8 @@
+query ListTenants @auth(level: NO_ACCESS) {
+  tenants(limit: 20) {
+    id
+    code
+    legalName
+    status
+  }
+}

@@ -1,3 +1,25 @@
-ImagesFromTorre/
+# SO / editores
 .DS_Store
 ~$*
+.vscode/
+.idea/
+
+# Fotos del software antiguo (pueden contener datos personales)
+docs/legacy-fotos/
+
+# Dependencias y builds
+node_modules/
+dist/
+.vite/
+__pycache__/
+*.pyc
+
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+*.secret*
+*-service-account*.json
+
+# Código generado del proyecto Firebase antiguo
+archive/firebase-legacy/**/*-generated/
