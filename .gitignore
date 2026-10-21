@@ -23,3 +23,8 @@ __pycache__/
 
 # Código generado del proyecto Firebase antiguo
 archive/firebase-legacy/**/*-generated/
+
+# Stack del NAS
+infra/nas/supabase/
+infra/nas/backups/
+infra/nas/proyecto/

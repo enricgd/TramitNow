@@ -1,0 +1,36 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# Certificado comodín vía reto DNS de DuckDNS: no hace falta abrir el puerto 80.
+*.{$DOMAIN} {
+	tls {
+		dns duckdns {$DUCKDNS_TOKEN}
+		resolvers 1.1.1.1
+	}
+
+	# API de Supabase: solo auth, rest y storage. Studio (/dashboard) queda solo en la red local.
+	@api host api.{$DOMAIN}
+	handle @api {
+		@public path /auth/v1/* /rest/v1/* /storage/v1/*
+		handle @public {
+			reverse_proxy api-gw:8000
+		}
+		respond 404
+	}
+
+	# Demo de la web, protegida con usuario y contraseña mientras no se enseñe.
+	@demo host demo.{$DOMAIN}
+	handle @demo {
+		basic_auth {
+			{$DEMO_USER} {$DEMO_PASSWORD_HASH}
+		}
+		root * /srv/demo
+		try_files {path} /index.html
+		file_server
+	}
+
+	handle {
+		abort
+	}
+}

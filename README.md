@@ -13,6 +13,7 @@ docs/          Especificación funcional: inventario de pantallas, modelo de dat
 db/            Esquema PostgreSQL.
   reference/   Modelo SQL heredado del proyecto Firebase; punto de partida para las migraciones.
 apps/          Código de la aplicación (web Vite + API). Ver apps/README.md.
+infra/nas/     Stack Docker de demo en el NAS (Supabase + Caddy + backups). Ver su README.
 archive/       Proyectos anteriores, solo como referencia.
 ```
 
