@@ -18,7 +18,7 @@ No se incluyen realtime, edge functions ni el pooler, para ahorrar RAM.
 ```
 /volume1/docker/tramitnow/
   proyecto/         ← la carpeta del Proyecto de UGOS
-    docker-compose.yml   generado: Supabase oficial + docker-compose.override.yml en un solo fichero
+    docker-compose.yaml  generado: Supabase oficial + docker-compose.override.yml en un solo fichero
     .env                 contraseñas y claves (solo existe en el NAS)
   caddy/            Caddyfile, Dockerfile y página provisional de la demo
   backups/
@@ -26,7 +26,7 @@ No se incluyen realtime, edge functions ni el pooler, para ahorrar RAM.
   setup.sh, compose.sh, docker-compose.override.yml
 ```
 
-La referencia es el repo: `docker-compose.override.yml` y `caddy/`. El `proyecto/docker-compose.yml`
+La referencia es el repo: `docker-compose.override.yml` y `caddy/`. El `proyecto/docker-compose.yaml`
 se genera a partir de ellos. Si cambias algo desde UGOS, pásalo también al repo; si no,
 se perderá la próxima vez que se regenere.
 
@@ -49,7 +49,7 @@ sudo sh setup.sh
 Edita `proyecto/.env` y rellena `DUCKDNS_TOKEN` y `ACME_EMAIL`.
 
 Después, en UGOS: **Docker → Proyecto → Crear**, con la ruta `/volume1/docker/tramitnow/proyecto`.
-UGOS usará el `docker-compose.yml` que ya hay en la carpeta. El primer arranque tarda unos minutos
+UGOS usará el `docker-compose.yaml` que ya hay en la carpeta. El primer arranque tarda unos minutos
 (descarga imágenes y compila Caddy).
 
 Sin UGOS, lo mismo por SSH:
@@ -60,7 +60,7 @@ sudo sh compose.sh up -d --build
 
 ## Router UniFi
 
-- Redirección de puertos: TCP 443 externo → `IP-DEL-NAS:443`. Ningún otro puerto.
+- Redirección de puertos: TCP 443 externo → `IP-DEL-NAS:4443` (el 443 del NAS lo usa UGOS). Ningún otro puerto.
 - Restringir el origen a España (o a las IPs necesarias) y activar IPS/IDS.
 - Reserva una IP fija para el NAS en el DHCP.
 

@@ -1,4 +1,4 @@
-# Se combina con el docker-compose.yml oficial de Supabase en proyecto/docker-compose.yml (ver setup.sh).
+# Se combina con el docker-compose.yml oficial de Supabase en proyecto/docker-compose.yaml (ver setup.sh).
 # Las rutas relativas parten de supabase/docker/, de ahí los ../../
 
 name: tramitnow
@@ -12,7 +12,7 @@ services:
   supavisor:
     profiles: [extra]
 
-  # Único servicio expuesto a internet (puerto 443 redirigido en el router).
+  # Único servicio expuesto a internet (puerto 443 del router → CADDY_HTTPS_PORT del NAS).
   caddy:
     build: ../../caddy
     image: tramitnow/caddy:local
@@ -20,7 +20,7 @@ services:
     depends_on:
       - api-gw
     ports:
-      - ${CADDY_HTTPS_PORT:-443}:443
+      - ${CADDY_HTTPS_PORT:-4443}:443
     environment:
       DOMAIN: ${DOMAIN}
       DUCKDNS_TOKEN: ${DUCKDNS_TOKEN}
