@@ -81,8 +81,10 @@ sudo sh compose.sh start
 Tras cambiar `docker-compose.override.yml`, `caddy/` o la versión de Supabase en el repo:
 
 ```bash
-rsync -av --exclude proyecto --exclude backups --exclude supabase infra/nas/ USUARIO@IP-DEL-NAS:/volume1/docker/tramitnow/
+rsync -av --exclude proyecto --exclude backups --exclude supabase --exclude caddy/site infra/nas/ USUARIO@IP-DEL-NAS:/volume1/docker/tramitnow/
 ```
+
+(`caddy/site` se excluye porque ahí está la web desplegada; ver "Desplegar la web").
 
 ```bash
 sudo sh setup.sh --regenerate
@@ -90,6 +92,24 @@ sudo sh setup.sh --regenerate
 
 Y volver a desplegar el Proyecto en UGOS (o `sudo sh compose.sh up -d --build`).
 El `.env` no se toca.
+
+## Desplegar la web
+
+`apps/web` se compila en el Mac y se copia a `caddy/site/` del NAS. Caddy la sirve al momento:
+no se reinicia nada y Supabase no se toca.
+
+```bash
+NAS=USUARIO@IP-DEL-NAS sh infra/nas/deploy-web.sh
+```
+
+Requisitos: SSH activado en UGOS y Node instalado en el Mac. Para no escribir la contraseña
+en cada despliegue, copia tu clave SSH al NAS una vez:
+
+```bash
+ssh-copy-id USUARIO@IP-DEL-NAS
+```
+
+La versión desplegada (`versión-commit`) aparece abajo en la barra lateral.
 
 ## Pasar a SSD
 
