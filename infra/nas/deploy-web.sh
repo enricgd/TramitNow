@@ -2,11 +2,12 @@
 # Compila apps/web y la publica en el NAS. Se ejecuta desde el Mac.
 # Caddy sirve la carpeta directamente: no hace falta reiniciar ningún contenedor.
 #
-# Uso:  NAS=usuario@ip-del-nas sh infra/nas/deploy-web.sh
+# Uso:  sh infra/nas/deploy-web.sh                (NAS por defecto: Enric@192.168.2.8)
+#       NAS=usuario@ip sh infra/nas/deploy-web.sh
 set -e
 
-: "${NAS:?Indica el NAS, por ejemplo: NAS=Enric@192.168.2.10 sh infra/nas/deploy-web.sh}"
-DEST=/volume1/docker/tramitnow/caddy/site/
+NAS=${NAS:-Enric@192.168.2.8}
+DEST=/volume1/docker/tramitnow/caddy/site
 
 cd "$(dirname "$0")/../../apps/web"
 
@@ -16,6 +17,17 @@ fi
 
 npm ci
 npm run build
-rsync -av --delete dist/ "$NAS:$DEST"
+
+# Se copia con tar por SSH: el rsync de UGOS no permite escribir en /volume1/docker.
+# El contenido se sustituye dentro de la carpeta (no se renombra) porque Caddy la tiene montada.
+COPYFILE_DISABLE=1 tar --no-mac-metadata -C dist -czf - . | ssh "$NAS" "
+  set -e
+  tmp=\$(mktemp -d)
+  tar -xzf - -C \"\$tmp\"
+  find '$DEST' -mindepth 1 -delete
+  cp -R \"\$tmp\"/. '$DEST'/
+  chmod -R a+rX '$DEST'
+  rm -rf \"\$tmp\"
+"
 
 echo "Desplegado $(git rev-parse --short HEAD) en https://demo.henrik11.duckdns.org"

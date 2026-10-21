@@ -7,7 +7,7 @@ gestionado como **Proyecto de UGOS**. Solo para demos: **nunca datos reales de p
 |---|---|
 | Demo web | `https://demo.henrik11.duckdns.org` (usuario y contraseña en el `.env`) |
 | API Supabase (auth, rest, storage) | `https://api.henrik11.duckdns.org` |
-| Supabase Studio | `http://IP-DEL-NAS:8000` (solo red local; usuario `supabase`, contraseña `DASHBOARD_PASSWORD` del `.env`) |
+| Supabase Studio | `http://192.168.2.8:8000` (solo red local; usuario `supabase`, contraseña `DASHBOARD_PASSWORD` del `.env`) |
 | Postgres | Solo dentro de Docker |
 | Backups | `backups/` (un `.dump` diario, 14 días) |
 
@@ -32,16 +32,21 @@ se perderá la próxima vez que se regenere.
 
 ## Instalación
 
-Desde el Mac, copia esta carpeta al NAS:
+Desde el Mac, copia esta carpeta al NAS (el `rsync` de UGOS no deja escribir en `/volume1/docker`,
+por eso se usa `tar` por SSH):
 
 ```bash
-rsync -av infra/nas/ USUARIO@IP-DEL-NAS:/volume1/docker/tramitnow/
+ssh Enric@192.168.2.8 mkdir -p /volume1/docker/tramitnow
+```
+
+```bash
+COPYFILE_DISABLE=1 tar --no-mac-metadata -C infra/nas -czf - . | ssh Enric@192.168.2.8 tar -xzf - -C /volume1/docker/tramitnow
 ```
 
 En el NAS:
 
 ```bash
-ssh USUARIO@IP-DEL-NAS
+ssh Enric@192.168.2.8
 cd /volume1/docker/tramitnow
 sudo sh setup.sh
 ```
@@ -60,7 +65,7 @@ sudo sh compose.sh up -d --build
 
 ## Router UniFi
 
-- Redirección de puertos: TCP 443 externo → `IP-DEL-NAS:4443` (el 443 del NAS lo usa UGOS). Ningún otro puerto.
+- Redirección de puertos: TCP 443 externo → `192.168.2.8:4443` (el 443 del NAS lo usa UGOS). Ningún otro puerto.
 - Restringir el origen a España (o a las IPs necesarias) y activar IPS/IDS.
 - Reserva una IP fija para el NAS en el DHCP.
 
@@ -81,7 +86,7 @@ sudo sh compose.sh start
 Tras cambiar `docker-compose.override.yml`, `caddy/` o la versión de Supabase en el repo:
 
 ```bash
-rsync -av --exclude proyecto --exclude backups --exclude supabase --exclude caddy/site infra/nas/ USUARIO@IP-DEL-NAS:/volume1/docker/tramitnow/
+COPYFILE_DISABLE=1 tar --no-mac-metadata -C infra/nas --exclude ./proyecto --exclude ./backups --exclude ./supabase --exclude ./caddy/site -czf - . | ssh Enric@192.168.2.8 tar -xzf - -C /volume1/docker/tramitnow
 ```
 
 (`caddy/site` se excluye porque ahí está la web desplegada; ver "Desplegar la web").
@@ -99,14 +104,14 @@ El `.env` no se toca.
 no se reinicia nada y Supabase no se toca.
 
 ```bash
-NAS=USUARIO@IP-DEL-NAS sh infra/nas/deploy-web.sh
+sh infra/nas/deploy-web.sh
 ```
 
 Requisitos: SSH activado en UGOS y Node instalado en el Mac. Para no escribir la contraseña
 en cada despliegue, copia tu clave SSH al NAS una vez:
 
 ```bash
-ssh-copy-id USUARIO@IP-DEL-NAS
+ssh-copy-id Enric@192.168.2.8
 ```
 
 La versión desplegada (`versión-commit`) aparece abajo en la barra lateral.
