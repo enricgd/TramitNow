@@ -3,6 +3,20 @@
 Este documento es para el agente de IA (Claude Code) con el que trabaja el diseñador. Léelo entero antes
 de empezar una sesión en la rama `design`. Las normas generales del proyecto están en `CLAUDE.md`.
 
+## Pasos de cada sesión
+
+1. **Rama**: `git switch design` y `git pull`. Todo el trabajo va en `design`, nunca en otra rama.
+2. **Abrir la app**: arranca el servidor **"web"** de `.claude/launch.json` con la herramienta de vista
+   previa. Se abre en el navegador integrado, en http://localhost:5173, sin login y con recarga instantánea.
+3. **Ir a la pantalla**: barra lateral o URL (`#/peticiones`, `#/laboral`, `#/mi-ett`).
+4. **Cambiar**: edita el fichero de `apps/web/src/` de esa pantalla y comprueba el resultado en el navegador.
+5. **Commit** cada vez que un cambio esté terminado y se vea bien, con
+   `npm --prefix apps/web run build` en verde y sin errores en la consola.
+6. **Nota de cambios** en `design/cambios/` al cerrar cada bloque.
+7. **Al terminar la sesión**: `git push`. La PR hacia `development` se abre cuando el bloque esté listo.
+
+El detalle de cada paso está más abajo.
+
 ## Qué es esto y quién hace qué
 
 TramitNOW es un ERP web para Empresas de Trabajo Temporal (ETT). La aplicación web está en `apps/web` y
@@ -17,7 +31,8 @@ hoy funciona en **modo demo**: todas las pantallas llevan datos de ejemplo y no 
 Lo que diseñáis **ya es la aplicación**: no hay que traducirlo después. Por eso tus cambios tienen que ser
 código limpio que desarrollo pueda conectar a datos reales sin rehacerlo.
 
-`design/*.html` son las maquetas originales. **No las edites**: son de Enric y su agente. Úsalas como
+`design/*.html` son las maquetas originales. **No las edites**: son de Enric y su agente (aunque las puedes
+ver con el servidor "maquetas", en http://localhost:5174). En `design/` solo escribes en `design/cambios/`. Úsalas como
 referencia de estilo y para pantallas que aún no están en la app. Lo que tú cambies se lo cuentas con una
 nota de cambios (ver más abajo), y su agente actualiza las maquetas a partir de ella.
 

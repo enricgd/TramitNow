@@ -160,8 +160,8 @@ Después aplica las migraciones, habilita el login de `tramitnow_api` y da de al
 `seeds/demo-tenant.sql` y un usuario administrador creado por la API de administración de Auth.
 Ese usuario y el secreto de los JWT locales están en `local/dev.env` (valores de desarrollo, no secretos).
 
-Con eso, `cd apps/web && npm run dev` y se entra en http://localhost:5173 con el usuario demo: Vite reenvía
-`/auth/v1` al Auth local.
+Con eso, `cd apps/web && npm run dev:real` y se entra en http://localhost:5173 con ese usuario: Vite reenvía
+`/auth/v1` al Auth local. (`npm run dev` a secas es el modo demo: entra sin login y no usa este Auth.)
 
 Cada test corre en una transacción que se deshace, con los datos ficticios de `tests/_fixtures.sql`.
 `06_api.sql` es distinto: se conecta de verdad como `tramitnow_api` y hace lo mismo que la API; como otra
