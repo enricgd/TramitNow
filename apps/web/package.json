@@ -8,6 +8,8 @@
     "dev": "vite",
     "predev:real": "node scripts/ensure-deps.mjs",
     "dev:real": "vite --mode real",
+    "premaquetas": "node scripts/ensure-deps.mjs",
+    "maquetas": "vite -c vite.maquetas.config.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
