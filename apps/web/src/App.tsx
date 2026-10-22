@@ -19,12 +19,16 @@ import {
   Bell,
   HelpCircle,
   ArrowRight,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react';
 import LaboralView from './views/LaboralView.jsx';
 import PeticionesView from './views/PeticionesView.jsx';
 import FichaEttView from './views/FichaEttView.jsx';
 import Inicio from './Inicio';
+import { ROLE_LABELS } from './auth/session';
+
+export type CurrentUser = { name: string; email: string; role: string };
 
 // Estructura común sacada de design/laboral.html. Las entradas sin vista aún salen deshabilitadas.
 type NavItem = { id: string; label: string; icon: LucideIcon; view?: ComponentType; badge?: string };
@@ -70,7 +74,7 @@ function currentId() {
   return AVAILABLE.some((i) => i.id === id) ? id : 'inicio';
 }
 
-export default function App() {
+export default function App({ user, onSignOut }: { user: CurrentUser; onSignOut: () => void }) {
   const [active, setActive] = useState(currentId);
 
   useEffect(() => {
@@ -83,7 +87,7 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-100/70 text-slate-800">
-      <Header />
+      <Header user={user} onSignOut={onSignOut} />
 
       {/* Navegación en móvil: la barra lateral solo aparece desde md */}
       <nav className="md:hidden flex gap-1 overflow-x-auto bg-slate-900 px-2 py-1.5 text-xs">
@@ -108,7 +112,13 @@ export default function App() {
   );
 }
 
-function Header() {
+function initials(name: string) {
+  const parts = name.replace(/@.*/, '').split(/[\s._-]+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : name.slice(0, 2)).toUpperCase();
+}
+
+// La ETT y la sucursal siguen siendo de ejemplo hasta que apps/api dé los datos de la ETT activa.
+function Header({ user, onSignOut }: { user: CurrentUser; onSignOut: () => void }) {
   return (
     <header className="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between shrink-0 z-30 shadow-xs">
       <div className="flex items-center gap-4">
@@ -151,11 +161,20 @@ function Header() {
           <HelpCircle className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-semibold">EM</div>
-          <div className="hidden lg:block text-left leading-tight">
-            <div className="text-xs font-semibold text-slate-800">Elena Morán</div>
-            <div className="text-[10px] text-slate-400">Responsable Laboral</div>
+          <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-semibold">
+            {initials(user.name)}
           </div>
+          <div className="hidden lg:block text-left leading-tight" title={user.email}>
+            <div className="text-xs font-semibold text-slate-800">{user.name}</div>
+            <div className="text-[10px] text-slate-400">{ROLE_LABELS[user.role] ?? user.role}</div>
+          </div>
+          <button
+            onClick={onSignOut}
+            title="Cerrar sesión"
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>

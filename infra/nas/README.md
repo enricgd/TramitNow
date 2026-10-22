@@ -110,6 +110,10 @@ sudo docker restart tramitnow-caddy-1
 `apps/web` se compila en el Mac y se copia a `caddy/site/` del NAS. Caddy la sirve al momento:
 no se reinicia nada y Supabase no se toca.
 
+La primera vez, crea `apps/web/.env.production.local` a partir de `apps/web/.env.example` con la URL
+de Supabase y la `ANON_KEY` del `proyecto/.env` del NAS (es pública por diseño; el fichero no se sube a git).
+El login de la web va contra Supabase Auth en `https://api.henrik11.duckdns.org/auth/v1`.
+
 ```bash
 sh infra/nas/deploy-web.sh
 ```

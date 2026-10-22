@@ -26,7 +26,22 @@ python3 scripts/import-design.py candidatos CandidatosView
 Después se añade la entrada `view: CandidatosView` en `NAV` (`src/App.tsx`).
 `--strip-header` quita también la cabecera del diseño cuando duplica la común.
 
-Pendiente: capa de datos (repositorios con implementación en memoria y contra `apps/api`), login con Supabase Auth.
+### Login
+
+`src/Login.tsx` (de `design/login.html`) inicia sesión con Supabase Auth (`@supabase/supabase-js`, solo
+para Auth). `src/Root.tsx` muestra el login sin sesión y la app con ella; si el token no trae `tenant_id`
+(el usuario no pertenece a ninguna ETT activa) cierra la sesión y lo avisa. `src/auth/session.ts` lee
+los claims del hook (`tenant_id`, `app_role`, `branch_ids`). La cabecera muestra el usuario y su rol;
+la ETT, la sucursal y las pantallas siguen con datos de ejemplo.
+
+- En local: `sh db/local/reset.sh` levanta Postgres + Auth con un usuario demo (ver `db/README.md`) y
+  `npm run dev` reenvía `/auth/v1` a ese Auth.
+- En el NAS: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env.production.local` (ver `.env.example`).
+- "¿Has olvidado tu contraseña?" llama a Supabase Auth; para que llegue el correo hay que configurar
+  SMTP en el `.env` del NAS. El enlace abre la pantalla "Nueva contraseña".
+
+Pendiente: capa de datos (repositorios con implementación en memoria y contra `apps/api`), y que la cabecera
+muestre la ETT y sucursal reales cuando exista la API.
 
 ## api
 

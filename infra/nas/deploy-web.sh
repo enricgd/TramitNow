@@ -15,6 +15,12 @@ if [ -n "$(git status --porcelain .)" ]; then
   echo "Aviso: apps/web tiene cambios sin commitear; la versión desplegada no corresponderá a un commit."
 fi
 
+# La URL y la anon key de Supabase se incrustan al compilar (ver apps/web/.env.example).
+if ! grep -qs '^VITE_SUPABASE_ANON_KEY=.' .env.production.local; then
+  echo "Falta apps/web/.env.production.local con VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY (copia .env.example)."
+  exit 1
+fi
+
 npm ci
 npm run build
 
