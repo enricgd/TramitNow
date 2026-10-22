@@ -1,5 +1,7 @@
 """Convierte un HTML de design/ en un componente de vista para apps/web, tal cual.
 
+Solo para pantallas nuevas: si la vista ya existe, se sobrescribe y se pierden sus cambios.
+
 Toma el script de React del diseño, quita el arranque (createRoot) y la barra lateral
 propia (la estructura común la pone App.tsx) y exporta App como <Nombre>View.
 
@@ -58,8 +60,8 @@ if first_root:
 # Quitar la indentación de 8 espacios del <script> original.
 src = "\n".join(l[8:] if l.startswith("        ") else l for l in src.splitlines()).strip() + "\n"
 
-header = (f"// GENERADO desde design/{args.design}.html con scripts/import-design.py.\n"
-          f"// Contenido del diseño tal cual; se irá sustituyendo por componentes reales.\n")
+header = (f"// Partió de design/{args.design}.html (scripts/import-design.py). "
+          f"Ahora se edita aquí directamente: no regenerar.\n")
 out = pathlib.Path(__file__).resolve().parents[1] / "src" / "views" / f"{args.component}.jsx"
 out.write_text(header + src, encoding="utf-8")
 print(out.relative_to(ROOT), len(src.splitlines()), "líneas")

@@ -1,5 +1,4 @@
-// GENERADO desde design/fichaett.html con scripts/import-design.py.
-// Contenido del diseño tal cual; se irá sustituyendo por componentes reales.
+// Partió de design/fichaett.html (scripts/import-design.py). Ahora se edita aquí directamente: no regenerar.
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Building2, ShieldCheck, FileText, Users, MapPin, Receipt, History, AlertTriangle,

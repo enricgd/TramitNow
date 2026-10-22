@@ -14,10 +14,10 @@ ha cambiado (`scripts/ensure-deps.mjs`), así que funciona igual en un clon reci
 
 - `src/App.tsx`: estructura común (cabecera y barra lateral sacadas de `design/laboral.html`) y navegación por `#/ruta`.
 - `src/Inicio.tsx`: portada de la demo.
-- `src/views/*.jsx`: pantallas de `design/` **tal cual**, generadas con `scripts/import-design.py`.
-  No se editan a mano: si el diseño cambia, se regeneran. Se irán sustituyendo por componentes reales.
+- `src/views/*.jsx`: pantallas. Nacieron copiando `design/` con `scripts/import-design.py`, pero ahora
+  **se editan directamente** (el diseñador trabaja aquí, ver `design/AGENTE-DISENO.md`): no se regeneran.
 
-Para añadir otra pantalla de diseño:
+Para añadir una pantalla nueva a partir de su maqueta (solo si la vista aún no existe):
 
 ```bash
 python3 scripts/import-design.py candidatos CandidatosView
@@ -34,8 +34,9 @@ para Auth). `src/Root.tsx` muestra el login sin sesión y la app con ella; si el
 los claims del hook (`tenant_id`, `app_role`, `branch_ids`). La cabecera muestra el usuario y su rol;
 la ETT, la sucursal y las pantallas siguen con datos de ejemplo.
 
-- En local: `sh db/local/reset.sh` levanta Postgres + Auth con un usuario demo (ver `db/README.md`) y
-  `npm run dev` reenvía `/auth/v1` a ese Auth.
+- En local, `npm run dev` es el **modo demo**: entra sin login con un usuario ficticio y no necesita Supabase.
+- Para probar el login en local: `sh db/local/reset.sh` levanta Postgres + Auth con un usuario demo (ver
+  `db/README.md`) y `npm run dev:real` reenvía `/auth/v1` a ese Auth.
 - En el NAS: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env.production.local` (ver `.env.example`).
 - "¿Has olvidado tu contraseña?" llama a Supabase Auth; para que llegue el correo hay que configurar
   SMTP en el `.env` del NAS. El enlace abre la pantalla "Nueva contraseña".

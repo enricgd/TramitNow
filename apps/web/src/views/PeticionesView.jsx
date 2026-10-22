@@ -1,5 +1,4 @@
-// GENERADO desde design/peticiones.html con scripts/import-design.py.
-// Contenido del diseño tal cual; se irá sustituyendo por componentes reales.
+// Partió de design/peticiones.html (scripts/import-design.py). Ahora se edita aquí directamente: no regenerar.
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     Building2, FileText, Users, Clock, Globe2, Share2, ShieldCheck,

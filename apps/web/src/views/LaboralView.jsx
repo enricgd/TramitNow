@@ -1,5 +1,4 @@
-// GENERADO desde design/laboral.html con scripts/import-design.py.
-// Contenido del diseño tal cual; se irá sustituyendo por componentes reales.
+// Partió de design/laboral.html (scripts/import-design.py). Ahora se edita aquí directamente: no regenerar.
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     LayoutDashboard,
