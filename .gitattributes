@@ -1,0 +1,13 @@
+# Finales de línea LF en el repo y en la copia de trabajo, también en Windows (el diseñador trabaja en
+# Windows): así un cambio pequeño no aparece como todo el fichero reescrito.
+* text=auto eol=lf
+
+# Exportaciones de diseño tal cual llegan (CRLF): no se convierten.
+design/*.html -text
+
+*.sh text eol=lf
+*.jpg binary
+*.png binary
+*.ico binary
+*.pdf binary
+*.docx binary
