@@ -6,11 +6,11 @@ SPA con Vite + React + TypeScript + Tailwind 4.
 
 ```bash
 cd apps/web
-npm install
 npm run dev
 ```
 
-Se abre en http://localhost:5173. Para publicarla en el NAS, ver `infra/nas/README.md` ("Desplegar la web").
+Se abre en http://localhost:5173. `npm run dev` instala antes las dependencias si faltan o si `package-lock.json`
+ha cambiado (`scripts/ensure-deps.mjs`), así que funciona igual en un clon recién hecho o tras cambiar de rama. Para publicarla en el NAS, ver `infra/nas/README.md` ("Desplegar la web").
 
 - `src/App.tsx`: estructura común (cabecera y barra lateral sacadas de `design/laboral.html`) y navegación por `#/ruta`.
 - `src/Inicio.tsx`: portada de la demo.
