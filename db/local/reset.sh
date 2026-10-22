@@ -1,18 +1,38 @@
 #!/bin/sh
-# Base local desde cero: borra el contenedor y su volumen, lo levanta, prepara auth y aplica las migraciones.
+# Entorno local desde cero: Postgres + Supabase Auth, migraciones y ETT DEMO con un usuario administrador.
 #   sh db/local/reset.sh && sh db/tests/run.sh
+# Borra los volúmenes: se pierde todo lo que hubiera en la base local.
 set -eu
 
 HERE=$(cd "$(dirname "$0")" && pwd)
-COMPOSE="docker compose -f $HERE/docker-compose.yml"
+COMPOSE="docker compose -f $HERE/docker-compose.yml --env-file $HERE/dev.env"
+. "$HERE/dev.env"
+PSQL="docker exec -i tramitnow-db-local psql -U postgres -d postgres"
 
 $COMPOSE down -v --remove-orphans
 $COMPOSE up -d --wait
-# El arranque inicial de la imagen reinicia Postgres una vez; esperar a que acepte conexiones de verdad.
-until docker exec tramitnow-db-local psql -U postgres -d postgres -c 'select 1' >/dev/null 2>&1; do sleep 1; done
 
-docker exec -i tramitnow-db-local psql -q -v ON_ERROR_STOP=1 -U supabase_admin -d postgres < "$HERE/auth-stub.sql"
-PSQL="docker exec -i tramitnow-db-local psql -U postgres -d postgres" sh "$HERE/../scripts/migrate.sh"
+# Supabase Auth crea su esquema (auth.users completo, auth.jwt()...) al arrancar; esperar a que acabe.
+until echo "select 'auth.jwt'::regproc" | $PSQL -q >/dev/null 2>&1; do sleep 1; done
+
+PSQL="$PSQL" sh "$HERE/../scripts/migrate.sh"
 
 # La API se conecta como tramitnow_api. En local, sin contraseña (pg_hba confía en 127.0.0.1 dentro del contenedor).
-docker exec -i tramitnow-db-local psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'alter role tramitnow_api login'
+$PSQL -q -v ON_ERROR_STOP=1 -c 'alter role tramitnow_api login'
+
+# Usuario demo por la API de administración de Auth, con un JWT de service_role firmado con el secreto local.
+b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+now=$(date +%s)
+header=$(printf '%s' '{"alg":"HS256","typ":"JWT"}' | b64url)
+payload=$(printf '{"role":"service_role","iat":%s,"exp":%s}' "$now" $((now + 300)) | b64url)
+signature=$(printf '%s' "$header.$payload" | openssl dgst -sha256 -hmac "$JWT_SECRET" -binary | b64url)
+
+curl -fsS -o /dev/null http://127.0.0.1:9999/admin/users \
+  -H "Authorization: Bearer $header.$payload.$signature" \
+  -H 'Content-Type: application/json' \
+  -d "{\"email\": \"$DEMO_EMAIL\", \"password\": \"$DEMO_PASSWORD\", \"email_confirm\": true,
+       \"user_metadata\": {\"full_name\": \"$DEMO_NAME\"}}"
+
+$PSQL -q -v email="$DEMO_EMAIL" < "$HERE/../seeds/demo-tenant.sql"
+
+echo "Listo. Usuario demo en db/local/dev.env; web: cd apps/web && npm run dev"

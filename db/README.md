@@ -38,7 +38,8 @@ db/
   migrations/   migraciones, en orden por nombre (AAAAMMDDhhmmss_nombre.sql)
   scripts/      migrate.sh: aplica las migraciones pendientes
   tests/        tests pgTAP de aislamiento entre ETT, RLS y hook de token
-  local/        Postgres de Supabase en Docker para probar en el Mac
+  local/        Postgres + Supabase Auth en Docker para probar en el Mac
+  seeds/        datos de demostración (ficticios)
   reference/    modelo heredado del proyecto Firebase (solo consulta)
 ```
 
@@ -148,17 +149,28 @@ sh db/local/reset.sh
 sh db/tests/run.sh
 ```
 
-`reset.sh` borra y levanta `supabase/postgres:17.6.1.136` (contenedor `tramitnow-db-local`, puerto
-`127.0.0.1:54322`, usuario `postgres`, contraseña `postgres`), crea `auth.jwt()` como lo haría Supabase
-Auth (`local/auth-stub.sql`; esta imagen sola no lo trae), aplica las migraciones y habilita el login de
-`tramitnow_api`. Cada test corre en una transacción que se deshace, con los datos ficticios de
-`tests/_fixtures.sql`. `06_api.sql` es distinto: se conecta de verdad como `tramitnow_api` y hace lo mismo
-que la API; como otra conexión no ve datos sin confirmar, para él los datos ficticios se confirman y se
-borran al terminar (`tests/_cleanup.sql`).
+`reset.sh` borra y levanta, con las mismas versiones que el NAS:
+
+- `supabase/postgres:17.6.1.136` (contenedor `tramitnow-db-local`, puerto `127.0.0.1:54322`, usuario
+  `postgres`, contraseña `postgres`).
+- Supabase Auth `supabase/gotrue:v2.197.0` (contenedor `tramitnow-auth-local`, `127.0.0.1:9999`) con el hook
+  de token activado. Al arrancar crea su esquema `auth` completo (con `auth.jwt()`).
+
+Después aplica las migraciones, habilita el login de `tramitnow_api` y da de alta la ETT DEMO con
+`seeds/demo-tenant.sql` y un usuario administrador creado por la API de administración de Auth.
+Ese usuario y el secreto de los JWT locales están en `local/dev.env` (valores de desarrollo, no secretos).
+
+Con eso, `cd apps/web && npm run dev` y se entra en http://localhost:5173 con el usuario demo: Vite reenvía
+`/auth/v1` al Auth local.
+
+Cada test corre en una transacción que se deshace, con los datos ficticios de `tests/_fixtures.sql`.
+`06_api.sql` es distinto: se conecta de verdad como `tramitnow_api` y hace lo mismo que la API; como otra
+conexión no ve datos sin confirmar, para él los datos ficticios se confirman y se borran al terminar
+(`tests/_cleanup.sql`). Los tests no tocan la ETT DEMO.
 
 Para conectarse con un cliente: `postgresql://postgres:postgres@localhost:54322/postgres`
 (como la API, desde dentro del contenedor: `docker exec -it tramitnow-db-local psql -h 127.0.0.1 -U tramitnow_api -d postgres`).
-Para pararlo: `docker compose -f db/local/docker-compose.yml down -v`.
+Para pararlo: `docker compose -f db/local/docker-compose.yml --env-file db/local/dev.env down -v`.
 
 ## Aplicar en el NAS
 
@@ -177,7 +189,7 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 2. Copia `db/` al NAS (desde el Mac):
 
    ```bash
-   COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C db -czf - migrations scripts | ssh Enric@192.168.2.8 'mkdir -p /volume1/docker/tramitnow/db && tar -xzf - -C /volume1/docker/tramitnow/db'
+   COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C db -czf - migrations scripts seeds | ssh Enric@192.168.2.8 'mkdir -p /volume1/docker/tramitnow/db && tar -xzf - -C /volume1/docker/tramitnow/db'
    ```
 
 3. En el NAS, aplica las migraciones:
@@ -210,9 +222,22 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 6. Comprueba que el hook funciona: inicia sesión y decodifica el `access_token` (debe traer `tenant_id`,
    `app_role` y `branch_ids`).
 
-Para dar de alta la primera ETT y su superadmin, por SQL en el NAS (con `docker exec -it supabase-db psql -U postgres`):
-crea el usuario desde Supabase Studio (Authentication), luego `insert into public.platform_admins (user_id) values ('…');`
-y `insert into public.tenants (code, legal_name) values (…);`.
+### ETT de demostración y primer usuario
+
+1. En Supabase Studio (`http://192.168.2.8:8000`): Authentication > Add user > Create new user, con
+   "Auto Confirm User" marcado. Es el usuario con el que entrarás en la demo.
+2. En el NAS (con `seeds/` ya copiado en el paso 2):
+
+   ```bash
+   cd /volume1/docker/tramitnow
+   sudo sh -c 'docker exec -i supabase-db psql -U postgres -d postgres -v email=TU_CORREO < db/seeds/demo-tenant.sql'
+   ```
+
+   Crea la ETT DEMO (ETT Global Servicios Temporales, sociedad y dos sucursales, todo ficticio) y hace
+   administrador al usuario. Al terminar muestra los claims que llevará su token. `-v superadmin=1` lo
+   hace además superadmin. Si la ETT DEMO ya existe, falla sin cambiar nada.
+3. Despliega la web (`infra/nas/README.md`, "Desplegar la web") y entra en `https://demo.henrik11.duckdns.org`
+   con ese usuario.
 
 ## Cambios respecto al modelo heredado (`reference/`)
 

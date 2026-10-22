@@ -3,8 +3,8 @@
 select plan(11);
 
 select pg_temp.login('d0000000-0000-0000-0000-000000000001');
-select is((select count(*)::int from public.tenants), 2, 'superadmin ve todas las ETT');
-select is((select count(distinct tenant_id)::int from public.companies), 2, 'superadmin ve sociedades de todas las ETT');
+select is((select count(*)::int from public.tenants where code in ('ETT-A', 'ETT-B')), 2, 'superadmin ve todas las ETT');
+select is((select count(distinct tenant_id)::int from public.companies where tenant_id in ('10000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-00000000000b')), 2, 'superadmin ve sociedades de todas las ETT');
 select lives_ok(
   $$ insert into public.tenants (id, code, legal_name) values ('10000000-0000-0000-0000-00000000000c', 'ETT-C', 'ETT Ficticia C, S.L.') $$,
   'superadmin da de alta una ETT');

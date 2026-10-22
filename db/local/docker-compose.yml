@@ -1,5 +1,7 @@
-# Postgres de Supabase para probar las migraciones en local (no es el stack completo).
-# Se levanta y prepara con db/local/reset.sh. Ver db/README.md.
+# Postgres + Supabase Auth (GoTrue) para probar en local: migraciones, tests y login de apps/web.
+# Mismas versiones que el NAS (infra/nas/setup.sh → docker/docker-compose.yml de Supabase).
+# Se levanta y prepara con db/local/reset.sh (que pasa --env-file dev.env). Ver db/README.md.
+# Todo lo de aquí son valores de desarrollo: nunca los uses fuera de tu máquina.
 name: tramitnow-db-local
 
 services:
@@ -10,8 +12,42 @@ services:
       - 127.0.0.1:54322:5432
     environment:
       POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
     healthcheck:
       test: pg_isready -U postgres -h localhost
       interval: 2s
       timeout: 5s
       retries: 30
+
+  auth:
+    image: supabase/gotrue:v2.197.0
+    container_name: tramitnow-auth-local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:9999:9999
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:9999/health
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:5173/auth/v1
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:postgres@db:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:5173
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
+      GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: pg-functions://postgres/private/custom_access_token_hook
