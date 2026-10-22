@@ -20,7 +20,7 @@ npm run build
 
 # Se copia con tar por SSH: el rsync de UGOS no permite escribir en /volume1/docker.
 # El contenido se sustituye dentro de la carpeta (no se renombra) porque Caddy la tiene montada.
-COPYFILE_DISABLE=1 tar --no-mac-metadata -C dist -czf - . | ssh "$NAS" "
+COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C dist -czf - . | ssh "$NAS" "
   set -e
   tmp=\$(mktemp -d)
   tar -xzf - -C \"\$tmp\"

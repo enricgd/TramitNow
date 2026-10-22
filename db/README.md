@@ -177,7 +177,7 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 2. Copia `db/` al NAS (desde el Mac):
 
    ```bash
-   COPYFILE_DISABLE=1 tar --no-mac-metadata -C db -czf - migrations scripts | ssh Enric@192.168.2.8 'mkdir -p /volume1/docker/tramitnow/db && tar -xzf - -C /volume1/docker/tramitnow/db'
+   COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C db -czf - migrations scripts | ssh Enric@192.168.2.8 'mkdir -p /volume1/docker/tramitnow/db && tar -xzf - -C /volume1/docker/tramitnow/db'
    ```
 
 3. En el NAS, aplica las migraciones:

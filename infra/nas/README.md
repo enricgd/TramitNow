@@ -40,7 +40,7 @@ ssh Enric@192.168.2.8 mkdir -p /volume1/docker/tramitnow
 ```
 
 ```bash
-COPYFILE_DISABLE=1 tar --no-mac-metadata -C infra/nas -czf - . | ssh Enric@192.168.2.8 tar -xzf - -C /volume1/docker/tramitnow
+COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C infra/nas -czf - . | ssh Enric@192.168.2.8 tar -xzf - -C /volume1/docker/tramitnow
 ```
 
 En el NAS:
@@ -86,7 +86,7 @@ sudo sh compose.sh start
 Tras cambiar `docker-compose.override.yml`, `caddy/` o la versión de Supabase en el repo:
 
 ```bash
-COPYFILE_DISABLE=1 tar --no-mac-metadata -C infra/nas --exclude ./proyecto --exclude ./backups --exclude ./supabase --exclude ./caddy/site -czf - . | ssh Enric@192.168.2.8 tar -xzf - -C /volume1/docker/tramitnow
+COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C infra/nas --exclude ./proyecto --exclude ./backups --exclude ./supabase --exclude ./caddy/site -czf - . | ssh Enric@192.168.2.8 tar -xzf - -C /volume1/docker/tramitnow
 ```
 
 (`caddy/site` se excluye porque ahí está la web desplegada; ver "Desplegar la web").
@@ -97,6 +97,13 @@ sudo sh setup.sh --regenerate
 
 Y volver a desplegar el Proyecto en UGOS (o `sudo sh compose.sh up -d --build`).
 El `.env` no se toca.
+
+Si solo ha cambiado el `Caddyfile`, Docker no recrea Caddy (su configuración es la misma) y sigue
+con el fichero anterior. Hay que reiniciarlo:
+
+```bash
+sudo docker restart tramitnow-caddy-1
+```
 
 ## Desplegar la web
 
