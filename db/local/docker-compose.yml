@@ -1,0 +1,17 @@
+# Postgres de Supabase para probar las migraciones en local (no es el stack completo).
+# Se levanta y prepara con db/local/reset.sh. Ver db/README.md.
+name: tramitnow-db-local
+
+services:
+  db:
+    image: supabase/postgres:17.6.1.136
+    container_name: tramitnow-db-local
+    ports:
+      - 127.0.0.1:54322:5432
+    environment:
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: pg_isready -U postgres -h localhost
+      interval: 2s
+      timeout: 5s
+      retries: 30
