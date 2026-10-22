@@ -31,9 +31,9 @@ También se puede abrir `http://localhost:5173` en cualquier navegador.
 **El diseñador no necesita acceso a la base de datos.**
 
 - Hoy la web no usa la base de datos: las pantallas llevan datos de ejemplo.
-- Cuando se conecte Supabase, la app tendrá dos modos:
+- Cuando se conecte el backend, la app tendrá dos modos:
   - **Modo demo** (por defecto en local): datos ficticios en memoria. Es el modo de trabajo del diseñador: sin conexión, sin claves, sin riesgo.
-  - **Modo real**: conectado a Supabase. Solo para probar login y datos de verdad.
+  - **Modo real**: login con Supabase y datos a través de la API (`apps/api`). Solo para probar login y datos de verdad.
 - Si alguna vez necesita ver la app conectada, se le da un **usuario de prueba** en Supabase, como a cualquier usuario. Nunca acceso a Studio ni a Postgres.
 
 ## Preparación pendiente antes de que empiece

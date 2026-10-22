@@ -28,8 +28,24 @@ archive/       Proyectos anteriores, solo como referencia.
 ## Stack previsto
 
 - Web: Vite + React + TypeScript + Tailwind (SPA).
-- Backend: Supabase (Postgres + Auth + Storage) y una API Node para la lógica de negocio.
-- Multi-ETT: `tenant_id` en todas las tablas + Row Level Security.
+- Backend: API propia en `apps/api` (Node + Hono) como única puerta a los datos, sobre Supabase
+  (Postgres, Auth para login y tokens, Storage para documentos).
+- Multi-ETT: `tenant_id` en todas las tablas + Row Level Security como red de seguridad.
+
+### Acceso a datos
+
+```
+Web ──login──▶ Supabase Auth (JWT con ETT, rol y sucursales)
+Web ──JWT────▶ apps/api ──▶ Postgres (RLS)
+Web ─────────▶ Supabase Storage (subidas/descargas con URLs firmadas por la API)
+```
+
+- La web **no** lee ni escribe tablas directamente: PostgREST no se expone a internet.
+  El contrato entre web y backend son las rutas y tipos de la API, no el esquema de la base de datos.
+- La API verifica el JWT, aplica las reglas de negocio y en cada transacción pasa los claims a Postgres
+  (`set_config('request.jwt.claims', …)`), así que las políticas RLS con `auth.jwt()` siguen protegiendo
+  aunque la API tuviera un fallo.
+- Las integraciones (Contrat@, SILTRA, Sistema RED), documentos y procesos programados viven en la API.
 - Despliegue: contenedores Docker (desarrollo/demo en NAS; producción en proveedor gestionado en la UE).
 
 ## Ramas

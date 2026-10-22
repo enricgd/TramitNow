@@ -26,9 +26,13 @@ python3 scripts/import-design.py candidatos CandidatosView
 Después se añade la entrada `view: CandidatosView` en `NAV` (`src/App.tsx`).
 `--strip-header` quita también la cabecera del diseño cuando duplica la común.
 
-Pendiente: capa de datos (repositorios con implementación en memoria y Supabase), login.
+Pendiente: capa de datos (repositorios con implementación en memoria y contra `apps/api`), login con Supabase Auth.
 
 ## api
 
-Pendiente. Node (Hono) para la lógica de negocio: documentos, integraciones (Contrat@, SILTRA,
-Sistema RED), procesos programados.
+Pendiente. Node (Hono) con validación de tipos y documentación OpenAPI. Es la única puerta a los datos:
+
+- Verifica el JWT de Supabase Auth y aplica permisos y reglas de negocio.
+- Accede a Postgres con un rol de mínimos privilegios; en cada transacción fija `request.jwt.claims`
+  y `role authenticated` para que las políticas RLS se apliquen igual que con PostgREST.
+- Documentos (URLs firmadas de Storage), integraciones (Contrat@, SILTRA, Sistema RED) y procesos programados.

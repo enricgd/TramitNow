@@ -6,7 +6,7 @@ gestionado como **Proyecto de UGOS**. Solo para demos: **nunca datos reales de p
 | Servicio | Dónde se ve |
 |---|---|
 | Demo web | `https://demo.henrik11.duckdns.org` (usuario y contraseña en el `.env`) |
-| API Supabase (auth, rest, storage) | `https://api.henrik11.duckdns.org` |
+| Supabase Auth y Storage | `https://api.henrik11.duckdns.org` (`/auth/v1`, `/storage/v1`; PostgREST no se publica) |
 | Supabase Studio | `http://192.168.2.8:8000` (solo red local; usuario `supabase`, contraseña `DASHBOARD_PASSWORD` del `.env`) |
 | Postgres | Solo dentro de Docker |
 | Backups | `backups/` (un `.dump` diario, 14 días) |
