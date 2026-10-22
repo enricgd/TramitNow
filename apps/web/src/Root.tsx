@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react';
-import App from './App';
+import App, { type CurrentUser } from './App';
 import Login from './Login';
 import { supabase, useAuth } from './auth/session';
 
 const NO_TENANT = 'Tu usuario no tiene acceso a ninguna ETT. Pide a tu administrador que te dé de alta.';
 
-// Sin sesión válida se muestra el login. Con sesión, la app (de momento con datos de ejemplo).
+// Modo demo: `npm run dev` entra sin login con un usuario ficticio, para trabajar en las pantallas sin
+// levantar Supabase. `npm run dev:real` usa el login de verdad (Auth local de db/local/reset.sh).
+// La compilación para el NAS siempre usa el login.
+const DEMO = import.meta.env.DEV && import.meta.env.MODE !== 'real';
+const DEMO_USER: CurrentUser = { name: 'Usuario Demo', email: 'demo@example.com', role: 'admin' };
+
 export default function Root() {
+  return DEMO ? <App user={DEMO_USER} onSignOut={() => {}} /> : <AuthRoot />;
+}
+
+// Sin sesión válida se muestra el login. Con sesión, la app (de momento con datos de ejemplo).
+function AuthRoot() {
   const auth = useAuth();
   const [message, setMessage] = useState<string>();
 
