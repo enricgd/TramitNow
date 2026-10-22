@@ -166,13 +166,15 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 `migrate.sh` aplica solo las migraciones pendientes, cada una en su transacción, y las anota en
 `supabase_migrations.schema_migrations`. Nunca ejecutes los tests contra el NAS.
 
-1. Copia de seguridad antes de migrar (además del backup diario):
+1. Copia de seguridad antes de migrar (además del backup diario), en el NAS:
 
    ```bash
-   ssh Enric@192.168.2.8 'sudo docker exec supabase-db pg_dump -U postgres -Fc postgres' > tramitnow-antes-de-migrar.dump
+   ssh Enric@192.168.2.8
+   cd /volume1/docker/tramitnow
+   sudo sh -c 'docker exec supabase-db pg_dump -U postgres -Fc postgres > backups/antes-de-migrar.dump'
    ```
 
-2. Copia `db/` al NAS:
+2. Copia `db/` al NAS (desde el Mac):
 
    ```bash
    COPYFILE_DISABLE=1 tar --no-mac-metadata -C db -czf - migrations scripts | ssh Enric@192.168.2.8 'mkdir -p /volume1/docker/tramitnow/db && tar -xzf - -C /volume1/docker/tramitnow/db'
@@ -186,20 +188,14 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
    sudo env PSQL="docker exec -i supabase-db psql -U postgres -d postgres" sh db/scripts/migrate.sh
    ```
 
-4. Solo la primera vez, activa el hook en Supabase Auth. Añade al `infra/nas/docker-compose.override.yml`
-   (y regenera con `sudo sh setup.sh --regenerate` como explica `infra/nas/README.md`):
-
-   ```yaml
-   auth:
-     environment:
-       GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
-       GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: pg-functions://postgres/private/custom_access_token_hook
-   ```
+4. Solo la primera vez, activa el hook en Supabase Auth. Ya está en `infra/nas/docker-compose.override.yml`
+   (servicio `auth`); hay que llevarlo al NAS y regenerar el proyecto como explica "Actualizar" en
+   `infra/nas/README.md`, y volver a desplegar el Proyecto en UGOS.
 
    Hazlo **después** del paso 3: si el hook está activado y la función no existe, nadie puede iniciar sesión.
 
-5. Solo la primera vez, habilita el login de `tramitnow_api` con una contraseña larga (no la escribas en
-   la línea de comandos ni en el repo; va al `.env` de la API):
+5. Cuando exista `apps/api` (no antes), habilita el login de `tramitnow_api` con una contraseña larga
+   (no la escribas en la línea de comandos ni en el repo; va al `.env` de la API):
 
    ```bash
    sudo docker exec -it supabase-db psql -U postgres -d postgres -c 'alter role tramitnow_api login'

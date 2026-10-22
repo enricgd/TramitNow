@@ -12,6 +12,13 @@ services:
   supavisor:
     profiles: [extra]
 
+  # Añade ETT activa, rol y sucursales al JWT (db/migrations/*_access_token_hook.sql).
+  # Requiere que las migraciones estén aplicadas: si la función no existe, nadie puede iniciar sesión.
+  auth:
+    environment:
+      GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
+      GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: pg-functions://postgres/private/custom_access_token_hook
+
   # Único servicio expuesto a internet (puerto 443 del router → CADDY_HTTPS_PORT del NAS).
   caddy:
     build: ../../caddy
