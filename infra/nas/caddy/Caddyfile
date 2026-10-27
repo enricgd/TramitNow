@@ -9,13 +9,17 @@
 		resolvers 1.1.1.1
 	}
 
-	# Supabase: solo auth y storage. Los datos van por la API propia (apps/api), así que
-	# PostgREST (/rest/v1) no se publica. Studio (/dashboard) queda solo en la red local.
+	# Supabase: solo auth y storage. Los datos van por la API propia (apps/api, /v1 y su especificación),
+	# así que PostgREST (/rest/v1) no se publica. Studio (/dashboard) queda solo en la red local.
 	@api host api.{$DOMAIN}
 	handle @api {
 		@public path /auth/v1/* /storage/v1/*
 		handle @public {
 			reverse_proxy api-gw:8000
+		}
+		@tramitnow path /v1/* /openapi.json
+		handle @tramitnow {
+			reverse_proxy api:3000
 		}
 		respond 404
 	}

@@ -6,6 +6,7 @@ gestionado como **Proyecto de UGOS**. Solo para demos: **nunca datos reales de p
 | Servicio | Dónde se ve |
 |---|---|
 | Demo web | `https://demo.henrik11.duckdns.org` (usuario y contraseña en el `.env`) |
+| API propia (`apps/api`) | `https://api.henrik11.duckdns.org/v1/...` y `/openapi.json` |
 | Supabase Auth y Storage | `https://api.henrik11.duckdns.org` (`/auth/v1`, `/storage/v1`; PostgREST no se publica) |
 | Supabase Studio | `http://192.168.2.8:8000` (solo red local; usuario `supabase`, contraseña `DASHBOARD_PASSWORD` del `.env`) |
 | Postgres | Solo dentro de Docker |
@@ -21,6 +22,7 @@ No se incluyen realtime, edge functions ni el pooler, para ahorrar RAM.
     docker-compose.yaml  generado: Supabase oficial + docker-compose.override.yml en un solo fichero
     .env                 contraseñas y claves (solo existe en el NAS)
   caddy/            Caddyfile, Dockerfile y página provisional de la demo
+  api/              código de apps/api para compilar su imagen (lo copia deploy-api.sh)
   backups/
   supabase/         copia de la configuración oficial de Supabase (la usa setup.sh)
   setup.sh, compose.sh, docker-compose.override.yml
@@ -126,6 +128,90 @@ ssh-copy-id Enric@192.168.2.8
 ```
 
 La versión desplegada (`versión-commit`) aparece abajo en la barra lateral.
+
+## API
+
+`apps/api` corre como servicio `api` del proyecto (imagen compilada en el NAS a partir de `api/`). Caddy
+publica solo `/v1/*` y `/openapi.json` en `https://api.henrik11.duckdns.org`; `/health` queda dentro de Docker.
+Se conecta a Postgres como `tramitnow_api` y verifica los tokens con el `JWT_SECRET` de Supabase (HS256).
+
+### Primera vez
+
+Antes, las migraciones de `db/` aplicadas (`db/README.md`, "Aplicar en el NAS", pasos 1 a 4).
+
+1. Genera una contraseña para `tramitnow_api` en el NAS (solo letras y números, para que valga tal cual en una URL)
+   y apúntala en `proyecto/.env`, al final del bloque de TramitNOW:
+
+   ```bash
+   ssh Enric@192.168.2.8
+   cd /volume1/docker/tramitnow
+   openssl rand -hex 32
+   ```
+
+   ```bash
+   sudo nano proyecto/.env
+   ```
+
+   ```
+   # Conexión de apps/api (rol tramitnow_api, sin privilegios propios)
+   API_DATABASE_URL=postgresql://tramitnow_api:LA_CONTRASEÑA@db:5432/postgres
+   ```
+
+   `SUPABASE_JWT_SECRET` no hace falta: el servicio usa el `JWT_SECRET` que ya está en el `.env`.
+
+2. Habilita el login de `tramitnow_api` con esa contraseña (paso 5 de "Aplicar en el NAS" en `db/README.md`;
+   `\password` la pide sin que quede en el historial):
+
+   ```bash
+   sudo docker exec -it supabase-db psql -U postgres -d postgres -c 'alter role tramitnow_api login'
+   ```
+
+   ```bash
+   sudo docker exec -it supabase-db psql -U postgres -d postgres -c '\password tramitnow_api'
+   ```
+
+3. Desde el Mac, lleva `docker-compose.override.yml` y el `Caddyfile` nuevos al NAS (comando de "Actualizar")
+   y, en el NAS, regenera el proyecto:
+
+   ```bash
+   sudo sh setup.sh --regenerate
+   ```
+
+4. Desde el Mac, copia la API y arráncala (pide la contraseña de sudo del NAS):
+
+   ```bash
+   sh infra/nas/deploy-api.sh
+   ```
+
+   Hasta que exista `api/` no se puede volver a desplegar el Proyecto en UGOS: el servicio `api` se compila desde ahí.
+
+5. Caddy no relee el `Caddyfile` solo:
+
+   ```bash
+   sudo docker restart tramitnow-caddy-1
+   ```
+
+6. Comprueba, desde el Mac:
+
+   ```bash
+   curl -s https://api.henrik11.duckdns.org/openapi.json | head -c 200
+   ```
+
+   ```bash
+   curl -s https://api.henrik11.duckdns.org/v1/me
+   ```
+
+   La segunda debe responder `401` con `{"error":{"code":"no_autenticado",...}}`. Con un token (ver "Probar con
+   Apidog" en `apps/README.md`), `/v1/me` devuelve el usuario y su ETT. Logs: `sudo sh compose.sh logs -f api`.
+
+### Actualizar la API
+
+```bash
+sh infra/nas/deploy-api.sh
+```
+
+Si se activan algún día las claves asimétricas de Supabase Auth (`JWT_KEYS`, ES256), la API tendrá que
+verificar con el JWKS en vez de con `JWT_SECRET`.
 
 ## Pasar a SSD
 
