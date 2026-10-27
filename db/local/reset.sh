@@ -17,8 +17,9 @@ until echo "select 'auth.jwt'::regproc" | $PSQL -q >/dev/null 2>&1; do sleep 1; 
 
 PSQL="$PSQL" sh "$HERE/../scripts/migrate.sh"
 
-# La API se conecta como tramitnow_api. En local, sin contraseña (pg_hba confía en 127.0.0.1 dentro del contenedor).
-$PSQL -q -v ON_ERROR_STOP=1 -c 'alter role tramitnow_api login'
+# La API se conecta como tramitnow_api. Dentro del contenedor (127.0.0.1) no pide contraseña; desde el Mac
+# (apps/api y sus tests, por el puerto 54322) usa API_DB_PASSWORD de dev.env.
+echo "alter role tramitnow_api login password :'pw'" | $PSQL -q -v ON_ERROR_STOP=1 -v pw="$API_DB_PASSWORD"
 
 # Usuario demo por la API de administración de Auth, con un JWT de service_role firmado con el secreto local.
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
