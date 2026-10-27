@@ -264,7 +264,8 @@ sh db/tests/run.sh
 - Supabase Auth `supabase/gotrue:v2.197.0` (contenedor `tramitnow-auth-local`, `127.0.0.1:9999`) con el hook
   de token activado. Al arrancar crea su esquema `auth` completo (con `auth.jwt()`).
 
-Después aplica las migraciones, habilita el login de `tramitnow_api` y da de alta la ETT DEMO con
+Después aplica las migraciones, habilita el login de `tramitnow_api` (con la contraseña local `API_DB_PASSWORD`
+de `local/dev.env`, para `apps/api`) y da de alta la ETT DEMO con
 `seeds/demo-tenant.sql` y un usuario administrador creado por la API de administración de Auth.
 Ese usuario y el secreto de los JWT locales están en `local/dev.env` (valores de desarrollo, no secretos).
 
@@ -321,8 +322,8 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 
    Hazlo **después** del paso 3: si el hook está activado y la función no existe, nadie puede iniciar sesión.
 
-5. Cuando exista `apps/api` (no antes), habilita el login de `tramitnow_api` con una contraseña larga
-   (no la escribas en la línea de comandos ni en el repo; va al `.env` de la API):
+5. Para `apps/api`, habilita el login de `tramitnow_api` con una contraseña larga (no la escribas en la
+   línea de comandos ni en el repo; va al `.env` del NAS, ver "API" en `infra/nas/README.md`):
 
    ```bash
    sudo docker exec -it supabase-db psql -U postgres -d postgres -c 'alter role tramitnow_api login'
@@ -381,5 +382,4 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
   convenio con entrada en vigor para el año") y se diseñarán con ese módulo.
 - Ámbito por cliente de `professional_categories` (`client_id`), con el módulo de clientes.
 - Sucursal activa para los roles `branch` (`seleccion`, `comercial`): hoy el JWT lleva todas sus sucursales.
-- `apps/api`: conexión como `tramitnow_api`, verificación del JWT y el `set local role` + `set_config` por transacción.
 - Alta de usuarios e invitaciones desde la API (service_role), y portal de cliente.
