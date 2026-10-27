@@ -264,7 +264,7 @@ sh db/tests/run.sh
 - Supabase Auth `supabase/gotrue:v2.197.0` (contenedor `tramitnow-auth-local`, `127.0.0.1:9999`) con el hook
   de token activado. Al arrancar crea su esquema `auth` completo (con `auth.jwt()`).
 
-Después aplica las migraciones, habilita el login de `tramitnow_api` (con la contraseña local `API_DB_PASSWORD`
+Después aplica las migraciones, carga los municipios del INE (`seeds/ine-municipios.sql`), habilita el login de `tramitnow_api` (con la contraseña local `API_DB_PASSWORD`
 de `local/dev.env`, para `apps/api`) y da de alta la ETT DEMO con
 `seeds/demo-tenant.sql` y un usuario administrador creado por la API de administración de Auth.
 Ese usuario y el secreto de los JWT locales están en `local/dev.env` (valores de desarrollo, no secretos).
