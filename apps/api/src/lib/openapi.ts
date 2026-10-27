@@ -45,7 +45,7 @@ export function jsonBody<T extends z.ZodType>(schema: T) {
 }
 
 export const IdParams = z.object({
-  id: z.uuid().openapi({ param: { name: 'id', in: 'path' }, example: '20000000-0000-0000-0000-0000000000a1' }),
+  id: z.guid().openapi({ param: { name: 'id', in: 'path' }, example: '20000000-0000-0000-0000-0000000000a1' }),
 });
 
 // ---------------------------------------------------------------------------

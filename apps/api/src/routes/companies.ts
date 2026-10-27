@@ -22,12 +22,12 @@ const CompanyType = z.enum(['ett', 'services', 'merchandising', 'other']);
 
 export const CompanySchema = z
   .object({
-    id: z.uuid(),
+    id: z.guid(),
     code: z.string(),
     name: z.string(),
     companyType: CompanyType,
     status: Status,
-    taxIdTypeId: z.uuid().nullable(),
+    taxIdTypeId: z.guid().nullable(),
     taxId: z.string().nullable(),
     phone: z.string().nullable(),
     fax: z.string().nullable(),
@@ -35,8 +35,8 @@ export const CompanySchema = z
     website: z.string().nullable(),
     smsSenderName: z.string().nullable(),
     workerCommunicationsCcEmail: z.string().nullable(),
-    addressId: z.uuid().nullable(),
-    postalAddressId: z.uuid().nullable(),
+    addressId: z.guid().nullable(),
+    postalAddressId: z.guid().nullable(),
     createdAt: Timestamp,
     updatedAt: Timestamp,
   })
@@ -49,7 +49,7 @@ const companyFields = {
   name: z.string().trim().min(1).max(200),
   companyType: CompanyType,
   status: Status,
-  taxIdTypeId: z.uuid().nullable().optional(),
+  taxIdTypeId: z.guid().nullable().optional(),
   taxId: nullableText(30).optional(),
   phone: nullableText(40).optional(),
   fax: nullableText(40).optional(),
@@ -57,8 +57,8 @@ const companyFields = {
   website: nullableText(250).optional(),
   smsSenderName: nullableText(120).optional(),
   workerCommunicationsCcEmail: z.email().max(200).nullable().optional(),
-  addressId: z.uuid().nullable().optional(),
-  postalAddressId: z.uuid().nullable().optional(),
+  addressId: z.guid().nullable().optional(),
+  postalAddressId: z.guid().nullable().optional(),
 };
 
 const CompanyCreateSchema = z

@@ -21,15 +21,15 @@ import {
 
 export const BranchSchema = z
   .object({
-    id: z.uuid(),
-    companyId: z.uuid(),
+    id: z.guid(),
+    companyId: z.guid(),
     code: z.string(),
     name: z.string(),
     status: Status,
     isDefault: z.boolean(),
     phone: z.string().nullable(),
     email: z.string().nullable(),
-    addressId: z.uuid().nullable(),
+    addressId: z.guid().nullable(),
     createdAt: Timestamp,
     updatedAt: Timestamp,
   })
@@ -44,12 +44,12 @@ const branchFields = {
   isDefault: z.boolean(),
   phone: nullableText(40).optional(),
   email: z.email().max(200).nullable().optional(),
-  addressId: z.uuid().nullable().optional(),
+  addressId: z.guid().nullable().optional(),
 };
 
 const BranchCreateSchema = z
   .strictObject({
-    companyId: z.uuid(),
+    companyId: z.guid(),
     ...branchFields,
     status: Status.default('active'),
     isDefault: z.boolean().default(false),
@@ -60,7 +60,7 @@ const BranchCreateSchema = z
 const BranchUpdateSchema = z.strictObject(branchFields).partial().openapi('BranchUpdate');
 
 const ListQuery = PaginationQuery.extend({
-  companyId: z.uuid().optional(),
+  companyId: z.guid().optional(),
   status: Status.optional(),
   q: z.string().trim().min(1).max(100).optional().openapi({ description: 'Busca en código y nombre' }),
 });

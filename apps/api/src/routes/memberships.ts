@@ -21,19 +21,19 @@ const MembershipStatus = z.enum(['active', 'blocked', 'inactive']);
 
 const UserContextSchema = z
   .object({
-    companyId: z.uuid(),
-    branchId: z.uuid().nullable().openapi({ description: 'null: toda la sociedad' }),
+    companyId: z.guid(),
+    branchId: z.guid().nullable().openapi({ description: 'null: toda la sociedad' }),
     isDefault: z.boolean(),
   })
   .openapi('UserContext');
 
 export const MembershipSchema = z
   .object({
-    id: z.uuid(),
-    userId: z.uuid(),
+    id: z.guid(),
+    userId: z.guid(),
     fullName: z.string(),
     status: MembershipStatus,
-    role: z.object({ id: z.uuid(), code: z.string(), name: z.string(), scope: z.string() }),
+    role: z.object({ id: z.guid(), code: z.string(), name: z.string(), scope: z.string() }),
     contexts: z.array(UserContextSchema),
     createdAt: Timestamp,
     updatedAt: Timestamp,
@@ -43,7 +43,7 @@ type Membership = z.infer<typeof MembershipSchema>;
 
 const ListQuery = PaginationQuery.extend({
   status: MembershipStatus.optional(),
-  roleId: z.uuid().optional(),
+  roleId: z.guid().optional(),
 });
 
 const tags = ['Usuarios'];

@@ -105,6 +105,7 @@ Todos los módulos siguen estas reglas.
   los campos enviados (`null` borra un valor). Borrar será `DELETE` con borrado lógico (`deleted_at`).
 - JSON en camelCase (`companyId`, `createdAt`); fechas en ISO 8601 UTC. La base de datos sigue en snake_case:
   postgres.js convierte los nombres de columna.
+- Identificadores con `z.guid()`, no `z.uuid()`: el de zod 4 exige versión RFC y rechaza uuid válidos para Postgres.
 - `tenant_id` nunca viaja en el cuerpo ni en la URL: sale siempre del token. Los cuerpos son estrictos
   (un campo desconocido es un 400).
 - Cada ruta se define con `createRoute` (tags, resumen, esquemas de entrada y salida, errores posibles y

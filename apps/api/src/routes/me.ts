@@ -8,7 +8,7 @@ import { RoleScope } from './roles.js';
 
 const TenantSummarySchema = z
   .object({
-    id: z.uuid(),
+    id: z.guid(),
     code: z.string(),
     legalName: z.string(),
     tradeName: z.string().nullable(),
@@ -19,7 +19,7 @@ type TenantSummary = z.infer<typeof TenantSummarySchema>;
 const MeSchema = z
   .object({
     user: z.object({
-      id: z.uuid(),
+      id: z.guid(),
       email: z.string().nullable(),
       fullName: z.string(),
       phone: z.string().nullable(),
@@ -31,21 +31,21 @@ const MeSchema = z
       description: 'ETT de la sesión (la del token). null si no tiene ninguna o ya no tiene acceso a ella.',
     }),
     role: z
-      .object({ id: z.uuid(), code: z.string(), name: z.string(), scope: RoleScope })
+      .object({ id: z.guid(), code: z.string(), name: z.string(), scope: RoleScope })
       .nullable()
       .openapi({ description: 'Rol en la ETT activa. null para el superadmin sin membresía en ella.' }),
     permissions: z.array(z.string()).openapi({ description: 'Permisos finos en la ETT activa' }),
     branches: z
-      .array(z.object({ id: z.uuid(), companyId: z.uuid(), code: z.string(), name: z.string() }))
+      .array(z.object({ id: z.guid(), companyId: z.guid(), code: z.string(), name: z.string() }))
       .openapi({ description: 'Sucursales de la ETT activa con las que puede trabajar' }),
     tenants: z.array(TenantSummarySchema).openapi({ description: 'ETT a las que puede cambiar' }),
   })
   .openapi('Me');
 
-const ActiveTenantBody = z.strictObject({ tenantId: z.uuid() }).openapi('ActiveTenantChange');
+const ActiveTenantBody = z.strictObject({ tenantId: z.guid() }).openapi('ActiveTenantChange');
 const ActiveTenantResponse = z
   .object({
-    activeTenantId: z.uuid(),
+    activeTenantId: z.guid(),
     refreshRequired: z.literal(true).openapi({
       description: 'El token sigue con la ETT anterior hasta que el cliente refresque la sesión (supabase.auth.refreshSession()).',
     }),

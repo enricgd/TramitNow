@@ -12,7 +12,7 @@ export const RoleScope = z.enum(['tenant', 'branches', 'branch']).openapi({
 
 export const RoleSchema = z
   .object({
-    id: z.uuid(),
+    id: z.guid(),
     code: z.string().openapi({ example: 'admin' }),
     name: z.string().openapi({ example: 'Administrador' }),
     description: z.string().nullable(),
