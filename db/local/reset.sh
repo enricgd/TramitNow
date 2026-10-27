@@ -17,6 +17,9 @@ until echo "select 'auth.jwt'::regproc" | $PSQL -q >/dev/null 2>&1; do sleep 1; 
 
 PSQL="$PSQL" sh "$HERE/../scripts/migrate.sh"
 
+# Catálogo global de municipios del INE (va aparte de las migraciones por tamaño; ver db/README.md).
+$PSQL -q -v ON_ERROR_STOP=1 < "$HERE/../seeds/ine-municipios.sql"
+
 # La API se conecta como tramitnow_api. En local, sin contraseña (pg_hba confía en 127.0.0.1 dentro del contenedor).
 $PSQL -q -v ON_ERROR_STOP=1 -c 'alter role tramitnow_api login'
 
