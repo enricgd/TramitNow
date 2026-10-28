@@ -1553,41 +1553,82 @@ export default function PeticionesView() {
                                     </dl>
                                 </Card>
 
-                                <Card className="overflow-hidden xl:col-span-3">
-                                    <div className="p-4 border-b border-slate-200">
-                                        <SectionTitle actions={<Button size="sm" icon={Copy} onClick={abrirDuplicar}>Duplicar con otro horario</Button>}>
-                                            Peticiones del presupuesto {peticion.presupuestoOrigen}
-                                        </SectionTitle>
-                                        {(() => {
-                                            const delPuesto = [peticion, ...hermanasDe(peticion, peticiones)].filter(p => p.estado !== 'Cancelada');
-                                            const repartidas = delPuesto.reduce((s, p) => s + p.solicitados, 0);
-                                            return (
-                                                <p className={`text-xs mt-1 ${repartidas === peticion.personasPuesto ? 'text-slate-500' : 'text-amber-700'}`}>
-                                                    {peticion.puesto}: {peticion.personasPuesto} personas en el presupuesto, {repartidas} repartidas en {delPuesto.length} {delPuesto.length === 1 ? 'petición' : 'peticiones'}
-                                                    {repartidas !== peticion.personasPuesto && ' (no coinciden; revísalo con el cliente)'}.
+                                {/* REPARTO DEL PUESTO: cuántas personas del presupuesto cubre cada petición de este puesto */}
+                                {(() => {
+                                    const delPuesto = [peticion, ...hermanasDe(peticion, peticiones)]
+                                        .filter(p => p.estado !== 'Cancelada')
+                                        .sort((a, b) => a.inicio.localeCompare(b.inicio) || a.id.localeCompare(b.id));
+                                    const repartidas = delPuesto.reduce((s, p) => s + p.solicitados, 0);
+                                    const faltan = peticion.personasPuesto - repartidas;
+                                    const escala = Math.max(peticion.personasPuesto, repartidas);
+                                    const otrosPuestos = peticiones.filter(p => p.presupuesto === peticion.presupuesto && p.tipo !== peticion.tipo);
+                                    return (
+                                        <Card className="overflow-hidden xl:col-span-3">
+                                            <div className="p-4 space-y-3">
+                                                <SectionTitle actions={<Button size="sm" icon={Copy} onClick={abrirDuplicar}>Duplicar con otro horario</Button>}>
+                                                    Reparto del puesto
+                                                </SectionTitle>
+                                                <p className="text-xs text-slate-600 -mt-1">
+                                                    El presupuesto {peticion.presupuestoOrigen} pide <strong className="font-medium text-slate-900">{peticion.personasPuesto} {peticion.puesto.toLowerCase()}</strong>.
+                                                    {delPuesto.length > 1
+                                                        ? ` Están repartidos en ${delPuesto.length} peticiones, una por horario o fechas.`
+                                                        : ' Están todos en esta petición. Si hace falta otro horario o fechas, crea otra con «Duplicar con otro horario».'}
                                                 </p>
-                                            );
-                                        })()}
-                                    </div>
-                                    <table className="w-full text-left text-xs">
-                                        <tbody>
-                                            {peticiones.filter(p => p.presupuesto === peticion.presupuesto).map(p => {
-                                                const actual = p.id === peticion.id;
-                                                return (
-                                                    <tr key={p.id} className={`border-b border-slate-100 last:border-0 ${actual ? 'bg-indigo-50/50' : 'hover:bg-slate-50 cursor-pointer'}`} onClick={() => !actual && abrirPeticion(p.id)}>
-                                                        <td className="py-2.5 px-4">
-                                                            <div className="font-medium text-slate-900">{p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}</div>
-                                                            <div className="text-[11px] text-slate-500">{p.id}{actual ? ' · esta petición' : p.tipo === peticion.tipo ? ' · mismo puesto' : ''}</div>
-                                                        </td>
-                                                        <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</td>
-                                                        <td className="py-2.5 px-4 text-slate-700 whitespace-nowrap">{cubiertasDe(plazas[p.id])} de {p.solicitados} plazas</td>
-                                                        <td className="py-2.5 px-4 text-right"><Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge></td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </Card>
+                                                {/* Barra: cada tramo es una petición; la actual en color fuerte */}
+                                                <div className="flex h-7 w-full overflow-hidden rounded-lg bg-slate-100 text-[11px] font-medium">
+                                                    {delPuesto.map(p => (
+                                                        <div
+                                                            key={p.id}
+                                                            title={`${p.id}: ${p.solicitados} plazas`}
+                                                            style={{ width: `${(p.solicitados / escala) * 100}%` }}
+                                                            className={`flex items-center justify-center border-r border-white/70 last:border-0 truncate px-1 ${p.id === peticion.id ? 'bg-indigo-600 text-white' : 'bg-indigo-200 text-indigo-900'}`}
+                                                        >
+                                                            {p.solicitados} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}
+                                                        </div>
+                                                    ))}
+                                                    {faltan > 0 && (
+                                                        <div style={{ width: `${(faltan / escala) * 100}%` }} className="flex items-center justify-center text-slate-500 truncate px-1">
+                                                            {faltan} sin petición
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className={`text-xs ${faltan === 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                    {faltan === 0 && `Repartidas las ${peticion.personasPuesto} personas del presupuesto.`}
+                                                    {faltan > 0 && `Faltan ${faltan} ${faltan === 1 ? 'persona' : 'personas'} por poner en alguna petición.`}
+                                                    {faltan < 0 && `Hay ${-faltan} ${faltan === -1 ? 'plaza' : 'plazas'} más que personas en el presupuesto: revísalo con el cliente.`}
+                                                </p>
+                                            </div>
+                                            <table className="w-full text-left text-xs border-t border-slate-200">
+                                                <tbody>
+                                                    {delPuesto.map(p => {
+                                                        const actual = p.id === peticion.id;
+                                                        return (
+                                                            <tr key={p.id} className={`border-b border-slate-100 last:border-0 ${actual ? 'bg-indigo-50/50' : 'hover:bg-slate-50 cursor-pointer'}`} onClick={() => !actual && abrirPeticion(p.id)}>
+                                                                <td className="py-2.5 px-4">
+                                                                    <div className="font-medium text-slate-900">{horarios[p.id]?.turnoNombre}{actual && <span className="ml-2 text-[11px] font-normal text-indigo-700">esta petición</span>}</div>
+                                                                    <div className="text-[11px] text-slate-500">{p.id}</div>
+                                                                </td>
+                                                                <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</td>
+                                                                <td className="py-2.5 px-4 text-slate-700 whitespace-nowrap">{p.solicitados} plazas · {cubiertasDe(plazas[p.id])} cubiertas</td>
+                                                                <td className="py-2.5 px-4 text-right"><Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge></td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                            {otrosPuestos.length > 0 && (
+                                                <div className="px-4 py-2.5 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                    <span>Otros puestos del mismo presupuesto:</span>
+                                                    {otrosPuestos.map(p => (
+                                                        <button key={p.id} type="button" onClick={() => abrirPeticion(p.id)} className="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                                            {p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()} ({p.id})
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </Card>
+                                    );
+                                })()}
                             </div>
                         )}
 

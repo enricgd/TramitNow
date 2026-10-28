@@ -624,8 +624,10 @@ margenServicio
       const crearPeticion = () => {
         const codigos = repartoPeticiones.map((_, i) => `PET-2026-${String(52 + i).padStart(4, '0')}`);
         const resumen = codigos.length === 1 ? codigos[0] : `${codigos[0]} a ${codigos[codigos.length - 1].slice(-4)}`;
-        setPresupuesto(prev => ({ ...prev, peticionCreada: resumen }));
-        setFormularioPresupuesto(prev => ({ ...prev, peticionCreada: resumen }));
+        // Se guarda el reparto para verlo en cada puesto del presupuesto
+        const peticionesCreadas = repartoPeticiones.map((r, i) => ({ codigo: codigos[i], posId: r.posId, turno: r.turno, plazas: Number(r.plazas) || 0 }));
+        setPresupuesto(prev => ({ ...prev, peticionCreada: resumen, peticionesCreadas }));
+        setFormularioPresupuesto(prev => ({ ...prev, peticionCreada: resumen, peticionesCreadas }));
         setModalPeticion(false);
         mostrarToast(`${codigos.length === 1 ? 'Creada la petición' : `Creadas ${codigos.length} peticiones:`} ${resumen}. Cada una con un solo puesto.`, 'exito');
       };
@@ -1595,6 +1597,29 @@ return datosActivos.posiciones.map(pos => ({
                         )}
                       </div>
                     </div>
+
+                    {/* Peticiones de este puesto: solo cuando el presupuesto está aceptado */}
+                    {datosActivos.estado === 'Firmado / Aceptado' && (() => {
+                      const delPuesto = (datosActivos.peticionesCreadas || []).filter(x => x.posId === pos.id);
+                      const repartidas = delPuesto.reduce((s, x) => s + x.plazas, 0);
+                      return (
+                        <div className="mt-3 rounded-lg border border-slate-200 px-3 py-2 text-xs flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <span className="text-slate-500">Peticiones:</span>
+                          {delPuesto.length === 0 ? (
+                            <span className="text-slate-500">aún no se han creado</span>
+                          ) : (
+                            <>
+                              {delPuesto.map(x => (
+                                <a key={x.codigo} href="#/peticiones" className="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                  {x.turno.toLowerCase()} · {x.plazas} {x.plazas === 1 ? 'plaza' : 'plazas'} ({x.codigo})
+                                </a>
+                              ))}
+                              <span className={repartidas === eco.personas ? 'text-emerald-700' : 'text-amber-700'}>{repartidas} de {eco.personas} personas</span>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Desglose de Parámetros Laborales */}
                     <div className="grid grid-cols-3 gap-2 py-3.5 text-xs border-b border-slate-100 bg-slate-50/50 rounded-lg p-2.5 my-3">
