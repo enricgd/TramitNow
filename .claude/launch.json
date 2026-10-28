@@ -26,6 +26,32 @@
         "maquetas"
       ],
       "port": 5174
+    },
+    {
+      "name": "web-real",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "apps/web",
+        "run",
+        "dev:real",
+        "--",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "apps/api",
+        "run",
+        "dev"
+      ],
+      "port": 3000
     }
   ]
 }

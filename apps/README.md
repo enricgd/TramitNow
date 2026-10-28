@@ -36,13 +36,35 @@ la ETT, la sucursal y las pantallas siguen con datos de ejemplo.
 
 - En local, `npm run dev` es el **modo demo**: entra sin login con un usuario ficticio y no necesita Supabase.
 - Para probar el login en local: `sh db/local/reset.sh` levanta Postgres + Auth con un usuario demo (ver
-  `db/README.md`) y `npm run dev:real` reenvía `/auth/v1` a ese Auth.
-- En el NAS: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env.production.local` (ver `.env.example`).
+  `db/README.md`) y `npm run dev:real` reenvía `/auth/v1` a ese Auth y `/v1` a la API local.
+- En el NAS: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` y `VITE_API_URL` en `.env.production.local` (ver `.env.example`).
 - "¿Has olvidado tu contraseña?" llama a Supabase Auth; para que llegue el correo hay que configurar
   SMTP en el `.env` del NAS. El enlace abre la pantalla "Nueva contraseña".
 
-Pendiente: capa de datos (repositorios con implementación en memoria y contra `apps/api`), y que la cabecera
-muestre la ETT y sucursal reales cuando exista la API.
+### Datos
+
+Las pantallas leen y guardan a través de `src/data/` (repositorios), nunca con `fetch` ni con `supabase.from(...)`:
+
+```tsx
+import { repos, useData } from '../data';
+
+const { data, loading, error, reload } = useData((r) => r.branches.list(), []);
+await repos.branches.update(id, { phone });
+reload();
+```
+
+- `repositorios.ts`: el contrato (una operación por ruta de `apps/api`). `tipos.ts`: los datos tal como los
+  devuelve la API y `ApiError` (`code` estable, `message` en español para mostrar, `details` por campo).
+- `memoria.ts`: datos de ejemplo en memoria para el **modo demo** (`npm run dev`, el del diseñador): sin login,
+  sin API y sin base de datos. Se comporta como la API (filtros, paginación, errores) y no entra en la
+  compilación para el NAS. Si una pantalla necesita datos de ejemplo nuevos, van aquí, no dentro de la vista.
+- `api.ts`: contra `apps/api` con el token de la sesión. Con `npm run dev:real`, Vite reenvía `/v1` a la API
+  local (en otra terminal, `cd apps/api && npm run dev`; sus valores locales en `apps/api/.env.example`).
+  En el NAS, `VITE_API_URL` en `.env.production.local`.
+- Cuando la API gane una ruta, se añade al contrato y a las dos implementaciones.
+
+Pendiente: conectar la cabecera (ETT y sucursal de `/v1/me`) y "Mi ETT" (sociedad, sucursales, usuarios y roles)
+a los repositorios; las pantallas aún usan los datos de ejemplo que llevan dentro.
 
 ## api
 

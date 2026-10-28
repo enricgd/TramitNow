@@ -16,9 +16,11 @@ const commit = (() => {
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    // Supabase Auth local (db/local/reset.sh). En el NAS la web llama a VITE_SUPABASE_URL directamente.
+    // Supabase Auth local (db/local/reset.sh) y apps/api local (`npm run dev` en apps/api), para
+    // `npm run dev:real`. En el NAS la web llama a VITE_SUPABASE_URL y VITE_API_URL directamente.
     proxy: {
       '/auth/v1': { target: 'http://127.0.0.1:9999', rewrite: (path) => path.replace(/^\/auth\/v1/, '') },
+      '/v1': { target: 'http://127.0.0.1:3000' },
     },
   },
   define: {
