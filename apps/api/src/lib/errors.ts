@@ -67,11 +67,21 @@ export function errorBody(code: ErrorCode, message: string, details?: Validation
   return { error: details ? { code, message, details } : { code, message } };
 }
 
+/** Mensajes propios de algunas unicidades; el resto de duplicados dicen "código duplicado". */
+const uniqueMessages: Record<string, string> = {
+  clients_tenant_company_tax_id_uniq: 'Ya existe un cliente con ese NIF en la sociedad',
+  client_contacts_main_uniq: 'El cliente ya tiene un contacto principal',
+};
+
 /** Traduce los errores de Postgres que puede provocar el cliente; el resto son errores internos. */
 function fromPostgres(err: { code: string; constraint_name?: string }): ApiError | undefined {
   switch (err.code) {
     case '23505':
-      return new ApiError(409, 'conflicto', 'Ya existe un registro con esos datos (código duplicado)');
+      return new ApiError(
+        409,
+        'conflicto',
+        uniqueMessages[err.constraint_name ?? ''] ?? 'Ya existe un registro con esos datos (código duplicado)',
+      );
     case '23503':
       return new ApiError(422, 'referencia_invalida', 'Hace referencia a un registro que no existe o no es de esta ETT');
     case '23514':

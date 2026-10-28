@@ -36,13 +36,35 @@ la ETT, la sucursal y las pantallas siguen con datos de ejemplo.
 
 - En local, `npm run dev` es el **modo demo**: entra sin login con un usuario ficticio y no necesita Supabase.
 - Para probar el login en local: `sh db/local/reset.sh` levanta Postgres + Auth con un usuario demo (ver
-  `db/README.md`) y `npm run dev:real` reenvía `/auth/v1` a ese Auth.
-- En el NAS: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env.production.local` (ver `.env.example`).
+  `db/README.md`) y `npm run dev:real` reenvía `/auth/v1` a ese Auth y `/v1` a la API local.
+- En el NAS: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` y `VITE_API_URL` en `.env.production.local` (ver `.env.example`).
 - "¿Has olvidado tu contraseña?" llama a Supabase Auth; para que llegue el correo hay que configurar
   SMTP en el `.env` del NAS. El enlace abre la pantalla "Nueva contraseña".
 
-Pendiente: capa de datos (repositorios con implementación en memoria y contra `apps/api`), y que la cabecera
-muestre la ETT y sucursal reales cuando exista la API.
+### Datos
+
+Las pantallas leen y guardan a través de `src/data/` (repositorios), nunca con `fetch` ni con `supabase.from(...)`:
+
+```tsx
+import { repos, useData } from '../data';
+
+const { data, loading, error, reload } = useData((r) => r.branches.list(), []);
+await repos.branches.update(id, { phone });
+reload();
+```
+
+- `repositorios.ts`: el contrato (una operación por ruta de `apps/api`). `tipos.ts`: los datos tal como los
+  devuelve la API y `ApiError` (`code` estable, `message` en español para mostrar, `details` por campo).
+- `memoria.ts`: datos de ejemplo en memoria para el **modo demo** (`npm run dev`, el del diseñador): sin login,
+  sin API y sin base de datos. Se comporta como la API (filtros, paginación, errores) y no entra en la
+  compilación para el NAS. Si una pantalla necesita datos de ejemplo nuevos, van aquí, no dentro de la vista.
+- `api.ts`: contra `apps/api` con el token de la sesión. Con `npm run dev:real`, Vite reenvía `/v1` a la API
+  local (en otra terminal, `cd apps/api && npm run dev`; sus valores locales en `apps/api/.env.example`).
+  En el NAS, `VITE_API_URL` en `.env.production.local`.
+- Cuando la API gane una ruta, se añade al contrato y a las dos implementaciones.
+
+Pendiente: conectar la cabecera (ETT y sucursal de `/v1/me`) y "Mi ETT" (sociedad, sucursales, usuarios y roles)
+a los repositorios; las pantallas aún usan los datos de ejemplo que llevan dentro.
 
 ## api
 
@@ -156,7 +178,7 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 - El superadmin (tabla `platform_admins`) tiene todos los permisos en la ETT activa.
 - Un permiso nuevo se añade en una migración (ver "Reglas para tablas nuevas" en `db/README.md`).
 
-### Rutas de esta fase
+### Rutas
 
 | Ruta | Permiso |
 |---|---|
@@ -170,9 +192,17 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `POST /v1/branches`, `PATCH /v1/branches/{id}` (al marcar una por defecto, la anterior deja de serlo) | `branches.manage` |
 | `GET /v1/roles`, `GET /v1/roles/{id}`, `GET /v1/permissions` | miembro |
 | `GET /v1/memberships`, `GET /v1/memberships/{id}` | `users.manage` |
+| `GET /v1/catalogs/autonomous-communities`, `/provinces?autonomousCommunityCode=`, `/municipalities?provinceCode=&q=` (exige uno de los dos), `/municipalities/{code}`, `/countries?q=`, `/contract-keys?includeInactive=`: catálogos oficiales, de solo lectura | token (aunque no tenga ETT) |
+| `GET`, `POST /v1/addresses`; `GET`, `PATCH`, `DELETE /v1/addresses/{id}`: con los códigos oficiales de municipio, provincia y país | miembro; escribir, `addresses.write` |
+| `/v1/collective-agreements`, `/v1/professional-categories`, `/v1/contract-types`, `/v1/payroll-concepts`: listar (filtros, `?q=`, `?status=`), ver, crear, editar y dar de baja (`DELETE`, baja lógica) | miembro; escribir, `labor_catalogs.manage` |
+| `/v1/clients` (`?q=` busca en código, razón social, nombre comercial y NIF; `?status=`, `?companyId=`, `?branchId=`, `?blocked=`), `/v1/client-centers?clientId=`, `/v1/client-contacts?clientId=`: listar, ver, crear, editar y dar de baja | miembro; escribir, `clients.manage` en la sucursal del cliente o del centro |
+| `GET`, `PUT /v1/clients/{id}/billing`: facturación del cliente (`PUT` crea o actualiza; devuelve `warnings` si el plazo de pago supera el legal) | `clients.billing.manage` |
 
-Fuera de esta fase: alta e invitación de usuarios (necesita la `service_role`), edición de roles y membresías,
-direcciones y borrado.
+Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
+sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
+
+Pendiente: alta e invitación de usuarios (necesita la `service_role`), edición de roles y membresías, y borrado
+de sociedades y sucursales.
 
 ### Tests
 

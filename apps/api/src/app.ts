@@ -11,9 +11,13 @@ import { requireAuth } from './lib/auth.js';
 import type { AppEnv } from './lib/context.js';
 import type { Sql } from './lib/db.js';
 import { ApiError, errorBody, handleError } from './lib/errors.js';
+import { addresses } from './routes/addresses.js';
 import { branches } from './routes/branches.js';
+import { catalogs } from './routes/catalogs.js';
+import { clientBilling, clientCenters, clientContacts, clients } from './routes/clients.js';
 import { companies } from './routes/companies.js';
 import { health } from './routes/health.js';
+import { collectiveAgreements, contractTypes, payrollConcepts, professionalCategories } from './routes/labor-catalogs.js';
 import { me } from './routes/me.js';
 import { memberships } from './routes/memberships.js';
 import { roles } from './routes/roles.js';
@@ -61,6 +65,16 @@ export function createApp(options: { sql: Sql; config: Pick<Config, 'jwtSecret' 
   app.route('/v1', branches);
   app.route('/v1', roles);
   app.route('/v1', memberships);
+  app.route('/v1', catalogs);
+  app.route('/v1', addresses);
+  app.route('/v1', collectiveAgreements);
+  app.route('/v1', professionalCategories);
+  app.route('/v1', contractTypes);
+  app.route('/v1', payrollConcepts);
+  app.route('/v1', clients);
+  app.route('/v1', clientBilling);
+  app.route('/v1', clientCenters);
+  app.route('/v1', clientContacts);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
     type: 'http',
