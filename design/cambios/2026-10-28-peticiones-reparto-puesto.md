@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-28
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design` (ver el commit que añade esta nota)
+- **Rama y commits**: `design`, 9b10001
 - **Cómo verlo**:
   - Petición: http://localhost:5173/#/peticiones → PET-2026-0048 → Resumen.
   - Presupuesto: #/presupuestos → pipeline → arrastrar PRE-2026-0048 a Aceptado → "Aceptar y crear peticiones" →
