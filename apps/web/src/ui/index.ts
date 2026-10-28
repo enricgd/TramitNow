@@ -4,4 +4,4 @@ export { Badge, Avatar, TONOS, type Tone } from './Badge';
 export { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, type Miga } from './Layout';
 export { Tabs, Segmented, type Tab } from './Tabs';
 export { Drawer, Modal, Confirmar } from './Overlay';
-export { SearchInput, Select, SelectConAlta, Field, TextInput, CAMPO } from './Fields';
+export { SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, CAMPO } from './Fields';

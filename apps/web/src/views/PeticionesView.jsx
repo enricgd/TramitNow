@@ -10,7 +10,7 @@ import {
     Home, UserCheck, UserPlus, DollarSign, BarChart3, Settings,
     Shield, Cpu, BookOpen, Layers2, FolderKanban, List, SquareKanban, GripVertical
 } from 'lucide-react';
-import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, Field, TextInput, Tabs, Segmented, Modal } from '../ui';
+import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal } from '../ui';
 
 // --- DATOS DE EJEMPLO ---
 // Una petición = un puesto. Las peticiones siempre salen de un presupuesto aceptado. Un mismo puesto del presupuesto
@@ -161,15 +161,15 @@ const PRESUPUESTOS_ACEPTADOS = [
 
 // plantilla: turno del horario (HORARIO_TEMPLATES). cubiertas: plazas ya cubiertas en la demo.
 const PETICIONES_BASE = [
-    { id: 'PET-2026-0048', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'manana', solicitados: 5, cubiertas: 5, enProceso: 0, estado: 'Cubierta', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 3, candidaturas: 41 },
-    { id: 'PET-2026-0049', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'tarde', solicitados: 3, cubiertas: 0, enProceso: 4, estado: 'En selección', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 4, candidaturas: 22 },
-    { id: 'PET-2026-0050', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'carretillero', personasPuesto: 4, plantilla: 'tarde', solicitados: 4, cubiertas: 2, enProceso: 3, estado: 'En selección', inicio: '2026-11-10', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Jon Ibarra', portalesActivos: 4, candidaturas: 17 },
-    { id: 'PET-2026-0044', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero', personasPuesto: 10, plantilla: 'partida', solicitados: 10, cubiertas: 10, enProceso: 0, estado: 'En curso', inicio: '2026-10-10', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 2, candidaturas: 58 },
-    { id: 'PET-2026-0045', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'ayudante_cocina', personasPuesto: 4, plantilla: 'partida', solicitados: 4, cubiertas: 4, enProceso: 0, estado: 'Cubierta', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 1, candidaturas: 19 },
-    { id: 'PET-2026-0046', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'cocinero', personasPuesto: 2, plantilla: 'partida', solicitados: 2, cubiertas: 0, enProceso: 1, estado: 'En difusión', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 3, candidaturas: 6 },
-    { id: 'PET-2026-0047', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero_barra', personasPuesto: 3, plantilla: 'noche', solicitados: 3, cubiertas: 0, enProceso: 0, estado: 'Nueva', inicio: '2026-11-12', fin: '2026-11-30', creada: '2026-10-27', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 0 },
-    { id: 'PET-2026-0031', presupuesto: 'PRE-2026-0029', version: 'v1', cliente: 'translog', tipo: 'mozo', personasPuesto: 6, plantilla: 'manana', solicitados: 6, cubiertas: 6, enProceso: 0, estado: 'Cerrada', inicio: '2026-07-01', fin: '2026-09-30', creada: '2026-06-12', responsable: 'Ane Uriarte', portalesActivos: 0, candidaturas: 47 },
-    { id: 'PET-2026-0036', presupuesto: 'PRE-2026-0033', version: 'v2', cliente: 'mediterranea', tipo: 'envasado', personasPuesto: 5, plantilla: 'noche', solicitados: 5, cubiertas: 0, enProceso: 0, estado: 'Cancelada', inicio: '2026-09-15', fin: '2026-12-15', creada: '2026-08-28', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 9, motivoCancelacion: 'El cliente aplaza la campaña' },
+    { id: 'PET-2026-0048', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'manana', solicitados: 5, cubiertas: 5, estado: 'Cubierta', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 3, candidaturas: 41 },
+    { id: 'PET-2026-0049', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'tarde', solicitados: 3, cubiertas: 0, estado: 'En selección', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 4, candidaturas: 22 },
+    { id: 'PET-2026-0050', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'carretillero', personasPuesto: 4, plantilla: 'tarde', solicitados: 4, cubiertas: 2, estado: 'En selección', inicio: '2026-11-10', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Jon Ibarra', portalesActivos: 4, candidaturas: 17 },
+    { id: 'PET-2026-0044', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero', personasPuesto: 10, plantilla: 'partida', solicitados: 10, cubiertas: 10, estado: 'En curso', inicio: '2026-10-10', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 2, candidaturas: 58 },
+    { id: 'PET-2026-0045', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'ayudante_cocina', personasPuesto: 4, plantilla: 'partida', solicitados: 4, cubiertas: 4, estado: 'Cubierta', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 1, candidaturas: 19 },
+    { id: 'PET-2026-0046', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'cocinero', personasPuesto: 2, plantilla: 'partida', solicitados: 2, cubiertas: 0, estado: 'En difusión', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 3, candidaturas: 6 },
+    { id: 'PET-2026-0047', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero_barra', personasPuesto: 3, plantilla: 'noche', solicitados: 3, cubiertas: 0, estado: 'Nueva', inicio: '2026-11-12', fin: '2026-11-30', creada: '2026-10-27', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 0 },
+    { id: 'PET-2026-0031', presupuesto: 'PRE-2026-0029', version: 'v1', cliente: 'translog', tipo: 'mozo', personasPuesto: 6, plantilla: 'manana', solicitados: 6, cubiertas: 6, estado: 'Cerrada', inicio: '2026-07-01', fin: '2026-09-30', creada: '2026-06-12', responsable: 'Ane Uriarte', portalesActivos: 0, candidaturas: 47 },
+    { id: 'PET-2026-0036', presupuesto: 'PRE-2026-0033', version: 'v2', cliente: 'mediterranea', tipo: 'envasado', personasPuesto: 5, plantilla: 'noche', solicitados: 5, cubiertas: 0, estado: 'Cancelada', inicio: '2026-09-15', fin: '2026-12-15', creada: '2026-08-28', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 9, motivoCancelacion: 'El cliente aplaza la campaña' },
 ];
 
 const completarPeticion = (p) => ({ ...CLIENTES[p.cliente], ...PUESTOS[p.tipo], ...p, presupuestoOrigen: `${p.presupuesto} ${p.version}` });
@@ -527,7 +527,7 @@ const generarPlazas = (p) => Array.from({ length: p.solicitados }, (_, i) => {
         foto: null
     };
 });
-const INITIAL_PLAZAS = Object.fromEntries(INITIAL_PETICIONES.map(p => {
+const PLAZAS_INICIO = Object.fromEntries(INITIAL_PETICIONES.map(p => {
     const codigo = p.id.slice(-4);
     if (p.id === 'PET-2026-0048') return [p.id, renumerarPlazas(PLAZAS_BASE['operario'].slice(0, 5), codigo)];
     if (p.id === 'PET-2026-0049') return [p.id, renumerarPlazas(PLAZAS_BASE['operario'].slice(5), codigo)];
@@ -535,7 +535,7 @@ const INITIAL_PLAZAS = Object.fromEntries(INITIAL_PETICIONES.map(p => {
     return [p.id, renumerarPlazas(generarPlazas(p), codigo)];
 }));
 
-const INITIAL_CANDIDATOS_POOL = [
+const CANDIDATOS_BASE = [
     {
         id: 'CND-1201',
         nombre: 'Nerea Barandiarán Goikoetxea',
@@ -624,7 +624,151 @@ const INITIAL_CANDIDATOS_POOL = [
 ];
 
 // --- ROOT COMPONENT ---
-const cubiertasDe = (lista) => (lista || []).filter(p => p.estado === 'cubierta').length;
+// Perfil de cada candidato para comprobarlo contra la petición: turnos en los que puede trabajar, carnés,
+// si su documentación está en vigor y de dónde vino.
+const PERFIL_CANDIDATOS = {
+    'CND-1201': { turnos: ['manana', 'tarde'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' },
+    'CND-1202': { turnos: ['manana', 'tarde', 'noche'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' },
+    'CND-1203': { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' },
+    'CND-1204': { turnos: ['tarde', 'noche'], carnes: ['carretilla'], docOk: false, origen: 'Indeed' },
+    'CND-1205': { turnos: ['manana', 'tarde'], carnes: [], docOk: true, origen: 'Base de datos' },
+};
+const persona = (id, nombre, puestoPrincipal, ubicacion, scoring, matchPosicion, perfil, experiencia) => ({
+    id, nombre, dni: '00000000T', telefono: '+34 600 000 000', email: `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
+    puestoPrincipal, experiencia, disponibilidad: 'Inmediata', carnets: perfil.carnes.map(c => NOMBRE_CARNE[c]).join(', ') || 'Ninguno',
+    scoring, matchPosicion, ubicacion, valoracionETT: 'Pendiente de entrevista.', estadoSeleccion: 'En proceso', foto: null, ...perfil
+});
+const NOMBRE_CARNE = { carretilla: 'Carné de carretillero', manipulador: 'Manipulador/a de alimentos' };
+const INITIAL_CANDIDATOS_POOL = [
+    ...CANDIDATOS_BASE.map(c => ({ ...c, ...PERFIL_CANDIDATOS[c.id] })),
+    persona('CND-1206', 'Ibai Zubizarreta Lasa', 'Operario de almacén', 'Basauri (Bizkaia)', 88, ['operario'], { turnos: ['tarde'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, '2 años en almacén de recambios'),
+    persona('CND-1207', 'Leire Ortuzar Bengoa', 'Operaria de almacén', 'Etxebarri (Bizkaia)', 80, ['operario'], { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, 'Sin experiencia en logística; viene de comercio'),
+    persona('CND-1208', 'Gorka Bilbao Arrieta', 'Carretillero', 'Arrigorriaga (Bizkaia)', 86, ['carretillero'], { turnos: ['tarde'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' }, '4 años con carretilla retráctil'),
+    persona('CND-1301', 'Marina Soler Bosch', 'Camarera de sala y barra', 'Barcelona', 92, ['camarero', 'camarero_barra'], { turnos: ['partida', 'noche'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' }, '5 temporadas en banquetes y eventos'),
+    persona('CND-1302', 'Jordi Vila Mas', 'Cocinero', 'L\'Hospitalet de Llobregat', 90, ['cocinero', 'ayudante_cocina'], { turnos: ['partida'], carnes: ['manipulador'], docOk: true, origen: 'InfoJobs' }, 'Jefe de partida en restaurante de 120 cubiertos'),
+    persona('CND-1303', 'Fatima Zahra El Idrissi', 'Ayudante de cocina', 'Badalona', 84, ['ayudante_cocina'], { turnos: ['partida', 'manana'], carnes: ['manipulador'], docOk: false, origen: 'Portal de candidatos' }, '1 año en cocina de colectividades'),
+    persona('CND-1304', 'Álex Romero Gil', 'Camarero de barra', 'Barcelona', 81, ['camarero_barra'], { turnos: ['noche'], carnes: [], docOk: true, origen: 'Indeed' }, 'Coctelería en locales de ocio nocturno'),
+];
+
+// Requisitos de la petición que se comprueban al proponer a alguien
+const REQUISITO_CARNE = { carretillero: 'carretilla', camarero: 'manipulador', camarero_barra: 'manipulador', ayudante_cocina: 'manipulador', cocinero: 'manipulador', envasado: 'manipulador' };
+const comprobarRequisitos = (c, pet, plantilla) => {
+    const carne = REQUISITO_CARNE[pet.tipo];
+    return [
+        { id: 'carne', texto: carne ? NOMBRE_CARNE[carne] : 'Sin carné específico', ok: !carne || (c.carnes || []).includes(carne) },
+        { id: 'turno', texto: HORARIO_TEMPLATES[plantilla]?.nombre || 'Turno', ok: (c.turnos || []).includes(plantilla) },
+        { id: 'doc', texto: 'Documentación en vigor', ok: c.docOk !== false },
+    ];
+};
+
+// Embudo de selección de cada petición
+const ETAPAS = [
+    { id: 'inscrito', texto: 'Inscritos', tono: 'neutral' },
+    { id: 'preseleccionado', texto: 'Preseleccionados', tono: 'info' },
+    { id: 'entrevista', texto: 'Entrevista', tono: 'accent' },
+    { id: 'propuesto', texto: 'Propuestos al cliente', tono: 'warning' },
+    { id: 'aceptado', texto: 'Aceptados', tono: 'success' },
+    { id: 'descartado', texto: 'Descartados', tono: 'danger' },
+];
+const ETAPAS_EN_PROCESO = ['preseleccionado', 'entrevista', 'propuesto'];
+const enProcesoDe = (lista) => (lista || []).filter(x => ETAPAS_EN_PROCESO.includes(x.etapa)).length;
+const INITIAL_EMBUDO = {
+    'PET-2026-0049': [
+        { id: 'CND-1201', etapa: 'entrevista', fecha: '2026-10-24' },
+        { id: 'CND-1205', etapa: 'entrevista', fecha: '2026-10-22' },
+        { id: 'CND-1203', etapa: 'preseleccionado', fecha: '2026-10-25' },
+        { id: 'CND-1206', etapa: 'preseleccionado', fecha: '2026-10-26' },
+        { id: 'CND-1207', etapa: 'inscrito', fecha: '2026-10-27' },
+    ],
+    'PET-2026-0050': [
+        { id: 'CND-1202', etapa: 'propuesto', fecha: '2026-10-20' },
+        { id: 'CND-1204', etapa: 'entrevista', fecha: '2026-10-23' },
+        { id: 'CND-1208', etapa: 'preseleccionado', fecha: '2026-10-26' },
+    ],
+    'PET-2026-0046': [
+        { id: 'CND-1302', etapa: 'entrevista', fecha: '2026-10-21' },
+        { id: 'CND-1303', etapa: 'inscrito', fecha: '2026-10-27' },
+    ],
+    'PET-2026-0047': [
+        { id: 'CND-1301', etapa: 'inscrito', fecha: '2026-10-27' },
+        { id: 'CND-1304', etapa: 'inscrito', fecha: '2026-10-28' },
+    ],
+};
+
+// Estados de una plaza: por cubrir → pendiente del cliente → cubierta → incorporada; y baja si alguien se va
+const ESTADOS_PLAZA = {
+    vacante: { texto: 'Por cubrir', tono: 'warning' },
+    reservada: { texto: 'Pendiente del cliente', tono: 'info' },
+    cubierta: { texto: 'Cubierta', tono: 'success' },
+    incorporada: { texto: 'Incorporada', tono: 'success' },
+    baja: { texto: 'Baja', tono: 'danger' },
+};
+const PLAZA_OCUPADA = ['reservada', 'cubierta', 'incorporada'];
+const MOTIVOS_BAJA = ['No se presentó', 'Renuncia', 'No supera el periodo de prueba', 'A petición del cliente', 'Fin de la necesidad'];
+
+// CPD por persona (se genera al confirmar la plaza) y CPD previo por petición (condiciones, antes de tener personas)
+const ESTADOS_CPD = {
+    sin_generar: { texto: 'Se genera al confirmar', tono: 'neutral' },
+    enviado: { texto: 'Pendiente de firma', tono: 'warning' },
+    firmado: { texto: 'Firmado', tono: 'success' },
+};
+const ESTADOS_CPD_PREVIO = {
+    sin_enviar: { texto: 'Sin enviar', tono: 'neutral' },
+    enviado: { texto: 'Enviado, sin revisar', tono: 'warning' },
+    revisado: { texto: 'Revisado por el cliente', tono: 'success' },
+};
+const INITIAL_CPD_PREVIO = Object.fromEntries(INITIAL_PETICIONES.map(p => [p.id,
+    p.estado === 'Nueva' ? { estado: 'sin_enviar' } : ['PET-2026-0049', 'PET-2026-0046'].includes(p.id) ? { estado: 'enviado', fecha: p.creada } : { estado: 'revisado', fecha: p.creada }
+]));
+
+// Portales propios de la ETT (subdominio configurado en Mi ETT): uno para empresas y otro para candidatos
+const SUBDOMINIO_ETT = 'ettglobal';
+const urlPortal = (tipo, petId) => `https://${SUBDOMINIO_ETT}.tramitnow.com/${tipo === 'empresa' ? 'empresas' : `candidatos/ofertas/${petId}`}`;
+const INITIAL_PORTALES_PROPIOS = Object.fromEntries(INITIAL_PETICIONES.map(p => [p.id, {
+    empresa: ESTADOS_ACTIVOS.includes(p.estado) && p.estado !== 'Nueva',
+    candidatos: ['En difusión', 'En selección'].includes(p.estado),
+    bienvenidaEmpresa: true,
+    bienvenidaCandidatos: true,
+    bienvenidaEmpresaEnviada: p.estado !== 'Nueva' ? p.creada : null,
+}]));
+
+// Plazas con su estado y su CPD. Las cubiertas de peticiones ya empezadas pasan a incorporadas.
+const INITIAL_PLAZAS = Object.fromEntries(Object.entries(PLAZAS_INICIO).map(([petId, lista]) => {
+    const pet = INITIAL_PETICIONES.find(p => p.id === petId);
+    const empezada = diasHasta(pet.inicio) <= 0;
+    return [petId, lista.map(pl => {
+        const p = { ...pl, motivoBaja: null, bajaDe: null, cpd: null };
+        if (p.estado !== 'cubierta') return { ...p, estado: 'vacante' };
+        return { ...p, estado: empezada ? 'incorporada' : 'cubierta', cpd: 'firmado', fechaIncorporacion: fechaCorta(pet.inicio), contratoTipo: 'Circunstancias de la producción' };
+    })];
+}));
+// Casos de la demo: CPD aún sin firmar, una persona propuesta al cliente y una baja
+INITIAL_PLAZAS['PET-2026-0048'][3].cpd = 'enviado';
+INITIAL_PLAZAS['PET-2026-0048'][4].cpd = 'enviado';
+INITIAL_PLAZAS['PET-2026-0050'][1].cpd = 'enviado';
+(() => {
+    const c = INITIAL_CANDIDATOS_POOL.find(x => x.id === 'CND-1202');
+    Object.assign(INITIAL_PLAZAS['PET-2026-0050'][2], { estado: 'reservada', candidatoId: c.id, nombre: c.nombre, dni: c.dni, telefono: c.telefono, email: c.email, scoring: c.scoring, fechaIncorporacion: '10/11/2026', contratoTipo: 'Circunstancias de la producción', cpd: 'sin_generar' });
+    const baja = INITIAL_PLAZAS['PET-2026-0044'][2];
+    Object.assign(baja, { estado: 'baja', motivoBaja: 'No se presentó', bajaDe: baja.nombre, candidatoId: null, nombre: null, cpd: null });
+})();
+
+// Requisitos de un candidato frente a la petición: carné, turno y documentación
+function Requisitos({ lista, compacto = false }) {
+    const corto = { carne: 'Carné', turno: 'Turno', doc: 'Documentos' };
+    return (
+        <span className="flex flex-wrap gap-1">
+            {lista.map(r => (
+                <span key={r.id} title={`${r.texto}: ${r.ok ? 'cumple' : 'no cumple'}`} className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${r.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                    {r.ok ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                    {compacto ? corto[r.id] : r.texto}
+                </span>
+            ))}
+        </span>
+    );
+}
+
+const cubiertasDe = (lista) => (lista || []).filter(p => ['cubierta', 'incorporada'].includes(p.estado)).length;
 
 // Contenido común de la publicación en portales, a partir del puesto y el turno de la petición
 const contenidoDe = (p, horario) => {
@@ -736,6 +880,32 @@ export default function PeticionesView() {
     const [nuevaPeticion, setNuevaPeticion] = useState(null);
     const [copiarDifusion, setCopiarDifusion] = useState(false);
 
+    // Plazas y candidatos: embudo, bajas, CPD previo y portales propios de cada petición
+    const [embudo, setEmbudo] = useState(INITIAL_EMBUDO);
+    const [filtroEtapa, setFiltroEtapa] = useState('');
+    const [verTodosCandidatos, setVerTodosCandidatos] = useState(false);
+    const [bajaPlaza, setBajaPlaza] = useState(null);
+    const [motivosBaja, setMotivosBaja] = useState(MOTIVOS_BAJA);
+    const [cpdPrevio, setCpdPrevio] = useState(INITIAL_CPD_PREVIO);
+    const [verCpdPrevio, setVerCpdPrevio] = useState(false);
+    const [portalesPropios, setPortalesPropios] = useState(INITIAL_PORTALES_PROPIOS);
+    const enviarCpdPrevio = () => {
+        setCpdPrevio(prev => ({ ...prev, [peticion.id]: { estado: 'enviado', fecha: new Date().toISOString().slice(0, 10) } }));
+        showToast(`Condiciones del CPD enviadas a ${peticion.emailContacto}${portalesPropios[peticion.id]?.empresa ? ' y publicadas en su portal' : ''}.`);
+    };
+    const cambiarPortalPropio = (tipo, activo) => {
+        const pp = portalesPropios[peticion.id] || {};
+        const bienvenida = activo && tipo === 'empresa' && pp.bienvenidaEmpresa && !pp.bienvenidaEmpresaEnviada;
+        setPortalesPropios(prev => ({
+            ...prev,
+            [peticion.id]: { ...pp, [tipo]: activo, ...(bienvenida ? { bienvenidaEmpresaEnviada: new Date().toISOString().slice(0, 10) } : {}) },
+        }));
+        const nombre = tipo === 'empresa' ? 'Portal de empresas' : 'Portal de candidatos';
+        showToast(activo
+            ? `${nombre} activado para ${peticion.id}.${bienvenida ? ` Bienvenida enviada a ${peticion.emailContacto}.` : ''}`
+            : `${nombre} desactivado para ${peticion.id}.`);
+    };
+
     // Portales & Content
     const [contenidoComun, setContenidoComun] = useState(() => contenidoDe(INITIAL_PETICIONES[0], INITIAL_HORARIOS[INITIAL_PETICIONES[0].id]));
     const [comunSavedStatus, setComunSavedStatus] = useState('Guardado'); // 'Guardado', 'Modificado', 'Guardando...'
@@ -837,7 +1007,7 @@ export default function PeticionesView() {
     // Crear peticiones: siempre de un puesto de un presupuesto aceptado
     const crearPeticionNueva = (base, plantilla) => {
         const id = siguienteCodigo(peticiones);
-        const nueva = completarPeticion({ ...base, id, plantilla, cubiertas: 0, enProceso: 0, estado: 'Nueva', creada: new Date().toISOString().slice(0, 10), portalesActivos: 0, candidaturas: 0 });
+        const nueva = completarPeticion({ ...base, id, plantilla, cubiertas: 0, estado: 'Nueva', creada: new Date().toISOString().slice(0, 10), portalesActivos: 0, candidaturas: 0 });
         setPeticiones(prev => [nueva, ...prev]);
         setHorarios(prev => ({ ...prev, [id]: horarioDesdePlantilla(plantilla, nueva.centroTrabajo, `${fechaCorta(nueva.creada)} por ${nueva.responsable}`) }));
         setPlazas(prev => ({ ...prev, [id]: renumerarPlazas(Array.from({ length: nueva.solicitados }, () => ({ ...plazaVacante })), id.slice(-4)) }));
@@ -853,7 +1023,7 @@ export default function PeticionesView() {
         setDuplicar({ plantilla: otra, solicitados: 1, inicio: peticion.inicio, fin: peticion.fin });
     };
     const confirmarDuplicar = () => {
-        const { id, cubiertas, enProceso, estado, creada, portalesActivos, candidaturas, motivoCancelacion, ...base } = PETICIONES_BASE.find(b => b.id === peticion.id) || peticion;
+        const { id, cubiertas, estado, creada, portalesActivos, candidaturas, motivoCancelacion, ...base } = PETICIONES_BASE.find(b => b.id === peticion.id) || peticion;
         const nuevoId = crearPeticionNueva({ ...base, solicitados: Number(duplicar.solicitados), inicio: duplicar.inicio, fin: duplicar.fin }, duplicar.plantilla);
         setDuplicar(null);
         showToast(`Petición ${nuevoId} creada: ${peticion.puesto.toLowerCase()}, ${HORARIO_TEMPLATES[duplicar.plantilla].nombre.toLowerCase()}.`);
@@ -906,55 +1076,56 @@ export default function PeticionesView() {
         }
     };
 
-    const handleAssignCandidateToPlaza = (posId, plazaId, candidato) => {
-        setPlazas(prev => {
-            const posPlazas = [...(prev[posId] || [])];
-            const idx = posPlazas.findIndex(p => p.id === plazaId);
-            if (idx !== -1) {
-                posPlazas[idx] = {
-                    ...posPlazas[idx],
-                    estado: 'cubierta',
-                    candidatoId: candidato.id,
-                    nombre: candidato.nombre,
-                    dni: candidato.dni,
-                    telefono: candidato.telefono,
-                    email: candidato.email,
-                    fechaIncorporacion: '03/11/2026',
-                    contratoTipo: 'CPD Obra y Servicio (ETT)',
-                    scoring: candidato.scoring,
-                    foto: candidato.foto
-                };
-            }
-            return { ...prev, [posId]: posPlazas };
+    // Plazas: proponer → el cliente confirma (en su portal) → cubierta con CPD enviado a firma → incorporada
+    const cambiarPlaza = (petId, plazaId, cambios) => {
+        setPlazas(prev => ({ ...prev, [petId]: (prev[petId] || []).map(p => (p.id === plazaId ? { ...p, ...cambios } : p)) }));
+    };
+    const cambiarEtapa = (petId, candidatoId, etapa) => {
+        setEmbudo(prev => {
+            const lista = prev[petId] || [];
+            const existe = lista.some(x => x.id === candidatoId);
+            return { ...prev, [petId]: existe ? lista.map(x => (x.id === candidatoId ? { ...x, etapa } : x)) : [...lista, { id: candidatoId, etapa, fecha: new Date().toISOString().slice(0, 10) }] };
         });
-
-        setAssignCandidateModal(null);
-        showToast(`Candidato ${candidato.nombre} asignado con éxito a la plaza ${plazaId}.`);
+    };
+    // Dónde está ya ocupada una persona (en cualquier petición)
+    const plazaDe = (candidatoId) => {
+        for (const petId in plazas) {
+            const pl = plazas[petId].find(p => p.candidatoId === candidatoId && PLAZA_OCUPADA.includes(p.estado));
+            if (pl) return { petId, plaza: pl };
+        }
+        return null;
     };
 
-    const handleUnassignPlaza = (posId, plazaId) => {
-        setPlazas(prev => {
-            const posPlazas = [...(prev[posId] || [])];
-            const idx = posPlazas.findIndex(p => p.id === plazaId);
-            if (idx !== -1) {
-                posPlazas[idx] = {
-                    ...posPlazas[idx],
-                    estado: 'vacante',
-                    candidatoId: null,
-                    nombre: null,
-                    dni: null,
-                    telefono: null,
-                    email: null,
-                    fechaIncorporacion: null,
-                    contratoTipo: null,
-                    scoring: null,
-                    foto: null
-                };
-            }
-            return { ...prev, [posId]: posPlazas };
+    const handleAssignCandidateToPlaza = (petId, plazaId, candidato) => {
+        const plaza = (plazas[petId] || []).find(p => p.id === plazaId);
+        cambiarPlaza(petId, plazaId, {
+            estado: 'reservada', candidatoId: candidato.id, nombre: candidato.nombre, dni: candidato.dni, telefono: candidato.telefono,
+            email: candidato.email, scoring: candidato.scoring, foto: candidato.foto, fechaIncorporacion: fechaCorta(peticion.inicio),
+            contratoTipo: 'Circunstancias de la producción', cpd: 'sin_generar',
         });
-
-        showToast(`Plaza ${plazaId} liberada y puesta nuevamente en estado Vacante.`);
+        cambiarEtapa(petId, candidato.id, 'propuesto');
+        setAssignCandidateModal(null);
+        showToast(portalesPropios[petId]?.empresa
+            ? `${candidato.nombre} propuesto/a para la plaza ${plaza?.numero}. El cliente lo confirmará en su portal.`
+            : `${candidato.nombre} propuesto/a para la plaza ${plaza?.numero}. Confírmalo cuando responda el cliente.`);
+    };
+    const confirmarPlaza = (petId, plaza) => {
+        cambiarPlaza(petId, plaza.id, { estado: 'cubierta', cpd: 'enviado' });
+        cambiarEtapa(petId, plaza.candidatoId, 'aceptado');
+        showToast(`Plaza ${plaza.numero} cubierta. CPD de ${plaza.nombre} generado y enviado a firma a ${peticion.emailContacto}.`);
+    };
+    const retirarPropuesta = (petId, plaza) => {
+        cambiarPlaza(petId, plaza.id, { ...plazaVacante, cpd: null });
+        cambiarEtapa(petId, plaza.candidatoId, 'entrevista');
+        showToast(`Propuesta de ${plaza.nombre} retirada. Vuelve a entrevista.`);
+    };
+    const recordarCpd = (plaza) => showToast(`Recordatorio de firma del CPD de ${plaza.nombre} enviado a ${peticion.emailContacto}.`);
+    const confirmarBaja = () => {
+        const { plaza, motivo, notas } = bajaPlaza;
+        cambiarPlaza(peticion.id, plaza.id, { ...plazaVacante, estado: 'baja', motivoBaja: notas ? `${motivo}: ${notas}` : motivo, bajaDe: plaza.nombre, cpd: null });
+        if (plaza.candidatoId) cambiarEtapa(peticion.id, plaza.candidatoId, 'descartado');
+        setBajaPlaza(null);
+        showToast(`Baja de ${plaza.nombre} registrada (${motivo}). La plaza ${plaza.numero} queda para buscar sustituto.`);
     };
 
     // Handlers: Horarios
@@ -1317,7 +1488,7 @@ export default function PeticionesView() {
                                     <div className={`${posActual.incorporados === posActual.solicitados ? 'bg-emerald-500' : 'bg-indigo-600'} h-1.5 rounded-full`} style={{ width: `${Math.round((posActual.incorporados / posActual.solicitados) * 100)}%` }}></div>
                                 </div>
                             </KpiTile>
-                            <KpiTile label="Candidatos en proceso" value={peticion.enProceso} hint={peticion.enProceso ? 'En entrevista o pendientes de respuesta' : 'Ninguno ahora mismo'} onClick={() => setActiveTab('plazas')} />
+                            <KpiTile label="Candidatos en proceso" value={enProcesoDe(embudo[peticion.id])} hint={enProcesoDe(embudo[peticion.id]) ? 'En entrevista o pendientes de respuesta' : 'Ninguno ahora mismo'} onClick={() => setActiveTab('plazas')} />
                             <KpiTile label="Portales activos" tone={portales.filter(p => p.activo).length ? 'success' : 'neutral'} value={portales.filter(p => p.activo).length} hint={`${peticion.candidaturas} candidaturas recibidas`} onClick={() => setActiveTab('portales')} />
                             {(() => {
                                 const dias = diasHasta(peticion.inicio);
@@ -1421,68 +1592,183 @@ export default function PeticionesView() {
                         )}
 
                         {/* TAB: PLAZAS Y CANDIDATOS */}
-                        {activeTab === 'plazas' && (
-                            <Card className="overflow-hidden">
-                                <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-                                    <div>
-                                        <SectionTitle>Plazas de esta petición</SectionTitle>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            {posActual.incorporados} cubiertas · {posActual.solicitados - posActual.incorporados} por cubrir · {peticion.enProceso} candidatos en proceso
-                                        </p>
-                                    </div>
-                                    <Button
-                                        variant="primary"
-                                        icon={UserPlus}
-                                        disabled={posActual.incorporados === posActual.solicitados}
-                                        onClick={() => {
-                                            const vacante = (plazas[peticion.id] || []).find(p => p.estado !== 'cubierta');
-                                            if (vacante) setAssignCandidateModal({ posId: peticion.id, plaza: vacante });
-                                        }}
-                                    >
-                                        Asignar candidato
-                                    </Button>
+                        {activeTab === 'plazas' && (() => {
+                            const lista = plazas[peticion.id] || [];
+                            const cuenta = (estados) => lista.filter(p => estados.includes(p.estado)).length;
+                            const libre = lista.find(p => ['vacante', 'baja'].includes(p.estado));
+                            const embudoPet = (embudo[peticion.id] || []).map(e => ({ ...e, c: candidatosPool.find(c => c.id === e.id) })).filter(e => e.c);
+                            const visibles = filtroEtapa ? embudoPet.filter(e => e.etapa === filtroEtapa) : embudoPet.filter(e => e.etapa !== 'descartado');
+                            const urgenteCpd = diasHasta(peticion.inicio) <= 2;
+                            return (
+                                <div className="space-y-4">
+                                    <Card className="overflow-hidden">
+                                        <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <SectionTitle>Plazas</SectionTitle>
+                                                <p className="text-xs text-slate-500 -mt-1">
+                                                    {cuenta(['cubierta', 'incorporada'])} cubiertas · {cuenta(['reservada'])} {cuenta(['reservada']) === 1 ? 'pendiente' : 'pendientes'} del cliente · {cuenta(['vacante', 'baja'])} por cubrir
+                                                </p>
+                                            </div>
+                                            <Button variant="primary" icon={UserPlus} disabled={!libre} onClick={() => libre && setAssignCandidateModal({ posId: peticion.id, plaza: libre })}>
+                                                Proponer candidato
+                                            </Button>
+                                        </div>
+                                        <div className="px-4 pt-3">
+                                            <Notice tone={portalesPropios[peticion.id]?.empresa ? 'info' : 'warning'} icon={Info}>
+                                                {portalesPropios[peticion.id]?.empresa
+                                                    ? <>El cliente confirma las personas propuestas en su portal. Al confirmar, se genera el CPD de cada persona y se le envía a firmar.</>
+                                                    : <>El portal de empresas está desactivado en esta petición: pulsa «Confirmar» cuando el cliente responda. Se puede activar en Difusión en portales.</>}
+                                            </Notice>
+                                        </div>
+                                        <div className="overflow-x-auto mt-3">
+                                            <table className="w-full text-left text-xs">
+                                                <thead>
+                                                    <tr className="border-y border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                        <th className="py-2 px-4 font-medium">Plaza</th>
+                                                        <th className="py-2 px-4 font-medium">Persona</th>
+                                                        <th className="py-2 px-4 font-medium">Estado</th>
+                                                        <th className="py-2 px-4 font-medium">Incorporación</th>
+                                                        <th className="py-2 px-4 font-medium">CPD</th>
+                                                        <th className="py-2 px-4" aria-label="Acciones"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {lista.map(plaza => {
+                                                        const est = ESTADOS_PLAZA[plaza.estado] || ESTADOS_PLAZA.vacante;
+                                                        const cpd = plaza.cpd && ESTADOS_CPD[plaza.cpd];
+                                                        return (
+                                                            <tr key={plaza.id} className="border-b border-slate-100 last:border-0">
+                                                                <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">Plaza {plaza.numero}</td>
+                                                                <td className="py-2.5 px-4">
+                                                                    {plaza.nombre ? (
+                                                                        <button type="button" onClick={() => handleOpenCandidatoFichaById(plaza.candidatoId)} className="inline-flex items-center gap-2 text-left hover:text-indigo-700">
+                                                                            <Avatar name={plaza.nombre} size="sm" />
+                                                                            <span className="font-medium text-slate-900">{plaza.nombre}</span>
+                                                                        </button>
+                                                                    ) : plaza.estado === 'baja' ? (
+                                                                        <span className="text-slate-500">Baja de {plaza.bajaDe}<span className="block text-[11px]">{plaza.motivoBaja}</span></span>
+                                                                    ) : (
+                                                                        <span className="text-slate-400">Sin asignar</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-2.5 px-4"><Badge tone={est.tono} dot>{est.texto}</Badge></td>
+                                                                <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{plaza.nombre ? plaza.fechaIncorporacion : '—'}</td>
+                                                                <td className="py-2.5 px-4">
+                                                                    {cpd ? (
+                                                                        <>
+                                                                            <Badge tone={cpd.tono}>{cpd.texto}</Badge>
+                                                                            {plaza.cpd === 'enviado' && urgenteCpd && <div className="text-[11px] text-rose-600 mt-0.5">Bloquea la incorporación</div>}
+                                                                        </>
+                                                                    ) : <span className="text-slate-400">—</span>}
+                                                                </td>
+                                                                <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                                                    {plaza.estado === 'vacante' && <Button size="sm" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Proponer</Button>}
+                                                                    {plaza.estado === 'baja' && <Button size="sm" variant="primary" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Buscar sustituto</Button>}
+                                                                    {plaza.estado === 'reservada' && (
+                                                                        <span className="inline-flex gap-1">
+                                                                            <Button size="sm" variant="ghost" onClick={() => retirarPropuesta(peticion.id, plaza)}>Retirar</Button>
+                                                                            <Button size="sm" variant="primary" title="En la demo simula que el cliente confirma en su portal" onClick={() => confirmarPlaza(peticion.id, plaza)}>Confirmar</Button>
+                                                                        </span>
+                                                                    )}
+                                                                    {['cubierta', 'incorporada'].includes(plaza.estado) && (
+                                                                        <span className="inline-flex gap-1">
+                                                                            {plaza.cpd === 'enviado' && <Button size="sm" variant="ghost" icon={Send} onClick={() => recordarCpd(plaza)}>Recordar CPD</Button>}
+                                                                            <Button size="sm" variant="ghost" onClick={() => setBajaPlaza({ plaza, motivo: MOTIVOS_BAJA[0], notas: '' })}>Dar de baja</Button>
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </Card>
+
+                                    <Card className="overflow-hidden">
+                                        <div className="p-4 border-b border-slate-200 space-y-3">
+                                            <div>
+                                                <SectionTitle>Candidatos de esta petición</SectionTitle>
+                                                <p className="text-xs text-slate-500 -mt-1">Llegan de los portales de empleo, del portal de candidatos de la ETT o de la base de datos. Pulsa una etapa para filtrar.</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {ETAPAS.map(et => {
+                                                    const n = embudoPet.filter(e => e.etapa === et.id).length;
+                                                    const activo = filtroEtapa === et.id;
+                                                    return (
+                                                        <button
+                                                            key={et.id}
+                                                            type="button"
+                                                            onClick={() => setFiltroEtapa(activo ? '' : et.id)}
+                                                            className={`rounded-lg border px-3 py-1.5 text-left transition-colors ${activo ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+                                                        >
+                                                            <div className="text-[11px] text-slate-500">{et.texto}</div>
+                                                            <div className="text-sm font-semibold text-slate-900">{n}</div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                        {visibles.length === 0 ? (
+                                            <EmptyState
+                                                icon={Users}
+                                                title={filtroEtapa ? 'Nadie en esta etapa' : 'Aún no hay candidatos'}
+                                                text={filtroEtapa ? undefined : 'Activa el portal de candidatos o publica la oferta en portales de empleo para recibir inscripciones.'}
+                                                action={!filtroEtapa && <Button onClick={() => setActiveTab('portales')}>Ir a Difusión en portales</Button>}
+                                            />
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left text-xs">
+                                                    <thead>
+                                                        <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                            <th className="py-2 px-4 font-medium">Persona</th>
+                                                            <th className="py-2 px-4 font-medium">Origen</th>
+                                                            <th className="py-2 px-4 font-medium">Afinidad</th>
+                                                            <th className="py-2 px-4 font-medium">Requisitos</th>
+                                                            <th className="py-2 px-4 font-medium">Etapa</th>
+                                                            <th className="py-2 px-4" aria-label="Acciones"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {visibles.map(({ c, etapa }) => {
+                                                            const otra = plazaDe(c.id);
+                                                            return (
+                                                                <tr key={c.id} className="border-b border-slate-100 last:border-0">
+                                                                    <td className="py-2.5 px-4">
+                                                                        <button type="button" onClick={() => setCandidatoFichaModal(c)} className="inline-flex items-center gap-2 text-left hover:text-indigo-700">
+                                                                            <Avatar name={c.nombre} size="sm" />
+                                                                            <span>
+                                                                                <span className="font-medium text-slate-900 block">{c.nombre}</span>
+                                                                                <span className="text-[11px] text-slate-500">{c.puestoPrincipal} · {c.ubicacion}</span>
+                                                                            </span>
+                                                                        </button>
+                                                                    </td>
+                                                                    <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{c.origen}</td>
+                                                                    <td className="py-2.5 px-4 text-slate-700">{c.scoring} %</td>
+                                                                    <td className="py-2.5 px-4"><Requisitos lista={comprobarRequisitos(c, peticion, peticion.plantilla)} compacto /></td>
+                                                                    <td className="py-2.5 px-4">
+                                                                        <Select value={etapa} onChange={(e) => cambiarEtapa(peticion.id, c.id, e.target.value)} aria-label={`Etapa de ${c.nombre}`}>
+                                                                            {ETAPAS.map(et => <option key={et.id} value={et.id}>{et.texto}</option>)}
+                                                                        </Select>
+                                                                    </td>
+                                                                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                                                        {otra ? (
+                                                                            <span className="text-[11px] text-slate-500">En plaza {otra.plaza.numero}{otra.petId !== peticion.id ? ` de ${otra.petId}` : ''}</span>
+                                                                        ) : etapa !== 'descartado' && libre ? (
+                                                                            <Button size="sm" onClick={() => handleAssignCandidateToPlaza(peticion.id, libre.id, c)}>Proponer</Button>
+                                                                        ) : null}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </Card>
                                 </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-xs">
-                                        <thead>
-                                            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
-                                                <th className="py-2 px-4 font-medium">Plaza</th>
-                                                <th className="py-2 px-4 font-medium">Persona</th>
-                                                <th className="py-2 px-4 font-medium">Incorporación</th>
-                                                <th className="py-2 px-4 font-medium">Contrato</th>
-                                                <th className="py-2 px-4" aria-label="Acciones"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(plazas[peticion.id] || []).map(plaza => (
-                                                <tr key={plaza.id} className="border-b border-slate-100 last:border-0">
-                                                    <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">Plaza {plaza.numero}</td>
-                                                    <td className="py-2.5 px-4">
-                                                        {plaza.estado === 'cubierta' && plaza.nombre ? (
-                                                            <button type="button" onClick={() => handleOpenCandidatoFichaById(plaza.candidatoId)} className="inline-flex items-center gap-2 text-left hover:text-indigo-700">
-                                                                <Avatar name={plaza.nombre} size="sm" />
-                                                                <span className="font-medium text-slate-900">{plaza.nombre}</span>
-                                                            </button>
-                                                        ) : (
-                                                            <Badge tone="warning" dot>Por cubrir</Badge>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{plaza.fechaIncorporacion || '—'}</td>
-                                                    <td className="py-2.5 px-4 text-slate-600">{plaza.contratoTipo || '—'}</td>
-                                                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                                                        {plaza.estado === 'cubierta' ? (
-                                                            <Button size="sm" variant="ghost" onClick={() => handleUnassignPlaza(peticion.id, plaza.id)}>Liberar plaza</Button>
-                                                        ) : (
-                                                            <Button size="sm" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Asignar</Button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </Card>
-                        )}
+                            );
+                        })()}
 
                         {/* TAB 2: HORARIOS & TURNOS POR POSICIÓN (REQUISITO PRINCIPAL 1) */}
                         {activeTab === 'horarios' && (
@@ -1704,6 +1990,55 @@ export default function PeticionesView() {
                         {/* TAB 3: DIFUSIÓN EN PORTALES & PERSONALIZACIÓN (REQUISITO PRINCIPAL 2) */}
                         {activeTab === 'portales' && (
                             <div className="space-y-6 animate-fade-in">
+                                {/* PORTALES PROPIOS DE LA ETT: se activan en cada petición */}
+                                {(() => {
+                                    const pp = portalesPropios[peticion.id] || {};
+                                    const filas = [
+                                        {
+                                            id: 'empresa', icono: Building2, titulo: 'Portal de empresas', url: urlPortal('empresa', peticion.id),
+                                            texto: 'La empresa ve esta petición, confirma a las personas propuestas, firma los CPD y valida las presencias.',
+                                            bienvenida: 'bienvenidaEmpresa',
+                                            textoBienvenida: `Enviar bienvenida con el acceso a los contactos de la empresa (${peticion.emailContacto})`,
+                                            enviada: pp.bienvenidaEmpresaEnviada,
+                                        },
+                                        {
+                                            id: 'candidatos', icono: Users, titulo: 'Portal de candidatos', url: urlPortal('candidatos', peticion.id),
+                                            texto: 'Oferta pública de esta petición. Quien se inscribe entra como «Inscrito» en Plazas y candidatos.',
+                                            bienvenida: 'bienvenidaCandidatos',
+                                            textoBienvenida: 'Enviar bienvenida a cada persona que se inscriba o se proponga para una plaza, con acceso para subir documentos y firmar su contrato',
+                                        },
+                                    ];
+                                    return (
+                                        <Card className="p-4 space-y-3">
+                                            <SectionTitle actions={<span className="text-[11px] text-slate-500">{SUBDOMINIO_ETT}.tramitnow.com · se configura en Mi ETT</span>}>
+                                                Portales de la ETT
+                                            </SectionTitle>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                                {filas.map(f => (
+                                                    <div key={f.id} className={`rounded-lg border p-3 space-y-2 ${pp[f.id] ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-200'}`}>
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex items-start gap-2 min-w-0">
+                                                                <f.icono className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+                                                                <div className="min-w-0">
+                                                                    <div className="text-xs font-medium text-slate-900">{f.titulo}</div>
+                                                                    <div className="text-[11px] text-slate-500 truncate">{f.url}</div>
+                                                                </div>
+                                                            </div>
+                                                            <Interruptor checked={!!pp[f.id]} onChange={(v) => cambiarPortalPropio(f.id, v)} label={`Activar ${f.titulo.toLowerCase()}`} />
+                                                        </div>
+                                                        <p className="text-xs text-slate-600">{f.texto}</p>
+                                                        <label className="flex items-start gap-2 text-xs text-slate-700">
+                                                            <input type="checkbox" checked={!!pp[f.bienvenida]} onChange={(e) => setPortalesPropios(prev => ({ ...prev, [peticion.id]: { ...prev[peticion.id], [f.bienvenida]: e.target.checked } }))} className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                                            <span>{f.textoBienvenida}{f.enviada ? <span className="text-slate-500"> · enviada el {fechaCorta(f.enviada)}</span> : ''}</span>
+                                                        </label>
+                                                        <div className="text-[11px] text-slate-400">Más opciones del portal: pendientes de definir.</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </Card>
+                                    );
+                                })()}
+
                                 {/* BANNER DIFUSIÓN */}
                                 <div className="bg-white text-slate-900 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs border border-slate-200">
                                     <div className="space-y-1">
@@ -2042,18 +2377,39 @@ export default function PeticionesView() {
                         )}
 
                         {/* TAB 4: DOCUMENTOS Y CONTRATOS */}
-                        {activeTab === 'documentos' && (
+                        {activeTab === 'documentos' && (() => {
+                            const previo = cpdPrevio[peticion.id] || { estado: 'sin_enviar' };
+                            const ocupadas = (plazas[peticion.id] || []).filter(p => ['cubierta', 'incorporada'].includes(p.estado));
+                            const empezado = diasHasta(peticion.inicio) <= 0;
+                            return (
                             <div className="space-y-4">
+                                <Card className="p-4 space-y-3">
+                                    <SectionTitle actions={<Badge tone={ESTADOS_CPD_PREVIO[previo.estado].tono} dot>{ESTADOS_CPD_PREVIO[previo.estado].texto}</Badge>}>
+                                        CPD previo: condiciones para la empresa
+                                    </SectionTitle>
+                                    <p className="text-xs text-slate-600">
+                                        Antes de tener personas, la empresa recibe las condiciones de la puesta a disposición (causa, puesto, riesgos, horario, duración y precio) para revisarlas con tiempo.
+                                        Se envía a {peticion.emailContacto}{portalesPropios[peticion.id]?.empresa ? ' y queda en su portal' : ''}.
+                                        {previo.fecha && ` Último envío: ${fechaCorta(previo.fecha)}.`}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button icon={Eye} onClick={() => setVerCpdPrevio(true)}>Ver condiciones</Button>
+                                        <Button variant={previo.estado === 'sin_enviar' ? 'primary' : 'secondary'} icon={Send} onClick={enviarCpdPrevio}>
+                                            {previo.estado === 'sin_enviar' ? 'Enviar al cliente' : 'Reenviar'}
+                                        </Button>
+                                    </div>
+                                </Card>
+
                                 <Card className="overflow-hidden">
                                     <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
                                         <div>
-                                            <SectionTitle>Contratos y altas de las personas de esta petición</SectionTitle>
-                                            <p className="text-xs text-slate-500 mt-0.5">Cada plaza cubierta necesita su contrato de puesta a disposición firmado y el alta en la Seguridad Social antes de empezar.</p>
+                                            <SectionTitle>CPD, contrato y alta de cada persona</SectionTitle>
+                                            <p className="text-xs text-slate-500 -mt-1">Cada persona necesita su CPD firmado por la empresa antes de empezar. Si a 2 días del inicio no está firmado, se bloquea la incorporación.</p>
                                         </div>
                                         <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/laboral'; }}>Ir a Contratos y altas</Button>
                                     </div>
-                                    {posActual.incorporados === 0 ? (
-                                        <EmptyState icon={Users} title="Todavía no hay plazas cubiertas" text="Cuando asignes personas a las plazas, aquí verás su contrato y su alta." />
+                                    {ocupadas.length === 0 ? (
+                                        <EmptyState icon={Users} title="Todavía no hay plazas cubiertas" text="Cuando el cliente confirme a alguien, aquí verás su CPD, su contrato y su alta." />
                                     ) : (
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left text-xs">
@@ -2061,20 +2417,29 @@ export default function PeticionesView() {
                                                     <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
                                                         <th className="py-2 px-4 font-medium">Persona</th>
                                                         <th className="py-2 px-4 font-medium">Incorporación</th>
-                                                        <th className="py-2 px-4 font-medium">Contrato</th>
+                                                        <th className="py-2 px-4 font-medium">CPD con la empresa</th>
+                                                        <th className="py-2 px-4 font-medium">Contrato con la persona</th>
                                                         <th className="py-2 px-4 font-medium">Alta en la Seguridad Social</th>
+                                                        <th className="py-2 px-4" aria-label="Acciones"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {(plazas[peticion.id] || []).filter(p => p.estado === 'cubierta').map((plaza, i) => {
-                                                        const empezado = diasHasta(peticion.inicio) <= 0;
-                                                        const firmado = empezado || i % 3 !== 2;
+                                                    {ocupadas.map(plaza => {
+                                                        const firmado = plaza.cpd === 'firmado';
                                                         return (
                                                             <tr key={plaza.id} className="border-b border-slate-100 last:border-0">
                                                                 <td className="py-2.5 px-4"><span className="inline-flex items-center gap-2"><Avatar name={plaza.nombre} size="sm" /><span className="font-medium text-slate-900">{plaza.nombre}</span></span></td>
                                                                 <td className="py-2.5 px-4 text-slate-600">{plaza.fechaIncorporacion}</td>
-                                                                <td className="py-2.5 px-4">{firmado ? <Badge tone="success">Firmado</Badge> : <Badge tone="warning">Pendiente de firma</Badge>}</td>
-                                                                <td className="py-2.5 px-4">{empezado ? <Badge tone="success">Comunicada</Badge> : firmado ? <Badge tone="info">Programada</Badge> : <Badge tone="neutral">Falta el contrato</Badge>}</td>
+                                                                <td className="py-2.5 px-4">
+                                                                    <Badge tone={ESTADOS_CPD[plaza.cpd]?.tono || 'neutral'}>{ESTADOS_CPD[plaza.cpd]?.texto || '—'}</Badge>
+                                                                    {!firmado && diasHasta(peticion.inicio) <= 2 && <div className="text-[11px] text-rose-600 mt-0.5">Bloquea la incorporación</div>}
+                                                                </td>
+                                                                <td className="py-2.5 px-4">{firmado ? <Badge tone="success">Firmado</Badge> : <Badge tone="neutral">Espera al CPD</Badge>}</td>
+                                                                <td className="py-2.5 px-4">{plaza.estado === 'incorporada' || empezado ? <Badge tone="success">Comunicada</Badge> : firmado ? <Badge tone="info">Programada</Badge> : <Badge tone="neutral">Espera al CPD</Badge>}</td>
+                                                                <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                                                    {plaza.cpd === 'enviado' && <Button size="sm" variant="ghost" icon={Send} onClick={() => recordarCpd(plaza)}>Recordar</Button>}
+                                                                    {firmado && <Button size="sm" variant="ghost" onClick={() => showToast(`Descarga simulada: CPD_${peticion.id}_${plaza.numero}.pdf`)}>Descargar CPD</Button>}
+                                                                </td>
                                                             </tr>
                                                         );
                                                     })}
@@ -2087,7 +2452,7 @@ export default function PeticionesView() {
                                 <Card className="p-4 space-y-2 text-xs">
                                     <SectionTitle>Documentos del servicio</SectionTitle>
                                     {[
-                                        { nombre: `CPD_${peticion.id}.pdf`, texto: `Contrato de puesta a disposición con ${peticion.clienteNombre}`, icono: FileText },
+                                        { nombre: `CPD_previo_${peticion.id}.pdf`, texto: 'Condiciones de la puesta a disposición para la empresa', icono: FileText },
                                         { nombre: `Riesgos_PRL_${peticion.tipo}.pdf`, texto: `Información de riesgos del puesto: ${peticion.puesto.toLowerCase()}`, icono: ShieldCheck },
                                     ].map(doc => (
                                         <div key={doc.nombre} className="p-3 rounded-lg border border-slate-200 flex items-center justify-between gap-3 hover:bg-slate-50">
@@ -2103,7 +2468,9 @@ export default function PeticionesView() {
                                     ))}
                                 </Card>
                             </div>
-                        )}
+                            );
+                        })()}
+
 
                         {/* TAB: ACTIVIDAD */}
                         {activeTab === 'auditoria' && (
@@ -2132,89 +2499,134 @@ export default function PeticionesView() {
             </div>
 
             {/* --- MODAL ASIGNAR CANDIDATO A PLAZA VACANTE --- */}
-            {assignCandidateModal && (
-                <Modal
-                  title={'Asignar candidato a la plaza'}
-                  subtitle={<>{peticion.puesto} · Plaza {assignCandidateModal.plaza.numero}</>}
-                  onClose={() => setAssignCandidateModal(null)}
-                  size="max-w-2xl"
-                  toolbar={<>
-                        <div className="p-5 border-b border-slate-200 bg-slate-50">
-                            <div className="relative">
-                                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar candidato por nombre, carnet, experiencia..."
-                                    value={candidateSearchFilter}
-                                    onChange={(e) => setCandidateSearchFilter(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
+            {/* PROPONER CANDIDATO PARA UNA PLAZA: comprueba requisitos y si ya está en otra plaza */}
+            {assignCandidateModal && (() => {
+                const plaza = assignCandidateModal.plaza;
+                const q = candidateSearchFilter.trim().toLowerCase();
+                const etapaDe = (id) => (embudo[peticion.id] || []).find(e => e.id === id)?.etapa;
+                const lista = candidatosPool
+                    .filter(c => verTodosCandidatos || c.matchPosicion.includes(peticion.tipo))
+                    .filter(c => !q || [c.nombre, c.puestoPrincipal, c.carnets, c.ubicacion].some(t => t.toLowerCase().includes(q)))
+                    .map(c => ({ c, req: comprobarRequisitos(c, peticion, peticion.plantilla), otra: plazaDe(c.id), etapa: etapaDe(c.id) }))
+                    .sort((a, b) => (a.otra ? 1 : 0) - (b.otra ? 1 : 0) || b.req.filter(r => r.ok).length - a.req.filter(r => r.ok).length || b.c.scoring - a.c.scoring);
+                return (
+                    <Modal
+                        title={plaza.estado === 'baja' ? `Buscar sustituto para la plaza ${plaza.numero}` : `Proponer candidato para la plaza ${plaza.numero}`}
+                        subtitle={`${peticion.puesto} · ${currentSchedule.turnoNombre.toLowerCase()} · ${peticion.clienteNombre}`}
+                        onClose={() => setAssignCandidateModal(null)}
+                        size="max-w-2xl"
+                        toolbar={
+                            <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center gap-3">
+                                <SearchInput className="flex-1 min-w-[200px]" value={candidateSearchFilter} onChange={setCandidateSearchFilter} placeholder="Buscar por nombre, carné o localidad..." />
+                                <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                                    <input type="checkbox" checked={verTodosCandidatos} onChange={(e) => setVerTodosCandidatos(e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                    Ver también los de otros puestos
+                                </label>
                             </div>
-                        </div>
-                  </>}
-                  footer={<>
-                            <button
-                                onClick={() => setAssignCandidateModal(null)}
-                                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold"
-                            >
-                                Cancelar
-                            </button>
-                  </>}
-                >
-
-                        <div className="space-y-3 text-xs">
-                            {candidatosPool
-                                .filter(c => {
-                                    const matchesSearch = !candidateSearchFilter ||
-                                        c.nombre.toLowerCase().includes(candidateSearchFilter.toLowerCase()) ||
-                                        c.puestoPrincipal.toLowerCase().includes(candidateSearchFilter.toLowerCase()) ||
-                                        c.carnets.toLowerCase().includes(candidateSearchFilter.toLowerCase());
-                                    return matchesSearch;
-                                })
-                                .map(candidato => {
-                                    const isRecommended = candidato.matchPosicion.includes(peticion.tipo);
-                                    return (
-                                        <div key={candidato.id} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-indigo-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                                            <div className="flex items-start gap-3">
-                                                <Avatar name={candidato.nombre} />
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold text-slate-900 text-sm">{candidato.nombre}</span>
-                                                        <span className="font-mono text-[10px] text-slate-400 font-semibold">{candidato.id}</span>
-                                                        {isRecommended && (
-                                                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[9px] font-semibold">
-                                                                Recomendado
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-slate-600 text-xs mt-0.5 font-medium">{candidato.puestoPrincipal}</div>
-                                                    <div className="text-[11px] text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                                                        <span>📍 {candidato.ubicacion}</span>
-                                                        <span>🪪 {candidato.carnets}</span>
-                                                        <span className="text-emerald-700 font-semibold">Afinidad: {candidato.scoring}%</span>
-                                                    </div>
+                        }
+                        footer={<Button onClick={() => setAssignCandidateModal(null)}>Cancelar</Button>}
+                    >
+                        <div className="space-y-2 text-xs">
+                            {plaza.estado === 'baja' && <Notice tone="warning" icon={AlertTriangle}>Baja de {plaza.bajaDe}: {plaza.motivoBaja}. El sustituto mantiene las mismas condiciones del CPD.</Notice>}
+                            {lista.length === 0 && <EmptyState icon={Search} title="No hay candidatos con este filtro" />}
+                            {lista.map(({ c, req, otra, etapa }) => {
+                                const fallan = req.filter(r => !r.ok);
+                                return (
+                                    <div key={c.id} className={`p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${otra ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}>
+                                        <div className="flex items-start gap-3 min-w-0">
+                                            <Avatar name={c.nombre} />
+                                            <div className="min-w-0 space-y-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="font-medium text-slate-900 text-sm">{c.nombre}</span>
+                                                    {etapa && <Badge tone={ETAPAS.find(e => e.id === etapa)?.tono}>{ETAPAS.find(e => e.id === etapa)?.texto}</Badge>}
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                                                <button
-                                                    onClick={() => setCandidatoFichaModal(candidato)}
-                                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium"
-                                                >
-                                                    Ver ficha
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAssignCandidateToPlaza(assignCandidateModal.posId, assignCandidateModal.plaza.id, candidato)}
-                                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-600 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1"
-                                                >
-                                                    <Check className="w-3.5 h-3.5" />
-                                                    <span>Asignar plaza</span>
-                                                </button>
+                                                <div className="text-slate-500 flex flex-wrap items-center gap-x-3">
+                                                    <span>{c.puestoPrincipal}</span>
+                                                    <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{c.ubicacion}</span>
+                                                    <span>Afinidad {c.scoring} %</span>
+                                                    <span>{c.origen}</span>
+                                                </div>
+                                                <Requisitos lista={req} />
+                                                {otra && <div className="text-[11px] text-amber-700">Ya está en la plaza {otra.plaza.numero} de {otra.petId}.</div>}
+                                                {!otra && fallan.length > 0 && <div className="text-[11px] text-rose-600">Se puede proponer, pero bloquea el contrato hasta resolver: {fallan.map(r => r.texto.toLowerCase()).join(', ')}.</div>}
                                             </div>
                                         </div>
-                                    );
-                                })}
+                                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                            <Button size="sm" variant="ghost" onClick={() => setCandidatoFichaModal(c)}>Ver ficha</Button>
+                                            <Button size="sm" variant="primary" disabled={!!otra} onClick={() => handleAssignCandidateToPlaza(peticion.id, plaza.id, c)}>Proponer</Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
+                    </Modal>
+                );
+            })()}
 
+            {/* DAR DE BAJA A UNA PERSONA DE UNA PLAZA: queda el motivo y la plaza pasa a buscar sustituto */}
+            {bajaPlaza && (
+                <Modal
+                    title={`¿Dar de baja a ${bajaPlaza.plaza.nombre}?`}
+                    subtitle={`Plaza ${bajaPlaza.plaza.numero} · ${peticion.id}`}
+                    onClose={() => setBajaPlaza(null)}
+                    size="max-w-md"
+                    footer={<>
+                        <Button onClick={() => setBajaPlaza(null)}>Cancelar</Button>
+                        <Button variant="danger" disabled={!bajaPlaza.motivo} onClick={confirmarBaja}>Dar de baja</Button>
+                    </>}
+                >
+                    <div className="space-y-4 text-xs">
+                        <p className="text-slate-600">La plaza queda como «Baja» con el motivo, para buscar un sustituto. La persona y el motivo quedan en el historial de la petición.</p>
+                        <div className="space-y-1">
+                            <span className="block text-[11px] font-medium text-slate-600">Motivo</span>
+                            <SelectConAlta
+                                value={bajaPlaza.motivo}
+                                onChange={(v) => setBajaPlaza(b => ({ ...b, motivo: v }))}
+                                options={motivosBaja}
+                                onAdd={(v) => { setMotivosBaja(m => [...m, v]); setBajaPlaza(b => ({ ...b, motivo: v })); }}
+                                nuevoPlaceholder="Nuevo motivo"
+                            />
+                        </div>
+                        <Field label="Notas (opcional)">
+                            <TextInput value={bajaPlaza.notas} onChange={(e) => setBajaPlaza(b => ({ ...b, notas: e.target.value }))} placeholder="Por ejemplo: avisó el mismo día" />
+                        </Field>
+                        {bajaPlaza.plaza.estado === 'incorporada' && (
+                            <Notice tone="warning" icon={AlertTriangle}>Ya ha empezado: habrá que tramitar la baja en la Seguridad Social desde Contratos y altas.</Notice>
+                        )}
+                    </div>
+                </Modal>
+            )}
+
+            {/* CPD PREVIO: condiciones de la puesta a disposición que recibe la empresa antes de tener personas */}
+            {verCpdPrevio && (
+                <Modal
+                    title="CPD previo: condiciones de la puesta a disposición"
+                    subtitle={`${peticion.id} · para ${peticion.clienteNombre}`}
+                    onClose={() => setVerCpdPrevio(false)}
+                    size="max-w-2xl"
+                    footer={<>
+                        <Button onClick={() => setVerCpdPrevio(false)}>Cerrar</Button>
+                        <Button variant="primary" icon={Send} onClick={() => { enviarCpdPrevio(); setVerCpdPrevio(false); }}>
+                            {cpdPrevio[peticion.id]?.estado === 'sin_enviar' ? 'Enviar al cliente' : 'Reenviar al cliente'}
+                        </Button>
+                    </>}
+                >
+                    <div className="space-y-4">
+                    <dl className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-x-4 gap-y-2.5 text-xs">
+                        <dt className="text-slate-500">Empresa de trabajo temporal</dt><dd className="text-slate-900">ETT Global Servicios Temporales, S.L.</dd>
+                        <dt className="text-slate-500">Empresa usuaria</dt><dd className="text-slate-900">{peticion.clienteNombre} · {peticion.cif}</dd>
+                        <dt className="text-slate-500">Causa de la contratación</dt><dd className="text-slate-900">Circunstancias de la producción (campaña). Presupuesto {peticion.presupuestoOrigen}.</dd>
+                        <dt className="text-slate-500">Puesto y cualificación</dt><dd className="text-slate-900">{peticion.puesto} · {peticion.categoria}. {peticion.carnetRequerido === 'Ninguno' ? 'Sin carné específico.' : `${peticion.carnetRequerido}.`}</dd>
+                        <dt className="text-slate-500">Riesgos del puesto</dt><dd className="text-slate-900">Según la evaluación de riesgos del cliente para este puesto. EPIs: {peticion.requiereEpi.toLowerCase()}.</dd>
+                        <dt className="text-slate-500">Centro de trabajo</dt><dd className="text-slate-900">{peticion.centroTrabajo}</dd>
+                        <dt className="text-slate-500">Horario</dt><dd className="text-slate-900">{currentSchedule.turnoNombre} · {totalHorasSemana.toLocaleString('es-ES')} h por semana</dd>
+                        <dt className="text-slate-500">Duración estimada</dt><dd className="text-slate-900">Del {fechaCorta(peticion.inicio)} al {fechaCorta(peticion.fin)} · {peticion.solicitados} {peticion.solicitados === 1 ? 'persona' : 'personas'}</dd>
+                        <dt className="text-slate-500">Precio</dt><dd className="text-slate-900">{peticion.tarifaVentaHora} la hora ordinaria, más los conceptos extra del presupuesto (horas extra, nocturnidad, fin de semana y festivos).</dd>
+                    </dl>
+                    <Notice tone="info" icon={Info}>
+                        Al confirmar a cada persona se genera su CPD con estas condiciones y sus datos, y se envía a firmar.
+                    </Notice>
+                    </div>
                 </Modal>
             )}
 

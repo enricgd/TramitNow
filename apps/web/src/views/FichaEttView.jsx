@@ -7,7 +7,7 @@ import {
     CreditCard, Sparkles, Sliders, Globe, Mail, Phone, Briefcase, FileSpreadsheet,
     Key, Layers, ArrowRight, Save, RefreshCw, AlertCircle, Eye, UserPlus, EyeOff
 } from 'lucide-react';
-import { PageHeader, Button, Badge, Tabs, Modal, Drawer } from '../ui';
+import { PageHeader, Button, Badge, Tabs, Modal, Drawer, Card, SectionTitle, Field, TextInput, Interruptor, Notice } from '../ui';
 
 // Initial Mock Database for "Mi ETT"
 const initialCompanyData = {
@@ -68,6 +68,15 @@ const initialTemplates = [
     { id: 'tpl-4', name: 'Contrato Puesta a Disposición (CPD Modelo Oficial)', category: 'Laboral / Legal', scope: 'Global (Todas)', status: 'active', format: 'PDF Firmable', updated: '10 Feb 2025' }
 ];
 
+// Portales propios de la ETT: subdominio y correos de bienvenida
+const initialPortales = {
+    subdominio: 'ettglobal',
+    bienvenida: {
+        empresa: { activo: true, asunto: 'Bienvenida al portal de empresas de {ett}', texto: 'Hola, {nombre}:\n\nYa puedes seguir las peticiones de {empresa} en nuestro portal: confirmar a las personas propuestas, firmar los CPD y validar las presencias.\n\nEntra aquí: {enlace}' },
+        candidato: { activo: true, asunto: 'Bienvenida a {ett}', texto: 'Hola, {nombre}:\n\nGracias por inscribirte. Desde tu área personal puedes subir tus documentos, seguir tus candidaturas y firmar tu contrato.\n\nEntra aquí: {enlace}' },
+    },
+};
+
 const initialActivity = [
     { id: 'act-1', timestamp: 'Hoy, 10:45', user: 'Ana López', action: 'Actualizó datos de contacto y provincia fiscal', type: 'fiscal' },
     { id: 'act-2', timestamp: 'Ayer, 16:30', user: 'Jordi Valls', action: 'Activó serie de facturación anual ETT-2025-', type: 'billing' },
@@ -83,6 +92,7 @@ export default function FichaEttView() {
     const [users, setUsers] = useState(initialUsers);
     const [templates, setTemplates] = useState(initialTemplates);
     const [activity, setActivity] = useState(initialActivity);
+    const [portales, setPortales] = useState(initialPortales);
 
     // UI State
     const [density, setDensity] = useState('comfortable'); // comfortable | compact
@@ -167,6 +177,7 @@ export default function FichaEttView() {
                             { id: 'sucursales', label: 'Sucursales', count: branches.length },
                             { id: 'usuarios', label: 'Usuarios y roles', count: users.length },
                             { id: 'plantillas', label: 'Plantillas', count: templates.length },
+                            { id: 'portales', label: 'Portales' },
                             { id: 'actividad', label: 'Actividad' },
                         ]}
                     />
@@ -868,6 +879,81 @@ export default function FichaEttView() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* PORTALES: subdominio de la ETT y correos de bienvenida */}
+                    {activeTab === 'portales' && (
+                        <div className="space-y-4 fade-in">
+                            <Card className="p-5 space-y-4">
+                                <SectionTitle actions={<Badge tone="success" dot>Activo</Badge>}>Dirección de los portales</SectionTitle>
+                                <p className="text-xs text-slate-600 -mt-1">
+                                    La ETT tiene su propio subdominio de TramitNOW con dos portales: uno para las empresas cliente y otro para los candidatos.
+                                    Cada petición decide si se ve en ellos.
+                                </p>
+                                <div className="max-w-md">
+                                    <Field label="Subdominio" hint="Solo minúsculas, números y guiones.">
+                                        <div className="flex items-center gap-2">
+                                            <TextInput value={portales.subdominio} onChange={(e) => setPortales(p => ({ ...p, subdominio: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} />
+                                            <span className="text-xs text-slate-500 whitespace-nowrap">.tramitnow.com</span>
+                                        </div>
+                                    </Field>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                    {[
+                                        { titulo: 'Portal de empresas', ruta: 'empresas', icono: Building2, texto: 'Las empresas ven sus peticiones, confirman a las personas propuestas, firman los CPD y validan presencias.' },
+                                        { titulo: 'Portal de candidatos', ruta: 'candidatos', icono: Users, texto: 'Ofertas públicas de las peticiones, inscripción, subida de documentos y firma del contrato.' },
+                                    ].map(p => (
+                                        <div key={p.ruta} className="rounded-lg border border-slate-200 p-3 space-y-1">
+                                            <div className="flex items-center gap-2 font-medium text-slate-900"><p.icono className="w-4 h-4 text-indigo-600" />{p.titulo}</div>
+                                            <div className="text-indigo-600">https://{portales.subdominio || 'tu-ett'}.tramitnow.com/{p.ruta}</div>
+                                            <p className="text-slate-500">{p.texto}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                {portales.subdominio !== initialPortales.subdominio && (
+                                    <Notice tone="warning" icon={AlertTriangle}>
+                                        Si cambias el subdominio, los enlaces que ya tienen las empresas y los candidatos dejarán de funcionar.
+                                    </Notice>
+                                )}
+                                <p className="text-[11px] text-slate-500">Los portales usan el logo y los colores de la ETT. Las opciones de cada portal están pendientes de definir.</p>
+                            </Card>
+
+                            <Card className="p-5 space-y-4">
+                                <SectionTitle>Correos de bienvenida</SectionTitle>
+                                <p className="text-xs text-slate-600 -mt-1">
+                                    Se envían con el acceso al portal. En cada petición se pueden activar o no; aquí se decide el valor por defecto y el texto.
+                                    Puedes usar {'{empresa}'}, {'{nombre}'}, {'{ett}'} y {'{enlace}'}.
+                                </p>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {[
+                                        { id: 'empresa', titulo: 'Para empresas', cuando: 'La primera vez que una petición de la empresa se activa en el portal de empresas.' },
+                                        { id: 'candidato', titulo: 'Para candidatos', cuando: 'Cuando alguien se inscribe en una oferta o se le propone para una plaza.' },
+                                    ].map(b => {
+                                        const datos = portales.bienvenida[b.id];
+                                        const cambiar = (campo, valor) => setPortales(p => ({ ...p, bienvenida: { ...p.bienvenida, [b.id]: { ...p.bienvenida[b.id], [campo]: valor } } }));
+                                        return (
+                                            <div key={b.id} className="rounded-lg border border-slate-200 p-4 space-y-3">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <div className="text-xs font-medium text-slate-900">{b.titulo}</div>
+                                                        <div className="text-[11px] text-slate-500">{b.cuando}</div>
+                                                    </div>
+                                                    <Interruptor checked={datos.activo} onChange={(v) => cambiar('activo', v)} label={`Activar por defecto la bienvenida ${b.titulo.toLowerCase()}`} />
+                                                </div>
+                                                <Field label="Asunto"><TextInput value={datos.asunto} onChange={(e) => cambiar('asunto', e.target.value)} /></Field>
+                                                <Field label="Texto">
+                                                    <textarea rows={5} value={datos.texto} onChange={(e) => cambiar('texto', e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                                                </Field>
+                                                <Button size="sm" icon={Eye} onClick={() => showToast(`Correo de prueba «${datos.asunto}» enviado a tu email`, 'info')}>Enviarme una prueba</Button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="flex justify-end">
+                                    <Button variant="primary" icon={Save} onClick={() => showToast('Configuración de los portales guardada')}>Guardar</Button>
+                                </div>
+                            </Card>
                         </div>
                     )}
 
