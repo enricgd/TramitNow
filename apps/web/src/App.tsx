@@ -26,6 +26,7 @@ import EmpresasView from './views/EmpresasView.jsx';
 import PresupuestosView from './views/PresupuestosView.jsx';
 import CandidatosView from './views/CandidatosView.jsx';
 import MisionView from './views/MisionView.jsx';
+import HorasView from './views/HorasView.jsx';
 import Inicio from './Inicio';
 import Header from './Header';
 
@@ -61,7 +62,7 @@ const NAV: NavSection[] = [
     items: [
       { id: 'laboral', label: 'Contratos y altas', icon: FileSignature, view: LaboralView },
       { id: 'mision', label: 'Personal en misión', icon: Briefcase, view: MisionView },
-      { id: 'horas', label: 'Horas e incidencias', icon: Clock },
+      { id: 'horas', label: 'Horas e incidencias', icon: Clock, view: HorasView },
     ],
   },
   {
