@@ -419,6 +419,242 @@ const CANDIDATOS_BASE = [
 
 // Estado del candidato -> texto y color. Mismos colores que el resto de la app (ver src/ui/Badge.tsx).
 // ==========================================
+// LISTADOS HOMOGÉNEOS (perfiles, carnés, habilidades e idiomas)
+// Cada valor tiene un nombre único y sus sinónimos: se busca por cualquiera de ellos y se guarda siempre el nombre.
+// En real serán tablas maestras ampliables desde la ficha.
+// ==========================================
+const item = (nombre, grupo, ...sinonimos) => ({ nombre, grupo, sinonimos });
+const CATALOGOS_INICIALES = {
+    perfiles: [
+        item('Operario/a de almacén', 'Logística', 'mozo de almacén', 'mozo', 'moza de almacén', 'operario de almacén / mozo', 'operario de almacén y logística', 'mozo de almacén y picking', 'operario logístico'),
+        item('Preparador/a de pedidos', 'Logística', 'picking', 'preparadora de pedidos', 'pickeador'),
+        item('Carretillero/a', 'Logística', 'carretillero', 'carretillera', 'conductor de carretilla', 'toro', 'carretillero retráctil', 'carretillero frontal', 'mozo especializado', 'carretillero / mozo especializado', 'carretillero retráctil / mozo', 'carretillera retráctil y frontal', 'carretillero / mozo frontal'),
+        item('Reponedor/a', 'Logística', 'reponedor', 'reponedor nocturno', 'reponedora', 'repositor', 'reponedora / moza de almacén', 'reponedor / carga y descarga', 'reponedora / inventarista'),
+        item('Mozo/a de carga y descarga', 'Logística', 'carga y descarga', 'descargador'),
+        item('Inventarista', 'Logística', 'auxiliar de inventario'),
+        item('Conductor/a repartidor/a', 'Transporte', 'repartidor', 'repartidora', 'driver', 'conductor / repartidor', 'chófer de reparto'),
+        item('Conductor/a de camión', 'Transporte', 'camionero', 'camionera', 'conductor C+E', 'trailero'),
+        item('Operario/a de producción', 'Industria', 'peón', 'peón de fábrica', 'operario de fábrica', 'operaria de producción'),
+        item('Operario/a de envasado', 'Industria', 'envasador', 'envasadora', 'operario de línea'),
+        item('Soldador/a', 'Industria', 'soldadora', 'soldador TIG', 'soldador MIG'),
+        item('Mecánico/a de mantenimiento', 'Industria', 'técnico de mantenimiento', 'mantenimiento industrial'),
+        item('Electricista', 'Industria', 'oficial electricista'),
+        item('Camarero/a', 'Hostelería', 'camarera', 'camarero de sala', 'mesero'),
+        item('Camarero/a de barra', 'Hostelería', 'barman', 'bartender', 'coctelero'),
+        item('Cocinero/a', 'Hostelería', 'cocinera', 'jefe de partida', 'chef'),
+        item('Ayudante de cocina', 'Hostelería', 'pinche', 'auxiliar de cocina'),
+        item('Friegaplatos', 'Hostelería', 'office', 'lavaplatos'),
+        item('Camarero/a de pisos', 'Hostelería', 'camarera de pisos', 'gobernanta', 'limpieza de habitaciones'),
+        item('Dependiente/a', 'Comercio', 'dependienta', 'vendedor', 'vendedora', 'dependiente de tienda'),
+        item('Cajero/a', 'Comercio', 'cajera'),
+        item('Promotor/a', 'Comercio', 'promotora', 'azafato de promoción'),
+        item('Azafato/a de eventos', 'Comercio', 'azafata', 'azafata de eventos', 'azafato'),
+        item('Limpiador/a', 'Limpieza', 'limpiadora', 'personal de limpieza', 'limpieza'),
+        item('Administrativo/a', 'Oficina', 'administrativa', 'auxiliar administrativo', 'auxiliar administrativa'),
+        item('Recepcionista', 'Oficina', 'recepción'),
+        item('Teleoperador/a', 'Oficina', 'teleoperadora', 'agente de call center', 'call center'),
+        item('Peón agrícola', 'Agricultura', 'jornalero', 'jornalera', 'recolector', 'temporero'),
+        item('Peón de construcción', 'Construcción', 'peón de obra', 'peón albañil'),
+        item('Albañil', 'Construcción', 'oficial de albañilería'),
+        item('Auxiliar de geriatría', 'Cuidados', 'gerocultor', 'gerocultora', 'auxiliar de residencia'),
+        item('Celador/a', 'Cuidados', 'celadora'),
+    ],
+    carnes: [
+        item('Permiso B', 'Permiso de conducir', 'carnet B', 'carné B', 'B', 'carnet de coche'),
+        item('Permiso C1', 'Permiso de conducir', 'C1'),
+        item('Permiso C', 'Permiso de conducir', 'C', 'carnet de camión'),
+        item('Permiso C+E', 'Permiso de conducir', 'C+E', 'CE', 'carnet de tráiler'),
+        item('Permiso D', 'Permiso de conducir', 'D', 'carnet de autobús'),
+        item('CAP', 'Permiso de conducir', 'certificado de aptitud profesional'),
+        item('ADR (mercancías peligrosas)', 'Permiso de conducir', 'ADR', 'mercancías peligrosas'),
+        item('Carné de carretillero', 'Carné profesional', 'carnet carretillero', 'carnet carretillero UNE 58451', 'carnet de carretillas', 'UNE 58451', 'carné de carretillas', 'carnet toro'),
+        item('Plataforma elevadora (PEMP)', 'Carné profesional', 'PEMP', 'plataforma elevadora', 'carnet de plataforma'),
+        item('Puente grúa', 'Carné profesional', 'carnet puente grúa'),
+        item('Manipulador/a de alimentos', 'Carné profesional', 'manipuladora de alimentos', 'carnet de manipulador', 'manipulador'),
+        item('Formación PRL 20 h', 'Prevención', 'PRL 20h', 'PRL básico 20 h'),
+        item('Formación PRL 60 h', 'Prevención', 'PRL 60h', 'PRL básico 60h', 'PRL nivel básico'),
+    ],
+    habilidades: [
+        item('Picking con radiofrecuencia', 'Almacén', 'picking RF', 'picking radiofrecuencia', 'picking con PDA', 'radiofrecuencia', 'PDA', 'picking por radiofrecuencia'),
+        item('Picking por voz', 'Almacén', 'picking voz', 'voice picking'),
+        item('Preparación de pedidos', 'Almacén', 'preparación pedidos'),
+        item('Carretilla frontal', 'Almacén', 'frontal'),
+        item('Carretilla retráctil', 'Almacén', 'retráctil', 'carretilla retráctil 12m', 'retráctil 14m'),
+        item('Carretilla trilateral', 'Almacén', 'trilateral'),
+        item('Transpaleta eléctrica', 'Almacén', 'apilador', 'manejo apiladores', 'apilador eléctrico'),
+        item('Transpaleta manual', 'Almacén', 'uso transpaleta manual', 'transpaleta'),
+        item('Paletizado', 'Almacén', 'paletizar', 'filmado'),
+        item('Carga y descarga', 'Almacén', 'carga/descarga', 'carga nocturna', 'carga contenedores', 'descarga de camiones'),
+        item('Ubicación en altura', 'Almacén', 'ubicaciones altas'),
+        item('Control de stock', 'Almacén', 'gestión de stocks', 'stock'),
+        item('Inventario', 'Almacén', 'inventarios', 'recuento'),
+        item('Reposición', 'Almacén', 'reposición lineal', 'reponer'),
+        item('Etiquetado', 'Almacén', 'etiquetar'),
+        item('Clasificación de paquetería', 'Almacén', 'clasificación paquetería', 'sorter'),
+        item('SGA / SAP', 'Herramientas', 'SGA SAP', 'SAP', 'SGA', 'sistema de gestión de almacén'),
+        item('Ofimática', 'Herramientas', 'office', 'excel', 'word'),
+        item('Atención al cliente', 'Personales', 'trato al cliente', 'servicio al cliente'),
+        item('Trabajo en equipo', 'Personales', 'equipo'),
+        item('Disponibilidad horaria', 'Personales', 'disponibilidad', 'disponibilidad inmediata', 'incorporación rápida'),
+    ],
+    idiomas: ['Español', 'Inglés', 'Francés', 'Alemán', 'Italiano', 'Portugués', 'Catalán', 'Euskera', 'Gallego', 'Árabe', 'Rumano', 'Chino'],
+};
+const NIVELES_IDIOMA = ['Nativo', 'C2', 'C1', 'B2', 'B1', 'A2', 'A1'];
+// Niveles escritos a mano en datos antiguos
+const NIVEL_EQUIVALENTE = { fluido: 'C1', alto: 'C1', medio: 'B1', intermedio: 'B1', basico: 'A2', 'básico': 'A2', nativa: 'Nativo', nativo: 'Nativo' };
+
+const normalizarTexto = (t = '') => t.toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+const buscarExacto = (lista, texto) => {
+    const n = normalizarTexto(texto);
+    return lista.find(x => normalizarTexto(x.nombre) === n || x.sinonimos.some(s => normalizarTexto(s) === n));
+};
+const canonico = (lista, texto) => buscarExacto(lista, texto)?.nombre || texto;
+const canonicos = (lista, valores = []) => [...new Set(valores.map(v => canonico(lista, v)))];
+const normalizarIdioma = (texto) => {
+    const m = texto.match(/^\s*([^(]+?)\s*(?:\((.+)\))?\s*$/);
+    if (!m) return texto;
+    const idioma = CATALOGOS_INICIALES.idiomas.find(i => normalizarTexto(i) === normalizarTexto(m[1])) || m[1];
+    const nivel = m[2] ? (NIVEL_EQUIVALENTE[normalizarTexto(m[2])] || m[2]) : 'B1';
+    return `${idioma} (${nivel})`;
+};
+// Pasa los valores escritos a mano al nombre del listado. Si el texto antiguo traía varios perfiles
+// ("Reponedor nocturno / Carretillero"), el primero es el principal y los demás pasan a otros perfiles.
+const perfilesDeTexto = (texto = '') => {
+    const entero = buscarExacto(CATALOGOS_INICIALES.perfiles, texto);
+    if (entero) return [entero.nombre];
+    return [...new Set(texto.split('/').map(p => canonico(CATALOGOS_INICIALES.perfiles, p.trim())).filter(Boolean))];
+};
+const homogeneizar = (c) => {
+    const [principal, ...resto] = perfilesDeTexto(c.category);
+    return {
+    ...c,
+    category: principal || c.category,
+    otherProfiles: [...new Set([...resto, ...canonicos(CATALOGOS_INICIALES.perfiles, c.otherProfiles)])].filter(p => p !== principal),
+    drivingLicenses: canonicos(CATALOGOS_INICIALES.carnes, c.drivingLicenses),
+    skills: canonicos(CATALOGOS_INICIALES.habilidades, c.skills),
+    languages: [...new Set((c.languages || []).map(normalizarIdioma))],
+    };
+};
+// Texto con nombres y sinónimos de perfiles, carnés y habilidades, para que la búsqueda encuentre por cualquiera
+const textoBuscable = (c, catalogos) => {
+    const con = (lista, valores) => valores.flatMap(v => { const x = buscarExacto(lista, v); return x ? [x.nombre, ...x.sinonimos] : [v]; });
+    return normalizarTexto([
+        ...con(catalogos.perfiles, [c.category, ...(c.otherProfiles || [])]),
+        ...con(catalogos.carnes, c.drivingLicenses || []),
+        ...con(catalogos.habilidades, c.skills || []),
+        ...(c.languages || []),
+    ].join(' | '));
+};
+
+// Selector con búsqueda sobre un listado: sugiere por nombre o sinónimo y permite añadir un valor nuevo al listado
+function SelectorCatalogo({ lista, valores, onChange, onAnadir, placeholder, unico = false }) {
+    const [texto, setTexto] = useState('');
+    const [abierto, setAbierto] = useState(false);
+    const n = normalizarTexto(texto);
+    const exacto = n ? buscarExacto(lista, texto) : null;
+    const sugerencias = (n
+        ? lista.filter(x => normalizarTexto(x.nombre).includes(n) || x.sinonimos.some(s => normalizarTexto(s).includes(n)))
+        : lista
+    ).filter(x => !valores.includes(x.nombre)).slice(0, 8);
+    const elegir = (nombre) => {
+        onChange(unico ? [nombre] : [...valores, nombre]);
+        setTexto('');
+        setAbierto(false);
+    };
+    const anadirNuevo = () => {
+        const nombre = texto.trim().replace(/^./, (l) => l.toUpperCase());
+        onAnadir(nombre);
+        elegir(nombre);
+    };
+    return (
+        <div className="space-y-2">
+            {!unico && (
+                <div className="flex flex-wrap gap-1.5">
+                    {valores.length === 0 && <span className="text-xs text-slate-400">Ninguno</span>}
+                    {valores.map(v => (
+                        <span key={v} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                            {v}
+                            <button type="button" onClick={() => onChange(valores.filter(x => x !== v))} aria-label={`Quitar ${v}`} className="text-slate-400 hover:text-rose-600">
+                                <X className="w-3 h-3" />
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+            <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <TextInput
+                    className="pl-8!"
+                    value={texto}
+                    placeholder={unico && valores[0] ? `${valores[0]} · escribe para cambiarlo` : placeholder}
+                    onChange={(e) => { setTexto(e.target.value); setAbierto(true); }}
+                    onFocus={() => setAbierto(true)}
+                    onBlur={() => setTimeout(() => setAbierto(false), 150)}
+                    onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return;
+                        e.preventDefault();
+                        if (exacto && !valores.includes(exacto.nombre)) elegir(exacto.nombre);
+                        else if (!exacto && texto.trim()) anadirNuevo();
+                    }}
+                />
+                {abierto && (sugerencias.length > 0 || (n && !exacto)) && (
+                    <div className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg py-1 text-xs">
+                        {sugerencias.map(x => {
+                            const porSinonimo = n && !normalizarTexto(x.nombre).includes(n) ? x.sinonimos.find(s => normalizarTexto(s).includes(n)) : null;
+                            return (
+                                <button key={x.nombre} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => elegir(x.nombre)} className="w-full text-left px-3 py-1.5 hover:bg-indigo-50 flex items-center justify-between gap-2">
+                                    <span className="text-slate-800">{x.nombre}{porSinonimo && <span className="text-slate-400"> · también «{porSinonimo}»</span>}</span>
+                                    <span className="text-[11px] text-slate-400 shrink-0">{x.grupo}</span>
+                                </button>
+                            );
+                        })}
+                        {n && !exacto && (
+                            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={anadirNuevo} className="w-full text-left px-3 py-1.5 text-indigo-700 hover:bg-indigo-50 border-t border-slate-100 flex items-center gap-1.5">
+                                <Plus className="w-3.5 h-3.5" /> Añadir «{texto.trim()}» al listado
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// Idiomas: idioma del listado + nivel, siempre con el mismo formato "Inglés (B1)"
+function SelectorIdiomas({ valores, onChange, idiomas, onAnadirIdioma }) {
+    const [idioma, setIdioma] = useState('');
+    const [nivel, setNivel] = useState('B1');
+    const anadir = () => {
+        if (!idioma) return;
+        const resto = valores.filter(v => !v.startsWith(`${idioma} (`));
+        onChange([...resto, `${idioma} (${nivel})`]);
+        setIdioma('');
+    };
+    return (
+        <div className="space-y-2">
+            <div className="flex flex-wrap gap-1.5">
+                {valores.length === 0 && <span className="text-xs text-slate-400">Ninguno</span>}
+                {valores.map(v => (
+                    <span key={v} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                        {v}
+                        <button type="button" onClick={() => onChange(valores.filter(x => x !== v))} aria-label={`Quitar ${v}`} className="text-slate-400 hover:text-rose-600">
+                            <X className="w-3 h-3" />
+                        </button>
+                    </span>
+                ))}
+            </div>
+            <div className="grid grid-cols-[1fr_110px_auto] gap-2 items-start">
+                <SelectorCatalogo unico lista={idiomas.map(i => item(i, 'Idioma'))} valores={idioma ? [idioma] : []} onChange={(v) => setIdioma(v[0])} onAnadir={onAnadirIdioma} placeholder="Busca un idioma" />
+                <Select value={nivel} onChange={(e) => setNivel(e.target.value)} aria-label="Nivel" className="w-full">
+                    {NIVELES_IDIOMA.map(x => <option key={x} value={x}>{x}</option>)}
+                </Select>
+                <Button size="sm" icon={Plus} onClick={anadir} disabled={!idioma} className="h-8">Añadir</Button>
+            </div>
+        </div>
+    );
+}
+
+// ==========================================
 // DOCUMENTOS: CADUCIDAD Y AVISOS
 // ==========================================
 // Días antes de caducar en los que un documento se marca "caduca pronto" y se avisa al candidato (por confirmar)
@@ -448,7 +684,6 @@ const TURNOS = [
     { id: 'finde', texto: 'Fines de semana' },
 ];
 const INCORPORACION = ['Inmediata', 'En una semana', 'En dos semanas', 'A partir de una fecha'];
-const CATEGORIAS = ['Operario de almacén / Mozo', 'Operario/a de almacén', 'Carretillero / Mozo especializado', 'Reponedor / Carga y descarga', 'Conductor / Repartidor'];
 const turnosDesde = (texto = '') => {
     const t = texto.toLowerCase();
     if (t.includes('indiferente')) return ['manana', 'tarde', 'noche'];
@@ -494,36 +729,7 @@ const sincronizarEstados = (c) => {
     };
 };
 
-// Lista de etiquetas que se pueden añadir y quitar (carnés, habilidades, idiomas...)
-function ListaEditable({ valores, onChange, placeholder }) {
-    const [nuevo, setNuevo] = useState('');
-    const anadir = () => {
-        const v = nuevo.trim();
-        if (v && !valores.includes(v)) onChange([...valores, v]);
-        setNuevo('');
-    };
-    return (
-        <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5">
-                {valores.length === 0 && <span className="text-xs text-slate-400">Ninguno</span>}
-                {valores.map(v => (
-                    <span key={v} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700">
-                        {v}
-                        <button type="button" onClick={() => onChange(valores.filter(x => x !== v))} aria-label={`Quitar ${v}`} className="text-slate-400 hover:text-rose-600">
-                            <X className="w-3 h-3" />
-                        </button>
-                    </span>
-                ))}
-            </div>
-            <div className="flex gap-2">
-                <TextInput value={nuevo} onChange={(e) => setNuevo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); anadir(); } }} placeholder={placeholder} />
-                <Button size="sm" icon={Plus} onClick={anadir}>Añadir</Button>
-            </div>
-        </div>
-    );
-}
-
-const INITIAL_CANDIDATES = CANDIDATOS_BASE.map(completarCandidato);
+const INITIAL_CANDIDATES = CANDIDATOS_BASE.map(c => homogeneizar(completarCandidato(c)));
 
 const ESTADO_CANDIDATO = {
     'Disponible': { tone: 'success', label: 'Disponible' },
@@ -561,6 +767,16 @@ export default function CandidatosView() {
     const [sourceFilter, setSourceFilter] = useState('ALL');
     const [docFilter, setDocFilter] = useState('ALL'); // 'ALL' | 'DOC_OK' | 'DOC_ALERT' | 'RGPD_ALERT'
     const [categoryFilter, setCategoryFilter] = useState('ALL');
+    const [skillFilter, setSkillFilter] = useState('ALL'); // 'carne:…' | 'habilidad:…' | 'idioma:…'
+    // Listados homogéneos; se amplían al añadir un valor nuevo desde la ficha
+    const [catalogos, setCatalogos] = useState(CATALOGOS_INICIALES);
+    const anadirACatalogo = (tipo, nombre, grupo = 'Añadidos') => {
+        setCatalogos(prev => ({
+            ...prev,
+            [tipo]: tipo === 'idiomas' ? [...prev.idiomas, nombre] : [...prev[tipo], item(nombre, grupo)],
+        }));
+        showToast('Añadido al listado', `«${nombre}» ya se puede elegir en todos los candidatos.`, 'info');
+    };
     const [savedPreset, setSavedPreset] = useState('ALL'); // 'ALL', 'AVAILABLE_NOW', 'DOC_PENDING', 'ASSIGNED'
 
     // Modals & Drawers
@@ -732,7 +948,8 @@ export default function CandidatosView() {
                 const matchCity = can.city.toLowerCase().includes(q);
                 const matchCategory = can.category.toLowerCase().includes(q);
                 const matchSkills = can.skills.some(s => s.toLowerCase().includes(q));
-                if (!matchName && !matchDni && !matchPhone && !matchEmail && !matchCity && !matchCategory && !matchSkills) {
+                const matchSinonimos = textoBuscable(can, catalogos).includes(normalizarTexto(q));
+                if (!matchName && !matchDni && !matchPhone && !matchEmail && !matchCity && !matchCategory && !matchSkills && !matchSinonimos) {
                     return false;
                 }
             }
@@ -754,11 +971,19 @@ export default function CandidatosView() {
             if (docFilter === 'RGPD_ALERT' && (can.rgpdStatus === 'Vigente')) return false;
 
             // Category
-            if (categoryFilter !== 'ALL' && !can.category.toLowerCase().includes(categoryFilter.toLowerCase())) return false;
+            if (categoryFilter !== 'ALL' && can.category !== categoryFilter && !(can.otherProfiles || []).includes(categoryFilter)) return false;
+
+            // Carné, habilidad o idioma
+            if (skillFilter !== 'ALL') {
+                const [tipo, valor] = skillFilter.split(':');
+                if (tipo === 'carne' && !(can.drivingLicenses || []).includes(valor)) return false;
+                if (tipo === 'habilidad' && !(can.skills || []).includes(valor)) return false;
+                if (tipo === 'idioma' && !(can.languages || []).some(l => l.startsWith(`${valor} (`))) return false;
+            }
 
             return true;
         });
-    }, [candidates, searchQuery, statusFilter, sourceFilter, docFilter, categoryFilter, savedPreset]);
+    }, [candidates, searchQuery, statusFilter, sourceFilter, docFilter, categoryFilter, skillFilter, savedPreset, catalogos]);
 
     // Handlers
     const handleSelectAll = (e) => {
@@ -1012,7 +1237,7 @@ export default function CandidatosView() {
             ]
         };
 
-        setCandidates([completarCandidato(newCan), ...candidates]);
+        setCandidates([homogeneizar(completarCandidato(newCan)), ...candidates]);
         setIsQuickCreateOpen(false);
         showToast('Candidato creado', `Alta rápida de ${newCan.name} ${newCan.lastName} completada con éxito.`, 'success');
     };
@@ -1065,7 +1290,7 @@ export default function CandidatosView() {
             ]
         };
 
-        setCandidates([completarCandidato(newCan), ...candidates]);
+        setCandidates([homogeneizar(completarCandidato(newCan)), ...candidates]);
         setIsImportPortalOpen(false);
         showToast('Importación completada', `1 nuevo candidato importado desde ${portalName}: ${newCan.name} ${newCan.lastName}.`, 'success');
     };
@@ -1119,12 +1344,14 @@ export default function CandidatosView() {
     };
 
     const conDocPendiente = (c) => c.dniStatus !== 'OK' || c.nssStatus !== 'OK' || c.rgpdStatus !== 'Vigente';
-    const hayFiltros = searchQuery || statusFilter !== 'ALL' || docFilter !== 'ALL' || sourceFilter !== 'ALL' || savedPreset !== 'ALL';
+    const hayFiltros = searchQuery || statusFilter !== 'ALL' || docFilter !== 'ALL' || sourceFilter !== 'ALL' || categoryFilter !== 'ALL' || skillFilter !== 'ALL' || savedPreset !== 'ALL';
     const limpiarFiltros = () => {
         setSearchQuery('');
         setStatusFilter('ALL');
         setDocFilter('ALL');
         setSourceFilter('ALL');
+        setCategoryFilter('ALL');
+        setSkillFilter('ALL');
         setSavedPreset('ALL');
     };
     const aplicarVista = (preset) => {
@@ -1181,8 +1408,33 @@ export default function CandidatosView() {
                             className="flex-1 min-w-[220px]"
                             value={searchQuery}
                             onChange={setSearchQuery}
-                            placeholder="Buscar por nombre, DNI, teléfono, email, población o categoría..."
+                            placeholder="Buscar por nombre, DNI, teléfono, perfil, carné o habilidad..."
                         />
+                        <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Perfil">
+                            <option value="ALL">Todos los perfiles</option>
+                            {[...new Set(catalogos.perfiles.map(p => p.grupo))].map(g => {
+                                const delGrupo = catalogos.perfiles.filter(p => p.grupo === g)
+                                    .map(p => ({ p, n: candidates.filter(c => c.category === p.nombre || (c.otherProfiles || []).includes(p.nombre)).length }))
+                                    .filter(x => x.n > 0);
+                                return delGrupo.length > 0 && (
+                                    <optgroup key={g} label={g}>
+                                        {delGrupo.map(({ p, n }) => <option key={p.nombre} value={p.nombre}>{p.nombre} ({n})</option>)}
+                                    </optgroup>
+                                );
+                            })}
+                        </Select>
+                        <Select value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)} aria-label="Carnés, habilidades e idiomas">
+                            <option value="ALL">Carnés, habilidades e idiomas</option>
+                            <optgroup label="Permisos y carnés">
+                                {catalogos.carnes.filter(x => candidates.some(c => (c.drivingLicenses || []).includes(x.nombre))).map(x => <option key={x.nombre} value={`carne:${x.nombre}`}>{x.nombre}</option>)}
+                            </optgroup>
+                            <optgroup label="Habilidades">
+                                {catalogos.habilidades.filter(x => candidates.some(c => (c.skills || []).includes(x.nombre))).map(x => <option key={x.nombre} value={`habilidad:${x.nombre}`}>{x.nombre}</option>)}
+                            </optgroup>
+                            <optgroup label="Idiomas">
+                                {catalogos.idiomas.filter(i => candidates.some(c => (c.languages || []).some(l => l.startsWith(`${i} (`)))).map(i => <option key={i} value={`idioma:${i}`}>{i}</option>)}
+                            </optgroup>
+                        </Select>
                         <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                             <option value="ALL">Todos los estados</option>
                             <option value="Disponible">Disponible</option>
@@ -1270,6 +1522,7 @@ export default function CandidatosView() {
                                             />
                                         </th>
                                         <th className="py-2 px-3 font-medium">Candidato</th>
+                                        <th className="py-2 px-3 font-medium">Perfil principal</th>
                                         <th className="py-2 px-3 font-medium">Contacto</th>
                                         <th className="py-2 px-3 font-medium">Ubicación</th>
                                         <th className="py-2 px-3 font-medium">Documentación</th>
@@ -1304,11 +1557,21 @@ export default function CandidatosView() {
                                                             >
                                                                 {c.name} {c.lastName}
                                                             </button>
-                                                            <div className="text-[11px] text-slate-500 truncate max-w-[220px]" title={c.category}>
-                                                                {c.category} · {c.experienceYears} años
+                                                            <div className="text-[11px] text-slate-500 whitespace-nowrap">
+                                                                {c.experienceYears} {c.experienceYears === 1 ? 'año' : 'años'} de experiencia
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td className="py-2.5 px-3">
+                                                    <button type="button" onClick={() => setCategoryFilter(c.category)} title="Filtrar por este perfil" className="text-left text-slate-700 hover:text-indigo-700 whitespace-nowrap">
+                                                        {c.category}
+                                                    </button>
+                                                    {(c.otherProfiles || []).length > 0 && (
+                                                        <div className="text-[11px] text-slate-500 truncate max-w-[180px]" title={c.otherProfiles.join(', ')}>
+                                                            También: {c.otherProfiles.join(', ')}
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="py-2.5 px-3">
                                                     <div className="text-slate-700 whitespace-nowrap">{c.phone}</div>
@@ -1604,18 +1867,18 @@ export default function CandidatosView() {
 
                                         {detailTab === 'profesional' && (editando ? (
                                             <div className="space-y-4">
+                                                <Notice tone="info" icon={Info}>Elige de los listados para que todos los candidatos usen los mismos nombres. Puedes buscar por sinónimos (por ejemplo, «toro» encuentra «Carretillero/a»). Si no está, añádelo al listado.</Notice>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                    <Field label="Perfil principal">
-                                                        <Select value={d.category} onChange={(e) => campo('category', e.target.value)} className="w-full">
-                                                            {[...new Set([d.category, ...CATEGORIAS])].map(x => <option key={x} value={x}>{x}</option>)}
-                                                        </Select>
-                                                    </Field>
+                                                    <div className="space-y-1">
+                                                        <span className="block text-[11px] font-medium text-slate-600">Perfil principal: <span className="text-slate-900">{d.category}</span></span>
+                                                        <SelectorCatalogo unico lista={catalogos.perfiles} valores={[d.category]} onChange={(v) => campo('category', v[0])} onAnadir={(n) => anadirACatalogo('perfiles', n)} placeholder="Busca un perfil" />
+                                                    </div>
                                                     <Field label="Años de experiencia"><TextInput type="number" min="0" max="50" value={d.experienceYears} onChange={(e) => campo('experienceYears', parseInt(e.target.value) || 0)} /></Field>
                                                 </div>
-                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Otros perfiles que puede cubrir</span><ListaEditable valores={d.otherProfiles} onChange={(v) => campo('otherProfiles', v)} placeholder="Por ejemplo: reponedor" /></div>
-                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Permisos de conducir y carnés</span><ListaEditable valores={d.drivingLicenses} onChange={(v) => campo('drivingLicenses', v)} placeholder="Por ejemplo: C1, carné de carretillero" /></div>
-                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Habilidades</span><ListaEditable valores={d.skills} onChange={(v) => campo('skills', v)} placeholder="Por ejemplo: picking con PDA" /></div>
-                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Idiomas</span><ListaEditable valores={d.languages} onChange={(v) => campo('languages', v)} placeholder="Por ejemplo: inglés (B1)" /></div>
+                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Otros perfiles que puede cubrir</span><SelectorCatalogo lista={catalogos.perfiles.filter(p => p.nombre !== d.category)} valores={d.otherProfiles} onChange={(v) => campo('otherProfiles', v)} onAnadir={(n) => anadirACatalogo('perfiles', n)} placeholder="Busca un perfil, por ejemplo: reponedor" /></div>
+                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Permisos de conducir y carnés</span><SelectorCatalogo lista={catalogos.carnes} valores={d.drivingLicenses} onChange={(v) => campo('drivingLicenses', v)} onAnadir={(n) => anadirACatalogo('carnes', n)} placeholder="Busca un permiso o carné, por ejemplo: C1 o carretillero" /></div>
+                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Habilidades</span><SelectorCatalogo lista={catalogos.habilidades} valores={d.skills} onChange={(v) => campo('skills', v)} onAnadir={(n) => anadirACatalogo('habilidades', n)} placeholder="Busca una habilidad, por ejemplo: picking" /></div>
+                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Idiomas</span><SelectorIdiomas valores={d.languages} onChange={(v) => campo('languages', v)} idiomas={catalogos.idiomas} onAnadirIdioma={(n) => anadirACatalogo('idiomas', n)} /></div>
                                                 <label className="inline-flex items-center gap-2 text-slate-700">
                                                     <input type="checkbox" checked={!!d.hasCar} onChange={(e) => campo('hasCar', e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                                     Tiene vehículo propio
@@ -2404,10 +2667,11 @@ export default function CandidatosView() {
                                     <div>
                                         <label className="font-semibold text-slate-700 block mb-1">Categoría Principal</label>
                                         <select name="category" className="w-full p-2 border border-slate-200 rounded-lg text-xs">
-                                            <option value="Operario de almacén / Mozo">Operario de almacén / Mozo</option>
-                                            <option value="Carretillero / Mozo especializado">Carretillero / Mozo especializado</option>
-                                            <option value="Reponedor / Carga y descarga">Reponedor / Carga y descarga</option>
-                                            <option value="Conductor / Repartidor">Conductor / Repartidor</option>
+                                            {[...new Set(catalogos.perfiles.map(p => p.grupo))].map(g => (
+                                                <optgroup key={g} label={g}>
+                                                    {catalogos.perfiles.filter(p => p.grupo === g).map(p => <option key={p.nombre} value={p.nombre}>{p.nombre}</option>)}
+                                                </optgroup>
+                                            ))}
                                         </select>
                                     </div>
                                     <div>
