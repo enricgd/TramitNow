@@ -50,6 +50,7 @@ import {
     HelpCircle,
     SlidersHorizontal
 } from 'lucide-react';
+import { PageHeader, Card, KpiTile, EmptyState, Notice, Button, Badge, Avatar, Modal, Drawer } from '../ui';
 
 // --- MOCK INITIAL DATA ---
 const INITIAL_EXPEDIENTES = [
@@ -60,7 +61,7 @@ const INITIAL_EXPEDIENTES = [
         nif: '48.912.834-K',
         telefono: '+34 612 345 678',
         email: 'laura.garcia@email.com',
-        foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
+        foto: null,
         plazaNumero: 1,
         posicion: 'Operario/a de almacén',
         categoria: 'Grupo IV - Mozo especialista',
@@ -88,7 +89,7 @@ const INITIAL_EXPEDIENTES = [
         nif: '51.029.418-L',
         telefono: '+34 689 123 456',
         email: 'miguel.torres@email.com',
-        foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+        foto: null,
         plazaNumero: 2,
         posicion: 'Operario/a de almacén',
         categoria: 'Grupo IV - Mozo especialista',
@@ -116,7 +117,7 @@ const INITIAL_EXPEDIENTES = [
         nif: '33.921.054-P',
         telefono: '+34 644 987 321',
         email: 'ana.lopez@email.com',
-        foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        foto: null,
         plazaNumero: 3,
         posicion: 'Operario/a de almacén',
         categoria: 'Grupo IV - Mozo especialista',
@@ -144,7 +145,7 @@ const INITIAL_EXPEDIENTES = [
         nif: '62.184.992-M',
         telefono: '+34 655 432 109',
         email: 'pablo.ruiz@email.com',
-        foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+        foto: null,
         plazaNumero: 4,
         posicion: 'Operario/a de almacén',
         categoria: 'Grupo IV - Mozo especialista',
@@ -172,7 +173,7 @@ const INITIAL_EXPEDIENTES = [
         nif: '74.119.823-R',
         telefono: '+34 670 998 877',
         email: 'carlos.mendoza@email.com',
-        foto: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80',
+        foto: null,
         plazaNumero: 5,
         posicion: 'Operario/a de almacén',
         categoria: 'Grupo IV - Mozo especialista',
@@ -448,10 +449,10 @@ export default function LaboralView() {
     };
 
     return (
-        <div className="min-h-full flex flex-col bg-slate-100/70 text-slate-800">
+        <div className="min-h-full flex flex-col text-slate-800">
             {/* TOAST NOTIFICATION */}
             {toast && (
-                <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200">
+                <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200">
                     <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-400">
                         <CheckCheck className="w-5 h-5" />
                     </div>
@@ -468,271 +469,75 @@ export default function LaboralView() {
             {/* TOP GLOBAL BAR */}
 
             {/* MAIN APP WRAPPER: SIDEBAR + CONTENT */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* GLOBAL SIDEBAR */}
-
-                {/* MAIN CONTENT AREA */}
-                <main className="flex-1 flex flex-col overflow-y-auto bg-slate-50">
-                    {/* BREADCRUMB + GLOBAL PETITION SWITCH BANNER */}
+            <div className="flex flex-1">
+                <div className="flex-1 flex flex-col min-w-0">
                     {viewGlobalLaboral && (
-                        <div className="bg-emerald-900 text-emerald-100 px-6 py-2.5 flex items-center justify-between text-xs border-b border-emerald-800">
-                            <div className="flex items-center gap-2">
-                                <Info className="w-4 h-4 text-emerald-300" />
-                                <span>Estás previsualizando la <strong>Bandeja Laboral Global</strong> (todas las peticiones). Puedes volver al contexto individual en cualquier momento:</span>
-                            </div>
-                            <button
-                                onClick={() => setViewGlobalLaboral(false)}
-                                className="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded font-medium transition-colors"
-                            >
-                                <ArrowLeft className="w-3.5 h-3.5" /> Volver a Petición PET-2026-0048
-                            </button>
+                        <div className="w-full px-4 sm:px-6 pt-5">
+                            <Notice tone="info" icon={Info}>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <span>Estás viendo la bandeja laboral de todas las peticiones.</span>
+                                    <Button size="sm" icon={ArrowLeft} onClick={() => setViewGlobalLaboral(false)}>Volver a PET-2026-0048</Button>
+                                </div>
+                            </Notice>
                         </div>
                     )}
 
-                    {/* BREADCRUMB */}
-                    <div className="px-6 pt-4 pb-2 flex items-center justify-between text-xs text-slate-500">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <span className="hover:text-slate-700 cursor-pointer">Peticiones Operativas</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="font-semibold text-slate-800">PET-2026-0048</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-medium border border-indigo-100">
-                                Pestaña Laboral (Altas, Cursos, Contratos y CPD)
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => showToast('Sincronizado', 'Conectado con TGSS Sistema RED y pasarela OTP de firma.')}
-                                className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-2xs hover:bg-slate-50 transition-colors"
-                            >
-                                <RefreshCw className="w-3.5 h-3.5 text-slate-500" /> Sincronizar Pasarelas
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* CONTEXTUAL PETITION HEADER */}
-                    <div className="px-6 py-4 bg-white border-b border-slate-200">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                            {/* Left info */}
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                        PET-2026-0048
-                                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                            En proceso laboral / Incorporación
-                                        </span>
-                                    </h1>
-                                    <span className="text-xs text-slate-400">|</span>
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                                        <span className="font-semibold text-slate-700">Trans-Logística Ibérica Norte, S.A.</span>
-                                        <span className="text-[11px] text-slate-400">(Centro Logístico Vitoria-Gasteiz)</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap pt-0.5">
-                                    <div className="flex items-center gap-1">
-                                        <Lock className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>Presupuesto origen:</span>
-                                        <span className="font-mono font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                                            PRE-2026-0048 v1 (Firmado)
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>Posición:</span>
-                                        <strong className="text-slate-700">Operario/a de almacén</strong>
-                                        <span className="text-slate-400">({metrics.asignadas} de {metrics.totalPlazas} plazas cubiertas)</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>Inicio pactado:</span>
-                                        <strong className="text-slate-700">02 Mar 2026</strong>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <span>Responsable:</span>
-                                        <span className="font-medium text-slate-700">Elena Morán</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Right actions */}
-                            <div className="flex items-center gap-2.5 self-start lg:self-center">
-                                <button
-                                    onClick={() => {
-                                        const target = expedientes.find(e => e.pasos.altaSS.estado === 'Pendiente') || expedientes[1];
-                                        handleTriggerAction('altaSS', target);
-                                    }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
-                                >
-                                    <ShieldCheck className="w-4 h-4" /> Tramitar Altas TGSS pendientes
-                                </button>
-                                <button
-                                    onClick={() => showToast('Bandeja de envíos', 'Preparando lote de 3 contratos para envío masivo con firma OTP.')}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
-                                >
-                                    <FileSignature className="w-4 h-4" /> Enviar contratos a firma
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* PETITION TABS NAVIGATION */}
-                        <div className="flex items-center gap-1 overflow-x-auto border-t border-slate-100 mt-4 pt-2 -mb-4">
-                            {[
-                                { id: 'resumen', label: 'Resumen' },
-                                { id: 'presupuesto', label: 'Presupuesto heredado', icon: Lock },
-                                { id: 'posiciones', label: 'Posiciones y turnos' },
-                                { id: 'horarios', label: 'Horarios' },
-                                { id: 'portales', label: 'Portales de empleo' },
-                                { id: 'seleccion', label: 'Selección y candidatos', badge: '5/8' },
-                                { id: 'laboral', label: 'Laboral (Altas / Contratos)', activeHighlight: true, badge: '5 asignados' },
-                                { id: 'documentos', label: 'Documentos' },
-                                { id: 'actividad', label: 'Actividad e histórico' }
-                            ].map(tab => {
-                                const isActive = activeRequestTab === tab.id;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveRequestTab(tab.id)}
-                                        className={`flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-medium border-b-2 whitespace-nowrap transition-all ${
-                                            isActive
-                                                ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/50'
-                                                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                        }`}
+                    <div className="w-full px-4 sm:px-6 py-5 space-y-4">
+                        <PageHeader
+                            breadcrumbs={[{ label: 'Contratos y altas' }, { label: 'PET-2026-0048' }]}
+                            title="Operario/a de almacén · PET-2026-0048"
+                            status={<Badge tone="info" dot>En incorporación</Badge>}
+                            subtitle={
+                                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <span className="inline-flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-slate-400" />Trans-Logística Ibérica Norte, S.A. · Centro Logístico Vitoria-Gasteiz</span>
+                                    <span className="inline-flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-slate-400" />Presupuesto PRE-2026-0048 v1</span>
+                                    <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />Inicio 02/03/2026</span>
+                                    <span>Responsable: Elena Morán</span>
+                                </span>
+                            }
+                            actions={
+                                <>
+                                    <Button icon={RefreshCw} onClick={() => showToast('Sincronizado', 'Conectado con TGSS Sistema RED y pasarela OTP de firma.')}>Sincronizar</Button>
+                                    <Button icon={FileSignature} onClick={() => showToast('Bandeja de envíos', 'Preparando lote de 3 contratos para envío masivo con firma OTP.')}>Enviar contratos a firma</Button>
+                                    <Button
+                                        variant="primary"
+                                        icon={ShieldCheck}
+                                        onClick={() => {
+                                            const target = expedientes.find(e => e.pasos.altaSS.estado === 'Pendiente') || expedientes[1];
+                                            handleTriggerAction('altaSS', target);
+                                        }}
                                     >
-                                        {tab.icon && <tab.icon className="w-3.5 h-3.5 text-slate-400" />}
-                                        <span>{tab.label}</span>
-                                        {tab.badge && (
-                                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                                                isActive ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'
-                                            }`}>
-                                                {tab.badge}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* WORKSPACE AREA */}
-                    <div className="p-6 space-y-6">
+                                        Tramitar altas pendientes
+                                    </Button>
+                                </>
+                            }
+                        />
                         {activeRequestTab !== 'laboral' ? (
-                            /* FALLBACK / NOTICE FOR OTHER TABS IN DEMO */
-                            <div className="bg-white rounded-xl p-8 border border-slate-200 text-center space-y-3 shadow-2xs">
-                                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
-                                    <Layers className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-base font-bold text-slate-800">
-                                    Vista de la pestaña "{activeRequestTab.toUpperCase()}"
-                                </h3>
-                                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                                    Para este prototipo de validación nos estamos centrando en el flujo y la operativa de la pestaña <strong>Laboral</strong>.
-                                </p>
-                                <button
-                                    onClick={() => setActiveRequestTab('laboral')}
-                                    className="inline-flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 shadow-xs"
-                                >
-                                    Volver a Pestaña Laboral
-                                </button>
-                            </div>
+                            <Card>
+                                <EmptyState
+                                    icon={Layers}
+                                    title="Pestaña no disponible en la demo"
+                                    action={<Button onClick={() => setActiveRequestTab('laboral')}>Volver a contratos y altas</Button>}
+                                />
+                            </Card>
                         ) : (
-                            /* PESTAÑA LABORAL CONTENT */
                             <>
-                                {/* SUMMARY METRICS CARDS */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-                                        <div className="flex items-center justify-between text-slate-500 text-xs">
-                                            <span>Personas asignadas</span>
-                                            <Users className="w-4 h-4 text-indigo-600" />
+                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                                    <KpiTile label="Personas asignadas" value={`${metrics.asignadas} de ${metrics.totalPlazas}`} hint={`${metrics.vacantes} plazas aún en selección`} />
+                                    <KpiTile label="Expedientes completos" tone="success" value={metrics.completos} hint="Contrato, SS, PRL y CPD listos" />
+                                    <KpiTile label="Pendientes" tone="warning" value={metrics.pendientes} hint="1 alta SS · 1 curso PRL · 1 CPD" />
+                                    <KpiTile label="Bloqueos" tone="danger" value={metrics.bloqueados} hint="DNI caducado (Carlos Mendoza)" />
+                                    <KpiTile label="Progreso" value={`${metrics.porcentaje}%`}>
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                                            <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${Math.max(metrics.porcentaje, 5)}%` }}></div>
                                         </div>
-                                        <div className="mt-2 flex items-baseline gap-2">
-                                            <span className="text-2xl font-bold text-slate-900">{metrics.asignadas}</span>
-                                            <span className="text-xs text-slate-400 font-medium">de {metrics.totalPlazas} plazas</span>
-                                        </div>
-                                        <div className="mt-2 text-[11px] text-slate-500">
-                                            {metrics.vacantes} plazas pendientes en Selección
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-                                        <div className="flex items-center justify-between text-slate-500 text-xs">
-                                            <span>Expedientes completos</span>
-                                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                        </div>
-                                        <div className="mt-2 flex items-baseline gap-2">
-                                            <span className="text-2xl font-bold text-emerald-600">{metrics.completos}</span>
-                                            <span className="text-xs text-emerald-700 font-medium">listos para iniciar</span>
-                                        </div>
-                                        <div className="mt-2 text-[11px] text-slate-500">
-                                            Contrato + SS + PRL + CPD OK
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-                                        <div className="flex items-center justify-between text-slate-500 text-xs">
-                                            <span>Pendientes de acción</span>
-                                            <Clock3 className="w-4 h-4 text-amber-500" />
-                                        </div>
-                                        <div className="mt-2 flex items-baseline gap-2">
-                                            <span className="text-2xl font-bold text-amber-600">{metrics.pendientes}</span>
-                                            <span className="text-xs text-slate-400 font-medium">en preparación</span>
-                                        </div>
-                                        <div className="mt-2 text-[11px] text-amber-600 font-medium">
-                                            1 Alta SS + 1 Curso PRL + 1 CPD
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-                                        <div className="flex items-center justify-between text-slate-500 text-xs">
-                                            <span>Bloqueos / Incidencias</span>
-                                            <AlertTriangle className="w-4 h-4 text-rose-500" />
-                                        </div>
-                                        <div className="mt-2 flex items-baseline gap-2">
-                                            <span className="text-2xl font-bold text-rose-600">{metrics.bloqueados}</span>
-                                            <span className="text-xs text-rose-500 font-medium">requiere subsanar</span>
-                                        </div>
-                                        <div className="mt-2 text-[11px] text-slate-500">
-                                            DNI caducado (Carlos Mendoza)
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-                                        <div className="flex items-center justify-between text-slate-500 text-xs">
-                                            <span>Progreso Laboral Global</span>
-                                            <span className="font-semibold text-slate-700">{metrics.porcentaje}%</span>
-                                        </div>
-                                        <div className="mt-2">
-                                            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
-                                                <div
-                                                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500"
-                                                    style={{ width: `${Math.max(metrics.porcentaje, 15)}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-2 text-[11px] text-slate-400 flex items-center justify-between">
-                                            <span>Fecha inicio objetivo:</span>
-                                            <strong className="text-slate-700">02/03/2026</strong>
-                                        </div>
-                                    </div>
+                                    </KpiTile>
                                 </div>
 
-                                {/* INFORMATIVE BANNER: READ-ONLY ECONOMIC DATA FROM BUDGET */}
-                                <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="p-1.5 rounded-lg bg-slate-200 text-slate-700">
-                                            <Lock className="w-4 h-4" />
-                                        </div>
-                                        <div>
-                                            <span className="font-semibold text-slate-800">Condiciones económicas heredadas del presupuesto: </span>
-                                            <span className="text-slate-600">Salario base 1.540,00 €/mes | Precio hora facturación 17,45 €/h | Convenio Logística Provincial | Coeficiente 1,48.</span>
-                                        </div>
-                                    </div>
-                                    <span className="text-[11px] text-slate-400 whitespace-nowrap bg-white px-2 py-1 rounded border border-slate-200">
-                                        Solo lectura (Gestionado en Presupuestos)
-                                    </span>
-                                </div>
+                                <Notice tone="neutral" icon={Lock}>
+                                    <span className="font-medium text-slate-700">Condiciones del presupuesto (solo lectura): </span>
+                                    salario base 1.540,00 €/mes · precio hora 17,45 €/h · Convenio Logística Provincial · coeficiente 1,48.
+                                </Notice>
 
                                 {/* TOOLBAR & FILTERS */}
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
@@ -803,15 +608,15 @@ export default function LaboralView() {
                                             <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
                                                 <button
                                                     onClick={() => setViewMode('tabla')}
-                                                    className={`px-2.5 py-1 rounded-md transition-colors ${viewMode === 'tabla' ? 'bg-white shadow-2xs font-semibold text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}
+                                                    className={`px-2.5 py-1 rounded-lg transition-colors ${viewMode === 'tabla' ? 'bg-white shadow-2xs font-semibold text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}
                                                 >
-                                                    Tabla de Expedientes
+                                                    Tabla de expedientes
                                                 </button>
                                                 <button
                                                     onClick={() => setViewMode('tarjetas')}
-                                                    className={`px-2.5 py-1 rounded-md transition-colors ${viewMode === 'tarjetas' ? 'bg-white shadow-2xs font-semibold text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}
+                                                    className={`px-2.5 py-1 rounded-lg transition-colors ${viewMode === 'tarjetas' ? 'bg-white shadow-2xs font-semibold text-slate-800' : 'text-slate-500 hover:text-slate-800'}`}
                                                 >
-                                                    Tarjetas Visuales
+                                                    Tarjetas
                                                 </button>
                                             </div>
 
@@ -820,7 +625,7 @@ export default function LaboralView() {
                                                 className="inline-flex items-center gap-1.5 text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg font-medium transition-colors"
                                                 title="Ver la bandeja agregada con todas las peticiones de la empresa"
                                             >
-                                                <ExternalLink className="w-3.5 h-3.5 text-slate-500" /> Ver Bandeja Laboral
+                                                <ExternalLink className="w-3.5 h-3.5 text-slate-500" /> Ver bandeja laboral
                                             </button>
                                         </div>
                                     </div>
@@ -832,13 +637,13 @@ export default function LaboralView() {
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left text-xs border-collapse">
                                                 <thead>
-                                                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                                                        <th className="py-3 px-4">Plaza / Candidato</th>
-                                                        <th className="py-3 px-3">Estado General</th>
-                                                        <th className="py-3 px-3">Checklist Laboral (Procesos)</th>
-                                                        <th className="py-3 px-3">Próxima Tarea / Límite</th>
+                                                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold text-[11px]">
+                                                        <th className="py-3 px-4">Plaza / candidato</th>
+                                                        <th className="py-3 px-3">Estado general</th>
+                                                        <th className="py-3 px-3">Checklist laboral (procesos)</th>
+                                                        <th className="py-3 px-3">Próxima tarea / límite</th>
                                                         <th className="py-3 px-3">Progreso</th>
-                                                        <th className="py-3 px-4 text-right">Acciones Rápidas</th>
+                                                        <th className="py-3 px-4 text-right">Acciones rápidas</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
@@ -852,11 +657,7 @@ export default function LaboralView() {
                                                             {/* Candidate Name & Link to Ficha */}
                                                             <td className="py-3.5 px-4">
                                                                 <div className="flex items-center gap-3">
-                                                                    <img
-                                                                        src={exp.foto}
-                                                                        alt={exp.nombre}
-                                                                        className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
-                                                                    />
+                                                                    <Avatar name={exp.nombre} />
                                                                     <div>
                                                                         <div className="flex items-center gap-1.5">
                                                                             <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded border border-slate-200">
@@ -958,28 +759,28 @@ export default function LaboralView() {
                                                                     ) : exp.pasos.altaSS.estado === 'Pendiente' ? (
                                                                         <button
                                                                             onClick={() => handleTriggerAction('altaSS', exp)}
-                                                                            className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                                                                            className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
                                                                         >
-                                                                            <ShieldCheck className="w-3.5 h-3.5" /> Preparar Alta SS
+                                                                            <ShieldCheck className="w-3.5 h-3.5" /> Preparar alta SS
                                                                         </button>
                                                                     ) : exp.pasos.prl.estado === 'Pendiente' ? (
                                                                         <button
                                                                             onClick={() => handleTriggerAction('prl', exp)}
                                                                             className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
                                                                         >
-                                                                            <GraduationCap className="w-3.5 h-3.5" /> Asignar Curso
+                                                                            <GraduationCap className="w-3.5 h-3.5" /> Asignar curso
                                                                         </button>
                                                                     ) : exp.pasos.contrato.estado !== 'Firmado' ? (
                                                                         <button
                                                                             onClick={() => handleTriggerAction('contrato', exp)}
-                                                                            className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                                                                            className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
                                                                         >
                                                                             <FileSignature className="w-3.5 h-3.5" /> Enviar Firma
                                                                         </button>
                                                                     ) : exp.pasos.cpd.estado !== 'Confirmado' ? (
                                                                         <button
                                                                             onClick={() => handleTriggerAction('cpd', exp)}
-                                                                            className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                                                                            className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
                                                                         >
                                                                             <Send className="w-3.5 h-3.5" /> Enviar CPD
                                                                         </button>
@@ -1006,7 +807,7 @@ export default function LaboralView() {
                                                         <tr key={v.plazaNumero} className="bg-slate-50/50 text-slate-400">
                                                             <td className="py-3 px-4">
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className="w-9 h-9 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 bg-white">
+                                                                    <div className="w-9 h-9 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 bg-white">
                                                                         <UserPlus className="w-4 h-4" />
                                                                     </div>
                                                                     <div>
@@ -1039,7 +840,7 @@ export default function LaboralView() {
                                                                     }}
                                                                     className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1.5 rounded-lg transition-colors"
                                                                 >
-                                                                    <UserCheck className="w-3.5 h-3.5" /> Asignar Candidato
+                                                                    <UserCheck className="w-3.5 h-3.5" /> Asignar candidato
                                                                 </button>
                                                             </td>
                                                         </tr>
@@ -1054,20 +855,20 @@ export default function LaboralView() {
                                         {expedientesFiltrados.map((exp) => (
                                             <div
                                                 key={exp.id}
-                                                className={`bg-white rounded-xl border p-4 shadow-2xs flex flex-col justify-between transition-all hover:shadow-md ${
+                                                className={`bg-white rounded-xl border p-4 shadow-2xs flex flex-col justify-between transition-all hover:shadow-xs ${
                                                     exp.bloqueante ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200'
                                                 }`}
                                             >
                                                 <div>
                                                     <div className="flex items-start justify-between gap-2">
                                                         <div className="flex items-center gap-3">
-                                                            <img src={exp.foto} alt={exp.nombre} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                                                            <Avatar name={exp.nombre} />
                                                             <div>
                                                                 <div className="flex items-center gap-1.5">
                                                                     <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1 rounded">
                                                                         Plaza #{exp.plazaNumero}
                                                                     </span>
-                                                                    <h4 className="font-bold text-slate-900 text-sm hover:text-indigo-600 cursor-pointer" onClick={() => handleOpenExpediente(exp)}>
+                                                                    <h4 className="font-semibold text-slate-900 text-sm hover:text-indigo-600 cursor-pointer" onClick={() => handleOpenExpediente(exp)}>
                                                                         {exp.nombre}
                                                                     </h4>
                                                                 </div>
@@ -1106,7 +907,7 @@ export default function LaboralView() {
                                                         </div>
 
                                                         <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 text-xs mt-2">
-                                                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-0.5">Próxima acción:</span>
+                                                            <span className="text-[10px] text-slate-400 font-semibold block mb-0.5">Próxima acción:</span>
                                                             <p className={`font-semibold ${exp.bloqueante ? 'text-rose-700' : 'text-slate-800'}`}>
                                                                 {exp.proximaTarea}
                                                             </p>
@@ -1132,7 +933,7 @@ export default function LaboralView() {
                                                     ) : exp.pasos.altaSS.estado === 'Pendiente' ? (
                                                         <button
                                                             onClick={() => handleTriggerAction('altaSS', exp)}
-                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
+                                                            className="bg-indigo-600 hover:bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
                                                         >
                                                             Preparar Alta
                                                         </button>
@@ -1155,8 +956,8 @@ export default function LaboralView() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <Clock3 className="w-4 h-4 text-indigo-600" />
-                                            <h3 className="text-sm font-bold text-slate-800">
-                                                Línea de Actividad Laboral y Sucesos de la Petición
+                                            <h3 className="text-sm font-semibold text-slate-800">
+                                                Línea de actividad laboral y sucesos de la petición
                                             </h3>
                                         </div>
                                         <span className="text-xs text-slate-400">Actualizado en tiempo real</span>
@@ -1190,53 +991,19 @@ export default function LaboralView() {
                             </>
                         )}
                     </div>
-                </main>
+                </div>
             </div>
 
             {/* INTERACTIVE EXPEDIENTE SIDEBAR DRAWER */}
             {isDrawerOpen && selectedExpediente && (
-                <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
-                    {/* Backdrop */}
-                    <div
-                        onClick={() => setIsDrawerOpen(false)}
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-                    ></div>
-
-                    {/* Drawer Content */}
-                    <div className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col z-10 border-l border-slate-200 animate-in slide-in-from-right duration-300">
-                        {/* Drawer Header */}
-                        <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <img
-                                    src={selectedExpediente.foto}
-                                    alt={selectedExpediente.nombre}
-                                    className="w-12 h-12 rounded-full object-cover border-2 border-indigo-400"
-                                />
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-mono bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded border border-indigo-400/40">
-                                            Plaza #{selectedExpediente.plazaNumero} • {selectedExpediente.id}
-                                        </span>
-                                        {selectedExpediente.bloqueante && (
-                                            <span className="text-xs bg-rose-500 text-white font-semibold px-2 py-0.5 rounded">
-                                                Bloqueado
-                                            </span>
-                                        )}
-                                    </div>
-                                    <h2 className="text-lg font-bold text-white mt-0.5">{selectedExpediente.nombre}</h2>
-                                    <p className="text-xs text-slate-300 font-mono">{selectedExpediente.nif} • {selectedExpediente.categoria}</p>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setIsDrawerOpen(false)}
-                                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Context Bar */}
+                <Drawer
+                  title={selectedExpediente.nombre}
+                  subtitle={<>Plaza {selectedExpediente.plazaNumero} · {selectedExpediente.id} · {selectedExpediente.nif} · {selectedExpediente.categoria}</>}
+                  status={selectedExpediente.bloqueante && <Badge tone="danger" dot>Bloqueado</Badge>}
+                  leading={<Avatar name={selectedExpediente.nombre} size="lg" />}
+                  onClose={() => setIsDrawerOpen(false)}
+                  width="max-w-2xl"
+                  toolbar={<>
                         <div className="bg-slate-100 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
                             <div className="flex items-center gap-2">
                                 <Building2 className="w-3.5 h-3.5 text-slate-500" />
@@ -1246,31 +1013,53 @@ export default function LaboralView() {
                                 onClick={() => showToast('Módulo Candidatos', `Abriendo ficha maestra de ${selectedExpediente.nombre}`)}
                                 className="text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1"
                             >
-                                Ficha Candidato <ExternalLink className="w-3 h-3" />
+                                Ficha del candidato <ExternalLink className="w-3 h-3" />
                             </button>
                         </div>
-
-                        {/* Internal Tabs */}
                         <div className="flex border-b border-slate-200 px-5 text-xs font-medium">
                             <button
                                 onClick={() => setDrawerInternalTab('checklist')}
-                                className={`py-3 px-3 border-b-2 transition-colors ${drawerInternalTab === 'checklist' ? 'border-indigo-600 text-indigo-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+                                className={`py-3 px-3 border-b-2 transition-colors ${drawerInternalTab === 'checklist' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
                             >
-                                Checklist y Procesos
+                                Checklist y procesos
                             </button>
                             <button
                                 onClick={() => setDrawerInternalTab('afiliacion')}
-                                className={`py-3 px-3 border-b-2 transition-colors ${drawerInternalTab === 'afiliacion' ? 'border-indigo-600 text-indigo-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+                                className={`py-3 px-3 border-b-2 transition-colors ${drawerInternalTab === 'afiliacion' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
                             >
-                                Datos de Afiliación / SS
+                                Datos de afiliación / SS
                             </button>
                             <button
                                 onClick={() => setDrawerInternalTab('documentos')}
-                                className={`py-3 px-3 border-b-2 transition-colors ${drawerInternalTab === 'documentos' ? 'border-indigo-600 text-indigo-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+                                className={`py-3 px-3 border-b-2 transition-colors ${drawerInternalTab === 'documentos' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
                             >
-                                Documentos y Contratos
+                                Documentos y contratos
                             </button>
                         </div>
+                  </>}
+                  footer={<>
+                  <div className="flex flex-1 items-center justify-between gap-2">
+                            <button
+                                onClick={() => setIsDrawerOpen(false)}
+                                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-100"
+                            >
+                                Cerrar panel
+                            </button>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        setIsDrawerOpen(false);
+                                        handleTriggerAction('altaSS', selectedExpediente);
+                                    }}
+                                    className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs"
+                                >
+                                    Ejecutar próxima acción
+                                </button>
+                            </div>
+                  </div>
+                  </>}
+                >
 
                         {/* Drawer Body */}
                         <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
@@ -1280,7 +1069,7 @@ export default function LaboralView() {
                                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="font-semibold text-slate-700">Estado global del expediente:</span>
-                                            <span className="font-bold text-sm text-indigo-600">{selectedExpediente.progreso}% completado</span>
+                                            <span className="font-semibold text-sm text-indigo-600">{selectedExpediente.progreso}% completado</span>
                                         </div>
                                         <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-3">
                                             <div
@@ -1297,8 +1086,8 @@ export default function LaboralView() {
                                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-start justify-between gap-3 shadow-2xs">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-bold flex items-center justify-center text-slate-600 text-[10px]">1</span>
-                                                <h4 className="font-bold text-slate-800">Documentación de Filiación</h4>
+                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-semibold flex items-center justify-center text-slate-600 text-[10px]">1</span>
+                                                <h4 className="font-semibold text-slate-800">Documentación de filiación</h4>
                                                 {getStatusBadge(selectedExpediente.pasos.documentacion.estado)}
                                             </div>
                                             <p className="text-slate-500 pl-7">{selectedExpediente.pasos.documentacion.detalle}</p>
@@ -1326,8 +1115,8 @@ export default function LaboralView() {
                                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-start justify-between gap-3 shadow-2xs">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-bold flex items-center justify-center text-slate-600 text-[10px]">2</span>
-                                                <h4 className="font-bold text-slate-800">Alta en Seguridad Social (TGSS)</h4>
+                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-semibold flex items-center justify-center text-slate-600 text-[10px]">2</span>
+                                                <h4 className="font-semibold text-slate-800">Alta en Seguridad Social (TGSS)</h4>
                                                 {getStatusBadge(selectedExpediente.pasos.altaSS.estado)}
                                             </div>
                                             <p className="text-slate-500 pl-7">{selectedExpediente.pasos.altaSS.detalle}</p>
@@ -1337,7 +1126,7 @@ export default function LaboralView() {
                                         {selectedExpediente.pasos.altaSS.estado !== 'Confirmado' && !selectedExpediente.bloqueante && (
                                             <button
                                                 onClick={() => handleTriggerAction('altaSS', selectedExpediente)}
-                                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold shadow-xs"
+                                                className="bg-indigo-600 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow-xs"
                                             >
                                                 Preparar Alta
                                             </button>
@@ -1348,8 +1137,8 @@ export default function LaboralView() {
                                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-start justify-between gap-3 shadow-2xs">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-bold flex items-center justify-center text-slate-600 text-[10px]">3</span>
-                                                <h4 className="font-bold text-slate-800">Formación y Prevención (PRL)</h4>
+                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-semibold flex items-center justify-center text-slate-600 text-[10px]">3</span>
+                                                <h4 className="font-semibold text-slate-800">Formación y prevención (PRL)</h4>
                                                 {getStatusBadge(selectedExpediente.pasos.prl.estado)}
                                             </div>
                                             <p className="text-slate-500 pl-7">{selectedExpediente.pasos.prl.detalle}</p>
@@ -1361,7 +1150,7 @@ export default function LaboralView() {
                                                 onClick={() => handleTriggerAction('prl', selectedExpediente)}
                                                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-semibold shadow-xs"
                                             >
-                                                Asignar Curso
+                                                Asignar curso
                                             </button>
                                         )}
                                     </div>
@@ -1370,8 +1159,8 @@ export default function LaboralView() {
                                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-start justify-between gap-3 shadow-2xs">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-bold flex items-center justify-center text-slate-600 text-[10px]">4</span>
-                                                <h4 className="font-bold text-slate-800">Contrato Laboral ETT</h4>
+                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-semibold flex items-center justify-center text-slate-600 text-[10px]">4</span>
+                                                <h4 className="font-semibold text-slate-800">Contrato laboral ETT</h4>
                                                 {getStatusBadge(selectedExpediente.pasos.contrato.estado)}
                                             </div>
                                             <p className="text-slate-500 pl-7">{selectedExpediente.pasos.contrato.detalle}</p>
@@ -1381,7 +1170,7 @@ export default function LaboralView() {
                                         {selectedExpediente.pasos.contrato.estado !== 'Firmado' && (
                                             <button
                                                 onClick={() => handleTriggerAction('contrato', selectedExpediente)}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold shadow-xs"
+                                                className="bg-indigo-600 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow-xs"
                                             >
                                                 Enviar a Firma
                                             </button>
@@ -1392,8 +1181,8 @@ export default function LaboralView() {
                                     <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-start justify-between gap-3 shadow-2xs">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-bold flex items-center justify-center text-slate-600 text-[10px]">5</span>
-                                                <h4 className="font-bold text-slate-800">Contrato Puesta Disposición (CPD)</h4>
+                                                <span className="w-5 h-5 rounded-full bg-slate-100 font-semibold flex items-center justify-center text-slate-600 text-[10px]">5</span>
+                                                <h4 className="font-semibold text-slate-800">Contrato puesta disposición (CPD)</h4>
                                                 {getStatusBadge(selectedExpediente.pasos.cpd.estado)}
                                             </div>
                                             <p className="text-slate-500 pl-7">{selectedExpediente.pasos.cpd.detalle}</p>
@@ -1403,7 +1192,7 @@ export default function LaboralView() {
                                         {selectedExpediente.pasos.cpd.estado !== 'Confirmado' && (
                                             <button
                                                 onClick={() => handleTriggerAction('cpd', selectedExpediente)}
-                                                className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg font-semibold"
+                                                className="bg-indigo-600 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold"
                                             >
                                                 Tramitar CPD
                                             </button>
@@ -1414,8 +1203,8 @@ export default function LaboralView() {
                                     <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-start justify-between gap-3">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-5 h-5 rounded-full bg-slate-200 font-bold flex items-center justify-center text-slate-600 text-[10px]">6</span>
-                                                <h4 className="font-bold text-slate-700">Cierre / Fin de Contrato Previsto</h4>
+                                                <span className="w-5 h-5 rounded-full bg-slate-200 font-semibold flex items-center justify-center text-slate-600 text-[10px]">6</span>
+                                                <h4 className="font-semibold text-slate-700">Cierre / fin de contrato previsto</h4>
                                                 <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-mono">30/06/2026</span>
                                             </div>
                                             <p className="text-slate-500 pl-7">Recordatorio automático de preaviso y finiquito 15 días antes del vencimiento.</p>
@@ -1428,34 +1217,34 @@ export default function LaboralView() {
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                                         <div>
-                                            <span className="text-slate-400 block text-[10px] uppercase">NIF / NIE</span>
-                                            <span className="font-bold text-slate-800 font-mono">{selectedExpediente.nif}</span>
+                                            <span className="text-slate-400 block text-[10px]">NIF / NIE</span>
+                                            <span className="font-semibold text-slate-800 font-mono">{selectedExpediente.nif}</span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-400 block text-[10px] uppercase">NUSS (Seg. Social)</span>
-                                            <span className="font-bold text-slate-800 font-mono">28 10928374 91</span>
+                                            <span className="text-slate-400 block text-[10px]">NUSS (Seg. Social)</span>
+                                            <span className="font-semibold text-slate-800 font-mono">28 10928374 91</span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-400 block text-[10px] uppercase">Código Cuenta Cotización</span>
-                                            <span className="font-bold text-slate-800 font-mono">0111-28-99382104</span>
+                                            <span className="text-slate-400 block text-[10px]">Código Cuenta Cotización</span>
+                                            <span className="font-semibold text-slate-800 font-mono">0111-28-99382104</span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-400 block text-[10px] uppercase">Grupo Cotización</span>
-                                            <span className="font-bold text-slate-800">Grupo 8 - Oficiales primera y segunda</span>
+                                            <span className="text-slate-400 block text-[10px]">Grupo Cotización</span>
+                                            <span className="font-semibold text-slate-800">Grupo 8 - Oficiales primera y segunda</span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-400 block text-[10px] uppercase">CNAE Petición</span>
-                                            <span className="font-bold text-slate-800">5210 - Depósito y almacenamiento</span>
+                                            <span className="text-slate-400 block text-[10px]">CNAE Petición</span>
+                                            <span className="font-semibold text-slate-800">5210 - Depósito y almacenamiento</span>
                                         </div>
                                         <div>
-                                            <span className="text-slate-400 block text-[10px] uppercase">Coeficiente Jornada</span>
-                                            <span className="font-bold text-slate-800">1,00 (100% - 40h/sem)</span>
+                                            <span className="text-slate-400 block text-[10px]">Coeficiente Jornada</span>
+                                            <span className="font-semibold text-slate-800">1,00 (100% - 40h/sem)</span>
                                         </div>
                                     </div>
 
                                     <div className="border border-slate-200 rounded-xl p-4 space-y-2">
-                                        <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                                            <ShieldCheck className="w-4 h-4 text-emerald-600" /> Registro Telemático SILTRA / RED
+                                        <h4 className="font-semibold text-slate-800 flex items-center gap-1.5">
+                                            <ShieldCheck className="w-4 h-4 text-emerald-600" /> Registro telemático SILTRA / RED
                                         </h4>
                                         <p className="text-slate-600">
                                             Las transacciones con la Tesorería General de la Seguridad Social se procesan mediante la pasarela directa con certificado electrónico corporativo de <strong>ETT Global Servicios Temporales, S.L.</strong>
@@ -1497,56 +1286,43 @@ export default function LaboralView() {
                         </div>
 
                         {/* Drawer Footer */}
-                        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                            <button
-                                onClick={() => setIsDrawerOpen(false)}
-                                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-100"
-                            >
-                                Cerrar panel
-                            </button>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        setIsDrawerOpen(false);
-                                        handleTriggerAction('altaSS', selectedExpediente);
-                                    }}
-                                    className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs"
-                                >
-                                    Ejecutar Próxima Acción
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </Drawer>
             )}
 
             {/* MODAL ACTION EXECUTION (ALTA SS / CURSO PRL / FIRMA / CPD / SUBSANAR) */}
             {modalConfig.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
-                        {/* Modal Header */}
-                        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-                                    {modalConfig.tipo === 'altaSS' && <ShieldCheck className="w-5 h-5 text-emerald-600" />}
-                                    {modalConfig.tipo === 'prl' && <GraduationCap className="w-5 h-5 text-indigo-600" />}
-                                    {modalConfig.tipo === 'contrato' && <FileSignature className="w-5 h-5 text-blue-600" />}
-                                    {modalConfig.tipo === 'cpd' && <Send className="w-5 h-5 text-slate-800" />}
-                                    {modalConfig.tipo === 'subsanar' && <AlertCircle className="w-5 h-5 text-rose-600" />}
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-900">{modalConfig.titulo}</h3>
-                                    <p className="text-[11px] text-slate-500">Petición PET-2026-0048 • Plaza #{modalConfig.expediente?.plazaNumero}</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
-                                className="text-slate-400 hover:text-slate-600 p-1"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
+                <Modal
+                  title={modalConfig.titulo}
+                  subtitle={<>Petición PET-2026-0048 · Plaza {modalConfig.expediente?.plazaNumero}</>}
+                  onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                  footer={<>
+                            {modalConfig.step === 'form' && (
+                                <>
+                                    <button
+                                        onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                                        className="px-3.5 py-2 rounded-lg text-slate-600 hover:bg-slate-200 font-medium"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleExecuteAction}
+                                        className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-xs"
+                                    >
+                                        Confirmar y Ejecutar
+                                    </button>
+                                </>
+                            )}
+
+                            {modalConfig.step === 'success' && (
+                                <button
+                                    onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                                    className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-600 text-white font-semibold shadow-xs"
+                                >
+                                    Aceptar y Continuar
+                                </button>
+                            )}
+                  </>}
+                >
 
                         {/* Modal Body with Multi-State */}
                         <div className="p-6 text-xs">
@@ -1570,7 +1346,7 @@ export default function LaboralView() {
                                             </div>
                                             <div>
                                                 <label className="text-slate-500 font-semibold block mb-1">Observaciones para el fichero AFI</label>
-                                                <textarea defaultValue="Alta ordinaria petición PET-2026-0048 almacén." rows="2" className="w-full bg-white p-2 rounded border border-slate-200 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                                                <textarea defaultValue="Alta ordinaria petición PET-2026-0048 almacén." rows="2" className="w-full bg-white p-2 rounded border border-slate-200 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                                             </div>
                                         </div>
                                     )}
@@ -1637,7 +1413,7 @@ export default function LaboralView() {
                                 <div className="py-8 text-center space-y-4">
                                     <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                                     <div>
-                                        <p className="font-bold text-slate-800 text-sm">Procesando operación con los servicios externos...</p>
+                                        <p className="font-semibold text-slate-800 text-sm">Procesando operación con los servicios externos...</p>
                                         <p className="text-slate-500 text-xs mt-1">Conectando con pasarelas, validando datos y actualizando expediente.</p>
                                     </div>
                                 </div>
@@ -1648,42 +1424,14 @@ export default function LaboralView() {
                                     <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                                         <CheckCircle2 className="w-7 h-7" />
                                     </div>
-                                    <h4 className="text-base font-bold text-slate-900">¡Operación Realizada con Éxito!</h4>
+                                    <h4 className="text-base font-semibold text-slate-900">¡Operación realizada con éxito!</h4>
                                     <p className="text-slate-600 max-w-sm mx-auto">{modalConfig.mensaje}</p>
                                 </div>
                             )}
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
-                            {modalConfig.step === 'form' && (
-                                <>
-                                    <button
-                                        onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
-                                        className="px-3.5 py-2 rounded-lg text-slate-600 hover:bg-slate-200 font-medium"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={handleExecuteAction}
-                                        className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-xs"
-                                    >
-                                        Confirmar y Ejecutar
-                                    </button>
-                                </>
-                            )}
-
-                            {modalConfig.step === 'success' && (
-                                <button
-                                    onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
-                                    className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
-                                >
-                                    Aceptar y Continuar
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

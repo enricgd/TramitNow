@@ -7,6 +7,7 @@ import {
     CreditCard, Sparkles, Sliders, Globe, Mail, Phone, Briefcase, FileSpreadsheet,
     Key, Layers, ArrowRight, Save, RefreshCw, AlertCircle, Eye, UserPlus, EyeOff
 } from 'lucide-react';
+import { PageHeader, Button, Badge, Tabs, Modal, Drawer } from '../ui';
 
 // Initial Mock Database for "Mi ETT"
 const initialCompanyData = {
@@ -23,7 +24,7 @@ const initialCompanyData = {
     email: "central@ettglobal.es",
     adminEmail: "administracion@ettglobal.es",
     web: "https://www.ettglobalpeople.es",
-    logoUrl: "https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=150&auto=format&fit=crop&q=80",
+    logoUrl: null,
     completionRate: 82,
     lastUpdated: "Hoy a las 10:45 por Ana López (CEO)",
     // Facturación
@@ -113,10 +114,10 @@ export default function FichaEttView() {
     };
 
     return (
-        <div className="flex h-full w-full overflow-hidden bg-slate-100 font-sans">
+        <div className="flex min-h-full w-full font-sans">
             {/* TOAST NOTIFICATION */}
             {toast && (
-                <div className="fixed top-5 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl border border-slate-700 fade-in">
+                <div className="fixed top-5 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg border border-slate-700 fade-in">
                     {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />}
                     {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />}
                     {toast.type === 'info' && <Info className="w-5 h-5 text-indigo-400 shrink-0" />}
@@ -130,169 +131,52 @@ export default function FichaEttView() {
             {/* GLOBAL ERP SIDEBAR */}
 
             {/* MAIN CONTENT AREA */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
-                
-                {/* TOP BREADCRUMB & CONTEXT HEADER */}
-                <header className="bg-white border-b border-slate-200 px-6 py-3.5 shrink-0">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        {/* Breadcrumb & Identification */}
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <span>Configuración</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="font-semibold text-slate-800">Mi ETT</span>
-                            <span className="mx-1.5 text-slate-300">|</span>
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
-                                <Building2 className="w-3 h-3 text-indigo-600" />
-                                ORGANIZACIÓN PROPIA
+            <div className="flex-1 flex flex-col min-w-0">
+                <div className="w-full px-4 sm:px-6 py-5 space-y-4">
+                    <PageHeader
+                        title="Mi ETT"
+                        status={
+                            <>
+                                <Badge tone="success" icon={CheckCircle2}>ETT acreditada</Badge>
+                                <Badge tone={company.completionRate >= 80 ? 'warning' : 'danger'}>Configuración al {company.completionRate}%</Badge>
+                            </>
+                        }
+                        subtitle={
+                            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span>{company.legalName}</span>
+                                <span className="font-mono">CIF {company.cif}</span>
+                                <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" />Sede central: {company.city}</span>
+                                <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" />{company.lastUpdated}</span>
                             </span>
-                            <span className="hidden md:inline-flex text-[11px] text-slate-400 italic">
-                                (Ficha emisora de facturas, contratos y gestión de sucursales)
-                            </span>
-                        </div>
+                        }
+                        actions={
+                            <>
+                                <Button icon={Download} onClick={() => showToast("Exportando ficha completa en formato PDF oficial...", "info")}>Exportar PDF</Button>
+                                <Button variant="primary" icon={Edit3} onClick={() => setIsEditingFiscal(true)}>Editar datos fiscales</Button>
+                            </>
+                        }
+                    />
 
-                        {/* Controls: Density + Quick help */}
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
-                                <button 
-                                    onClick={() => setDensity('comfortable')}
-                                    className={`px-2.5 py-1 rounded-md transition text-xs font-medium ${density === 'comfortable' ? 'bg-white shadow-xs text-slate-800 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
-                                    title="Vista holgada"
-                                >
-                                    Cómodo
-                                </button>
-                                <button 
-                                    onClick={() => setDensity('compact')}
-                                    className={`px-2.5 py-1 rounded-md transition text-xs font-medium ${density === 'compact' ? 'bg-white shadow-xs text-slate-800 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
-                                    title="Mayor densidad de datos"
-                                >
-                                    Compacto
-                                </button>
-                            </div>
-
-                            <button 
-                                onClick={() => showToast("Modo solo demostración UX. Los cambios se mantienen en memoria durante la sesión.", "info")}
-                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                                title="Información del prototipo"
-                            >
-                                <Info className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* MAIN IDENTITY CARD */}
-                    <div className="mt-3 flex flex-col md:flex-row md:items-center justify-between gap-4 pt-3 border-t border-slate-100">
-                        <div className="flex items-start gap-4">
-                            {/* Company Avatar / Logo */}
-                            <div className="relative group">
-                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-600 to-slate-800 text-white flex items-center justify-center font-bold text-xl shadow-md border-2 border-white ring-1 ring-slate-200 overflow-hidden">
-                                    {company.logoUrl ? (
-                                        <img src={company.logoUrl} alt="Logo ETT" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span>ETT</span>
-                                    )}
-                                </div>
-                                <button 
-                                    onClick={() => {
-                                        showToast("Selector de imagen simulado: logotipo actualizado");
-                                        setCompany(prev => ({ ...prev, logoUrl: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=150&auto=format&fit=crop&q=80" }));
-                                        logAction("Actualizó el logotipo corporativo de la ETT", "fiscal");
-                                    }}
-                                    className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow border border-slate-200 text-slate-600 hover:text-indigo-600 transition"
-                                    title="Cambiar logotipo"
-                                >
-                                    <Upload className="w-3 h-3" />
-                                </button>
-                            </div>
-
-                            {/* Titles and identifiers */}
-                            <div>
-                                <div className="flex items-center gap-2.5 flex-wrap">
-                                    <h1 className="text-xl font-bold text-slate-900 tracking-tight">Mi ETT</h1>
-                                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-semibold border border-slate-200">
-                                        CIF: {company.cif}
-                                    </span>
-                                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium border border-emerald-200 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                        Entidad ETT Acreditada
-                                    </span>
-                                </div>
-                                <div className="text-sm font-medium text-slate-600 flex items-center gap-2 mt-0.5">
-                                    <span>{company.legalName}</span>
-                                    <span className="text-slate-300">•</span>
-                                    <span className="text-slate-500 text-xs">Comercial: {company.tradeName}</span>
-                                </div>
-                                <div className="text-xs text-slate-400 mt-1 flex items-center gap-3">
-                                    <span className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3 text-slate-400" />
-                                        {company.lastUpdated}
-                                    </span>
-                                    <span>•</span>
-                                    <span className="text-indigo-600 font-medium">Sede Central: {company.city}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Right Side Actions & Completion Rate */}
-                        <div className="flex items-center gap-3 self-end md:self-center">
-                            <div className="text-right hidden sm:block">
-                                <div className="flex items-center justify-end gap-1.5 text-xs font-semibold text-slate-700">
-                                    <span>Configuración completa</span>
-                                    <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${company.completionRate >= 80 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}`}>
-                                        {company.completionRate}%
-                                    </span>
-                                </div>
-                                <div className="w-36 h-2 bg-slate-200 rounded-full mt-1 overflow-hidden">
-                                    <div 
-                                        className="h-full bg-indigo-600 rounded-full transition-all duration-500" 
-                                        style={{ width: `${company.completionRate}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setIsEditingFiscal(true)}
-                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
-                                >
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                    Editar datos fiscales
-                                </button>
-                                <button 
-                                    onClick={() => showToast("Exportando ficha completa en formato PDF oficial...", "info")}
-                                    className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition" 
-                                    title="Exportar resumen en PDF"
-                                >
-                                    <Download className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* INTERNAL TABS NAVIGATION */}
-                    <div className="flex items-center gap-1 mt-4 overflow-x-auto border-t border-slate-100 pt-1 -mb-1">
-                        <TabButton id="resumen" label="Resumen" icon={Sparkles} activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <TabButton id="fiscal" label="Datos fiscales" icon={Building2} activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <TabButton 
-                            id="facturacion" 
-                            label="Facturación" 
-                            icon={Receipt} 
-                            activeTab={activeTab} 
-                            setActiveTab={setActiveTab} 
-                            badge={!company.iban ? "Pendiente" : null}
-                        />
-                        <TabButton id="sucursales" label="Sucursales" icon={MapPin} count={branches.length} activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <TabButton id="usuarios" label="Usuarios y roles" icon={Users} count={users.length} activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <TabButton id="plantillas" label="Plantillas" icon={FileText} count={templates.length} activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <TabButton id="actividad" label="Actividad" icon={History} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    </div>
-                </header>
+                    <Tabs
+                        active={activeTab}
+                        onChange={setActiveTab}
+                        tabs={[
+                            { id: 'resumen', label: 'Resumen' },
+                            { id: 'fiscal', label: 'Datos fiscales' },
+                            { id: 'facturacion', label: 'Facturación', alert: !company.iban },
+                            { id: 'sucursales', label: 'Sucursales', count: branches.length },
+                            { id: 'usuarios', label: 'Usuarios y roles', count: users.length },
+                            { id: 'plantillas', label: 'Plantillas', count: templates.length },
+                            { id: 'actividad', label: 'Actividad' },
+                        ]}
+                    />
 
                 {/* TAB CONTENT AREA */}
-                <main className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="space-y-6">
 
                     {/* 1. RESUMEN TAB */}
                     {activeTab === 'resumen' && (
-                        <div className="space-y-6 fade-in max-w-7xl mx-auto">
+                        <div className="space-y-6 fade-in">
                             {/* Actionable Alerts Banner */}
                             {(!company.iban || users.some(u => u.branch === 'Sin asignar') || templates.some(t => t.status === 'incomplete')) && (
                                 <div className="bg-amber-50/80 border border-amber-200/90 rounded-xl p-4 shadow-xs">
@@ -301,7 +185,7 @@ export default function FichaEttView() {
                                             <AlertTriangle className="w-5 h-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-bold text-amber-900">Atención requerida para completar la configuración de tu ETT</h3>
+                                            <h3 className="text-sm font-semibold text-amber-900">Atención requerida para completar la configuración de tu ETT</h3>
                                             <p className="text-xs text-amber-800/90 mt-0.5">
                                                 Hay datos indispensables pendientes para emitir facturación y asegurar la asignación territorial de operaciones.
                                             </p>
@@ -363,7 +247,7 @@ export default function FichaEttView() {
                                     title="Datos Fiscales"
                                     status="Completos"
                                     statusColor="emerald"
-                                    subtitle="CIF, Razón Social y Domicilio"
+                                    subtitle="CIF, razón social y domicilio"
                                     icon={Building2}
                                     onClick={() => setActiveTab('fiscal')}
                                 />
@@ -408,7 +292,7 @@ export default function FichaEttView() {
                                 <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
                                     <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                                         <div>
-                                            <h2 className="text-base font-bold text-slate-800">Ficha Operativa de la Organización</h2>
+                                            <h2 className="text-base font-semibold text-slate-800">Ficha operativa de la organización</h2>
                                             <p className="text-xs text-slate-500">Datos corporativos consolidados utilizados en todos los módulos</p>
                                         </div>
                                         <button 
@@ -422,8 +306,8 @@ export default function FichaEttView() {
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-xs">
                                         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                                            <span className="text-slate-400 font-medium block">Razón Social Oficial</span>
-                                            <span className="text-slate-800 font-bold text-sm mt-0.5 block">{company.legalName}</span>
+                                            <span className="text-slate-400 font-medium block">Razón social oficial</span>
+                                            <span className="text-slate-800 font-semibold text-sm mt-0.5 block">{company.legalName}</span>
                                             <span className="text-slate-500 mt-1 block">CIF: <strong className="text-slate-700">{company.cif}</strong></span>
                                         </div>
                                         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
@@ -456,9 +340,9 @@ export default function FichaEttView() {
                                 <div className="space-y-6">
                                     {/* Quick Actions Card */}
                                     <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
-                                        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                        <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
                                             <Sparkles className="w-4 h-4 text-indigo-600" />
-                                            Acciones Rápidas
+                                            Acciones rápidas
                                         </h3>
                                         <div className="space-y-2">
                                             <QuickActionButton 
@@ -485,7 +369,7 @@ export default function FichaEttView() {
                                                 icon={Upload} 
                                                 label="Cambiar logotipo oficial" 
                                                 onClick={() => {
-                                                    setCompany(prev => ({ ...prev, logoUrl: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=150&auto=format&fit=crop&q=80" }));
+                                                    setCompany(prev => ({ ...prev, logoUrl: null }));
                                                     showToast("Logotipo corporativo actualizado");
                                                 }} 
                                             />
@@ -495,7 +379,7 @@ export default function FichaEttView() {
                                     {/* Branches Mini Status */}
                                     <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
                                         <div className="flex items-center justify-between mb-3">
-                                            <h3 className="text-sm font-bold text-slate-800">Sucursales ({branches.length})</h3>
+                                            <h3 className="text-sm font-semibold text-slate-800">Sucursales ({branches.length})</h3>
                                             <button 
                                                 onClick={() => setActiveTab('sucursales')}
                                                 className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
@@ -509,12 +393,12 @@ export default function FichaEttView() {
                                                     <div>
                                                         <div className="font-semibold text-slate-800 flex items-center gap-1.5">
                                                             {b.name}
-                                                            {b.isHeadquarters && <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1 rounded">SEDE</span>}
+                                                            {b.isHeadquarters && <span className="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-1 rounded">SEDE</span>}
                                                         </div>
                                                         <div className="text-[11px] text-slate-500">Resp: {b.manager || <span className="text-amber-600 italic">Sin asignar</span>}</div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <span className="font-mono font-bold text-slate-700">{b.completion}%</span>
+                                                        <span className="font-mono font-semibold text-slate-700">{b.completion}%</span>
                                                         <div className="w-12 h-1.5 bg-slate-200 rounded-full mt-1">
                                                             <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${b.completion}%` }}></div>
                                                         </div>
@@ -531,12 +415,12 @@ export default function FichaEttView() {
 
                     {/* 2. DATOS FISCALES TAB */}
                     {activeTab === 'fiscal' && (
-                        <div className="space-y-6 fade-in max-w-6xl mx-auto">
+                        <div className="space-y-6 fade-in">
                             <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                                 <div className="p-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/50">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <h2 className="text-lg font-bold text-slate-900">Datos Fiscales e Identificación Oficial</h2>
+                                            <h2 className="text-lg font-semibold text-slate-900">Datos fiscales e identificación oficial</h2>
                                             <span className="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
                                                 Verificado AEAT
                                             </span>
@@ -551,7 +435,7 @@ export default function FichaEttView() {
                                             className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
                                         >
                                             <Edit3 className="w-3.5 h-3.5" />
-                                            Editar Datos Fiscales
+                                            Editar datos fiscales
                                         </button>
                                     </div>
                                 </div>
@@ -559,17 +443,17 @@ export default function FichaEttView() {
                                 {/* Fiscal fields display */}
                                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <InfoField label="Razón Social" value={company.legalName} isSensitive />
-                                    <InfoField label="Nombre Comercial / Marca" value={company.tradeName} />
-                                    <InfoField label="CIF / NIF Oficial" value={company.cif} isSensitive code />
+                                    <InfoField label="Nombre comercial / marca" value={company.tradeName} />
+                                    <InfoField label="CIF / NIF oficial" value={company.cif} isSensitive code />
                                     <InfoField label="Tipo de Sociedad" value={company.companyType} />
                                     <InfoField label="País Fiscal" value={company.country} />
-                                    <InfoField label="Dirección Fiscal Completa" value={company.address} />
+                                    <InfoField label="Dirección fiscal completa" value={company.address} />
                                     <InfoField label="Código Postal" value={company.postalCode} />
                                     <InfoField label="Localidad / Municipio" value={company.city} />
                                     <InfoField label="Provincia" value={company.province} />
                                     <InfoField label="Teléfono General" value={company.phone} />
-                                    <InfoField label="Email General Notificaciones" value={company.email} />
-                                    <InfoField label="Sitio Web Corporativo" value={company.web} isLink />
+                                    <InfoField label="Email general notificaciones" value={company.email} />
+                                    <InfoField label="Sitio web corporativo" value={company.web} isLink />
                                 </div>
 
                                 {/* Sensitive Data Notice */}
@@ -585,7 +469,7 @@ export default function FichaEttView() {
 
                     {/* 3. FACTURACIÓN TAB */}
                     {activeTab === 'facturacion' && (
-                        <div className="space-y-6 fade-in max-w-6xl mx-auto">
+                        <div className="space-y-6 fade-in">
                             
                             {/* Warning banner if bank account is missing */}
                             {!company.iban && (
@@ -593,7 +477,7 @@ export default function FichaEttView() {
                                     <div className="flex items-start gap-3">
                                         <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                                         <div>
-                                            <h3 className="text-sm font-bold text-rose-900">Datos de facturación incompletos</h3>
+                                            <h3 className="text-sm font-semibold text-rose-900">Datos de facturación incompletos</h3>
                                             <p className="text-xs text-rose-700 mt-0.5">
                                                 No podrás emitir facturas legales ni generar remesas SEPA hasta completar: <strong>IBAN bancario</strong> y verificar la serie de facturación predeterminada.
                                             </p>
@@ -611,7 +495,7 @@ export default function FichaEttView() {
                             <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                                 <div className="p-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/50">
                                     <div>
-                                        <h2 className="text-lg font-bold text-slate-900">Parámetros Financieros y Facturación Emisora</h2>
+                                        <h2 className="text-lg font-semibold text-slate-900">Parámetros financieros y facturación emisora</h2>
                                         <p className="text-xs text-slate-500 mt-0.5">
                                             Configura los valores por defecto que se aplicarán al facturar servicios de trabajo temporal a clientes.
                                         </p>
@@ -621,20 +505,20 @@ export default function FichaEttView() {
                                         className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
                                     >
                                         <Edit3 className="w-3.5 h-3.5" />
-                                        Editar Parámetros de Facturación
+                                        Editar parámetros de facturación
                                     </button>
                                 </div>
 
                                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <InfoField label="Serie de Facturación Anual" value={company.billingSeries} code />
-                                    <InfoField label="Prefijo Número Factura" value={company.invoicePrefix} code />
-                                    <InfoField label="IVA General Aplicable" value={company.vatRate} />
-                                    <InfoField label="Retenciones IRPF por Defecto" value={company.withholdingRate} />
+                                    <InfoField label="Serie de facturación anual" value={company.billingSeries} code />
+                                    <InfoField label="Prefijo número factura" value={company.invoicePrefix} code />
+                                    <InfoField label="IVA general aplicable" value={company.vatRate} />
+                                    <InfoField label="Retenciones IRPF por defecto" value={company.withholdingRate} />
                                     
                                     <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
                                         <span className="text-slate-400 font-medium text-xs block">Cuenta Bancaria Principal (IBAN)</span>
                                         {company.iban ? (
-                                            <span className="font-mono font-bold text-slate-800 text-sm mt-0.5 block">{company.iban}</span>
+                                            <span className="font-mono font-semibold text-slate-800 text-sm mt-0.5 block">{company.iban}</span>
                                         ) : (
                                             <span className="text-rose-600 font-semibold text-xs mt-1 inline-flex items-center gap-1">
                                                 <AlertCircle className="w-3.5 h-3.5" />
@@ -647,9 +531,9 @@ export default function FichaEttView() {
                                     
                                     {/* Forma de pago selector estructurado display */}
                                     <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
-                                        <span className="text-slate-400 font-medium text-xs block">Forma de Pago Predeterminada</span>
+                                        <span className="text-slate-400 font-medium text-xs block">Forma de pago predeterminada</span>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className="font-bold text-slate-800 text-xs">
+                                            <span className="font-semibold text-slate-800 text-xs">
                                                 {company.paymentMethod === 'Otro' ? `Personalizado: ${company.customPaymentMethod || 'Sin especificar'}` : company.paymentMethod}
                                             </span>
                                             <span className="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 text-[10px] font-semibold">Base</span>
@@ -658,7 +542,7 @@ export default function FichaEttView() {
 
                                     <InfoField label="Condiciones de Vencimiento" value={company.paymentTerms} />
                                     <InfoField label="Moneda de Emisión" value={company.currency} />
-                                    <InfoField label="Email Contacto Administración" value={company.adminEmail} />
+                                    <InfoField label="Email contacto administración" value={company.adminEmail} />
                                     
                                     <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
                                         <span className="text-slate-400 font-medium text-xs block">Esquema de Series por Sucursal</span>
@@ -682,10 +566,10 @@ export default function FichaEttView() {
 
                     {/* 4. SUCURSALES TAB */}
                     {activeTab === 'sucursales' && (
-                        <div className="space-y-6 fade-in max-w-6xl mx-auto">
+                        <div className="space-y-6 fade-in">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-900">Sucursales y Delegaciones Territoriales</h2>
+                                    <h2 className="text-lg font-semibold text-slate-900">Sucursales y delegaciones territoriales</h2>
                                     <p className="text-xs text-slate-500">Gestión de centros de trabajo, responsables de oficina y asignación operativa.</p>
                                 </div>
                                 <button
@@ -693,7 +577,7 @@ export default function FichaEttView() {
                                     className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
                                 >
                                     <Plus className="w-4 h-4" />
-                                    Añadir Sucursal
+                                    Añadir sucursal
                                 </button>
                             </div>
 
@@ -705,16 +589,16 @@ export default function FichaEttView() {
                                             <div className="flex items-start justify-between gap-2">
                                                 <div>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-mono text-[11px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                                        <span className="font-mono text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
                                                             {b.code}
                                                         </span>
                                                         {b.isHeadquarters && (
-                                                            <span className="text-[10px] font-bold bg-slate-900 text-white px-2 py-0.5 rounded-full">
+                                                            <span className="text-[10px] font-semibold bg-slate-900 text-white px-2 py-0.5 rounded-full">
                                                                 SEDE CENTRAL
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <h3 className="text-base font-bold text-slate-900 mt-1.5">{b.name}</h3>
+                                                    <h3 className="text-base font-semibold text-slate-900 mt-1.5">{b.name}</h3>
                                                 </div>
                                                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" title="Activa"></span>
                                             </div>
@@ -747,9 +631,9 @@ export default function FichaEttView() {
 
                                         <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
                                             <div>
-                                                <div className="text-[10px] text-slate-400 uppercase font-semibold">Completitud</div>
+                                                <div className="text-[10px] text-slate-400 font-semibold">Completitud</div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-bold text-slate-800">{b.completion}%</span>
+                                                    <span className="text-xs font-semibold text-slate-800">{b.completion}%</span>
                                                     <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                                         <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${b.completion}%` }}></div>
                                                     </div>
@@ -759,7 +643,7 @@ export default function FichaEttView() {
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     onClick={() => setBranchDrawer({ open: true, mode: 'edit', data: b })}
-                                                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition"
+                                                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
                                                     title="Editar sucursal"
                                                 >
                                                     <Edit3 className="w-3.5 h-3.5" />
@@ -773,7 +657,7 @@ export default function FichaEttView() {
                                                                 showToast(`Sucursal ${b.name} desactivada.`);
                                                             }
                                                         }}
-                                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
+                                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                                                         title="Desactivar sucursal"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
@@ -789,10 +673,10 @@ export default function FichaEttView() {
 
                     {/* 5. USUARIOS Y ROLES TAB */}
                     {activeTab === 'usuarios' && (
-                        <div className="space-y-6 fade-in max-w-6xl mx-auto">
+                        <div className="space-y-6 fade-in">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-900">Usuarios, Comerciales y Matriz de Roles</h2>
+                                    <h2 className="text-lg font-semibold text-slate-900">Usuarios, comerciales y matriz de roles</h2>
                                     <p className="text-xs text-slate-500">Gestión de accesos, permisos por módulo ETT y delegación de sucursales.</p>
                                 </div>
                                 <button
@@ -800,7 +684,7 @@ export default function FichaEttView() {
                                     className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
                                 >
                                     <UserPlus className="w-4 h-4" />
-                                    Invitar Usuario
+                                    Invitar usuario
                                 </button>
                             </div>
 
@@ -823,12 +707,12 @@ export default function FichaEttView() {
                                 </div>
 
                                 <table className="w-full text-left text-xs">
-                                    <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-100">
+                                    <thead className="bg-slate-50 text-slate-500 font-semibold text-[10px] border-b border-slate-100">
                                         <tr>
                                             <th className="py-3 px-4">Usuario</th>
                                             <th className="py-3 px-4">Rol en ERP</th>
                                             <th className="py-3 px-4">Departamento</th>
-                                            <th className="py-3 px-4">Sucursal Asignada</th>
+                                            <th className="py-3 px-4">Sucursal asignada</th>
                                             <th className="py-3 px-4">Estado</th>
                                             <th className="py-3 px-4 text-right">Acciones</th>
                                         </tr>
@@ -838,11 +722,11 @@ export default function FichaEttView() {
                                             <tr key={u.id} className="hover:bg-slate-50/80 transition">
                                                 <td className="py-3 px-4">
                                                     <div className="flex items-center gap-2.5">
-                                                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs">
+                                                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-semibold flex items-center justify-center text-xs">
                                                             {u.name.split(' ').map(n=>n[0]).join('')}
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-slate-800">{u.name}</div>
+                                                            <div className="font-semibold text-slate-800">{u.name}</div>
                                                             <div className="text-[11px] text-slate-400">{u.email}</div>
                                                         </div>
                                                     </div>
@@ -894,16 +778,16 @@ export default function FichaEttView() {
                             {/* Interactive Roles & Permissions Matrix */}
                             <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
                                 <div className="mb-4">
-                                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                                         <Key className="w-4 h-4 text-indigo-600" />
-                                        Matriz de Permisos por Módulo ETT
+                                        Matriz de permisos por módulo ETT
                                     </h3>
                                     <p className="text-xs text-slate-500">Configuración granular de capacidades por rol del backoffice.</p>
                                 </div>
 
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-xs text-left">
-                                        <thead className="bg-slate-50 text-[11px] text-slate-600 font-bold border-b border-slate-200">
+                                        <thead className="bg-slate-50 text-[11px] text-slate-600 font-semibold border-b border-slate-200">
                                             <tr>
                                                 <th className="p-2.5">Módulo ETT</th>
                                                 <th className="p-2.5 text-center">Ver</th>
@@ -928,10 +812,10 @@ export default function FichaEttView() {
 
                     {/* 6. PLANTILLAS TAB */}
                     {activeTab === 'plantillas' && (
-                        <div className="space-y-6 fade-in max-w-6xl mx-auto">
+                        <div className="space-y-6 fade-in">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-900">Plantillas Documentales Oficiales</h2>
+                                    <h2 className="text-lg font-semibold text-slate-900">Plantillas documentales oficiales</h2>
                                     <p className="text-xs text-slate-500">Formatos oficiales de presupuestos, facturas y contratos con membrete de la ETT.</p>
                                 </div>
                                 <button
@@ -939,7 +823,7 @@ export default function FichaEttView() {
                                     className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
                                 >
                                     <Upload className="w-4 h-4" />
-                                    Subir Plantilla
+                                    Subir plantilla
                                 </button>
                             </div>
 
@@ -948,14 +832,14 @@ export default function FichaEttView() {
                                     <div key={tpl.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
                                         <div>
                                             <div className="flex items-start justify-between gap-2">
-                                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
                                                     {tpl.category}
                                                 </span>
                                                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${tpl.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                                                     {tpl.status === 'active' ? 'Activa' : 'Incompleta'}
                                                 </span>
                                             </div>
-                                            <h3 className="text-sm font-bold text-slate-900 mt-2">{tpl.name}</h3>
+                                            <h3 className="text-sm font-semibold text-slate-900 mt-2">{tpl.name}</h3>
                                             <div className="text-xs text-slate-500 mt-2 space-y-1">
                                                 <div>Ámbito: <strong>{tpl.scope}</strong></div>
                                                 <div>Formato: {tpl.format}</div>
@@ -989,11 +873,11 @@ export default function FichaEttView() {
 
                     {/* 7. ACTIVIDAD TAB */}
                     {activeTab === 'actividad' && (
-                        <div className="space-y-6 fade-in max-w-4xl mx-auto">
+                        <div className="space-y-6 fade-in">
                             <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6">
                                 <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                                     <div>
-                                        <h2 className="text-base font-bold text-slate-900">Registro de Auditoría de la ETT</h2>
+                                        <h2 className="text-base font-semibold text-slate-900">Registro de auditoría de la ETT</h2>
                                         <p className="text-xs text-slate-500">Historial inmutable de cambios fiscales, bancarios y de estructura.</p>
                                     </div>
                                     <button 
@@ -1026,40 +910,74 @@ export default function FichaEttView() {
                         </div>
                     )}
 
-                </main>
+                </div>
+                </div>
             </div>
 
             {/* ========================================================= */}
             {/* DRAWER: EDITAR DATOS FISCALES */}
             {/* ========================================================= */}
             {isEditingFiscal && (
-                <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs fade-in">
-                    <div className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col justify-between overflow-hidden">
-                        <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-700">
-                                    <Building2 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-900 text-sm">Editar Datos Fiscales de la ETT</h3>
-                                    <span className="text-[11px] text-slate-500">Configuración de entidad jurídica propia</span>
-                                </div>
-                            </div>
-                            <button 
+                <Drawer
+                  title={'Editar datos fiscales'}
+                  subtitle={'Datos de la propia ETT'}
+                  onClose={() => setIsEditingFiscal(false)}
+                  width="max-w-xl"
+                  footer={<>
+                            <button
                                 onClick={() => setIsEditingFiscal(false)}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+                                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
                             >
-                                <X className="w-5 h-5" />
+                                Cancelar
                             </button>
-                        </div>
+                            <button
+                                onClick={() => {
+                                    const newLegal = document.getElementById('edit-legalName')?.value || company.legalName;
+                                    const newCif = document.getElementById('edit-cif')?.value || company.cif;
+                                    
+                                    // Check if sensitive field changed
+                                    if (newCif !== company.cif || newLegal !== company.legalName) {
+                                        setSensitiveModal({
+                                            open: true,
+                                            field: newCif !== company.cif ? 'CIF/NIF' : 'Razón Social',
+                                            pendingValue: newCif !== company.cif ? newCif : newLegal,
+                                            reason: ''
+                                        });
+                                        return;
+                                    }
 
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+                                    // Direct update for non-sensitive
+                                    setCompany(prev => ({
+                                        ...prev,
+                                        tradeName: document.getElementById('edit-tradeName')?.value || prev.tradeName,
+                                        address: document.getElementById('edit-address')?.value || prev.address,
+                                        postalCode: document.getElementById('edit-postalCode')?.value || prev.postalCode,
+                                        city: document.getElementById('edit-city')?.value || prev.city,
+                                        province: document.getElementById('edit-province')?.value || prev.province,
+                                        phone: document.getElementById('edit-phone')?.value || prev.phone,
+                                        email: document.getElementById('edit-email')?.value || prev.email,
+                                        web: document.getElementById('edit-web')?.value || prev.web,
+                                        lastUpdated: "Hoy (recién editado)"
+                                    }));
+                                    setIsEditingFiscal(false);
+                                    logAction("Actualizó los datos de contacto y domicilio de la ETT", "fiscal");
+                                    showToast("Datos fiscales actualizados con éxito");
+                                }}
+                                className="px-5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition flex items-center gap-1.5"
+                            >
+                                <Save className="w-3.5 h-3.5" />
+                                Guardar Cambios
+                            </button>
+                  </>}
+                >
+
+                        <div className="space-y-4 text-xs">
                             <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 text-amber-900">
                                 <strong>Nota de seguridad:</strong> Si modificas el CIF o la Razón Social se solicitará confirmación expresa antes de guardar.
                             </div>
 
                             <DrawerInput 
-                                label="Razón Social Oficial" 
+                                label="Razón social oficial" 
                                 defaultValue={company.legalName}
                                 id="edit-legalName"
                             />
@@ -1108,7 +1026,7 @@ export default function FichaEttView() {
                                 />
                             </div>
                             <DrawerInput 
-                                label="Email General de Notificaciones" 
+                                label="Email general de notificaciones" 
                                 defaultValue={company.email}
                                 id="edit-email"
                             />
@@ -1119,152 +1037,19 @@ export default function FichaEttView() {
                             />
                         </div>
 
-                        <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
-                            <button
-                                onClick={() => setIsEditingFiscal(false)}
-                                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const newLegal = document.getElementById('edit-legalName')?.value || company.legalName;
-                                    const newCif = document.getElementById('edit-cif')?.value || company.cif;
-                                    
-                                    // Check if sensitive field changed
-                                    if (newCif !== company.cif || newLegal !== company.legalName) {
-                                        setSensitiveModal({
-                                            open: true,
-                                            field: newCif !== company.cif ? 'CIF/NIF' : 'Razón Social',
-                                            pendingValue: newCif !== company.cif ? newCif : newLegal,
-                                            reason: ''
-                                        });
-                                        return;
-                                    }
-
-                                    // Direct update for non-sensitive
-                                    setCompany(prev => ({
-                                        ...prev,
-                                        tradeName: document.getElementById('edit-tradeName')?.value || prev.tradeName,
-                                        address: document.getElementById('edit-address')?.value || prev.address,
-                                        postalCode: document.getElementById('edit-postalCode')?.value || prev.postalCode,
-                                        city: document.getElementById('edit-city')?.value || prev.city,
-                                        province: document.getElementById('edit-province')?.value || prev.province,
-                                        phone: document.getElementById('edit-phone')?.value || prev.phone,
-                                        email: document.getElementById('edit-email')?.value || prev.email,
-                                        web: document.getElementById('edit-web')?.value || prev.web,
-                                        lastUpdated: "Hoy (recién editado)"
-                                    }));
-                                    setIsEditingFiscal(false);
-                                    logAction("Actualizó los datos de contacto y domicilio de la ETT", "fiscal");
-                                    showToast("Datos fiscales actualizados con éxito");
-                                }}
-                                className="px-5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition flex items-center gap-1.5"
-                            >
-                                <Save className="w-3.5 h-3.5" />
-                                Guardar Cambios
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                </Drawer>
             )}
 
             {/* ========================================================= */}
             {/* DRAWER: EDITAR FACTURACIÓN & FORMA DE PAGO */}
             {/* ========================================================= */}
             {isEditingBilling && (
-                <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs fade-in">
-                    <div className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col justify-between overflow-hidden">
-                        <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-700">
-                                    <Receipt className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-900 text-sm">Configuración de Facturación y Cobros</h3>
-                                    <span className="text-[11px] text-slate-500">Parámetros emisores oficiales</span>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setIsEditingBilling(false)}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-3">
-                                <DrawerInput 
-                                    label="Serie de Facturación" 
-                                    defaultValue={company.billingSeries}
-                                    id="edit-billingSeries"
-                                />
-                                <DrawerInput 
-                                    label="Prefijo Facturas" 
-                                    defaultValue={company.invoicePrefix}
-                                    id="edit-invoicePrefix"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="font-semibold text-slate-700 block mb-1">IVA General Aplicable</label>
-                                    <select 
-                                        id="edit-vatRate" 
-                                        defaultValue={company.vatRate}
-                                        className="w-full p-2 rounded-lg border border-slate-300 bg-white focus:outline-indigo-500"
-                                    >
-                                        <option value="21%">21% (General ETT)</option>
-                                        <option value="10%">10% (Reducido)</option>
-                                        <option value="0%">0% (Exento / Canarias IGIC)</option>
-                                    </select>
-                                </div>
-                                <DrawerInput 
-                                    label="Retenciones IRPF" 
-                                    defaultValue={company.withholdingRate}
-                                    id="edit-withholdingRate"
-                                />
-                            </div>
-
-                            {/* Bank account */}
-                            <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-lg space-y-3">
-                                <div className="font-bold text-indigo-950 flex items-center gap-1.5">
-                                    <CreditCard className="w-4 h-4 text-indigo-700" />
-                                    Cuenta Bancaria para Cobro de Facturas
-                                </div>
-                                <DrawerInput 
-                                    label="IBAN Oficial de la ETT (Obligatorio)" 
-                                    placeholder="ES91 2100 0418 4502 0005 1332"
-                                    defaultValue={company.iban || "ES91 2100 0418 4502 0005 1332"}
-                                    id="edit-iban"
-                                />
-                                <DrawerInput 
-                                    label="Código BIC / SWIFT" 
-                                    defaultValue={company.swiftBic}
-                                    id="edit-swiftBic"
-                                />
-                            </div>
-
-                            {/* FORMA DE PAGO SELECTOR + OTRO/LITERAL PATTERN */}
-                            <PaymentMethodEditor 
-                                initialMethod={company.paymentMethod}
-                                initialCustom={company.customPaymentMethod}
-                            />
-
-                            <DrawerInput 
-                                label="Condiciones de Vencimiento Estándar" 
-                                defaultValue={company.paymentTerms}
-                                id="edit-paymentTerms"
-                            />
-                            <DrawerInput 
-                                label="Email de Contacto de Administración" 
-                                defaultValue={company.adminEmail}
-                                id="edit-adminEmail"
-                            />
-                        </div>
-
-                        <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+                <Drawer
+                  title={'Facturación y cobros'}
+                  subtitle={'Datos con los que se emiten las facturas'}
+                  onClose={() => setIsEditingBilling(false)}
+                  width="max-w-xl"
+                  footer={<>
                             <button
                                 onClick={() => setIsEditingBilling(false)}
                                 className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
@@ -1301,97 +1086,93 @@ export default function FichaEttView() {
                                 <Save className="w-3.5 h-3.5" />
                                 Guardar Parámetros
                             </button>
+                  </>}
+                >
+
+                        <div className="space-y-4 text-xs">
+                            <div className="grid grid-cols-2 gap-3">
+                                <DrawerInput 
+                                    label="Serie de Facturación" 
+                                    defaultValue={company.billingSeries}
+                                    id="edit-billingSeries"
+                                />
+                                <DrawerInput 
+                                    label="Prefijo Facturas" 
+                                    defaultValue={company.invoicePrefix}
+                                    id="edit-invoicePrefix"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="font-semibold text-slate-700 block mb-1">IVA general aplicable</label>
+                                    <select 
+                                        id="edit-vatRate" 
+                                        defaultValue={company.vatRate}
+                                        className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500"
+                                    >
+                                        <option value="21%">21% (General ETT)</option>
+                                        <option value="10%">10% (Reducido)</option>
+                                        <option value="0%">0% (Exento / Canarias IGIC)</option>
+                                    </select>
+                                </div>
+                                <DrawerInput 
+                                    label="Retenciones IRPF" 
+                                    defaultValue={company.withholdingRate}
+                                    id="edit-withholdingRate"
+                                />
+                            </div>
+
+                            {/* Bank account */}
+                            <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-lg space-y-3">
+                                <div className="font-semibold text-indigo-950 flex items-center gap-1.5">
+                                    <CreditCard className="w-4 h-4 text-indigo-700" />
+                                    Cuenta bancaria para cobro de facturas
+                                </div>
+                                <DrawerInput 
+                                    label="IBAN oficial de la ETT (obligatorio)" 
+                                    placeholder="ES91 2100 0418 4502 0005 1332"
+                                    defaultValue={company.iban || "ES91 2100 0418 4502 0005 1332"}
+                                    id="edit-iban"
+                                />
+                                <DrawerInput 
+                                    label="Código BIC / SWIFT" 
+                                    defaultValue={company.swiftBic}
+                                    id="edit-swiftBic"
+                                />
+                            </div>
+
+                            {/* FORMA DE PAGO SELECTOR + OTRO/LITERAL PATTERN */}
+                            <PaymentMethodEditor 
+                                initialMethod={company.paymentMethod}
+                                initialCustom={company.customPaymentMethod}
+                            />
+
+                            <DrawerInput 
+                                label="Condiciones de vencimiento estándar" 
+                                defaultValue={company.paymentTerms}
+                                id="edit-paymentTerms"
+                            />
+                            <DrawerInput 
+                                label="Email de contacto de administración" 
+                                defaultValue={company.adminEmail}
+                                id="edit-adminEmail"
+                            />
                         </div>
-                    </div>
-                </div>
+
+                </Drawer>
             )}
 
             {/* ========================================================= */}
             {/* DRAWER: AÑADIR / EDITAR SUCURSAL */}
             {/* ========================================================= */}
             {branchDrawer.open && (
-                <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs fade-in">
-                    <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between overflow-hidden">
-                        <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-700">
-                                    <MapPin className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-900 text-sm">
-                                        {branchDrawer.mode === 'create' ? 'Nueva Sucursal / Delegación' : `Editar ${branchDrawer.data?.name}`}
-                                    </h3>
-                                    <span className="text-[11px] text-slate-500">Centros de atención y comerciales territoriales</span>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setBranchDrawer({ open: false, mode: 'create', data: null })}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
-                            <DrawerInput 
-                                label="Nombre de la Sucursal" 
-                                placeholder="Ej: Sucursal Tarragona" 
-                                defaultValue={branchDrawer.data?.name || ''}
-                                id="branch-name"
-                            />
-                            <DrawerInput 
-                                label="Código Interno" 
-                                placeholder="Ej: SUC-04" 
-                                defaultValue={branchDrawer.data?.code || `SUC-0${branches.length + 1}`}
-                                id="branch-code"
-                            />
-                            <DrawerInput 
-                                label="Ciudad / Población" 
-                                placeholder="Ej: Tarragona" 
-                                defaultValue={branchDrawer.data?.city || ''}
-                                id="branch-city"
-                            />
-                            <DrawerInput 
-                                label="Dirección Física de la Oficina" 
-                                placeholder="Ej: Rambla Nova 12, Principal" 
-                                defaultValue={branchDrawer.data?.address || ''}
-                                id="branch-address"
-                            />
-                            <div className="grid grid-cols-2 gap-3">
-                                <DrawerInput 
-                                    label="Teléfono Directo" 
-                                    placeholder="+34 977 00 00 00" 
-                                    defaultValue={branchDrawer.data?.phone || ''}
-                                    id="branch-phone"
-                                />
-                                <DrawerInput 
-                                    label="Email Oficina" 
-                                    placeholder="tarragona@ettglobal.es" 
-                                    defaultValue={branchDrawer.data?.email || ''}
-                                    id="branch-email"
-                                />
-                            </div>
-                            <DrawerInput 
-                                label="Responsable de Sucursal" 
-                                placeholder="Nombre del director de delegación" 
-                                defaultValue={branchDrawer.data?.manager || ''}
-                                id="branch-manager"
-                            />
-
-                            <div className="pt-2">
-                                <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
-                                    <input 
-                                        type="checkbox" 
-                                        className="rounded text-indigo-600 focus:ring-indigo-500" 
-                                        defaultChecked={branchDrawer.data?.isHeadquarters || false}
-                                        disabled={branchDrawer.data?.isHeadquarters}
-                                    />
-                                    <span>Sede Central Principal de la ETT</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+                <Drawer
+                  title={branchDrawer.mode === 'create' ? 'Nueva sucursal' : `Editar ${branchDrawer.data?.name}`}
+                  subtitle={'Delegaciones comerciales y de atención'}
+                  onClose={() => setBranchDrawer({ open: false, mode: 'create', data: null })}
+                  width="max-w-md"
+                  footer={<>
                             <button
                                 onClick={() => setBranchDrawer({ open: false, mode: 'create', data: null })}
                                 className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
@@ -1445,94 +1226,81 @@ export default function FichaEttView() {
                             >
                                 {branchDrawer.mode === 'create' ? 'Crear Sucursal' : 'Guardar Sucursal'}
                             </button>
+                  </>}
+                >
+
+                        <div className="space-y-4 text-xs">
+                            <DrawerInput 
+                                label="Nombre de la Sucursal" 
+                                placeholder="Ej: Sucursal Tarragona" 
+                                defaultValue={branchDrawer.data?.name || ''}
+                                id="branch-name"
+                            />
+                            <DrawerInput 
+                                label="Código Interno" 
+                                placeholder="Ej: SUC-04" 
+                                defaultValue={branchDrawer.data?.code || `SUC-0${branches.length + 1}`}
+                                id="branch-code"
+                            />
+                            <DrawerInput 
+                                label="Ciudad / Población" 
+                                placeholder="Ej: Tarragona" 
+                                defaultValue={branchDrawer.data?.city || ''}
+                                id="branch-city"
+                            />
+                            <DrawerInput 
+                                label="Dirección física de la oficina" 
+                                placeholder="Ej: Rambla Nova 12, Principal" 
+                                defaultValue={branchDrawer.data?.address || ''}
+                                id="branch-address"
+                            />
+                            <div className="grid grid-cols-2 gap-3">
+                                <DrawerInput 
+                                    label="Teléfono Directo" 
+                                    placeholder="+34 977 00 00 00" 
+                                    defaultValue={branchDrawer.data?.phone || ''}
+                                    id="branch-phone"
+                                />
+                                <DrawerInput 
+                                    label="Email Oficina" 
+                                    placeholder="tarragona@ettglobal.es" 
+                                    defaultValue={branchDrawer.data?.email || ''}
+                                    id="branch-email"
+                                />
+                            </div>
+                            <DrawerInput 
+                                label="Responsable de Sucursal" 
+                                placeholder="Nombre del director de delegación" 
+                                defaultValue={branchDrawer.data?.manager || ''}
+                                id="branch-manager"
+                            />
+
+                            <div className="pt-2">
+                                <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded text-indigo-600 focus:ring-indigo-500" 
+                                        defaultChecked={branchDrawer.data?.isHeadquarters || false}
+                                        disabled={branchDrawer.data?.isHeadquarters}
+                                    />
+                                    <span>Sede Central Principal de la ETT</span>
+                                </label>
+                            </div>
                         </div>
-                    </div>
-                </div>
+
+                </Drawer>
             )}
 
             {/* ========================================================= */}
             {/* DRAWER: INVITAR / EDITAR USUARIO */}
             {/* ========================================================= */}
             {userDrawer.open && (
-                <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs fade-in">
-                    <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between overflow-hidden">
-                        <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-700">
-                                    <UserPlus className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-900 text-sm">
-                                        {userDrawer.mode === 'invite' ? 'Invitar Usuario a la ETT' : `Editar permisos de ${userDrawer.data?.name}`}
-                                    </h3>
-                                    <span className="text-[11px] text-slate-500">Asignación de rol y ámbito territorial</span>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setUserDrawer({ open: false, mode: 'invite', data: null })}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
-                            <DrawerInput 
-                                label="Nombre y Apellidos" 
-                                placeholder="Ej: Laura Vidal" 
-                                defaultValue={userDrawer.data?.name || ''}
-                                id="user-name"
-                            />
-                            <DrawerInput 
-                                label="Email Corporativo" 
-                                placeholder="laura.vidal@ettglobal.es" 
-                                defaultValue={userDrawer.data?.email || ''}
-                                id="user-email"
-                            />
-
-                            <div>
-                                <label className="font-semibold text-slate-700 block mb-1">Rol en el ERP de la ETT</label>
-                                <select 
-                                    id="user-role" 
-                                    defaultValue={userDrawer.data?.role || 'Comercial Senior'}
-                                    className="w-full p-2 rounded-lg border border-slate-300 bg-white focus:outline-indigo-500"
-                                >
-                                    <option value="Dirección / CEO">Dirección / CEO (Acceso total)</option>
-                                    <option value="Administración & Facturación">Administración & Facturación</option>
-                                    <option value="Responsable de Sucursal">Responsable de Sucursal</option>
-                                    <option value="Comercial Senior">Comercial Senior (Presupuestos)</option>
-                                    <option value="Selección & Recruiting">Selección & Talent Pool</option>
-                                    <option value="Gestor Laboral">Gestor Laboral (Contratos CPD)</option>
-                                    <option value="Consulta / Auditoría">Consulta / Solo Lectura</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="font-semibold text-slate-700 block mb-1">Sucursal Asignada</label>
-                                <select 
-                                    id="user-branch" 
-                                    defaultValue={userDrawer.data?.branch || 'Barcelona (Central)'}
-                                    className="w-full p-2 rounded-lg border border-slate-300 bg-white focus:outline-indigo-500"
-                                >
-                                    <option value="Todas">Todas las sucursales (Ámbito Global)</option>
-                                    {branches.map(b => (
-                                        <option key={b.id} value={b.name}>{b.name}</option>
-                                    ))}
-                                    <option value="Sin asignar">Sin asignar (Pendiente)</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="font-semibold text-slate-700 block mb-1">Mensaje de bienvenida (Opcional)</label>
-                                <textarea 
-                                    rows="2" 
-                                    placeholder="Te damos la bienvenida al backoffice de ETT Global..." 
-                                    className="w-full p-2 rounded-lg border border-slate-300 bg-white focus:outline-indigo-500 text-xs"
-                                ></textarea>
-                            </div>
-                        </div>
-
-                        <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+                <Drawer
+                  title={userDrawer.mode === 'invite' ? 'Invitar usuario' : `Permisos de ${userDrawer.data?.name}`}
+                  subtitle={'Rol y ámbito territorial'}
+                  onClose={() => setUserDrawer({ open: false, mode: 'invite', data: null })}
+                  width="max-w-md"
+                  footer={<>
                             <button
                                 onClick={() => setUserDrawer({ open: false, mode: 'invite', data: null })}
                                 className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
@@ -1583,34 +1351,77 @@ export default function FichaEttView() {
                             >
                                 {userDrawer.mode === 'invite' ? 'Enviar Invitación' : 'Guardar Usuario'}
                             </button>
+                  </>}
+                >
+
+                        <div className="space-y-4 text-xs">
+                            <DrawerInput 
+                                label="Nombre y Apellidos" 
+                                placeholder="Ej: Laura Vidal" 
+                                defaultValue={userDrawer.data?.name || ''}
+                                id="user-name"
+                            />
+                            <DrawerInput 
+                                label="Email Corporativo" 
+                                placeholder="laura.vidal@ettglobal.es" 
+                                defaultValue={userDrawer.data?.email || ''}
+                                id="user-email"
+                            />
+
+                            <div>
+                                <label className="font-semibold text-slate-700 block mb-1">Rol en el ERP de la ETT</label>
+                                <select 
+                                    id="user-role" 
+                                    defaultValue={userDrawer.data?.role || 'Comercial Senior'}
+                                    className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500"
+                                >
+                                    <option value="Dirección / CEO">Dirección / CEO (Acceso total)</option>
+                                    <option value="Administración & Facturación">Administración y Facturación</option>
+                                    <option value="Responsable de Sucursal">Responsable de Sucursal</option>
+                                    <option value="Comercial Senior">Comercial Senior (Presupuestos)</option>
+                                    <option value="Selección & Recruiting">Selección y Talent Pool</option>
+                                    <option value="Gestor Laboral">Gestor Laboral (Contratos CPD)</option>
+                                    <option value="Consulta / Auditoría">Consulta / Solo Lectura</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="font-semibold text-slate-700 block mb-1">Sucursal asignada</label>
+                                <select 
+                                    id="user-branch" 
+                                    defaultValue={userDrawer.data?.branch || 'Barcelona (Central)'}
+                                    className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500"
+                                >
+                                    <option value="Todas">Todas las sucursales (Ámbito Global)</option>
+                                    {branches.map(b => (
+                                        <option key={b.id} value={b.name}>{b.name}</option>
+                                    ))}
+                                    <option value="Sin asignar">Sin asignar (Pendiente)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="font-semibold text-slate-700 block mb-1">Mensaje de bienvenida (Opcional)</label>
+                                <textarea 
+                                    rows="2" 
+                                    placeholder="Te damos la bienvenida al backoffice de ETT Global..." 
+                                    className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500 text-xs"
+                                ></textarea>
+                            </div>
                         </div>
-                    </div>
-                </div>
+
+                </Drawer>
             )}
 
             {/* ========================================================= */}
             {/* MODAL: CONFIRMACIÓN DE CAMBIO SENSIBLE (CIF/RAZÓN SOCIAL) */}
             {/* ========================================================= */}
             {sensitiveModal.open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 fade-in">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-                        <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-4">
-                            <AlertTriangle className="w-6 h-6" />
-                        </div>
-                        <h3 className="text-base font-bold text-slate-900">¿Confirmar cambio sensible de {sensitiveModal.field}?</h3>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                            Vas a modificar un dato fiscal de primer orden ({sensitiveModal.field} cambiará a <strong>{sensitiveModal.pendingValue}</strong>). Este cambio quedará firmado y registrado en la auditoría del sistema.
-                        </p>
-                        <div className="mt-4">
-                            <label className="text-[11px] font-semibold text-slate-700 block mb-1">Motivo del cambio (Obligatorio para auditoría)</label>
-                            <input 
-                                type="text" 
-                                id="sensitive-reason"
-                                placeholder="Ej: Actualización escrituras notariales" 
-                                className="w-full p-2 text-xs rounded-lg border border-slate-300 focus:outline-indigo-500"
-                            />
-                        </div>
-                        <div className="mt-6 flex items-center justify-end gap-3">
+                <Modal
+                  title={`¿Confirmar el cambio de ${sensitiveModal.field}?`}
+                  onClose={() => setSensitiveModal({ open: false, field: '', pendingValue: '', reason: '' })}
+                  size="max-w-md"
+                  footer={<>
                             <button 
                                 onClick={() => setSensitiveModal({ open: false, field: '', pendingValue: '', reason: '' })}
                                 className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
@@ -1634,9 +1445,19 @@ export default function FichaEttView() {
                             >
                                 Confirmar y Registrar
                             </button>
+                  </>}
+                >
+                  <p className="text-xs text-slate-600 mb-3">Es un dato fiscal principal: pasará a <strong>{sensitiveModal.pendingValue}</strong> y el cambio quedará registrado en la auditoría.</p>
+                        <div className="mt-4">
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-1">Motivo del cambio (Obligatorio para auditoría)</label>
+                            <input 
+                                type="text" 
+                                id="sensitive-reason"
+                                placeholder="Ej: Actualización escrituras notariales" 
+                                className="w-full p-2 text-xs rounded-lg border border-slate-200 focus:outline-indigo-500"
+                            />
                         </div>
-                    </div>
-                </div>
+                </Modal>
             )}
 
         </div>
@@ -1646,33 +1467,6 @@ export default function FichaEttView() {
 // =========================================================================
 // SUBCOMPONENTS
 // =========================================================================
-
-function TabButton({ id, label, icon: Icon, count, badge, activeTab, setActiveTab }) {
-    const isActive = activeTab === id;
-    return (
-        <button
-            onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition shrink-0 ${
-                isActive
-                    ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-        >
-            <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-            <span>{label}</span>
-            {count !== undefined && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-indigo-200/80 text-indigo-900' : 'bg-slate-200 text-slate-600'}`}>
-                    {count}
-                </span>
-            )}
-            {badge && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                    {badge}
-                </span>
-            )}
-        </button>
-    );
-}
 
 function StatusCard({ title, status, statusColor, subtitle, icon: Icon, onClick }) {
     const colorClasses = {
@@ -1693,7 +1487,7 @@ function StatusCard({ title, status, statusColor, subtitle, icon: Icon, onClick 
                 </div>
             </div>
             <div className="mt-3">
-                <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${colorClasses[statusColor]}`}>
+                <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded border ${colorClasses[statusColor]}`}>
                     {status}
                 </span>
                 <p className="text-[11px] text-slate-400 mt-1 truncate">{subtitle}</p>
@@ -1723,7 +1517,7 @@ function InfoField({ label, value, isSensitive, isLink, code }) {
             <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-medium text-xs block">{label}</span>
                 {isSensitive && (
-                    <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                    <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
                         Sensible
                     </span>
                 )}
@@ -1750,7 +1544,7 @@ function DrawerInput({ label, defaultValue, id, placeholder, type = 'text' }) {
                 id={id} 
                 defaultValue={defaultValue} 
                 placeholder={placeholder}
-                className="w-full p-2 rounded-lg border border-slate-300 bg-white focus:outline-indigo-500 text-xs text-slate-800"
+                className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500 text-xs text-slate-800"
             />
         </div>
     );
@@ -1772,12 +1566,12 @@ function PaymentMethodEditor({ initialMethod, initialCustom }) {
 
     return (
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
-            <label className="font-semibold text-slate-700 block">Forma de Pago Predeterminada</label>
+            <label className="font-semibold text-slate-700 block">Forma de pago predeterminada</label>
             <select
                 id="edit-paymentMethodSelect"
                 value={selectedMethod}
                 onChange={(e) => setSelectedMethod(e.target.value)}
-                className="w-full p-2 rounded-lg border border-slate-300 bg-white focus:outline-indigo-500 text-xs text-slate-800"
+                className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500 text-xs text-slate-800"
             >
                 {options.map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
