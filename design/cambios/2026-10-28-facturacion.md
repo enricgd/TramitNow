@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-28
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, a6ada07
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/facturacion.
   - Para crear una factura: "Preparar borrador" en Hostelería (octubre) → "Simular horas validadas" → "Emitir factura".
   - Para la rectificativa: abrir F2026-0094 → "Rectificar".
