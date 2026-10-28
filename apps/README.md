@@ -178,7 +178,7 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 - El superadmin (tabla `platform_admins`) tiene todos los permisos en la ETT activa.
 - Un permiso nuevo se añade en una migración (ver "Reglas para tablas nuevas" en `db/README.md`).
 
-### Rutas de esta fase
+### Rutas
 
 | Ruta | Permiso |
 |---|---|
@@ -192,9 +192,17 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `POST /v1/branches`, `PATCH /v1/branches/{id}` (al marcar una por defecto, la anterior deja de serlo) | `branches.manage` |
 | `GET /v1/roles`, `GET /v1/roles/{id}`, `GET /v1/permissions` | miembro |
 | `GET /v1/memberships`, `GET /v1/memberships/{id}` | `users.manage` |
+| `GET /v1/catalogs/autonomous-communities`, `/provinces?autonomousCommunityCode=`, `/municipalities?provinceCode=&q=` (exige uno de los dos), `/municipalities/{code}`, `/countries?q=`, `/contract-keys?includeInactive=`: catálogos oficiales, de solo lectura | token (aunque no tenga ETT) |
+| `GET`, `POST /v1/addresses`; `GET`, `PATCH`, `DELETE /v1/addresses/{id}`: con los códigos oficiales de municipio, provincia y país | miembro; escribir, `addresses.write` |
+| `/v1/collective-agreements`, `/v1/professional-categories`, `/v1/contract-types`, `/v1/payroll-concepts`: listar (filtros, `?q=`, `?status=`), ver, crear, editar y dar de baja (`DELETE`, baja lógica) | miembro; escribir, `labor_catalogs.manage` |
+| `/v1/clients` (`?q=` busca en código, razón social, nombre comercial y NIF; `?status=`, `?companyId=`, `?branchId=`, `?blocked=`), `/v1/client-centers?clientId=`, `/v1/client-contacts?clientId=`: listar, ver, crear, editar y dar de baja | miembro; escribir, `clients.manage` en la sucursal del cliente o del centro |
+| `GET`, `PUT /v1/clients/{id}/billing`: facturación del cliente (`PUT` crea o actualiza; devuelve `warnings` si el plazo de pago supera el legal) | `clients.billing.manage` |
 
-Fuera de esta fase: alta e invitación de usuarios (necesita la `service_role`), edición de roles y membresías,
-direcciones y borrado.
+Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
+sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
+
+Pendiente: alta e invitación de usuarios (necesita la `service_role`), edición de roles y membresías, y borrado
+de sociedades y sucursales.
 
 ### Tests
 
