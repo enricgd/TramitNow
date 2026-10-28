@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-28
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design` (ver el commit que añade esta nota)
+- **Rama y commits**: `design`, 9c650cb
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/mision. Para probar el fin de contrato:
   "Decidir el fin" en Aitana Roca Vidal o en Marc Puig Soler. Para la baja médica: Youssef Amrani.
 
