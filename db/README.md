@@ -94,8 +94,9 @@ Por qué:
 - **Lo configurable va por ETT y apunta al oficial**: un tipo de contrato de la ETT (`contract_types`, con su
   código y nombre internos, por ejemplo "403 Acumulación de tareas previsible") lleva la clave oficial
   (`contract_key_code = '402'`). Es lo que hacía el programa anterior con "Código" y "Cód. Oficial".
-- `catalog_items` sigue para catálogos simples por ETT (formas de pago, zonas, causas...). Las provincias y
-  países que hoy usa `addresses` vía `catalog_items` deberían pasar a los globales (ver "Pendiente").
+- `catalog_items` sigue para catálogos simples por ETT (formas de pago, zonas, causas...). `addresses` usa los
+  globales: `municipality_code`, `province_code` y `country_code` (España por defecto; provincia y municipio
+  solo en España, y el municipio de su provincia). Migración `20261028000100_addresses_global_catalogs.sql`.
 
 ### Tablas
 
@@ -141,34 +142,13 @@ Los presupuestos y peticiones que usen convenios o conceptos deben **copiar** im
 - **Provincias, países y claves de contrato**: con una migración nueva que cite la fuente. Una clave de
   contrato que se suprima se marca `active = false`, no se borra.
 
-### Rutas que necesitará la API
+### Rutas en la API
 
-Lectura de globales (cualquier usuario con sesión; se pueden cachear, cambian como mucho una vez al año):
-
-| Método y ruta | Devuelve |
-|---|---|
-| `GET /catalogos/comunidades` | Comunidades y ciudades autónomas |
-| `GET /catalogos/provincias?comunidad=` | Provincias, opcionalmente de una comunidad |
-| `GET /catalogos/municipios?provincia=&q=&limite=` | Búsqueda de municipios por provincia y texto (para los selectores; nunca la lista entera sin filtro) |
-| `GET /catalogos/municipios/:codigo` | Un municipio |
-| `GET /catalogos/paises?q=` | Países |
-| `GET /catalogos/claves-contrato?activas=true` | Claves oficiales de contrato |
-
-Catálogos de la ETT activa (leer: cualquier miembro; escribir: `labor_catalogs.manage`). Mismo patrón para
-los cuatro recursos `convenios`, `categorias`, `tipos-contrato` y `conceptos`:
-
-| Método y ruta | Qué hace |
-|---|---|
-| `GET /convenios?q=&estado=&provincia=` | Listado con filtros y paginación |
-| `GET /convenios/:id` | Detalle |
-| `POST /convenios` | Alta |
-| `PATCH /convenios/:id` | Edición (también `status` para activar o desactivar) |
-| `DELETE /convenios/:id` | Baja lógica (`deleted_at = now()`) |
-
-Filtros propios: `GET /categorias?convenio=&sociedad=&sucursal=&cno=&tipo=` (como "Categorías TTI-SRV"),
-`GET /tipos-contrato?clave=&estado=` y `GET /conceptos?tipo=&estado=`. Los errores de base de datos que la
-API debería traducir a mensajes: `23505` (código repetido), `23503` (convenio, sucursal o clave que no
-existe o es de otra ETT), `23514` (dato no válido) y `42501` (sin permiso).
+Ya están en `apps/api` (ver "Rutas" en `apps/README.md`): `/v1/catalogs/...` para los globales (cualquier usuario
+con sesión) y `/v1/collective-agreements`, `/v1/professional-categories`, `/v1/contract-types` y
+`/v1/payroll-concepts` para los de la ETT (leer: cualquier miembro; escribir: `labor_catalogs.manage`; `DELETE`
+es baja lógica). Los municipios exigen provincia o texto: nunca se devuelve la lista entera. La búsqueda por
+texto no ignora acentos ("Malaga" no encuentra "Málaga"); si hace falta, la extensión `unaccent`.
 
 ### Identidad
 
@@ -244,6 +224,33 @@ de Supabase Auth.
 6. Si hace falta un permiso nuevo: insertarlo en `permissions` y asignarlo a los roles de serie de las ETT
    existentes y en `private.seed_tenant_roles()`.
 7. Tests en `tests/` que prueben que otra ETT no lee ni escribe.
+
+## Módulo 2: empresas cliente
+
+Migración `20261028000200_clients.sql`. Tests: `tests/10_clientes.sql`. Fuentes: `docs/modelo-backend.md` (§03),
+`docs/inventario-pantallas.md` (§2-7), `design/empresas.html` y el modelo heredado.
+
+| Tabla | Qué es | Notas |
+|---|---|---|
+| `clients` | Empresa cliente (usuaria) | De una sociedad de la ETT, con sucursal propietaria. Estado `prospect`, `active` o `inactive`; bloqueo con motivo. **NIF único por sociedad** (sin espacios ni guiones, en mayúsculas). Responsable de la ETT (`owner_user_id`) |
+| `client_centers` | Centros de trabajo | Sucursal gestora, CCC (11 dígitos), CNAE y régimen (texto hasta que haya catálogos), convenio del cliente, de nómina y GRDA, sociedad y sucursal para los TC, instrucciones de acceso y PRL |
+| `client_contacts` | Contactos del cliente o de un centro (del mismo cliente) | **Datos personales.** Para qué se le contacta (`roles`), un contacto principal como mucho, destinatario de presupuestos, firmante de CPD. **DNI/NIE solo del firmante de los CPD**; sin fecha de nacimiento |
+| `client_billing_profiles` | Facturación (1:1) | Forma y plazo de pago, días fijos (máx. 3), IBAN y BIC, cliente al que se factura, riesgo, cuenta contable, textos fijos... |
+
+Además, `professional_categories.client_id`: categorías propias de un cliente (de la sociedad del cliente).
+
+Acceso (decidido por Enric el 2026-10-28):
+
+- **Leer clientes, centros y contactos: cualquier miembro de la ETT**, sea cual sea su sucursal.
+- **Escribir: `clients.manage`** (de serie en `admin`, `laboral`, `director_zona` y `comercial`; no en `seleccion`)
+  y acceso a la sucursal del cliente (clientes y contactos) o del centro (`private.can_access_branch`).
+- **Facturación: `clients.billing.manage`** (de serie solo en `admin`), también para leerla.
+
+La API avisa (sin impedirlo) si el plazo de pago supera los 60 días de la Ley 3/2004. La "preparación" que muestra
+la maqueta (lista para presupuestar, para operar o para facturar) se calcula; no se guarda.
+
+Fuera de este módulo: firma digital de facturas y CPD (`client_digital_signature_settings`), riesgos del puesto
+(PRL: decidir si van aquí o con peticiones y CPD), portal de cliente, documentos (Storage) e historial (auditoría).
 
 ## Probar en local
 
@@ -369,17 +376,14 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 
 ## Pendiente
 
-- Resto de tablas del modelo (clientes, ofertas, peticiones, candidatos, trabajadores, documentos,
-  comunicaciones, auditoría, importaciones), siguiendo las reglas de arriba.
+- Resto de tablas del modelo (ofertas, peticiones, candidatos, trabajadores, documentos, comunicaciones,
+  auditoría, importaciones), siguiendo las reglas de arriba.
 - Datos personales (NIF, Nº SS, IBAN, documentos): cifrado a nivel de columna y auditoría de accesos.
-- `addresses` sigue apuntando a `catalog_items` para municipio, provincia y país. Hay que pasarla a
-  `municipality_code`, `province_code` y `country_code` contra los catálogos globales (migración nueva que
-  cambie también los tests y la API que ya la use).
 - Más catálogos oficiales globales: ocupaciones CNO-11 (y el código de 8 dígitos del SEPE para Contrat@),
-  CNAE, regímenes de la Seguridad Social, tipos de documento de identidad. `professional_categories.cno_code`
+  CNAE, regímenes de la Seguridad Social, tipos de documento de identidad (`client_centers.cnae_code` y
+  `ss_regime_code` pasarán a FK). `professional_categories.cno_code`
   pasará a FK cuando exista el de ocupaciones.
 - Tablas salariales de convenio por año (niveles, salario base, pluses): las piden presupuestos ("precios de
   convenio con entrada en vigor para el año") y se diseñarán con ese módulo.
-- Ámbito por cliente de `professional_categories` (`client_id`), con el módulo de clientes.
 - Sucursal activa para los roles `branch` (`seleccion`, `comercial`): hoy el JWT lleva todas sus sucursales.
 - Alta de usuarios e invitaciones desde la API (service_role), y portal de cliente.
