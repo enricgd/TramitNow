@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-28
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, d9c1d09
 - **Cómo verlo**: `npm --prefix apps/web run dev`. Por ejemplo:
   - Presupuestos → PRE-2026-0041: sus cuatro puestos y sus peticiones PET-2026-0044 a 0047.
   - Candidatos → estado «En misión» o «En incorporación».
