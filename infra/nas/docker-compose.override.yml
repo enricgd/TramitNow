@@ -19,6 +19,22 @@ services:
       GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
       GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: pg-functions://postgres/private/custom_access_token_hook
 
+  # API propia (apps/api): única puerta a los datos. Solo la publica Caddy (/v1/*, /openapi.json).
+  # El código se copia a ../../api con deploy-api.sh. Se conecta como tramitnow_api (nunca postgres).
+  # API_DATABASE_URL y JWT_SECRET están en el .env del NAS, nunca en git.
+  api:
+    build: ../../api
+    image: tramitnow/api:local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${API_DATABASE_URL}
+      SUPABASE_JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: https://demo.${DOMAIN}
+      PORT: 3000
+
   # Único servicio expuesto a internet (puerto 443 del router → CADDY_HTTPS_PORT del NAS).
   caddy:
     build: ../../caddy
@@ -26,6 +42,7 @@ services:
     restart: unless-stopped
     depends_on:
       - api-gw
+      - api
     ports:
       - ${CADDY_HTTPS_PORT:-4443}:443
     environment:

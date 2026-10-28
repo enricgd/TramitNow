@@ -48,7 +48,7 @@ db/
 | Tabla | Qué es |
 |---|---|
 | `tenants` | ETT clientes de la plataforma |
-| `catalog_items` | Catálogos simples por ETT (provincias, tipos de documento, zonas...) |
+| `catalog_items` | Catálogos simples por ETT (formas de pago, zonas, causas...). Los oficiales son globales: ver módulo 1 |
 | `addresses` | Direcciones reutilizables |
 | `companies` | Sociedades de la ETT |
 | `branches` | Sucursales de una sociedad |
@@ -61,6 +61,114 @@ db/
 
 Las tablas de pantallas concretas (clientes, ofertas, peticiones, candidatos, documentos...) llegarán
 cuando estén cerrados sus diseños.
+
+## Módulo 1: catálogos legales y de configuración
+
+Migraciones `20261027000100_global_catalogs.sql`, `..._global_catalogs_data.sql` y `..._labor_catalogs.sql`,
+y el seed `seeds/ine-municipios.sql`. Tests: `tests/07_catalogos_globales.sql` y `tests/08_catalogos_laborales.sql`.
+
+### Catálogos globales y catálogos por ETT
+
+Hay dos clases de catálogo y no se mezclan:
+
+| | Globales | Por ETT |
+|---|---|---|
+| Qué | Lo que fija la Administración y es igual para todas: provincias, municipios, países, claves de contrato | Lo que cada ETT decide: convenios que aplica, categorías y puestos, tipos de contrato internos, conceptos |
+| `tenant_id` | No | Sí, con las reglas de tablas nuevas |
+| Clave | El código oficial (`'28'`, `'28079'`, `'ES'`, `'402'`) | `uuid` + `code` único por ETT |
+| Quién escribe | Nadie desde la API, ni el superadmin: migraciones y seeds con la fuente citada | Usuarios de la ETT con `labor_catalogs.manage` (admin y laboral) |
+| Quién lee | Cualquier usuario autenticado, tenga ETT o no | Miembros de la ETT activa (y el superadmin) |
+| Bajas | `active = false` (el histórico las sigue referenciando) | `deleted_at` / `status` |
+
+Por qué:
+
+- **Copiar los oficiales en cada ETT** (como hacía `catalog_items` en el modelo heredado) multiplica 8.000
+  municipios por ETT, deja que cada una los edite a su manera y obliga a actualizar N copias cuando el INE
+  publica la relación anual. Lo que se comunica a SEPE, TGSS o AEAT tiene que ser el código oficial, no el
+  que haya escrito una ETT.
+- **Código oficial como clave primaria**: es estable, legible en la base de datos y en los ficheros que se
+  intercambian (Contrat@, afiliación) y permite una FK simple desde las tablas por ETT
+  (`province_code char(2) references provinces`). La FK compuesta con `tenant_id` no aplica: no hay ETT.
+- **Solo lectura incluso para el superadmin**: un cambio en un catálogo oficial afecta a todas las ETT a la
+  vez. Debe ir en una migración o seed revisado, con la fuente, no en una pantalla.
+- **Lo configurable va por ETT y apunta al oficial**: un tipo de contrato de la ETT (`contract_types`, con su
+  código y nombre internos, por ejemplo "403 Acumulación de tareas previsible") lleva la clave oficial
+  (`contract_key_code = '402'`). Es lo que hacía el programa anterior con "Código" y "Cód. Oficial".
+- `catalog_items` sigue para catálogos simples por ETT (formas de pago, zonas, causas...). Las provincias y
+  países que hoy usa `addresses` vía `catalog_items` deberían pasar a los globales (ver "Pendiente").
+
+### Tablas
+
+Globales (sin `tenant_id`):
+
+| Tabla | Clave | Datos | Fuente |
+|---|---|---|---|
+| `autonomous_communities` | CODAUTO (2) | 19 | INE, relación de comunidades y ciudades autónomas con sus códigos |
+| `provinces` | CPRO (2) | 52 | INE, ídem y relación de municipios 2026 (nombres) |
+| `municipalities` | CPRO+CMUN (5), con dígito de control | 8.132 | INE, relación de municipios a 1-1-2026 (`seeds/ine-municipios.sql`) |
+| `countries` | ISO 3166-1 alfa-2, con alfa-3 y numérico | 249 | ISO 3166-1 (iso-codes de Debian), nombres en español; marca UE y EEE |
+| `contract_keys` | clave TGSS-SEPE (3) | 48 (2 inactivas: 401/501) | INAEM, "Modalidades de contratación 2024" (codificación unificada TGSS-SEPE) |
+
+Por ETT:
+
+| Tabla | Qué es | Notas |
+|---|---|---|
+| `collective_agreements` | Convenios que aplica la ETT | Código interno, código REGCON opcional, ámbito (estatal, autonómico, provincial...) con comunidad o provincia, vigencia. Sirve igual para "convenio cliente", "convenio nómina" o GRDA: quien lo usa decide el papel |
+| `professional_categories` | Categorías y puestos ("Categorías TTI-SRV") | Convenio, nivel o grupo del convenio, CNO-11 (texto de 4 dígitos), grupo de cotización 1-11, código estadístico. Ámbito: ETT, sociedad o sucursal |
+| `contract_types` | Tipos de contrato de la ETT | Clave oficial obligatoria; cotización por porcentajes o importes fijos. Al crear la ETT se crea uno por clave activa (trigger `private.seed_tenant_contract_types`) |
+| `payroll_concepts` | Conceptos de nómina y de coste | Tipo, cálculo por defecto (%, €/h, €/día, €/mes), base del %, salarial o extrasalarial, obligatorio por ley y marcas de impresión (oferta, CPD factura, CPD salario, contrato) |
+
+Permiso nuevo `labor_catalogs.manage` (módulo laboral): de serie en `admin` y `laboral`, añadido también a
+las ETT que ya existían. Leer los catálogos no exige permiso: comercial y selección los necesitan.
+
+Los presupuestos y peticiones que usen convenios o conceptos deben **copiar** importes y descripciones
+(como dice "Histórico de precios" en `docs/modelo-backend.md`): editar el catálogo no cambia lo ya enviado.
+
+### Actualizar los catálogos oficiales
+
+- **Municipios**, cada año cuando el INE publique la relación a 1 de enero:
+
+  ```bash
+  curl -fsSLO https://www.ine.es/daco/daco42/codmun/27codmun.xlsx
+  ```
+
+  ```bash
+  python3 -I db/scripts/ine-municipios.py 27codmun.xlsx 2027 > db/seeds/ine-municipios.sql
+  ```
+
+  El seed es idempotente: inserta o actualiza y marca como inactivos los que desaparecen. Se aplica en el
+  NAS como en el paso 3 de "Aplicar en el NAS" y `reset.sh` lo carga en local.
+- **Provincias, países y claves de contrato**: con una migración nueva que cite la fuente. Una clave de
+  contrato que se suprima se marca `active = false`, no se borra.
+
+### Rutas que necesitará la API
+
+Lectura de globales (cualquier usuario con sesión; se pueden cachear, cambian como mucho una vez al año):
+
+| Método y ruta | Devuelve |
+|---|---|
+| `GET /catalogos/comunidades` | Comunidades y ciudades autónomas |
+| `GET /catalogos/provincias?comunidad=` | Provincias, opcionalmente de una comunidad |
+| `GET /catalogos/municipios?provincia=&q=&limite=` | Búsqueda de municipios por provincia y texto (para los selectores; nunca la lista entera sin filtro) |
+| `GET /catalogos/municipios/:codigo` | Un municipio |
+| `GET /catalogos/paises?q=` | Países |
+| `GET /catalogos/claves-contrato?activas=true` | Claves oficiales de contrato |
+
+Catálogos de la ETT activa (leer: cualquier miembro; escribir: `labor_catalogs.manage`). Mismo patrón para
+los cuatro recursos `convenios`, `categorias`, `tipos-contrato` y `conceptos`:
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /convenios?q=&estado=&provincia=` | Listado con filtros y paginación |
+| `GET /convenios/:id` | Detalle |
+| `POST /convenios` | Alta |
+| `PATCH /convenios/:id` | Edición (también `status` para activar o desactivar) |
+| `DELETE /convenios/:id` | Baja lógica (`deleted_at = now()`) |
+
+Filtros propios: `GET /categorias?convenio=&sociedad=&sucursal=&cno=&tipo=` (como "Categorías TTI-SRV"),
+`GET /tipos-contrato?clave=&estado=` y `GET /conceptos?tipo=&estado=`. Los errores de base de datos que la
+API debería traducir a mensajes: `23505` (código repetido), `23503` (convenio, sucursal o clave que no
+existe o es de otra ETT), `23514` (dato no válido) y `42501` (sin permiso).
 
 ### Identidad
 
@@ -156,7 +264,8 @@ sh db/tests/run.sh
 - Supabase Auth `supabase/gotrue:v2.197.0` (contenedor `tramitnow-auth-local`, `127.0.0.1:9999`) con el hook
   de token activado. Al arrancar crea su esquema `auth` completo (con `auth.jwt()`).
 
-Después aplica las migraciones, habilita el login de `tramitnow_api` y da de alta la ETT DEMO con
+Después aplica las migraciones, carga los municipios del INE (`seeds/ine-municipios.sql`), habilita el login de `tramitnow_api` (con la contraseña local `API_DB_PASSWORD`
+de `local/dev.env`, para `apps/api`) y da de alta la ETT DEMO con
 `seeds/demo-tenant.sql` y un usuario administrador creado por la API de administración de Auth.
 Ese usuario y el secreto de los JWT locales están en `local/dev.env` (valores de desarrollo, no secretos).
 
@@ -200,14 +309,21 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
    sudo env PSQL="docker exec -i supabase-db psql -U postgres -d postgres" sh db/scripts/migrate.sh
    ```
 
+   Si la migración trae catálogos globales o el INE ha publicado una relación nueva, carga también los
+   municipios (es idempotente; la primera vez, después de `20261027000100_global_catalogs.sql`):
+
+   ```bash
+   sudo sh -c 'docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < db/seeds/ine-municipios.sql'
+   ```
+
 4. Solo la primera vez, activa el hook en Supabase Auth. Ya está en `infra/nas/docker-compose.override.yml`
    (servicio `auth`); hay que llevarlo al NAS y regenerar el proyecto como explica "Actualizar" en
    `infra/nas/README.md`, y volver a desplegar el Proyecto en UGOS.
 
    Hazlo **después** del paso 3: si el hook está activado y la función no existe, nadie puede iniciar sesión.
 
-5. Cuando exista `apps/api` (no antes), habilita el login de `tramitnow_api` con una contraseña larga
-   (no la escribas en la línea de comandos ni en el repo; va al `.env` de la API):
+5. Para `apps/api`, habilita el login de `tramitnow_api` con una contraseña larga (no la escribas en la
+   línea de comandos ni en el repo; va al `.env` del NAS, ver "API" en `infra/nas/README.md`):
 
    ```bash
    sudo docker exec -it supabase-db psql -U postgres -d postgres -c 'alter role tramitnow_api login'
@@ -253,11 +369,17 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 
 ## Pendiente
 
-- Resto de tablas del modelo (convenios, tipos de contrato, clientes, ofertas, peticiones, candidatos,
-  trabajadores, documentos, comunicaciones, auditoría, importaciones), siguiendo las reglas de arriba.
+- Resto de tablas del modelo (clientes, ofertas, peticiones, candidatos, trabajadores, documentos,
+  comunicaciones, auditoría, importaciones), siguiendo las reglas de arriba.
 - Datos personales (NIF, Nº SS, IBAN, documentos): cifrado a nivel de columna y auditoría de accesos.
-- Catálogos globales (provincias, municipios y países del INE) compartidos por todas las ETT, en vez de copiarlos por ETT.
-- Comprobar que `addresses.province_id` y similares apuntan al catálogo correcto (hoy solo se exige que sea de la misma ETT).
+- `addresses` sigue apuntando a `catalog_items` para municipio, provincia y país. Hay que pasarla a
+  `municipality_code`, `province_code` y `country_code` contra los catálogos globales (migración nueva que
+  cambie también los tests y la API que ya la use).
+- Más catálogos oficiales globales: ocupaciones CNO-11 (y el código de 8 dígitos del SEPE para Contrat@),
+  CNAE, regímenes de la Seguridad Social, tipos de documento de identidad. `professional_categories.cno_code`
+  pasará a FK cuando exista el de ocupaciones.
+- Tablas salariales de convenio por año (niveles, salario base, pluses): las piden presupuestos ("precios de
+  convenio con entrada en vigor para el año") y se diseñarán con ese módulo.
+- Ámbito por cliente de `professional_categories` (`client_id`), con el módulo de clientes.
 - Sucursal activa para los roles `branch` (`seleccion`, `comercial`): hoy el JWT lleva todas sus sucursales.
-- `apps/api`: conexión como `tramitnow_api`, verificación del JWT y el `set local role` + `set_config` por transacción.
 - Alta de usuarios e invitaciones desde la API (service_role), y portal de cliente.
