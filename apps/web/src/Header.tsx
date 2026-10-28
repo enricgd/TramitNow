@@ -34,16 +34,16 @@ type TipoResultado = 'peticion' | 'candidato' | 'cliente' | 'presupuesto';
 type Resultado = { id: string; tipo: TipoResultado; titulo: string; detalle: string; estado?: string; ruta?: string };
 
 const INITIAL_BUSQUEDA: Resultado[] = [
-  { id: 'p1', tipo: 'peticion', titulo: 'PET-2026-0048 · Refuerzo Campaña Logística Primavera 2026', detalle: 'Trans-Logística Ibérica Norte, S.A. · 7/12 cubiertas', estado: 'En selección', ruta: 'peticiones' },
-  { id: 'p2', tipo: 'peticion', titulo: 'PET-2026-0051 · Mozos de almacén turno noche', detalle: 'Distribuciones Cantábrico, S.L. · 0/4 cubiertas', estado: 'Nueva', ruta: 'peticiones' },
-  { id: 'p3', tipo: 'peticion', titulo: 'PET-2026-0039 · Carretilleros para inventario anual', detalle: 'Trans-Logística Ibérica Norte, S.A. · 3/3 cubiertas', estado: 'Cubierta', ruta: 'peticiones' },
+  { id: 'p1', tipo: 'peticion', titulo: 'PET-2026-0049 · Operario/a de almacén · turno de tarde', detalle: 'Trans-Logística Ibérica Norte, S.L. · 0/3 cubiertas', estado: 'En selección', ruta: 'peticiones' },
+  { id: 'p2', tipo: 'peticion', titulo: 'PET-2026-0047 · Camarero/a de barra · turno de noche', detalle: 'Hostelería & Eventos Premium BCN, S.L. · 0/3 cubiertas', estado: 'Nueva', ruta: 'peticiones' },
+  { id: 'p3', tipo: 'peticion', titulo: 'PET-2026-0048 · Operario/a de almacén · turno de mañana', detalle: 'Trans-Logística Ibérica Norte, S.L. · 5/5 cubiertas', estado: 'Cubierta', ruta: 'peticiones' },
   { id: 'c1', tipo: 'candidato', titulo: 'Carlos Mendoza Vidal', detalle: 'NIE X0000000T · Operario de almacén · Bilbao', estado: 'En misión', ruta: 'laboral' },
   { id: 'c2', tipo: 'candidato', titulo: 'Laura García Moreno', detalle: 'DNI 00000001R · Carretillera · Barakaldo', estado: 'En misión', ruta: 'laboral' },
   { id: 'c3', tipo: 'candidato', titulo: 'Ainhoa Larrazabal Urkijo', detalle: 'DNI 00000002W · Mozo de almacén · Getxo', estado: 'Disponible' },
   { id: 'c4', tipo: 'candidato', titulo: 'Miguel Torres Navarro', detalle: 'DNI 00000003A · Operario de almacén · Bilbao', estado: 'En misión', ruta: 'laboral' },
-  { id: 'e1', tipo: 'cliente', titulo: 'Trans-Logística Ibérica Norte, S.A.', detalle: 'CIF B00000000 · 3 centros · 2 peticiones abiertas' },
+  { id: 'e1', tipo: 'cliente', titulo: 'Trans-Logística Ibérica Norte, S.L.', detalle: 'CIF B-87654321 · 3 centros · 3 peticiones abiertas' },
   { id: 'e2', tipo: 'cliente', titulo: 'Distribuciones Cantábrico, S.L.', detalle: 'CIF B00000001 · 1 centro · 1 petición abierta' },
-  { id: 'b1', tipo: 'presupuesto', titulo: 'PRE-2026-0048 v1 · Campaña Logística Primavera', detalle: 'Trans-Logística Ibérica Norte, S.A. · 42.850,00 €', estado: 'Aceptado' },
+  { id: 'b1', tipo: 'presupuesto', titulo: 'PRE-2026-0042 v1 · Campaña logística otoño HUB central', detalle: 'Trans-Logística Ibérica Norte, S.L. · 58.200,00 €', estado: 'Aceptado' },
   { id: 'b2', tipo: 'presupuesto', titulo: 'PRE-2026-0053 · Mozos turno noche', detalle: 'Distribuciones Cantábrico, S.L. · 18.200,00 €', estado: 'Enviado' },
 ];
 
@@ -72,9 +72,9 @@ type Aviso = { id: string; tipo: TipoAviso; titulo: string; texto: string; hace:
 
 const INITIAL_AVISOS: Aviso[] = [
   { id: 'a1', tipo: 'urgente', titulo: 'DNI caducado: Carlos Mendoza Vidal', texto: 'Bloquea el alta en PET-2026-0048. Pide el documento renovado.', hace: 'Hace 10 min', leido: false, ruta: 'laboral' },
-  { id: 'a2', tipo: 'pendiente', titulo: '3 contratos pendientes de firma', texto: 'PET-2026-0048 · Inicio previsto el 02/03/2026', hace: 'Hace 1 h', leido: false, ruta: 'laboral' },
-  { id: 'a3', tipo: 'correcto', titulo: 'Presupuesto PRE-2026-0048 aceptado', texto: 'Trans-Logística Ibérica Norte, S.A. Ya se ha generado la petición.', hace: 'Hace 3 h', leido: false, ruta: 'peticiones' },
-  { id: 'a4', tipo: 'info', titulo: '12 candidaturas nuevas desde portales', texto: 'Refuerzo Campaña Logística Primavera 2026', hace: 'Ayer', leido: true, ruta: 'peticiones' },
+  { id: 'a2', tipo: 'pendiente', titulo: '3 contratos pendientes de firma', texto: 'PET-2026-0048 · Inicio previsto el 03/11/2026', hace: 'Hace 1 h', leido: false, ruta: 'laboral' },
+  { id: 'a3', tipo: 'correcto', titulo: 'Presupuesto PRE-2026-0042 aceptado', texto: 'Trans-Logística Ibérica Norte, S.L. Ya se han creado sus 3 peticiones.', hace: 'Hace 3 h', leido: false, ruta: 'peticiones' },
+  { id: 'a4', tipo: 'info', titulo: '12 candidaturas nuevas desde portales', texto: 'PET-2026-0049 · Operario/a de almacén · turno de tarde', hace: 'Ayer', leido: true, ruta: 'peticiones' },
   { id: 'a5', tipo: 'info', titulo: 'Mantenimiento programado', texto: 'Domingo de 02:00 a 04:00. La app no estará disponible.', hace: 'Hace 2 días', leido: true },
 ];
 

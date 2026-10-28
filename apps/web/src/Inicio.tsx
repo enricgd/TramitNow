@@ -35,10 +35,10 @@ type Tarea = {
 
 const INITIAL_TAREAS: Tarea[] = [
   { id: 't1', tone: 'danger', icon: AlertTriangle, titulo: 'DNI caducado de Carlos Mendoza Vidal', contexto: 'Bloquea el alta · PET-2026-0048', plazo: 'Atrasada 1 día', urgente: true, hoy: true, accion: 'Pedir documento', ruta: 'laboral' },
-  { id: 't2', tone: 'warning', icon: ShieldCheck, titulo: 'Alta en Seguridad Social de Miguel Torres Navarro', contexto: 'Inicio el 02/03/2026 · PET-2026-0048', plazo: 'Hoy', urgente: true, hoy: true, accion: 'Tramitar alta', ruta: 'laboral' },
-  { id: 't3', tone: 'warning', icon: FileSignature, titulo: '3 contratos pendientes de firma', contexto: 'Trans-Logística Ibérica Norte, S.A.', plazo: 'Hoy', urgente: false, hoy: true, accion: 'Enviar a firma', ruta: 'laboral' },
+  { id: 't2', tone: 'warning', icon: ShieldCheck, titulo: 'Alta en Seguridad Social de Miguel Torres Navarro', contexto: 'Inicio el 03/11/2026 · PET-2026-0048', plazo: 'Hoy', urgente: true, hoy: true, accion: 'Tramitar alta', ruta: 'laboral' },
+  { id: 't3', tone: 'warning', icon: FileSignature, titulo: '3 contratos pendientes de firma', contexto: 'Trans-Logística Ibérica Norte, S.L.', plazo: 'Hoy', urgente: false, hoy: true, accion: 'Enviar a firma', ruta: 'laboral' },
   { id: 't3b', tone: 'warning', icon: FileSignature, titulo: 'Aprobar el margen de PRE-2026-0047', contexto: 'Carretillero/a al 13,8 % (mínimo 15 %) · Mediterránea Agrícola y Envasado', plazo: 'Hoy', urgente: false, hoy: true, accion: 'Revisar margen', ruta: 'presupuestos' },
-  { id: 't4', tone: 'info', icon: UserSearch, titulo: '4 plazas sin candidatos', contexto: 'PET-2026-0051 · Mozos de almacén turno noche', plazo: 'Vence mañana', urgente: false, hoy: false, accion: 'Buscar candidatos', ruta: 'peticiones' },
+  { id: 't4', tone: 'info', icon: UserSearch, titulo: '3 plazas sin cubrir', contexto: 'PET-2026-0049 · Operario/a de almacén · turno de tarde', plazo: 'Empieza en 6 días', urgente: false, hoy: false, accion: 'Buscar candidatos', ruta: 'peticiones' },
   { id: 't5', tone: 'info', icon: PhoneCall, titulo: 'Llamar a Mohamed El Amrani', contexto: 'Por contactar desde hace 2 días', plazo: 'Hoy', urgente: false, hoy: true, accion: 'Llamar', ruta: 'candidatos' },
   { id: 't6', tone: 'neutral', icon: Send, titulo: 'Presupuesto PRE-2026-0045 sin respuesta', contexto: 'Enviado hace 6 días · Talleres Metalmecánicos Getafe, S.A.', plazo: 'Esta semana', urgente: false, hoy: false, accion: 'Recordar al cliente', ruta: 'presupuestos' },
 ];
@@ -51,9 +51,9 @@ const AGENDA = [
 ];
 
 const COBERTURA = [
-  { id: 'PET-2026-0048', titulo: 'Refuerzo campaña logística primavera', cliente: 'Trans-Logística Ibérica Norte, S.A.', cubiertas: 7, total: 12 },
-  { id: 'PET-2026-0051', titulo: 'Mozos de almacén turno noche', cliente: 'Distribuciones Cantábrico, S.L.', cubiertas: 0, total: 4 },
-  { id: 'PET-2026-0039', titulo: 'Carretilleros para inventario anual', cliente: 'Trans-Logística Ibérica Norte, S.A.', cubiertas: 3, total: 3 },
+  { id: 'PET-2026-0049', titulo: 'Operario/a de almacén · turno de tarde', cliente: 'Trans-Logística Ibérica Norte, S.L.', cubiertas: 0, total: 3 },
+  { id: 'PET-2026-0050', titulo: 'Carretillero/a · turno de tarde', cliente: 'Trans-Logística Ibérica Norte, S.L.', cubiertas: 2, total: 4 },
+  { id: 'PET-2026-0046', titulo: 'Cocinero/a · jornada partida', cliente: 'Hostelería & Eventos Premium BCN, S.L.', cubiertas: 0, total: 2 },
 ];
 
 const EMBUDO = [

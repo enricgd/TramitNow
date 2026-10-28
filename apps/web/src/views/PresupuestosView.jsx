@@ -403,11 +403,14 @@ comentario: 'Campaña invierno finalizada con éxito.'
     ];
 
     // Otros presupuestos para la vista de listado
+    const TURNOS_PETICION = ['Turno de mañana', 'Turno de tarde', 'Turno de noche', 'Jornada partida'];
+
     const DEMO_LISTADO_PRESUPUESTOS = [
       { id: 'PRE-2026-0048', importe: 63800,  titulo: 'Servicio ETT campaña logística primavera HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Borrador', puestosCount: 2, tarifaMedia: 18.72, margenPct: 17.4, fechaValidez: '2026-11-27', esEditableDirecto: true },
       { id: 'PRE-2026-0047', importe: 41200,  titulo: 'Refuerzo líneas de envasado y picking alimentario', cliente: 'Mediterránea Agrícola y Envasado, S.L.', comercial: 'Carlos Mendoza', estado: 'En preparación', puestosCount: 3, tarifaMedia: 16.90, margenPct: 18.2, fechaValidez: '2026-11-02', esEditableDirecto: true },
       { id: 'PRE-2026-0046', importe: 28900, diasSinRespuesta: 2,  titulo: 'Camareros/as para temporada de congresos', cliente: 'Hostelería & Eventos Premium BCN, S.L.', comercial: 'Laura Vidal', estado: 'Pendiente de Firma', puestosCount: 2, tarifaMedia: 17.40, margenPct: 19.1, fechaValidez: '2026-11-10', esEditableDirecto: false },
       { id: 'PRE-2026-0045', importe: 52300, diasSinRespuesta: 6,  titulo: 'Operarios/as soldadura y mecanizado metal 24/7', cliente: 'Manufacturas Metálicas del Henares, S.A.', comercial: 'Elena Rivas', estado: 'Enviado a Cliente', puestosCount: 1, tarifaMedia: 22.40, margenPct: 19.5, fechaValidez: '2026-11-15', esEditableDirecto: false },
+      { id: 'PRE-2026-0042', importe: 58200,  titulo: 'Campaña logística otoño HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Firmado / Aceptado', puestosCount: 2, tarifaMedia: 18.37, margenPct: 18.0, fechaValidez: '2026-10-20', esEditableDirecto: false },
       { id: 'PRE-2026-0041', importe: 37600,  titulo: 'Servicio ETT camareros/as y cocina fiestas locales', cliente: 'Hostelería & Eventos Premium BCN, S.L.', comercial: 'Laura Vidal', estado: 'Firmado / Aceptado', puestosCount: 4, tarifaMedia: 18.10, margenPct: 21.0, fechaValidez: '2026-10-15', esEditableDirecto: false },
       { id: 'PRE-2026-0038', importe: 12400,  titulo: 'Mozos de carga para inventario anual', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Carlos Mendoza', estado: 'Rechazado', puestosCount: 1, tarifaMedia: 16.20, margenPct: 14.0, fechaValidez: '2026-10-01', esEditableDirecto: false },
     ];
@@ -603,12 +606,28 @@ margenServicio
         mostrarToast(`Propuesta enviada a ${datosActivos.emailContacto}.`, 'exito');
       };
 
+      const abrirCrearPeticiones = () => {
+        setInicioPeticion(datosActivos.fechaInicioPrevista || '');
+        setRepartoPeticiones(datosActivos.posiciones.map((pos, i) => ({ fila: `${pos.id}-${i}`, posId: pos.id, plazas: Number(pos.personas) || 1, turno: TURNOS_PETICION[0] })));
+        setModalPeticion(true);
+      };
+      const dividirPuesto = (fila) => {
+        setRepartoPeticiones(prev => {
+          const i = prev.findIndex(r => r.fila === fila);
+          const r = prev[i];
+          const mitad = Math.max(1, Math.floor(r.plazas / 2));
+          const resto = Math.max(1, r.plazas - mitad);
+          const otro = TURNOS_PETICION.find(x => x !== r.turno) || r.turno;
+          return [...prev.slice(0, i), { ...r, plazas: resto }, { ...r, fila: `${r.posId}-${Date.now()}`, plazas: mitad, turno: otro }, ...prev.slice(i + 1)];
+        });
+      };
       const crearPeticion = () => {
-        const codigo = 'PET-2026-0052';
-        setPresupuesto(prev => ({ ...prev, peticionCreada: codigo }));
-        setFormularioPresupuesto(prev => ({ ...prev, peticionCreada: codigo }));
+        const codigos = repartoPeticiones.map((_, i) => `PET-2026-${String(52 + i).padStart(4, '0')}`);
+        const resumen = codigos.length === 1 ? codigos[0] : `${codigos[0]} a ${codigos[codigos.length - 1].slice(-4)}`;
+        setPresupuesto(prev => ({ ...prev, peticionCreada: resumen }));
+        setFormularioPresupuesto(prev => ({ ...prev, peticionCreada: resumen }));
         setModalPeticion(false);
-        mostrarToast(`Petición ${codigo} creada con ${datosActivos.posiciones.length} puestos.`, 'exito');
+        mostrarToast(`${codigos.length === 1 ? 'Creada la petición' : `Creadas ${codigos.length} peticiones:`} ${resumen}. Cada una con un solo puesto.`, 'exito');
       };
 
       // Duplicar: copia puestos, costes y condiciones; la empresa se elige de nuevo
@@ -650,6 +669,8 @@ margenServicio
       const [modalRechazo, setModalRechazo] = useState(null);
       const [modalPeticion, setModalPeticion] = useState(false);
       const [inicioPeticion, setInicioPeticion] = useState('');
+      // Reparto en peticiones: una por puesto; un puesto se puede dividir (otro turno, otras fechas)
+      const [repartoPeticiones, setRepartoPeticiones] = useState([]);
       const [motivosRechazo, setMotivosRechazo] = useState(['Precio', 'Plazo de incorporación', 'Eligió a la competencia', 'Cancela el proyecto', 'Sin respuesta del cliente']);
       const [versiones, setVersiones] = useState([{ codigo: 'PRE-2026-0048-v1', fecha: '2026-03-10', autor: 'Elena Navarro', estado: 'Sustituido', comentario: 'Primera propuesta enviada; el cliente pidió ajustar la tarifa del carretillero.', datos: DEMO_VERSION_ANTERIOR }]);
       const [versionAComparar, setVersionAComparar] = useState(null);
@@ -1344,9 +1365,9 @@ return datosActivos.posiciones.map(pos => ({
                 </>
               )}
               {datosActivos.estado === 'Firmado / Aceptado' && (datosActivos.peticionCreada ? (
-                <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/peticiones'; }}>Ver {datosActivos.peticionCreada}</Button>
+                <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/peticiones'; }}>Ver peticiones</Button>
               ) : (
-                <Button variant="primary" icon={ArrowUpRight} onClick={() => { setInicioPeticion(datosActivos.fechaInicioPrevista || ''); setModalPeticion(true); }}>Crear petición</Button>
+                <Button variant="primary" icon={ArrowUpRight} onClick={abrirCrearPeticiones}>Crear peticiones</Button>
               ))}
               {['Rechazado', 'Sustituido'].includes(datosActivos.estado) && (
                 <Button variant="primary" icon={GitBranch} onClick={() => setModalNuevaVersionAbierto(true)}>Nueva versión</Button>
@@ -1392,9 +1413,9 @@ return datosActivos.posiciones.map(pos => ({
           )}
           <KpiTile label="Tarifa media" value={euros(totalesAgregados.tarifaMedia)} hint={rolUsuario === 'direccion' ? `Coste medio ${euros(totalesAgregados.costeMedio)}` : `${datosActivos.posiciones.length} puestos`} />
           <KpiTile
-            label="Petición"
+            label="Peticiones"
             value={datosActivos.peticionCreada || (datosActivos.estado === 'Firmado / Aceptado' ? 'Por crear' : 'Pendiente')}
-            hint={datosActivos.peticionCreada ? 'Creada desde este presupuesto' : datosActivos.estado === 'Firmado / Aceptado' ? 'Ya se puede crear' : 'Cuando el cliente lo acepte'}
+            hint={datosActivos.peticionCreada ? 'Creadas desde este presupuesto' : datosActivos.estado === 'Firmado / Aceptado' ? 'Ya se puede crear' : 'Cuando el cliente lo acepte'}
           />
         </div>
       )}
@@ -2210,16 +2231,16 @@ return datosActivos.posiciones.map(pos => ({
               aplicarEstado(modalAceptar.id, 'Firmado / Aceptado');
               const esActual = modalAceptar.id === presupuesto.id;
               setModalAceptar(null);
-              if (esActual) setModalPeticion(true);
-              else { mostrarToast('Aceptado. Abriendo Peticiones para crear la petición...', 'exito'); setTimeout(() => { window.location.hash = '#/peticiones'; }, 900); }
+              if (esActual) abrirCrearPeticiones();
+              else { mostrarToast('Aceptado. Abriendo Peticiones para crear las peticiones...', 'exito'); setTimeout(() => { window.location.hash = '#/peticiones'; }, 900); }
             }}
           >
-            Aceptar y crear petición
+            Aceptar y crear peticiones
           </Button>
         </>
       }
     >
-      <p className="text-xs text-slate-600">El presupuesto queda cerrado. Puedes crear ahora la petición con sus puestos, tarifas y conceptos extra, sin volver a escribirlos.</p>
+      <p className="text-xs text-slate-600">El presupuesto queda cerrado. Puedes crear ahora las peticiones (una por puesto) con sus tarifas y conceptos extra, sin volver a escribirlos.</p>
     </Modal>
   )}
 
@@ -2267,42 +2288,85 @@ return datosActivos.posiciones.map(pos => ({
     </Modal>
   )}
 
-  {/* CREAR PETICIÓN DESDE EL PRESUPUESTO ACEPTADO */}
+  {/* CREAR PETICIONES DESDE EL PRESUPUESTO ACEPTADO: una por puesto, o varias si se divide */}
   {modalPeticion && (
     <Modal
-      title="Crear petición"
+      title="Crear peticiones"
       subtitle={`Desde ${datosActivos.codigoVersion} · ${datosActivos.cliente}`}
       onClose={() => setModalPeticion(false)}
-      size="max-w-2xl"
+      size="max-w-3xl"
       footer={
         <>
           <Button onClick={() => setModalPeticion(false)}>Cancelar</Button>
-          <Button variant="primary" icon={ArrowUpRight} onClick={crearPeticion}>Crear petición</Button>
+          <Button variant="primary" icon={ArrowUpRight} disabled={!inicioPeticion || repartoPeticiones.some(r => !(r.plazas > 0))} onClick={crearPeticion}>
+            Crear {repartoPeticiones.length} {repartoPeticiones.length === 1 ? 'petición' : 'peticiones'}
+          </Button>
         </>
       }
     >
       <div className="space-y-4 text-xs">
-        <p className="text-slate-600">Pasarán a la petición la empresa, el contacto y, de cada puesto, el convenio, la categoría, el salario, la tarifa y todos los conceptos extra (también los que no se imprimieron), para poder facturarlos.</p>
-        <table className="w-full">
-          <thead>
-            <tr className="text-[11px] text-slate-500 border-b border-slate-200">
-              <th className="py-1.5 text-left font-medium">Puesto</th>
-              <th className="py-1.5 text-right font-medium">Personas</th>
-              <th className="py-1.5 text-right font-medium">Tarifa</th>
-              <th className="py-1.5 text-right font-medium">Conceptos extra</th>
-            </tr>
-          </thead>
-          <tbody>
-            {calculosPosiciones.map(({ pos, eco }) => (
-              <tr key={pos.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-1.5 text-slate-800">{pos.nombre}<div className="text-[11px] text-slate-500">{etiquetaConvenio(pos.convenio, pos.convenioCustom)}</div></td>
-                <td className="py-1.5 text-right">{Number(pos.personas) || 1}</td>
-                <td className="py-1.5 text-right">{euros(eco.tarifaPVP)}</td>
-                <td className="py-1.5 text-right">{eco.extras.length}</td>
+        <p className="text-slate-600">
+          Cada petición es <strong className="font-medium text-slate-800">un solo puesto</strong>. Si un puesto necesita varios turnos o fechas, divídelo en varias peticiones.
+          Todas heredan la empresa, el contacto y, del puesto, el convenio, la categoría, el salario, la tarifa y todos los conceptos extra (también los que no se imprimieron), para poder facturarlos.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="text-[11px] text-slate-500 border-b border-slate-200">
+                <th className="py-1.5 text-left font-medium">Puesto</th>
+                <th className="py-1.5 text-left font-medium">Turno</th>
+                <th className="py-1.5 text-right font-medium">Plazas</th>
+                <th className="py-1.5 text-right font-medium">Tarifa</th>
+                <th className="py-1.5" aria-label="Acciones"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {calculosPosiciones.map(({ pos, eco }) => {
+                const filas = repartoPeticiones.filter(r => r.posId === pos.id);
+                const personas = Number(pos.personas) || 1;
+                const repartidas = filas.reduce((s, r) => s + (Number(r.plazas) || 0), 0);
+                return (
+                  <React.Fragment key={pos.id}>
+                    {filas.map((r, i) => (
+                      <tr key={r.fila} className={i === filas.length - 1 && repartidas === personas ? 'border-b border-slate-100' : ''}>
+                        <td className="py-1.5 pr-2 text-slate-800">
+                          {i === 0 ? (
+                            <>{pos.nombre}<div className="text-[11px] text-slate-500">{personas} personas en el presupuesto · {eco.extras.length} conceptos extra</div></>
+                          ) : (
+                            <span className="pl-3 text-slate-500">↳ otra petición del mismo puesto</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 pr-2">
+                          <Select value={r.turno} onChange={(e) => setRepartoPeticiones(prev => prev.map(x => (x.fila === r.fila ? { ...x, turno: e.target.value } : x)))} aria-label="Turno">
+                            {TURNOS_PETICION.map(tn => <option key={tn} value={tn}>{tn}</option>)}
+                          </Select>
+                        </td>
+                        <td className="py-1.5 text-right">
+                          <input type="number" min="1" value={r.plazas} onChange={(e) => setRepartoPeticiones(prev => prev.map(x => (x.fila === r.fila ? { ...x, plazas: parseInt(e.target.value) || 0 } : x)))} className={`${CAMPO} w-16 text-right`} aria-label="Plazas" />
+                        </td>
+                        <td className="py-1.5 text-right whitespace-nowrap">{euros(eco.tarifaPVP)}</td>
+                        <td className="py-1.5 pl-2 text-right whitespace-nowrap">
+                          {i === 0 ? (
+                            <Button size="sm" variant="ghost" icon={Plus} onClick={() => dividirPuesto(r.fila)}>Dividir</Button>
+                          ) : (
+                            <IconButton icon={X} title="Quitar esta petición" onClick={() => setRepartoPeticiones(prev => prev.filter(x => x.fila !== r.fila))} />
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {repartidas !== personas && (
+                      <tr className="border-b border-slate-100">
+                        <td colSpan={5} className="pb-2 text-[11px] text-amber-700">
+                          Las plazas ({repartidas}) no coinciden con las personas del presupuesto ({personas}). Se puede crear igualmente.
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         <div className="max-w-xs">
           <label className="block text-[11px] font-medium text-slate-600 mb-1">Inicio previsto</label>
           <input type="date" value={inicioPeticion} onChange={(e) => setInicioPeticion(e.target.value)} className={`${CAMPO} w-full`} />

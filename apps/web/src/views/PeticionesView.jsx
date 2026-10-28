@@ -8,69 +8,183 @@ import {
     Layers, Sliders, History, Info, ChevronUp, Bell, ArrowUpRight,
     CheckSquare, AlertTriangle, FileSpreadsheet, Lock, Radio,
     Home, UserCheck, UserPlus, DollarSign, BarChart3, Settings,
-    Shield, Cpu, BookOpen, Layers2, FolderKanban
+    Shield, Cpu, BookOpen, Layers2, FolderKanban, List, SquareKanban, GripVertical
 } from 'lucide-react';
-import { Page, PageHeader, Card, KpiTile, Button, Badge, Avatar, SearchInput, Select, Tabs, Modal } from '../ui';
+import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, Field, TextInput, Tabs, Segmented, Modal } from '../ui';
 
-// --- MOCK INITIAL DATA ---
-const INITIAL_PETICION = {
-    id: 'PET-2026-0048',
-    titulo: 'Refuerzo campaña logística primavera 2026',
-    clienteId: 'CLI-8492',
-    clienteNombre: 'Trans-Logística Ibérica Norte, S.L.',
-    cif: 'B-84920194',
-    sector: 'Transporte y Almacenamiento',
-    presupuestoOrigen: 'PRE-2026-0048 v1',
-    presupuestoFechaAprobacion: '12 Feb 2026',
-    presupuestoImporteMax: '42.850,00 €',
-    estado: 'En Selección', // Borrador, En Aprobación, Publicada / En Selección, En Cobertura, Cerrada
-    fechaSolicitud: '14/02/2026',
-    fechaInicioPrevista: '01/03/2026',
-    fechaFinEstimada: '30/06/2026',
-    responsableETT: 'Marta Gómez (Consultora Senior)',
-    contactoCliente: 'Carlos Mendiluce (Dir. Operaciones)',
-    telefonoContacto: '+34 944 821 033',
-    emailContacto: 'c.mendiluce@translogistica.es',
-    centroTrabajo: 'Hub Logístico ZAL Puerto Bilbao - Muelle 4B'
+// --- DATOS DE EJEMPLO ---
+// Una petición = un puesto. Las peticiones siempre salen de un presupuesto aceptado. Un mismo puesto del presupuesto
+// se puede repartir en varias peticiones (por ejemplo, una por turno o por fechas); todas comparten sus condiciones.
+const ESTADOS_PETICION = [
+    { estado: 'Nueva', tono: 'neutral' },
+    { estado: 'En difusión', tono: 'info' },
+    { estado: 'En selección', tono: 'accent' },
+    { estado: 'Cubierta', tono: 'success' },
+    { estado: 'En curso', tono: 'success' },
+    { estado: 'Cerrada', tono: 'neutral' },
+    { estado: 'Cancelada', tono: 'danger' },
+];
+const tonoEstado = (estado) => ESTADOS_PETICION.find(e => e.estado === estado)?.tono || 'neutral';
+const ESTADOS_ACTIVOS = ['Nueva', 'En difusión', 'En selección', 'Cubierta', 'En curso'];
+const RESPONSABLES = ['Ane Uriarte', 'Jon Ibarra', 'Nuria Castells'];
+
+const CLIENTES = {
+    translog: {
+        clienteNombre: 'Trans-Logística Ibérica Norte, S.L.',
+        cif: 'B-87654321',
+        sector: 'Logística y almacén',
+        contactoCliente: 'Marta Gómez Arana (Responsable de RRHH y Selección)',
+        emailContacto: 'marta.gomez@translog-norte.es',
+        telefonoContacto: '+34 654 987 321',
+        centroTrabajo: 'HUB central Basauri (Bizkaia) - Nave 2',
+        ciudad: 'Basauri (Bizkaia)',
+    },
+    hosteleria: {
+        clienteNombre: 'Hostelería & Eventos Premium BCN, S.L.',
+        cif: 'B-00000041',
+        sector: 'Hostelería y eventos',
+        contactoCliente: 'Responsable de eventos',
+        emailContacto: 'eventos@ejemplo-hosteleria.es',
+        telefonoContacto: '+34 600 000 041',
+        centroTrabajo: 'Recinto de congresos - Barcelona',
+        ciudad: 'Barcelona',
+    },
+    mediterranea: {
+        clienteNombre: 'Mediterránea Agrícola y Envasado, S.L.',
+        cif: 'B-00000047',
+        sector: 'Agroalimentario',
+        contactoCliente: 'Jefe de planta',
+        emailContacto: 'planta@ejemplo-mediterranea.es',
+        telefonoContacto: '+34 600 000 047',
+        centroTrabajo: 'Planta de envasado - Lleida',
+        ciudad: 'Lleida',
+    },
 };
 
-const INITIAL_POSICIONES = [
-    {
-        id: 'POS-001',
-        puesto: 'Operario/a de almacén y preparación de pedidos',
+// Puestos tal como vienen del presupuesto: convenio, categoría, salario, tarifa y requisitos
+const PUESTOS = {
+    operario: {
+        puesto: 'Operario/a de almacén',
         categoria: 'Especialistas / Logística (Grupo 4)',
-        solicitados: 8,
-        incorporados: 5,
-        enProceso: 4,
-        tarifaVentaHora: '19,45 €/h',
-        salarioBrutoConvenio: '12,30 €/h',
         cctConvenio: 'Convenio Logística y Distribución Bizkaia',
-        turnoDefecto: 'Turno Mañana (06:00 - 14:00)',
-        requiereEpi: 'Calzado S3, Chaleco Alta Visibilidad, Guantes corte 3',
-        carnetRequerido: 'Ninguno / Manipulador Alimentos opcional',
-        descripcionCorta: 'Picking por radiofrecuencia, preparación de palets y control de albaranes de entrada.'
+        salarioBrutoConvenio: '10,45 €/h',
+        tarifaVentaHora: '17,65 €/h',
+        requiereEpi: 'Calzado S3, chaleco de alta visibilidad, guantes anticorte',
+        carnetRequerido: 'Ninguno',
+        descripcionCorta: 'Recepción, control de bultos, picking por radiofrecuencia, preparación de pedidos e inventario rotativo.',
+    },
+    carretillero: {
+        puesto: 'Carretillero/a frontal y retráctil',
+        categoria: 'Mozo/a especialista (Grupo 3)',
+        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
+        salarioBrutoConvenio: '12,11 €/h',
+        tarifaVentaHora: '19,80 €/h',
+        requiereEpi: 'Calzado S3, chaleco, protectores auditivos',
+        carnetRequerido: 'Carnet de carretillero vigente (UNE 58451)',
+        descripcionCorta: 'Ubicación en altura en estanterías dinámicas (hasta 9 m), descarga de tráileres y abastecimiento de líneas.',
+    },
+    mozo: {
+        puesto: 'Mozo/a de almacén',
+        categoria: 'Mozo/a (Grupo 5)',
+        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
+        salarioBrutoConvenio: '10,10 €/h',
+        tarifaVentaHora: '16,20 €/h',
+        requiereEpi: 'Calzado S3, chaleco de alta visibilidad',
+        carnetRequerido: 'Ninguno',
+        descripcionCorta: 'Carga y descarga manual, recuento de inventario y etiquetado.',
+    },
+    camarero: {
+        puesto: 'Camarero/a de sala',
+        categoria: 'Camarero/a (Nivel IV)',
+        cctConvenio: 'Convenio de Hostelería de Cataluña',
+        salarioBrutoConvenio: '10,60 €/h',
+        tarifaVentaHora: '17,40 €/h',
+        requiereEpi: 'Calzado antideslizante',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Servicio de sala y banquetes, montaje y desmontaje de mesas.',
+    },
+    camarero_barra: {
+        puesto: 'Camarero/a de barra',
+        categoria: 'Camarero/a (Nivel IV)',
+        cctConvenio: 'Convenio de Hostelería de Cataluña',
+        salarioBrutoConvenio: '10,60 €/h',
+        tarifaVentaHora: '17,40 €/h',
+        requiereEpi: 'Calzado antideslizante',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Servicio de barra y coctelería en eventos nocturnos.',
+    },
+    ayudante_cocina: {
+        puesto: 'Ayudante de cocina',
+        categoria: 'Ayudante (Nivel V)',
+        cctConvenio: 'Convenio de Hostelería de Cataluña',
+        salarioBrutoConvenio: '10,20 €/h',
+        tarifaVentaHora: '16,90 €/h',
+        requiereEpi: 'Calzado antideslizante, uniforme de cocina',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Preparación de elaboraciones frías y calientes, limpieza y orden de la cocina.',
+    },
+    cocinero: {
+        puesto: 'Cocinero/a',
+        categoria: 'Cocinero/a (Nivel III)',
+        cctConvenio: 'Convenio de Hostelería de Cataluña',
+        salarioBrutoConvenio: '11,90 €/h',
+        tarifaVentaHora: '19,60 €/h',
+        requiereEpi: 'Calzado antideslizante, uniforme de cocina',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Elaboración de menús de banquete y coordinación de la partida.',
+    },
+    envasado: {
+        puesto: 'Operario/a de envasado',
+        categoria: 'Peón especialista',
+        cctConvenio: 'Convenio de la industria de conservas vegetales',
+        salarioBrutoConvenio: '9,90 €/h',
+        tarifaVentaHora: '16,90 €/h',
+        requiereEpi: 'Calzado de seguridad, guantes, cofia',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Alimentación de línea, control de calidad visual y paletizado.',
+    },
+};
+
+// Presupuestos aceptados de los que se pueden crear peticiones (de cada puesto, las personas presupuestadas)
+const PRESUPUESTOS_ACEPTADOS = [
+    {
+        id: 'PRE-2026-0042', version: 'v1', cliente: 'translog', aceptado: '2026-10-14',
+        titulo: 'Campaña logística otoño HUB central',
+        puestos: [{ tipo: 'operario', personas: 8 }, { tipo: 'carretillero', personas: 4 }],
     },
     {
-        id: 'POS-002',
-        puesto: 'Carretillero/a frontal y retráctil',
-        categoria: 'Oficiales de 2ª / Carretilleros (Grupo 3)',
-        solicitados: 4,
-        incorporados: 2,
-        enProceso: 3,
-        tarifaVentaHora: '22,80 €/h',
-        salarioBrutoConvenio: '14,10 €/h',
-        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
-        turnoDefecto: 'Turno Tarde (14:00 - 22:00)',
-        requiereEpi: 'Calzado S3, Chaleco, Protectores auditivos ZAL',
-        carnetRequerido: 'Carnet de Carretillero vigente UNE 58451 (5 tipos)',
-        descripcionCorta: 'Ubicación en estanterías dinámicas 11m, carga/descarga de tráileres y uso de retráctil.'
-    }
+        id: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', aceptado: '2026-09-30',
+        titulo: 'Servicio ETT camareros/as y cocina fiestas locales',
+        puestos: [{ tipo: 'camarero', personas: 10 }, { tipo: 'camarero_barra', personas: 3 }, { tipo: 'ayudante_cocina', personas: 4 }, { tipo: 'cocinero', personas: 2 }],
+    },
 ];
+
+// plantilla: turno del horario (HORARIO_TEMPLATES). cubiertas: plazas ya cubiertas en la demo.
+const PETICIONES_BASE = [
+    { id: 'PET-2026-0048', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'manana', solicitados: 5, cubiertas: 5, enProceso: 0, estado: 'Cubierta', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 3, candidaturas: 41 },
+    { id: 'PET-2026-0049', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'tarde', solicitados: 3, cubiertas: 0, enProceso: 4, estado: 'En selección', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 4, candidaturas: 22 },
+    { id: 'PET-2026-0050', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'carretillero', personasPuesto: 4, plantilla: 'tarde', solicitados: 4, cubiertas: 2, enProceso: 3, estado: 'En selección', inicio: '2026-11-10', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Jon Ibarra', portalesActivos: 4, candidaturas: 17 },
+    { id: 'PET-2026-0044', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero', personasPuesto: 10, plantilla: 'partida', solicitados: 10, cubiertas: 10, enProceso: 0, estado: 'En curso', inicio: '2026-10-10', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 2, candidaturas: 58 },
+    { id: 'PET-2026-0045', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'ayudante_cocina', personasPuesto: 4, plantilla: 'partida', solicitados: 4, cubiertas: 4, enProceso: 0, estado: 'Cubierta', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 1, candidaturas: 19 },
+    { id: 'PET-2026-0046', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'cocinero', personasPuesto: 2, plantilla: 'partida', solicitados: 2, cubiertas: 0, enProceso: 1, estado: 'En difusión', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 3, candidaturas: 6 },
+    { id: 'PET-2026-0047', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero_barra', personasPuesto: 3, plantilla: 'noche', solicitados: 3, cubiertas: 0, enProceso: 0, estado: 'Nueva', inicio: '2026-11-12', fin: '2026-11-30', creada: '2026-10-27', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 0 },
+    { id: 'PET-2026-0031', presupuesto: 'PRE-2026-0029', version: 'v1', cliente: 'translog', tipo: 'mozo', personasPuesto: 6, plantilla: 'manana', solicitados: 6, cubiertas: 6, enProceso: 0, estado: 'Cerrada', inicio: '2026-07-01', fin: '2026-09-30', creada: '2026-06-12', responsable: 'Ane Uriarte', portalesActivos: 0, candidaturas: 47 },
+    { id: 'PET-2026-0036', presupuesto: 'PRE-2026-0033', version: 'v2', cliente: 'mediterranea', tipo: 'envasado', personasPuesto: 5, plantilla: 'noche', solicitados: 5, cubiertas: 0, enProceso: 0, estado: 'Cancelada', inicio: '2026-09-15', fin: '2026-12-15', creada: '2026-08-28', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 9, motivoCancelacion: 'El cliente aplaza la campaña' },
+];
+
+const completarPeticion = (p) => ({ ...CLIENTES[p.cliente], ...PUESTOS[p.tipo], ...p, presupuestoOrigen: `${p.presupuesto} ${p.version}` });
+const INITIAL_PETICIONES = PETICIONES_BASE.map(completarPeticion);
+
+const fechaCorta = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
+const diasHasta = (iso) => Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
+// Peticiones del mismo puesto del mismo presupuesto (por ejemplo, otro turno)
+const hermanasDe = (p, lista) => lista.filter(x => x.id !== p.id && x.presupuesto === p.presupuesto && x.tipo === p.tipo);
+const siguienteCodigo = (lista) => `PET-2026-${String(Math.max(...lista.map(p => Number(p.id.slice(-4)))) + 1).padStart(4, '0')}`;
 
 // Plantillas horarias
 const HORARIO_TEMPLATES = {
     manana: {
-        nombre: 'Turno Mañana',
+        nombre: 'Turno de mañana',
         dias: [
             { dia: 'Lunes', laborable: true, inicio: '06:00', fin: '14:00', descanso: 30, horas: 7.5 },
             { dia: 'Martes', laborable: true, inicio: '06:00', fin: '14:00', descanso: 30, horas: 7.5 },
@@ -82,7 +196,7 @@ const HORARIO_TEMPLATES = {
         ]
     },
     tarde: {
-        nombre: 'Turno Tarde',
+        nombre: 'Turno de tarde',
         dias: [
             { dia: 'Lunes', laborable: true, inicio: '14:00', fin: '22:00', descanso: 30, horas: 7.5 },
             { dia: 'Martes', laborable: true, inicio: '14:00', fin: '22:00', descanso: 30, horas: 7.5 },
@@ -94,7 +208,7 @@ const HORARIO_TEMPLATES = {
         ]
     },
     noche: {
-        nombre: 'Turno Noche',
+        nombre: 'Turno de noche',
         dias: [
             { dia: 'Lunes', laborable: true, inicio: '22:00', fin: '06:00', descanso: 30, horas: 7.5 },
             { dia: 'Martes', laborable: true, inicio: '22:00', fin: '06:00', descanso: 30, horas: 7.5 },
@@ -106,7 +220,7 @@ const HORARIO_TEMPLATES = {
         ]
     },
     partida: {
-        nombre: 'Jornada Partida',
+        nombre: 'Jornada partida',
         dias: [
             { dia: 'Lunes', laborable: true, inicio: '08:30', fin: '17:30', descanso: 60, horas: 8.0 },
             { dia: 'Martes', laborable: true, inicio: '08:30', fin: '17:30', descanso: 60, horas: 8.0 },
@@ -119,24 +233,18 @@ const HORARIO_TEMPLATES = {
     }
 };
 
-const INITIAL_HORARIOS = {
-    'POS-001': {
-        turnoNombre: 'Turno Mañana',
-        tipoJornada: 'Completa (37,5 h/semana)',
-        centro: 'Hub Logístico ZAL Puerto Bilbao - Nave 2',
-        dias: JSON.parse(JSON.stringify(HORARIO_TEMPLATES.manana.dias)),
-        guardado: true,
-        ultimaModif: '14/02/2026 11:30 por Marta Gómez'
-    },
-    'POS-002': {
-        turnoNombre: 'Turno Tarde',
-        tipoJornada: 'Completa (37,5 h/semana)',
-        centro: 'Hub Logístico ZAL Puerto Bilbao - Muelle 4B',
-        dias: JSON.parse(JSON.stringify(HORARIO_TEMPLATES.tarde.dias)),
-        guardado: true,
-        ultimaModif: '14/02/2026 11:32 por Marta Gómez'
-    }
-};
+// Un horario por petición. Otro turno del mismo puesto = otra petición.
+const horarioDesdePlantilla = (plantilla, centro, nota) => ({
+    turnoNombre: HORARIO_TEMPLATES[plantilla].nombre,
+    tipoJornada: 'Completa (37,5 h/semana)',
+    centro,
+    dias: JSON.parse(JSON.stringify(HORARIO_TEMPLATES[plantilla].dias)),
+    guardado: true,
+    ultimaModif: nota
+});
+const INITIAL_HORARIOS = Object.fromEntries(
+    INITIAL_PETICIONES.map(p => [p.id, horarioDesdePlantilla(p.plantilla, p.centroTrabajo, `${fechaCorta(p.creada)} por ${p.responsable}`)])
+);
 
 const INITIAL_CONTENIDO_COMUN = {
     titulo: 'Operarios/as de almacén y carretilleros/as - campaña logística 2026',
@@ -224,8 +332,8 @@ const INITIAL_PORTALES = [
 ];
 
 // --- MOCK DATA: PLAZAS Y CANDIDATOS POR POSICIÓN ---
-const INITIAL_PLAZAS = {
-    'POS-001': [
+const PLAZAS_BASE = {
+    'operario': [
         {
             id: 'PLZ-001-01',
             numero: 1,
@@ -235,7 +343,7 @@ const INITIAL_PLAZAS = {
             dni: '45892134K',
             telefono: '+34 654 112 890',
             email: 'jonander.etxebarria@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 96,
             foto: null
@@ -249,7 +357,7 @@ const INITIAL_PLAZAS = {
             dni: '78912340M',
             telefono: '+34 688 234 561',
             email: 'ainhoa.larrazabal@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 92,
             foto: null
@@ -263,7 +371,7 @@ const INITIAL_PLAZAS = {
             dni: 'X8923412P',
             telefono: '+34 611 902 443',
             email: 'mamadou.diallo@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 88,
             foto: null
@@ -277,7 +385,7 @@ const INITIAL_PLAZAS = {
             dni: '16098234L',
             telefono: '+34 670 445 119',
             email: 'laura.morales@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 94,
             foto: null
@@ -291,7 +399,7 @@ const INITIAL_PLAZAS = {
             dni: '30691288B',
             telefono: '+34 699 871 203',
             email: 'iker.agirre@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 90,
             foto: null
@@ -339,7 +447,7 @@ const INITIAL_PLAZAS = {
             foto: null
         }
     ],
-    'POS-002': [
+    'carretillero': [
         {
             id: 'PLZ-002-01',
             numero: 1,
@@ -349,7 +457,7 @@ const INITIAL_PLAZAS = {
             dni: '44901238R',
             telefono: '+34 633 901 223',
             email: 'unai.garcia@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 98,
             foto: null
@@ -363,7 +471,7 @@ const INITIAL_PLAZAS = {
             dni: 'Y1290384T',
             telefono: '+34 677 340 192',
             email: 'carlos.ortiz@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 95,
             foto: null
@@ -399,6 +507,34 @@ const INITIAL_PLAZAS = {
     ]
 };
 
+// Plazas de cada petición. Las de logística salen de los ejemplos de arriba; el resto se generan.
+const NOMBRES_DEMO = ['Garazi Uribe Arana', 'Pablo Ruiz Cano', 'Sara Benítez Lago', 'Youssef Amrani', 'Lucía Ferrer Sanz', 'Marc Puig Soler', 'Aitana Roca Vidal', 'Daniel Sousa Prieto', 'Irene Campos Gil', 'Óscar León Mena', 'Noa Serra Pons', 'Hugo Martín Vera'];
+const renumerarPlazas = (lista, codigo) => lista.map((p, i) => ({ ...p, id: `PLZ-${codigo}-${String(i + 1).padStart(2, '0')}`, numero: i + 1 }));
+const plazaVacante = { estado: 'vacante', candidatoId: null, nombre: null, dni: null, telefono: null, email: null, fechaIncorporacion: null, contratoTipo: null, scoring: null, foto: null };
+const generarPlazas = (p) => Array.from({ length: p.solicitados }, (_, i) => {
+    if (i >= p.cubiertas) return { ...plazaVacante };
+    const nombre = NOMBRES_DEMO[(i + Number(p.id.slice(-2))) % NOMBRES_DEMO.length];
+    return {
+        estado: 'cubierta',
+        candidatoId: `CND-${p.id.slice(-4)}${i}`,
+        nombre,
+        dni: '00000000T',
+        telefono: '+34 600 000 000',
+        email: `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
+        fechaIncorporacion: fechaCorta(p.inicio),
+        contratoTipo: 'CPD circunstancias de la producción (ETT)',
+        scoring: 85 + (i % 10),
+        foto: null
+    };
+});
+const INITIAL_PLAZAS = Object.fromEntries(INITIAL_PETICIONES.map(p => {
+    const codigo = p.id.slice(-4);
+    if (p.id === 'PET-2026-0048') return [p.id, renumerarPlazas(PLAZAS_BASE['operario'].slice(0, 5), codigo)];
+    if (p.id === 'PET-2026-0049') return [p.id, renumerarPlazas(PLAZAS_BASE['operario'].slice(5), codigo)];
+    if (p.id === 'PET-2026-0050') return [p.id, renumerarPlazas(PLAZAS_BASE['carretillero'], codigo)];
+    return [p.id, renumerarPlazas(generarPlazas(p), codigo)];
+}));
+
 const INITIAL_CANDIDATOS_POOL = [
     {
         id: 'CND-1201',
@@ -411,7 +547,7 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'Inmediata (Turnos Mañana / Tarde)',
         carnets: 'Carnet B + Manipuladora de alimentos',
         scoring: 95,
-        matchPosicion: ['POS-001'],
+        matchPosicion: ['operario'],
         ubicacion: 'Barakaldo (Bizkaia)',
         valoracionETT: 'Candidata muy formal, experiencia comprobada en Grupo Eroski logística.',
         estadoSeleccion: 'Disponible para asignación',
@@ -428,7 +564,7 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'Inmediata',
         carnets: 'Carnet Carretillas UNE 58451 (5 tipos) + C1',
         scoring: 98,
-        matchPosicion: ['POS-002'],
+        matchPosicion: ['carretillero'],
         ubicacion: 'Santurtzi (Bizkaia)',
         valoracionETT: 'Alta destreza en retráctil, referencias positivas en DHL Bilbao.',
         estadoSeleccion: 'Disponible para asignación',
@@ -445,7 +581,7 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'Inmediata (Mañanas)',
         carnets: 'Carnet B + PRL básico 60h',
         scoring: 89,
-        matchPosicion: ['POS-001'],
+        matchPosicion: ['operario'],
         ubicacion: 'Bilbao (Bizkaia)',
         valoracionETT: 'Muy motivado, disponibilidad para horas extra si procede.',
         estadoSeleccion: 'Disponible para asignación',
@@ -462,7 +598,7 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'A partir del 25/02/2026',
         carnets: 'Carnet Carretillero UNE 58451 + C+E',
         scoring: 91,
-        matchPosicion: ['POS-002'],
+        matchPosicion: ['carretillero'],
         ubicacion: 'Portugalete (Bizkaia)',
         valoracionETT: 'Conoce los muelles de la ZAL de Santurtzi a la perfección.',
         estadoSeleccion: 'Disponible para asignación',
@@ -479,7 +615,7 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'Inmediata',
         carnets: 'Carnet B',
         scoring: 87,
-        matchPosicion: ['POS-001'],
+        matchPosicion: ['operario'],
         ubicacion: 'Galdakao (Bizkaia)',
         valoracionETT: 'Rapidez en picking y manejo ágil de lector de código de barras.',
         estadoSeleccion: 'Disponible para asignación',
@@ -488,11 +624,87 @@ const INITIAL_CANDIDATOS_POOL = [
 ];
 
 // --- ROOT COMPONENT ---
+const cubiertasDe = (lista) => (lista || []).filter(p => p.estado === 'cubierta').length;
+
+// Contenido común de la publicación en portales, a partir del puesto y el turno de la petición
+const contenidoDe = (p, horario) => {
+    const turno = (horario?.turnoNombre || 'el turno indicado').toLowerCase();
+    return {
+        ...INITIAL_CONTENIDO_COMUN,
+        titulo: `${p.puesto} - ${turno} - ${p.ciudad}`,
+        descripcion: `Empresa del sector ${p.sector.toLowerCase()} en ${p.ciudad} busca ${p.solicitados} ${p.solicitados === 1 ? 'persona' : 'personas'} para el puesto de ${p.puesto.toLowerCase()}, del ${fechaCorta(p.inicio)} al ${fechaCorta(p.fin)}.`,
+        funciones: `• ${p.descripcionCorta}`,
+        requisitos: `• Disponibilidad para ${turno}.\n• ${p.carnetRequerido === 'Ninguno' ? 'No se necesita carné específico.' : `${p.carnetRequerido}.`}\n• EPIs que facilita la empresa: ${p.requiereEpi.toLowerCase()}.`,
+        categoria: `${p.sector} — ${p.puesto}`,
+        ubicacion: p.ciudad,
+        jornada: horario?.tipoJornada || INITIAL_CONTENIDO_COMUN.jornada,
+    };
+};
+
+// Pipeline de peticiones: una columna por estado; las tarjetas se arrastran para cambiar de estado
+function PipelinePeticiones({ lista, plazas, horarios, onAbrir, onMover }) {
+    const [sobre, setSobre] = useState(null);
+    return (
+        <div className="flex gap-3 overflow-x-auto pb-2">
+            {ESTADOS_PETICION.map(col => {
+                const items = lista.filter(p => p.estado === col.estado);
+                return (
+                    <div
+                        key={col.estado}
+                        onDragOver={(e) => { e.preventDefault(); setSobre(col.estado); }}
+                        onDragLeave={() => setSobre(null)}
+                        onDrop={(e) => { e.preventDefault(); setSobre(null); onMover(e.dataTransfer.getData('text/plain'), col.estado); }}
+                        className={`w-64 shrink-0 rounded-xl border p-2 space-y-2 transition-colors ${sobre === col.estado ? 'border-indigo-400 bg-indigo-50/60' : 'border-slate-200 bg-slate-50'}`}
+                    >
+                        <div className="flex items-center justify-between px-1 pt-1">
+                            <Badge tone={col.tono} dot>{col.estado}</Badge>
+                            <span className="text-[11px] text-slate-500">{items.length} · {items.reduce((s, p) => s + p.solicitados, 0)} plazas</span>
+                        </div>
+                        {items.length === 0 && <div className="px-2 py-6 text-center text-[11px] text-slate-400">Arrastra aquí</div>}
+                        {items.map(p => {
+                            const cubiertas = cubiertasDe(plazas[p.id]);
+                            const pct = Math.round((cubiertas / p.solicitados) * 100);
+                            return (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    draggable
+                                    onDragStart={(e) => e.dataTransfer.setData('text/plain', p.id)}
+                                    onClick={() => onAbrir(p)}
+                                    className="w-full text-left rounded-lg border border-slate-200 bg-white p-3 shadow-xs hover:border-indigo-300 cursor-grab active:cursor-grabbing"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="font-mono text-[11px] text-slate-500">{p.id}</span>
+                                        <GripVertical className="w-3.5 h-3.5 text-slate-300" />
+                                    </div>
+                                    <div className="mt-1 text-xs font-medium text-slate-900 line-clamp-2">{p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}</div>
+                                    <div className="text-[11px] text-slate-500 line-clamp-1">{p.clienteNombre}</div>
+                                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                                        <span>{cubiertas} de {p.solicitados} plazas</span>
+                                        <span>Inicio {fechaCorta(p.inicio)}</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 rounded-full h-1 mt-1 overflow-hidden">
+                                        <div className={`${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-600'} h-1 rounded-full`} style={{ width: `${pct}%` }}></div>
+                                    </div>
+                                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
+                                        <span>{p.presupuestoOrigen}</span>
+                                        <span>{p.responsable}</span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function PeticionesView() {
     // Navigation
     const [currentView, setCurrentView] = useState('bandeja'); // 'bandeja' | 'detalle'
     const [busquedaPeticiones, setBusquedaPeticiones] = useState('');
-    const [activeTab, setActiveTab] = useState('horarios'); // 'resumen', 'posiciones', 'horarios', 'portales', 'documentos', 'auditoria'
+    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen', 'horarios', 'plazas', 'portales', 'documentos', 'auditoria'
 
     // Notifications / Toast
     const [toast, setToast] = useState(null);
@@ -502,21 +714,32 @@ export default function PeticionesView() {
     };
 
     // Main States
-    const [peticion, setPeticion] = useState(INITIAL_PETICION);
-    const [posiciones, setPosiciones] = useState(INITIAL_POSICIONES);
+    const [peticiones, setPeticiones] = useState(INITIAL_PETICIONES);
+    const [peticionId, setPeticionId] = useState(INITIAL_PETICIONES[0].id);
+    const peticion = peticiones.find(p => p.id === peticionId) || peticiones[0];
     const [horarios, setHorarios] = useState(INITIAL_HORARIOS);
-    const [selectedPosId, setSelectedPosId] = useState('POS-001');
+    // Cada petición tiene un solo puesto: la "posición seleccionada" es siempre la propia petición
+    const selectedPosId = peticion.id;
     const [savingHorario, setSavingHorario] = useState(false);
     const [horarioChangesUnsaved, setHorarioChangesUnsaved] = useState(false);
 
-    // Copy Schedule Modal
-    const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
-    const [copyTargetPosId, setCopyTargetPosId] = useState('POS-002');
+    // Listado: filtros, vista y agrupación
+    const [filtroEstado, setFiltroEstado] = useState('activas');
+    const [filtroCliente, setFiltroCliente] = useState('');
+    const [filtroPresupuesto, setFiltroPresupuesto] = useState('');
+    const [filtroResponsable, setFiltroResponsable] = useState('');
+    const [vistaListado, setVistaListado] = useState('tabla'); // 'tabla' | 'pipeline'
+    const [agruparPorPresupuesto, setAgruparPorPresupuesto] = useState(false);
+
+    // Ventanas: duplicar con otro horario, nueva petición y copiar difusión
+    const [duplicar, setDuplicar] = useState(null);
+    const [nuevaPeticion, setNuevaPeticion] = useState(null);
+    const [copiarDifusion, setCopiarDifusion] = useState(false);
 
     // Portales & Content
-    const [contenidoComun, setContenidoComun] = useState(INITIAL_CONTENIDO_COMUN);
+    const [contenidoComun, setContenidoComun] = useState(() => contenidoDe(INITIAL_PETICIONES[0], INITIAL_HORARIOS[INITIAL_PETICIONES[0].id]));
     const [comunSavedStatus, setComunSavedStatus] = useState('Guardado'); // 'Guardado', 'Modificado', 'Guardando...'
-    const [portales, setPortales] = useState(INITIAL_PORTALES);
+    const [portales, setPortales] = useState(() => INITIAL_PORTALES.map((x, i) => ({ ...x, activo: i < INITIAL_PETICIONES[0].portalesActivos })));
 
     // Plazas y Candidatos Management State
     const [plazas, setPlazas] = useState(INITIAL_PLAZAS);
@@ -524,7 +747,6 @@ export default function PeticionesView() {
     const [candidatoFichaModal, setCandidatoFichaModal] = useState(null); // Candidate object or null to display profile
     const [assignCandidateModal, setAssignCandidateModal] = useState(null); // { posId, plaza } or null
     const [candidateSearchFilter, setCandidateSearchFilter] = useState('');
-    const [activePlazaPosView, setActivePlazaPosView] = useState('POS-001');
 
     // Modals for Portals
     const [editPortalModal, setEditPortalModal] = useState(null); // portal object or null
@@ -537,13 +759,116 @@ export default function PeticionesView() {
     const [syncStep, setSyncStep] = useState(0); // 0: review, 1: validando, 2: adaptando, 3: enviando, 4: exito
 
     // Helper calculation
-    const currentSchedule = useMemo(() => horarios[selectedPosId] || horarios['POS-001'], [horarios, selectedPosId]);
-    const selectedPositionObj = useMemo(() => posiciones.find(p => p.id === selectedPosId) || posiciones[0], [posiciones, selectedPosId]);
+    const currentSchedule = useMemo(() => horarios[selectedPosId], [horarios, selectedPosId]);
+    const selectedPositionObj = peticion;
 
     const totalHorasSemana = useMemo(() => {
         if (!currentSchedule || !currentSchedule.dias) return 0;
         return currentSchedule.dias.reduce((acc, d) => acc + (d.laborable ? Number(d.horas || 0) : 0), 0);
     }, [currentSchedule]);
+
+    // La petición como "posición" única, para las partes que trabajan con plazas y horario
+    const posActual = useMemo(() => ({ ...peticion, incorporados: cubiertasDe(plazas[peticion.id]) }), [peticion, plazas]);
+    const posiciones = [posActual];
+
+    // Listado
+    const hayFiltros = filtroEstado !== 'activas' || filtroCliente || filtroPresupuesto || filtroResponsable || busquedaPeticiones;
+    const limpiarFiltros = () => {
+        setFiltroEstado('activas'); setFiltroCliente(''); setFiltroPresupuesto(''); setFiltroResponsable(''); setBusquedaPeticiones('');
+    };
+    const peticionesFiltradas = useMemo(() => {
+        const q = busquedaPeticiones.trim().toLowerCase();
+        return peticiones.filter(p =>
+            (filtroEstado === 'todas' || (filtroEstado === 'activas' ? ESTADOS_ACTIVOS.includes(p.estado) : p.estado === filtroEstado)) &&
+            (!filtroCliente || p.cliente === filtroCliente) &&
+            (!filtroPresupuesto || p.presupuesto === filtroPresupuesto) &&
+            (!filtroResponsable || p.responsable === filtroResponsable) &&
+            (!q || [p.id, p.clienteNombre, p.puesto, p.presupuesto].some(t => t.toLowerCase().includes(q)))
+        );
+    }, [peticiones, filtroEstado, filtroCliente, filtroPresupuesto, filtroResponsable, busquedaPeticiones]);
+    const gruposListado = useMemo(() => {
+        if (!agruparPorPresupuesto) return [{ id: 'todas', items: peticionesFiltradas }];
+        const grupos = [];
+        peticionesFiltradas.forEach(p => {
+            let g = grupos.find(x => x.id === p.presupuestoOrigen);
+            if (!g) { g = { id: p.presupuestoOrigen, cliente: p.clienteNombre, items: [] }; grupos.push(g); }
+            g.items.push(p);
+        });
+        return grupos;
+    }, [peticionesFiltradas, agruparPorPresupuesto]);
+    const resumenListado = useMemo(() => {
+        const activas = peticiones.filter(p => ESTADOS_ACTIVOS.includes(p.estado));
+        const plazasTot = activas.reduce((s, p) => s + p.solicitados, 0);
+        const cubiertas = activas.reduce((s, p) => s + cubiertasDe(plazas[p.id]), 0);
+        return {
+            activas: activas.length,
+            enSeleccion: activas.filter(p => ['En difusión', 'En selección'].includes(p.estado)).length,
+            plazas: plazasTot,
+            cubiertas,
+            porCubrir: plazasTot - cubiertas,
+            empiezanPronto: activas.filter(p => { const d = diasHasta(p.inicio); return d >= 0 && d <= 7 && cubiertasDe(plazas[p.id]) < p.solicitados; }).length,
+            candidaturas: activas.reduce((s, p) => s + p.candidaturas, 0),
+        };
+    }, [peticiones, plazas]);
+
+    const abrirPeticion = (id) => {
+        const p = peticiones.find(x => x.id === id);
+        setPeticionId(id);
+        setActiveTab('resumen');
+        setHorarioChangesUnsaved(false);
+        if (p) {
+            setContenidoComun(contenidoDe(p, horarios[id]));
+            setComunSavedStatus('Guardado');
+            setPortales(prev => prev.map((x, i) => ({ ...x, activo: i < p.portalesActivos })));
+        }
+        setCurrentView('detalle');
+    };
+    useEffect(() => {
+        const activos = portales.filter(x => x.activo).length;
+        setPeticiones(prev => prev.map(p => (p.id === peticionId && p.portalesActivos !== activos ? { ...p, portalesActivos: activos } : p)));
+    }, [portales]);
+
+    const moverPeticion = (id, estado) => {
+        if (!ESTADOS_PETICION.some(e => e.estado === estado)) return;
+        setPeticiones(prev => prev.map(p => (p.id === id ? { ...p, estado } : p)));
+        showToast(`${id} pasa a ${estado}.`);
+    };
+
+    // Crear peticiones: siempre de un puesto de un presupuesto aceptado
+    const crearPeticionNueva = (base, plantilla) => {
+        const id = siguienteCodigo(peticiones);
+        const nueva = completarPeticion({ ...base, id, plantilla, cubiertas: 0, enProceso: 0, estado: 'Nueva', creada: new Date().toISOString().slice(0, 10), portalesActivos: 0, candidaturas: 0 });
+        setPeticiones(prev => [nueva, ...prev]);
+        setHorarios(prev => ({ ...prev, [id]: horarioDesdePlantilla(plantilla, nueva.centroTrabajo, `${fechaCorta(nueva.creada)} por ${nueva.responsable}`) }));
+        setPlazas(prev => ({ ...prev, [id]: renumerarPlazas(Array.from({ length: nueva.solicitados }, () => ({ ...plazaVacante })), id.slice(-4)) }));
+        setPeticionId(id);
+        setContenidoComun(contenidoDe(nueva, { turnoNombre: HORARIO_TEMPLATES[plantilla].nombre }));
+        setPortales(prev => prev.map(x => ({ ...x, activo: false })));
+        setActiveTab('resumen');
+        setCurrentView('detalle');
+        return id;
+    };
+    const abrirDuplicar = () => {
+        const otra = Object.keys(HORARIO_TEMPLATES).find(k => HORARIO_TEMPLATES[k].nombre !== currentSchedule.turnoNombre) || 'manana';
+        setDuplicar({ plantilla: otra, solicitados: 1, inicio: peticion.inicio, fin: peticion.fin });
+    };
+    const confirmarDuplicar = () => {
+        const { id, cubiertas, enProceso, estado, creada, portalesActivos, candidaturas, motivoCancelacion, ...base } = PETICIONES_BASE.find(b => b.id === peticion.id) || peticion;
+        const nuevoId = crearPeticionNueva({ ...base, solicitados: Number(duplicar.solicitados), inicio: duplicar.inicio, fin: duplicar.fin }, duplicar.plantilla);
+        setDuplicar(null);
+        showToast(`Petición ${nuevoId} creada: ${peticion.puesto.toLowerCase()}, ${HORARIO_TEMPLATES[duplicar.plantilla].nombre.toLowerCase()}.`);
+    };
+    const confirmarNuevaPeticion = () => {
+        const presu = PRESUPUESTOS_ACEPTADOS.find(p => p.id === nuevaPeticion.presupuesto);
+        const puesto = presu.puestos.find(x => x.tipo === nuevaPeticion.tipo);
+        const fin = new Date(`${nuevaPeticion.inicio}T00:00:00`); fin.setMonth(fin.getMonth() + 3);
+        const nuevoId = crearPeticionNueva({
+            presupuesto: presu.id, version: presu.version, cliente: presu.cliente, tipo: puesto.tipo, personasPuesto: puesto.personas,
+            solicitados: Number(nuevaPeticion.solicitados), inicio: nuevaPeticion.inicio, fin: fin.toISOString().slice(0, 10), responsable: RESPONSABLES[0],
+        }, nuevaPeticion.plantilla);
+        setNuevaPeticion(null);
+        showToast(`Petición ${nuevoId} creada desde ${presu.id}.`);
+    };
 
     // Handlers: Plazas & Candidatos
     const handleOpenCandidatoFichaById = (candidatoId) => {
@@ -594,7 +919,7 @@ export default function PeticionesView() {
                     dni: candidato.dni,
                     telefono: candidato.telefono,
                     email: candidato.email,
-                    fechaIncorporacion: '01/03/2026',
+                    fechaIncorporacion: '03/11/2026',
                     contratoTipo: 'CPD Obra y Servicio (ETT)',
                     scoring: candidato.scoring,
                     foto: candidato.foto
@@ -602,14 +927,6 @@ export default function PeticionesView() {
             }
             return { ...prev, [posId]: posPlazas };
         });
-
-        // Update position count in state
-        setPosiciones(prev => prev.map(p => {
-            if (p.id === posId) {
-                return { ...p, incorporados: Math.min(p.solicitados, p.incorporados + 1) };
-            }
-            return p;
-        }));
 
         setAssignCandidateModal(null);
         showToast(`Candidato ${candidato.nombre} asignado con éxito a la plaza ${plazaId}.`);
@@ -636,13 +953,6 @@ export default function PeticionesView() {
             }
             return { ...prev, [posId]: posPlazas };
         });
-
-        setPosiciones(prev => prev.map(p => {
-            if (p.id === posId) {
-                return { ...p, incorporados: Math.max(0, p.incorporados - 1) };
-            }
-            return p;
-        }));
 
         showToast(`Plaza ${plazaId} liberada y puesta nuevamente en estado Vacante.`);
     };
@@ -722,34 +1032,15 @@ export default function PeticionesView() {
                 [selectedPosId]: {
                     ...prev[selectedPosId],
                     guardado: true,
-                    ultimaModif: `${nowStr} por Marta Gómez`
+                    ultimaModif: `${nowStr} por Ane Uriarte`
                 }
             }));
             setSavingHorario(false);
             setHorarioChangesUnsaved(false);
-            showToast(`Horario y turno guardados correctamente para la posición ${selectedPosId}.`);
+            showToast(`Horario y turno guardados correctamente de ${selectedPosId}.`);
         }, 700);
     };
 
-    const handleConfirmCopySchedule = () => {
-        if (copyTargetPosId === selectedPosId) {
-            showToast('Selecciona una posición de destino diferente', 'error');
-            return;
-        }
-        const sourceData = horarios[selectedPosId];
-        setHorarios(prev => ({
-            ...prev,
-            [copyTargetPosId]: {
-                ...prev[copyTargetPosId],
-                turnoNombre: sourceData.turnoNombre,
-                dias: JSON.parse(JSON.stringify(sourceData.dias)),
-                guardado: true,
-                ultimaModif: `Copiado de ${selectedPosId} el ${new Date().toLocaleDateString('es-ES')}`
-            }
-        }));
-        setIsCopyModalOpen(false);
-        showToast(`Horario de ${selectedPosId} copiado exitosamente a ${copyTargetPosId}.`);
-    };
 
     // Handlers: Portales & Contenido
     const handleSaveContenidoComun = (e) => {
@@ -856,20 +1147,21 @@ export default function PeticionesView() {
 
             {/* MAIN CONTENT AREA */}
             <div className="flex-1 flex flex-col min-w-0">
-                {/* VIEW 1: BANDEJA DE PETICIONES */}
+                {/* VIEW 1: LISTADO DE PETICIONES (una fila por petición; cada petición es un puesto) */}
                 {currentView === 'bandeja' && (
                     <Page>
                         <PageHeader
                             title="Peticiones"
-                            count={1}
-                            subtitle="Pedidos de trabajadores que vienen de presupuestos aceptados, con sus turnos y su difusión en portales."
+                            count={peticiones.length}
+                            subtitle="Cada petición es un puesto de un presupuesto aceptado, con su horario, sus plazas y su difusión en portales."
+                            actions={<Button variant="primary" icon={Plus} onClick={() => setNuevaPeticion({ presupuesto: '', tipo: '', plantilla: 'manana', solicitados: 1, inicio: '' })}>Nueva petición</Button>}
                         />
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                            <KpiTile label="En selección" tone="accent" value="8" hint="3 con difusión en portales" />
-                            <KpiTile label="Posiciones solicitadas" value="26" hint="16 cubiertas · 10 pendientes" />
-                            <KpiTile label="Candidaturas de portales" value="63" hint="15 en las últimas 24 h" />
-                            <KpiTile label="Tiempo medio de cobertura" value="4,2 días" hint="Objetivo: menos de 5 días" />
+                            <KpiTile label="Activas" tone="accent" value={resumenListado.activas} hint={`${resumenListado.enSeleccion} en selección o difusión`} active={filtroEstado === 'activas'} onClick={() => setFiltroEstado('activas')} />
+                            <KpiTile label="Plazas por cubrir" tone="warning" value={resumenListado.porCubrir} hint={`${resumenListado.cubiertas} de ${resumenListado.plazas} cubiertas en las activas`} />
+                            <KpiTile label="Empiezan en 7 días" value={resumenListado.empiezanPronto} hint="Con plazas aún sin cubrir" />
+                            <KpiTile label="Candidaturas de portales" value={resumenListado.candidaturas} hint="En las peticiones activas" />
                         </div>
 
                         <Card className="overflow-hidden">
@@ -878,89 +1170,167 @@ export default function PeticionesView() {
                                     className="flex-1 min-w-[220px] max-w-sm"
                                     value={busquedaPeticiones}
                                     onChange={setBusquedaPeticiones}
-                                    placeholder="Buscar por código, cliente o puesto..."
+                                    placeholder="Buscar por código, cliente, puesto o presupuesto..."
                                 />
-                                <Select defaultValue="activas">
+                                <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
                                     <option value="activas">Activas</option>
-                                    <option value="todas">Todas</option>
-                                    <option value="cerradas">Cerradas</option>
+                                    <option value="todas">Todos los estados</option>
+                                    {ESTADOS_PETICION.map(e => <option key={e.estado} value={e.estado}>{e.estado}</option>)}
                                 </Select>
+                                <Select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} aria-label="Cliente">
+                                    <option value="">Todos los clientes</option>
+                                    {Object.entries(CLIENTES).map(([id, c]) => <option key={id} value={id}>{c.clienteNombre}</option>)}
+                                </Select>
+                                <Select value={filtroPresupuesto} onChange={(e) => setFiltroPresupuesto(e.target.value)} aria-label="Presupuesto">
+                                    <option value="">Todos los presupuestos</option>
+                                    {[...new Set(peticiones.map(p => p.presupuesto))].map(id => <option key={id} value={id}>{id}</option>)}
+                                </Select>
+                                <Select value={filtroResponsable} onChange={(e) => setFiltroResponsable(e.target.value)} aria-label="Responsable">
+                                    <option value="">Todos los responsables</option>
+                                    {RESPONSABLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                </Select>
+                                {hayFiltros && <Button size="sm" variant="ghost" onClick={limpiarFiltros}>Limpiar</Button>}
+                                <div className="ml-auto flex items-center gap-2">
+                                    {vistaListado === 'tabla' && (
+                                        <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                                            <input type="checkbox" checked={agruparPorPresupuesto} onChange={(e) => setAgruparPorPresupuesto(e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                            Agrupar por presupuesto
+                                        </label>
+                                    )}
+                                    <Segmented
+                                        value={vistaListado}
+                                        onChange={setVistaListado}
+                                        options={[{ id: 'tabla', title: 'Tabla', icon: List }, { id: 'pipeline', title: 'Pipeline', icon: SquareKanban }]}
+                                    />
+                                </div>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs">
-                                    <thead>
-                                        <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-500">
-                                            <th className="py-2 px-3 font-medium">Petición</th>
-                                            <th className="py-2 px-3 font-medium">Cliente</th>
-                                            <th className="py-2 px-3 font-medium">Cobertura</th>
-                                            <th className="py-2 px-3 font-medium">Turnos</th>
-                                            <th className="py-2 px-3 font-medium">Portales</th>
-                                            <th className="py-2 px-3 font-medium">Estado</th>
-                                            <th className="py-2 px-3" aria-label="Acciones"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setCurrentView('detalle')}>
-                                            <td className="py-2.5 px-3">
-                                                <div className="font-medium text-slate-900">{peticion.titulo}</div>
-                                                <div className="text-[11px] text-slate-500">{peticion.id}</div>
-                                            </td>
-                                            <td className="py-2.5 px-3">
-                                                <div className="text-slate-700">{peticion.clienteNombre}</div>
-                                                <div className="text-[11px] text-slate-500">Presupuesto {peticion.presupuestoOrigen}</div>
-                                            </td>
-                                            <td className="py-2.5 px-3">
-                                                <div className="text-slate-700">7 de 12 incorporados</div>
-                                                <div className="w-28 bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
-                                                    <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: '58%' }}></div>
-                                                </div>
-                                            </td>
-                                            <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">Mañana · Tarde</td>
-                                            <td className="py-2.5 px-3"><Badge tone="success">4 activos</Badge></td>
-                                            <td className="py-2.5 px-3"><Badge tone="accent" dot>{peticion.estado}</Badge></td>
-                                            <td className="py-2.5 px-3 text-right">
-                                                <Button size="sm" onClick={(e) => { e.stopPropagation(); setCurrentView('detalle'); }}>Abrir</Button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+
+                            {peticionesFiltradas.length === 0 ? (
+                                <EmptyState icon={Search} title="No hay peticiones con estos filtros" action={<Button onClick={limpiarFiltros}>Limpiar filtros</Button>} />
+                            ) : vistaListado === 'pipeline' ? (
+                                <div className="p-3">
+                                    <PipelinePeticiones lista={peticionesFiltradas} plazas={plazas} horarios={horarios} onAbrir={(p) => abrirPeticion(p.id)} onMover={moverPeticion} />
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-500">
+                                                <th className="py-2 px-3 font-medium">Petición</th>
+                                                <th className="py-2 px-3 font-medium">Cliente y presupuesto</th>
+                                                <th className="py-2 px-3 font-medium">Fechas</th>
+                                                <th className="py-2 px-3 font-medium">Cobertura</th>
+                                                <th className="py-2 px-3 font-medium">Portales</th>
+                                                <th className="py-2 px-3 font-medium">Responsable</th>
+                                                <th className="py-2 px-3 font-medium">Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {gruposListado.map(grupo => (
+                                                <React.Fragment key={grupo.id}>
+                                                    {agruparPorPresupuesto && (
+                                                        <tr className="bg-slate-50/70 border-b border-slate-200">
+                                                            <td colSpan={7} className="py-2 px-3">
+                                                                <span className="font-medium text-slate-800">{grupo.id}</span>
+                                                                <span className="text-slate-500"> · {grupo.cliente} · {grupo.items.length} {grupo.items.length === 1 ? 'petición' : 'peticiones'} · {grupo.items.reduce((s, p) => s + p.solicitados, 0)} plazas</span>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                    {grupo.items.map(p => {
+                                                        const cubiertas = cubiertasDe(plazas[p.id]);
+                                                        const pct = Math.round((cubiertas / p.solicitados) * 100);
+                                                        const dias = diasHasta(p.inicio);
+                                                        return (
+                                                            <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => abrirPeticion(p.id)}>
+                                                                <td className="py-2.5 px-3">
+                                                                    <div className="font-medium text-slate-900">{p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}</div>
+                                                                    <div className="text-[11px] text-slate-500">{p.id} · {p.centroTrabajo}</div>
+                                                                </td>
+                                                                <td className="py-2.5 px-3">
+                                                                    <div className="text-slate-700">{p.clienteNombre}</div>
+                                                                    <div className="text-[11px] text-slate-500">{p.presupuestoOrigen}</div>
+                                                                </td>
+                                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                                    <div className="text-slate-700">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</div>
+                                                                    {ESTADOS_ACTIVOS.includes(p.estado) && dias >= 0 && dias <= 7 && cubiertas < p.solicitados && (
+                                                                        <div className="text-[11px] text-amber-700">Empieza en {dias} {dias === 1 ? 'día' : 'días'}</div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-2.5 px-3">
+                                                                    <div className="text-slate-700">{cubiertas} de {p.solicitados} plazas</div>
+                                                                    <div className="w-28 bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
+                                                                        <div className={`${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-600'} h-1.5 rounded-full`} style={{ width: `${pct}%` }}></div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="py-2.5 px-3">
+                                                                    {p.portalesActivos > 0 ? <Badge tone="success">{p.portalesActivos} {p.portalesActivos === 1 ? 'activo' : 'activos'}</Badge> : <span className="text-slate-400">Sin publicar</span>}
+                                                                </td>
+                                                                <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{p.responsable}</td>
+                                                                <td className="py-2.5 px-3">
+                                                                    <Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge>
+                                                                    {p.motivoCancelacion && <div className="text-[11px] text-slate-500 mt-0.5">{p.motivoCancelacion}</div>}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </React.Fragment>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </Card>
                     </Page>
                 )}
 
-                {/* VIEW 2: DETALLE 360º DE PET-2026-0048 */}
+                {/* VIEW 2: FICHA DE UNA PETICIÓN (un solo puesto) */}
                 {currentView === 'detalle' && (
                     <div className="w-full px-4 sm:px-6 py-5 space-y-4">
                         <PageHeader
                             breadcrumbs={[{ label: 'Peticiones', onClick: () => setCurrentView('bandeja') }, { label: peticion.id }]}
-                            title={peticion.titulo}
-                            status={<Badge tone="accent" dot>{peticion.estado}</Badge>}
+                            title={`${peticion.puesto} · ${currentSchedule.turnoNombre.toLowerCase()}`}
+                            status={<Badge tone={tonoEstado(peticion.estado)} dot>{peticion.estado}</Badge>}
                             subtitle={
                                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                     <span className="inline-flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-slate-400" />{peticion.clienteNombre}</span>
                                     <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" />{peticion.centroTrabajo}</span>
-                                    <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />{peticion.fechaInicioPrevista} a {peticion.fechaFinEstimada}</span>
-                                    <span className="inline-flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-slate-400" />Presupuesto {peticion.presupuestoOrigen} ({peticion.presupuestoImporteMax})</span>
+                                    <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />{fechaCorta(peticion.inicio)} a {fechaCorta(peticion.fin)}</span>
+                                    <button type="button" onClick={() => { window.location.hash = '#/presupuestos'; }} className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline">
+                                        <FileText className="w-3.5 h-3.5" />Presupuesto {peticion.presupuestoOrigen}
+                                    </button>
                                 </span>
                             }
                             actions={
                                 <>
-                                    <Button icon={Globe2} onClick={() => setActiveTab('portales')}>Portales (5)</Button>
+                                    <Select value={peticion.estado} onChange={(e) => moverPeticion(peticion.id, e.target.value)} aria-label="Cambiar estado">
+                                        {ESTADOS_PETICION.map(e => <option key={e.estado} value={e.estado}>{e.estado}</option>)}
+                                    </Select>
+                                    <Button icon={Copy} onClick={abrirDuplicar}>Duplicar con otro horario</Button>
                                     <Button variant="primary" icon={Share2} onClick={() => startSyncProcess()}>Publicar cambios</Button>
                                 </>
                             }
                         />
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                            <KpiTile label="Cobertura total" value="7 de 12">
+                            <KpiTile label="Plazas cubiertas" value={`${posActual.incorporados} de ${posActual.solicitados}`} onClick={() => setActiveTab('plazas')}>
                                 <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
-                                    <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: '58.3%' }}></div>
+                                    <div className={`${posActual.incorporados === posActual.solicitados ? 'bg-emerald-500' : 'bg-indigo-600'} h-1.5 rounded-full`} style={{ width: `${Math.round((posActual.incorporados / posActual.solicitados) * 100)}%` }}></div>
                                 </div>
                             </KpiTile>
-                            <KpiTile label="POS-001 · Operarios" value="5 de 8" hint="Turno de mañana (06:00-14:00)" />
-                            <KpiTile label="POS-002 · Carretilleros" value="2 de 4" hint="Turno de tarde (14:00-22:00)" />
-                            <KpiTile label="Portales" tone="success" value="4 activos" hint="1 en pausa · 63 candidaturas" />
+                            <KpiTile label="Candidatos en proceso" value={peticion.enProceso} hint={peticion.enProceso ? 'En entrevista o pendientes de respuesta' : 'Ninguno ahora mismo'} onClick={() => setActiveTab('plazas')} />
+                            <KpiTile label="Portales activos" tone={portales.filter(p => p.activo).length ? 'success' : 'neutral'} value={portales.filter(p => p.activo).length} hint={`${peticion.candidaturas} candidaturas recibidas`} onClick={() => setActiveTab('portales')} />
+                            {(() => {
+                                const dias = diasHasta(peticion.inicio);
+                                const terminada = ['Cerrada', 'Cancelada'].includes(peticion.estado);
+                                return (
+                                    <KpiTile
+                                        label={dias >= 0 ? 'Días hasta el inicio' : 'Servicio'}
+                                        tone={!terminada && dias >= 0 && dias <= 7 && posActual.incorporados < posActual.solicitados ? 'warning' : 'neutral'}
+                                        value={terminada ? peticion.estado : dias >= 0 ? dias : 'Empezado'}
+                                        hint={dias >= 0 ? `Empieza el ${fechaCorta(peticion.inicio)}` : `Desde el ${fechaCorta(peticion.inicio)} hasta el ${fechaCorta(peticion.fin)}`}
+                                    />
+                                );
+                            })()}
                         </div>
 
                         <Tabs
@@ -968,454 +1338,190 @@ export default function PeticionesView() {
                             onChange={setActiveTab}
                             tabs={[
                                 { id: 'resumen', label: 'Resumen' },
-                                { id: 'presupuesto', label: 'Presupuesto' },
-                                { id: 'posiciones', label: 'Posiciones', count: posiciones.length },
-                                { id: 'horarios', label: 'Horarios y turnos', alert: horarioChangesUnsaved },
+                                { id: 'horarios', label: 'Horario', alert: horarioChangesUnsaved },
+                                { id: 'plazas', label: 'Plazas y candidatos', count: posActual.solicitados },
                                 { id: 'portales', label: 'Difusión en portales' },
-                                { id: 'documentos', label: 'Contratos y anexos' },
-                                { id: 'auditoria', label: 'Trazabilidad' },
+                                { id: 'documentos', label: 'Contratos y altas' },
+                                { id: 'auditoria', label: 'Actividad' },
                             ]}
                         />
 
-                        {/* TAB: PRESUPUESTO HEREDADO (HERENCIA COMERCIAL Y TARIFAS) */}
-                        {activeTab === 'presupuesto' && (
-                            <div className="space-y-6 animate-fade-in">
-                                <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                    <div className="flex items-start gap-3.5">
-                                        <div className="p-2.5 bg-amber-600 text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
-                                            <Lock className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-mono font-semibold text-xs bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded">
-                                                    {peticion.presupuestoOrigen}
-                                                </span>
-                                                <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Aprobado y Firmado
-                                                </span>
-                                            </div>
-                                            <h3 className="text-sm font-semibold text-amber-950 mt-1">
-                                                Condiciones económicas heredadas y blindadas
-                                            </h3>
-                                            <p className="text-xs text-amber-800 mt-0.5 max-w-2xl">
-                                                Las tarifas hora, coeficientes de recargo ETT, salarios de convenio y partidas de coste provienen del presupuesto comercial aceptado el <strong>{peticion.presupuestoFechaAprobacion}</strong>. No pueden modificarse desde la gestión operativa.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right shrink-0 bg-white/80 p-3.5 rounded-xl border border-amber-200">
-                                        <div className="text-[10px] font-semibold text-slate-500">Importe Máximo Autorizado</div>
-                                        <div className="text-xl font-semibold text-slate-900 mt-0.5">{peticion.presupuestoImporteMax}</div>
-                                        <div className="text-[11px] text-slate-500">Consumo actual estimado: 17.820,00 € (41%)</div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-                                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
-                                            <h4 className="font-semibold text-slate-900 text-xs">Líneas económicas validadas en presupuesto</h4>
-                                        </div>
-                                        <span className="text-xs text-slate-500 font-mono">Convenio: Bizkaia Logística 2026</span>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-xs text-slate-700">
-                                            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 text-[10px]">
-                                                <tr>
-                                                    <th className="py-3 px-4">Ref. Posición</th>
-                                                    <th className="py-3 px-4">Puesto / categoría</th>
-                                                    <th className="py-3 px-4">Cant. Aprobada</th>
-                                                    <th className="py-3 px-4">Salario bruto (conv.)</th>
-                                                    <th className="py-3 px-4">Seguridad Social + PRL</th>
-                                                    <th className="py-3 px-4">Tarifa facturación ETT</th>
-                                                    <th className="py-3 px-4 text-right">Margen bruto</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100 bg-white">
-                                                <tr>
-                                                    <td className="py-3 px-4 font-mono font-semibold text-indigo-600">POS-001</td>
-                                                    <td className="py-3 px-4">
-                                                        <div className="font-semibold text-slate-900">Operario/a de almacén y preparación</div>
-                                                        <div className="text-[11px] text-slate-400">Grupo 4 — Especialistas</div>
-                                                    </td>
-                                                    <td className="py-3 px-4 font-semibold text-slate-900">8 pax</td>
-                                                    <td className="py-3 px-4 font-mono">12,30 €/h</td>
-                                                    <td className="py-3 px-4 font-mono text-slate-500">3,94 €/h (32%)</td>
-                                                    <td className="py-3 px-4 font-mono font-semibold text-emerald-700">19,45 €/h</td>
-                                                    <td className="py-3 px-4 text-right font-mono font-semibold text-indigo-600">+16,5% (3,21 €/h)</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-3 px-4 font-mono font-semibold text-indigo-600">POS-002</td>
-                                                    <td className="py-3 px-4">
-                                                        <div className="font-semibold text-slate-900">Carretillero/a frontal y retráctil</div>
-                                                        <div className="text-[11px] text-slate-400">Grupo 3 — Oficiales de 2ª</div>
-                                                    </td>
-                                                    <td className="py-3 px-4 font-semibold text-slate-900">4 pax</td>
-                                                    <td className="py-3 px-4 font-mono">14,10 €/h</td>
-                                                    <td className="py-3 px-4 font-mono text-slate-500">4,51 €/h (32%)</td>
-                                                    <td className="py-3 px-4 font-mono font-semibold text-emerald-700">22,80 €/h</td>
-                                                    <td className="py-3 px-4 text-right font-mono font-semibold text-indigo-600">+18,4% (4,19 €/h)</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TAB: POSICIONES SOLICITADAS (DETALLE Y ESTADOS DE COBERTURA) */}
-                        {activeTab === 'posiciones' && (
-                            <div className="space-y-6 animate-fade-in">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-                                    <div>
-                                        <h3 className="text-base font-semibold text-slate-900">Posiciones de la petición ({posiciones.length})</h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">Estado de cobertura, requisitos técnicos, EPIs y acceso rápido a cuadrantes específicos.</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => { setActiveTab('horarios'); }}
-                                            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
-                                        >
-                                            <Clock className="w-3.5 h-3.5" />
-                                            <span>Ir a horarios por posición</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* LEYENDA CONCEPTUAL */}
-                                <div className="bg-slate-100/90 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-700 flex items-center gap-2.5 shadow-2xs">
-                                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-                                    <span>
-                                        <strong className="text-slate-900 font-semibold">Leyenda:</strong> Posición = tipo de puesto · Plaza = necesidad individual · Candidato = persona · Asignación = persona vinculada a una plaza
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {posiciones.map(pos => {
-                                        const posHorario = horarios[pos.id];
-                                        const percent = Math.round((pos.incorporados / pos.solicitados) * 100);
-                                        return (
-                                            <div key={pos.id} className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 flex flex-col justify-between space-y-4">
-                                                <div>
-                                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                                        <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 font-mono font-semibold rounded text-xs border border-indigo-100">
-                                                            {pos.id}
-                                                        </span>
-                                                        <span className="text-xs font-semibold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg">
-                                                            Venta: {pos.tarifaVentaHora}
-                                                        </span>
-                                                    </div>
-
-                                                    <h4 className="font-semibold text-slate-900 text-base mt-3">{pos.puesto}</h4>
-                                                    <div className="text-xs text-slate-500 mt-0.5">{pos.categoria} • {pos.cctConvenio}</div>
-
-                                                    <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                                        <div className="flex items-center justify-between text-xs mb-1.5">
-                                                            <span className="font-semibold text-slate-700">Progreso de cobertura</span>
-                                                            <span className="font-mono font-semibold text-indigo-600">{pos.incorporados} de {pos.solicitados} ({percent}%)</span>
-                                                        </div>
-                                                        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                                                            <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${percent}%` }}></div>
-                                                        </div>
-                                                        <div className="text-[11px] text-slate-500 mt-2 flex items-center justify-between">
-                                                            <span>En proceso de selección: <strong>{pos.enProceso} candidatos</strong></span>
-                                                            <span className="text-amber-700 font-medium">Faltan: {pos.solicitados - pos.incorporados}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* BLOQUE COMPACTO: PLAZAS Y PERSONAS */}
-                                                    {(() => {
-                                                        const posPlazas = plazas[pos.id] || [];
-                                                        const cubiertas = posPlazas.filter(p => p.estado === 'cubierta').length;
-                                                        const vacantes = posPlazas.filter(p => p.estado !== 'cubierta').length;
-                                                        const previewPlazas = posPlazas.slice(0, 3);
-
-                                                        return (
-                                                            <div className="mt-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
-                                                                <div className="flex items-center justify-between text-xs mb-2">
-                                                                    <span className="font-semibold text-slate-800 flex items-center gap-1.5">
-                                                                        <Users className="w-3.5 h-3.5 text-indigo-600" />
-                                                                        Plazas y personas
-                                                                    </span>
-                                                                    <span className="text-[11px] text-slate-500 font-medium">
-                                                                        <strong className="text-emerald-700">{cubiertas} cubiertas</strong> · <strong className="text-amber-700">{vacantes} vacantes</strong>
-                                                                    </span>
-                                                                </div>
-                                                                <div className="space-y-1.5">
-                                                                    {previewPlazas.map((plaza) => (
-                                                                        <div key={plaza.id} className="flex items-center justify-between p-1.5 bg-white rounded-lg border border-slate-200 text-xs">
-                                                                            <span className="font-mono text-[11px] text-slate-500 font-semibold px-1.5 py-0.5 bg-slate-100 rounded">
-                                                                                Plaza #{plaza.numero}
-                                                                            </span>
-                                                                            {plaza.estado === 'cubierta' && plaza.nombre ? (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => handleOpenCandidatoFichaById(plaza.candidatoId)}
-                                                                                    className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate max-w-[180px] sm:max-w-[220px] text-left text-xs flex items-center gap-1"
-                                                                                    title="Ver ficha personal"
-                                                                                >
-                                                                                    <span className="truncate">{plaza.nombre}</span>
-                                                                                    <ExternalLink className="w-3 h-3 shrink-0 text-indigo-500" />
-                                                                                </button>
-                                                                            ) : (
-                                                                                <span className="text-amber-600 font-medium text-xs flex items-center gap-1">
-                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                                                                                    Vacante
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                    {posPlazas.length > 3 && (
-                                                                        <div className="text-[10px] text-slate-400 text-right pt-0.5 font-medium">
-                                                                            + {posPlazas.length - 3} plazas adicionales
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })()}
-
-                                                    <div className="mt-3 space-y-1.5 text-xs text-slate-600">
-                                                        <div className="flex items-start gap-1.5">
-                                                            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                                                            <span><strong>EPIs Obligatorios:</strong> {pos.requiereEpi}</span>
-                                                        </div>
-                                                        <div className="flex items-start gap-1.5">
-                                                            <CheckSquare className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                                                            <span><strong>Acreditaciones / Carnet:</strong> {pos.carnetRequerido}</span>
-                                                        </div>
-                                                        <div className="flex items-start gap-1.5">
-                                                            <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                                            <span><strong>Turno asignado:</strong> {posHorario?.turnoNombre || 'Pendiente'} ({posHorario?.tipoJornada || '37,5 h'})</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setActivePlazaPosView(pos.id);
-                                                                showToast(`Detalle de plazas y personas seleccionado para ${pos.id}`);
-                                                            }}
-                                                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-xs"
-                                                        >
-                                                            <Users className="w-3.5 h-3.5" />
-                                                            <span>Ver plazas y personas</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setActivePlazaPosView(pos.id);
-                                                                const posPlazas = plazas[pos.id] || [];
-                                                                const vacante = posPlazas.find(p => p.estado !== 'cubierta');
-                                                                if (vacante) {
-                                                                    setAssignCandidateModal({ posId: pos.id, plaza: vacante });
-                                                                } else {
-                                                                    showToast(`Todas las plazas de ${pos.id} ya están cubiertas.`, 'error');
-                                                                }
-                                                            }}
-                                                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-                                                        >
-                                                            <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
-                                                            <span>Buscar candidatos</span>
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedPosId(pos.id);
-                                                                setActiveTab('horarios');
-                                                            }}
-                                                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-                                                        >
-                                                            <Clock className="w-3.5 h-3.5" />
-                                                            <span>Configurar horario {pos.id}</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setActiveTab('portales')}
-                                                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-                                                        >
-                                                            <Globe2 className="w-3.5 h-3.5 text-slate-500" />
-                                                            <span>Ver en portales</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TAB 1: RESUMEN GENERAL */}
+                        {/* TAB: RESUMEN (datos heredados del presupuesto y peticiones del mismo presupuesto) */}
                         {activeTab === 'resumen' && (
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {posiciones.map(pos => {
-                                        const posHorario = horarios[pos.id];
-                                        return (
-                                            <div key={pos.id} className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 flex flex-col justify-between">
-                                                <div>
-                                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                                        <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 font-mono font-semibold rounded text-xs">
-                                                            {pos.id}
-                                                        </span>
-                                                        <span className="text-xs font-semibold text-slate-900 bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
-                                                            Tarifa: {pos.tarifaVentaHora}
-                                                        </span>
-                                                    </div>
-                                                    <h3 className="font-semibold text-slate-900 text-base mt-3">
-                                                        {pos.puesto}
-                                                    </h3>
-                                                    <p className="text-xs text-slate-500 mt-1">
-                                                        {pos.categoria}
-                                                    </p>
-                                                    <p className="text-xs text-slate-600 mt-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                                                        {pos.descripcionCorta}
-                                                    </p>
+                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                                <Card className="p-5 space-y-4 xl:col-span-2">
+                                    <SectionTitle actions={<Badge tone="neutral"><Lock className="w-3 h-3 mr-1 inline" />Del presupuesto</Badge>}>Puesto</SectionTitle>
+                                    <div>
+                                        <div className="text-base font-medium text-slate-900">{peticion.puesto}</div>
+                                        <div className="text-xs text-slate-500 mt-0.5">{peticion.categoria} · {peticion.cctConvenio}</div>
+                                        <p className="text-xs text-slate-600 mt-2">{peticion.descripcionCorta}</p>
+                                    </div>
+                                    <dl className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                        <div><dt className="text-[11px] text-slate-500">Salario</dt><dd className="font-medium text-slate-900">{peticion.salarioBrutoConvenio}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Tarifa al cliente</dt><dd className="font-medium text-slate-900">{peticion.tarifaVentaHora}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Plazas de esta petición</dt><dd className="font-medium text-slate-900">{peticion.solicitados}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Turno</dt><dd className="font-medium text-slate-900">{currentSchedule.turnoNombre} · {totalHorasSemana.toLocaleString('es-ES')} h/semana</dd></div>
+                                    </dl>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-600">
+                                        <div className="flex items-start gap-1.5"><ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="text-slate-500">EPIs:</span> {peticion.requiereEpi}</span></div>
+                                        <div className="flex items-start gap-1.5"><CheckSquare className="w-4 h-4 text-indigo-600 shrink-0" /><span><span className="text-slate-500">Carnés y acreditaciones:</span> {peticion.carnetRequerido}</span></div>
+                                    </div>
+                                    <Notice tone="info" icon={Info}>
+                                        Salario, tarifa y conceptos extra facturables (horas extra, nocturnidad, fin de semana y festivos) vienen del presupuesto y no se cambian aquí. Para cambiarlos, haz una nueva versión del presupuesto.
+                                    </Notice>
+                                </Card>
 
-                                                    <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                                                        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                                                            <div className="text-slate-400 text-[10px] font-semibold">Incorporación</div>
-                                                            <div className="font-semibold text-slate-900 mt-0.5">{pos.incorporados} de {pos.solicitados} cubiertos</div>
-                                                            <div className="text-[10px] text-indigo-600">{pos.enProceso} en entrevista</div>
-                                                        </div>
-                                                        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                                                            <div className="text-slate-400 text-[10px] font-semibold">Turno Configurado</div>
-                                                            <div className="font-semibold text-slate-900 mt-0.5">{posHorario ? posHorario.turnoNombre : 'Sin configurar'}</div>
-                                                            <div className="text-[10px] text-slate-500">Lunes a Viernes</div>
-                                                        </div>
-                                                    </div>
+                                <Card className="p-5 space-y-3">
+                                    <SectionTitle>Cliente y servicio</SectionTitle>
+                                    <dl className="space-y-2.5 text-xs">
+                                        <div><dt className="text-[11px] text-slate-500">Empresa</dt><dd className="text-slate-900">{peticion.clienteNombre} · {peticion.cif}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Contacto</dt><dd className="text-slate-900">{peticion.contactoCliente}</dd><dd className="text-slate-500">{peticion.emailContacto} · {peticion.telefonoContacto}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Centro de trabajo</dt><dd className="text-slate-900">{peticion.centroTrabajo}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Fechas</dt><dd className="text-slate-900">{fechaCorta(peticion.inicio)} a {fechaCorta(peticion.fin)}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Responsable de la ETT</dt><dd className="text-slate-900">{peticion.responsable}</dd></div>
+                                    </dl>
+                                </Card>
 
-                                                    <div className="mt-3 text-xs text-slate-500 space-y-1">
-                                                        <div><strong>EPIs Obligatorios:</strong> {pos.requiereEpi}</div>
-                                                        <div><strong>Requisitos / Carnet:</strong> {pos.carnetRequerido}</div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedPosId(pos.id);
-                                                            setActiveTab('horarios');
-                                                        }}
-                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition"
-                                                    >
-                                                        <Clock className="w-3.5 h-3.5" />
-                                                        <span>Ver / editar turno semanal</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setActiveTab('portales');
-                                                        }}
-                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition"
-                                                    >
-                                                        <Globe2 className="w-3.5 h-3.5 text-slate-500" />
-                                                        <span>Difusión API</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                <Card className="overflow-hidden xl:col-span-3">
+                                    <div className="p-4 border-b border-slate-200">
+                                        <SectionTitle actions={<Button size="sm" icon={Copy} onClick={abrirDuplicar}>Duplicar con otro horario</Button>}>
+                                            Peticiones del presupuesto {peticion.presupuestoOrigen}
+                                        </SectionTitle>
+                                        {(() => {
+                                            const delPuesto = [peticion, ...hermanasDe(peticion, peticiones)].filter(p => p.estado !== 'Cancelada');
+                                            const repartidas = delPuesto.reduce((s, p) => s + p.solicitados, 0);
+                                            return (
+                                                <p className={`text-xs mt-1 ${repartidas === peticion.personasPuesto ? 'text-slate-500' : 'text-amber-700'}`}>
+                                                    {peticion.puesto}: {peticion.personasPuesto} personas en el presupuesto, {repartidas} repartidas en {delPuesto.length} {delPuesto.length === 1 ? 'petición' : 'peticiones'}
+                                                    {repartidas !== peticion.personasPuesto && ' (no coinciden; revísalo con el cliente)'}.
+                                                </p>
+                                            );
+                                        })()}
+                                    </div>
+                                    <table className="w-full text-left text-xs">
+                                        <tbody>
+                                            {peticiones.filter(p => p.presupuesto === peticion.presupuesto).map(p => {
+                                                const actual = p.id === peticion.id;
+                                                return (
+                                                    <tr key={p.id} className={`border-b border-slate-100 last:border-0 ${actual ? 'bg-indigo-50/50' : 'hover:bg-slate-50 cursor-pointer'}`} onClick={() => !actual && abrirPeticion(p.id)}>
+                                                        <td className="py-2.5 px-4">
+                                                            <div className="font-medium text-slate-900">{p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}</div>
+                                                            <div className="text-[11px] text-slate-500">{p.id}{actual ? ' · esta petición' : p.tipo === peticion.tipo ? ' · mismo puesto' : ''}</div>
+                                                        </td>
+                                                        <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</td>
+                                                        <td className="py-2.5 px-4 text-slate-700 whitespace-nowrap">{cubiertasDe(plazas[p.id])} de {p.solicitados} plazas</td>
+                                                        <td className="py-2.5 px-4 text-right"><Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge></td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </Card>
                             </div>
+                        )}
+
+                        {/* TAB: PLAZAS Y CANDIDATOS */}
+                        {activeTab === 'plazas' && (
+                            <Card className="overflow-hidden">
+                                <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <SectionTitle>Plazas de esta petición</SectionTitle>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            {posActual.incorporados} cubiertas · {posActual.solicitados - posActual.incorporados} por cubrir · {peticion.enProceso} candidatos en proceso
+                                        </p>
+                                    </div>
+                                    <Button
+                                        variant="primary"
+                                        icon={UserPlus}
+                                        disabled={posActual.incorporados === posActual.solicitados}
+                                        onClick={() => {
+                                            const vacante = (plazas[peticion.id] || []).find(p => p.estado !== 'cubierta');
+                                            if (vacante) setAssignCandidateModal({ posId: peticion.id, plaza: vacante });
+                                        }}
+                                    >
+                                        Asignar candidato
+                                    </Button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                <th className="py-2 px-4 font-medium">Plaza</th>
+                                                <th className="py-2 px-4 font-medium">Persona</th>
+                                                <th className="py-2 px-4 font-medium">Incorporación</th>
+                                                <th className="py-2 px-4 font-medium">Contrato</th>
+                                                <th className="py-2 px-4" aria-label="Acciones"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(plazas[peticion.id] || []).map(plaza => (
+                                                <tr key={plaza.id} className="border-b border-slate-100 last:border-0">
+                                                    <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">Plaza {plaza.numero}</td>
+                                                    <td className="py-2.5 px-4">
+                                                        {plaza.estado === 'cubierta' && plaza.nombre ? (
+                                                            <button type="button" onClick={() => handleOpenCandidatoFichaById(plaza.candidatoId)} className="inline-flex items-center gap-2 text-left hover:text-indigo-700">
+                                                                <Avatar name={plaza.nombre} size="sm" />
+                                                                <span className="font-medium text-slate-900">{plaza.nombre}</span>
+                                                            </button>
+                                                        ) : (
+                                                            <Badge tone="warning" dot>Por cubrir</Badge>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{plaza.fechaIncorporacion || '—'}</td>
+                                                    <td className="py-2.5 px-4 text-slate-600">{plaza.contratoTipo || '—'}</td>
+                                                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                                        {plaza.estado === 'cubierta' ? (
+                                                            <Button size="sm" variant="ghost" onClick={() => handleUnassignPlaza(peticion.id, plaza.id)}>Liberar plaza</Button>
+                                                        ) : (
+                                                            <Button size="sm" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Asignar</Button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
                         )}
 
                         {/* TAB 2: HORARIOS & TURNOS POR POSICIÓN (REQUISITO PRINCIPAL 1) */}
                         {activeTab === 'horarios' && (
                             <div className="space-y-6 animate-fade-in">
-                                {/* BANNER AVISO */}
-                                <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-4 flex items-start gap-3.5">
-                                    <div className="p-2 bg-indigo-600 text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
-                                        <Clock className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1 text-xs">
-                                        <h4 className="font-semibold text-indigo-950 text-sm">
-                                            Configuración independiente de horario por posición
-                                        </h4>
-                                        <p className="text-indigo-800 mt-0.5">
-                                            Cada posición solicitada tiene su propio cuadrante horario, turno y centro de trabajo asociado. Cambiar o guardar el horario de una posición <strong>no afecta</strong> a las demás posiciones de esta petición.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* SELECTOR DE POSICIÓN PRINCIPAL */}
+                                {/* UN HORARIO POR PETICIÓN */}
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                                         <div>
-                                            <label className="text-xs font-semibold text-slate-500 block">
-                                                Posición a configurar en este momento:
-                                            </label>
-                                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                                                {posiciones.map(pos => {
-                                                    const isSelected = pos.id === selectedPosId;
-                                                    const posH = horarios[pos.id];
-                                                    return (
-                                                        <button
-                                                            key={pos.id}
-                                                            onClick={() => {
-                                                                setSelectedPosId(pos.id);
-                                                                setHorarioChangesUnsaved(false);
-                                                            }}
-                                                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-semibold transition ${
-                                                                isSelected
-                                                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                                                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                                                            }`}
-                                                        >
-                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
-                                                                isSelected ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
-                                                            }`}>
-                                                                {pos.id}
-                                                            </span>
-                                                            <span>{pos.puesto}</span>
-                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                                                                isSelected ? 'bg-indigo-500 text-indigo-100' : 'bg-slate-100 text-slate-500'
-                                                            }`}>
-                                                                {posH?.turnoNombre || 'Sin turno'}
-                                                            </span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
+                                            <h3 className="text-sm font-semibold text-slate-900">Horario de esta petición</h3>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Una petición tiene un solo horario. Si el mismo puesto necesita otro turno u otras fechas, crea otra petición con «Duplicar con otro horario».
+                                            </p>
                                         </div>
-
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <button
-                                                onClick={() => {
-                                                    setCopyTargetPosId(selectedPosId === 'POS-001' ? 'POS-002' : 'POS-001');
-                                                    setIsCopyModalOpen(true);
-                                                }}
-                                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200"
-                                            >
-                                                <Copy className="w-3.5 h-3.5 text-slate-600" />
-                                                <span>Copiar horario a otra posición</span>
-                                            </button>
-                                        </div>
+                                        <Button icon={Copy} onClick={abrirDuplicar} className="shrink-0">Duplicar con otro horario</Button>
                                     </div>
 
                                     {/* RESUMEN DE LA POSICIÓN SELECCIONADA */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                            <div className="text-[10px] font-semibold text-slate-400">Puesto y Vacantes</div>
+                                            <div className="text-[10px] font-semibold text-slate-400">Puesto y plazas</div>
                                             <div className="font-semibold text-slate-900 text-sm mt-0.5 truncate">{selectedPositionObj.puesto}</div>
-                                            <div className="text-[11px] text-slate-500 font-mono mt-0.5">{selectedPosId} — {selectedPositionObj.solicitados} vacantes</div>
+                                            <div className="text-[11px] text-slate-500 font-mono mt-0.5">{selectedPositionObj.solicitados} {selectedPositionObj.solicitados === 1 ? 'plaza' : 'plazas'}</div>
                                         </div>
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                            <div className="text-[10px] font-semibold text-slate-400">Turno y Jornada</div>
+                                            <div className="text-[10px] font-semibold text-slate-400">Turno y jornada</div>
                                             <div className="font-semibold text-slate-900 text-sm mt-0.5">{currentSchedule.turnoNombre}</div>
                                             <div className="text-[11px] text-slate-500 mt-0.5">{currentSchedule.tipoJornada}</div>
                                         </div>
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                            <div className="text-[10px] font-semibold text-slate-400">Total Horas Semanales</div>
-                                            <div className="font-semibold text-indigo-600 text-base mt-0.5">{totalHorasSemana} h / semana</div>
+                                            <div className="text-[10px] font-semibold text-slate-400">Horas por semana</div>
+                                            <div className="font-semibold text-indigo-600 text-base mt-0.5">{totalHorasSemana.toLocaleString('es-ES')} h por semana</div>
                                             <div className="text-[11px] text-emerald-600 font-medium">Cumple convenio laboral</div>
                                         </div>
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                            <div className="text-[10px] font-semibold text-slate-400">Estado de Guardado</div>
+                                            <div className="text-[10px] font-semibold text-slate-400">Estado</div>
                                             <div className="flex items-center gap-1.5 font-semibold text-sm mt-0.5">
                                                 {currentSchedule.guardado ? (
                                                     <span className="text-emerald-700 flex items-center gap-1">
-                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Horario Guardado
+                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Horario guardado
                                                     </span>
                                                 ) : (
                                                     <span className="text-amber-700 flex items-center gap-1">
@@ -1435,7 +1541,7 @@ export default function PeticionesView() {
                                                 Aplicar plantilla rápida de turno:
                                             </span>
                                             <span className="text-[11px] text-slate-500 ml-1">
-                                                (Se aplica <strong>solo</strong> a la posición {selectedPosId}: {selectedPositionObj.puesto})
+                                                (Solo cambia el horario de esta petición)
                                             </span>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2">
@@ -1443,25 +1549,25 @@ export default function PeticionesView() {
                                                 onClick={() => handleApplyTemplate('manana')}
                                                 className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition"
                                             >
-                                                Turno Mañana (06:00 - 14:00)
+                                                Turno de mañana (06:00-14:00)
                                             </button>
                                             <button
                                                 onClick={() => handleApplyTemplate('tarde')}
                                                 className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition"
                                             >
-                                                Turno Tarde (14:00 - 22:00)
+                                                Turno de tarde (14:00-22:00)
                                             </button>
                                             <button
                                                 onClick={() => handleApplyTemplate('noche')}
                                                 className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition"
                                             >
-                                                Turno Noche (22:00 - 06:00)
+                                                Turno de noche (22:00-06:00)
                                             </button>
                                             <button
                                                 onClick={() => handleApplyTemplate('partida')}
                                                 className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition"
                                             >
-                                                Jornada Partida
+                                                Jornada partida
                                             </button>
                                         </div>
                                     </div>
@@ -1470,7 +1576,7 @@ export default function PeticionesView() {
                                     <div className="mt-5 border border-slate-200 rounded-xl overflow-hidden shadow-xs">
                                         <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
                                             <span className="text-xs font-semibold text-slate-700">
-                                                Cuadrante Semanal — Posición {selectedPosId}
+                                                Cuadrante semanal
                                             </span>
                                             <span className="text-xs text-slate-500">
                                                 Edita los campos directamente para personalizar días laborables o descansos
@@ -1556,7 +1662,7 @@ export default function PeticionesView() {
                                                                 <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
                                                                     d.laborable ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                                                                 }`}>
-                                                                    {d.laborable ? 'Turno Activo' : 'No Computa'}
+                                                                    {d.laborable ? 'Laborable' : 'No computa'}
                                                                 </span>
                                                             </td>
                                                         </tr>
@@ -1570,7 +1676,7 @@ export default function PeticionesView() {
                                     <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
                                         <div className="text-xs text-slate-500 flex items-center gap-2">
                                             <Info className="w-4 h-4 text-indigo-500" />
-                                            <span>Los cambios se guardan exclusivamente en el perfil de la posición <strong>{selectedPosId}</strong>.</span>
+                                            <span>Los cambios solo afectan a esta petición (<strong>{selectedPosId}</strong>).</span>
                                         </div>
 
                                         <button
@@ -1581,12 +1687,12 @@ export default function PeticionesView() {
                                             {savingHorario ? (
                                                 <>
                                                     <RefreshCw className="w-4 h-4 animate-spin" />
-                                                    <span>Guardando Horario {selectedPosId}...</span>
+                                                    <span>Guardando horario...</span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <Check className="w-4 h-4" />
-                                                    <span>Guardar horario de esta posición ({selectedPosId})</span>
+                                                    <span>Guardar horario</span>
                                                 </>
                                             )}
                                         </button>
@@ -1616,6 +1722,7 @@ export default function PeticionesView() {
                                     </div>
 
                                     <div className="flex items-center gap-2.5 shrink-0">
+                                        {hermanasDe(peticion, peticiones).length > 0 && <Button icon={Copy} onClick={() => setCopiarDifusion(true)}>Copiar de una petición hermana</Button>}
                                         <button
                                             onClick={() => setCommonPreviewOpen(true)}
                                             className="px-3.5 py-2 bg-slate-100 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-semibold transition flex items-center gap-2"
@@ -1936,71 +2043,89 @@ export default function PeticionesView() {
 
                         {/* TAB 4: DOCUMENTOS Y CONTRATOS */}
                         {activeTab === 'documentos' && (
-                            <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 space-y-4">
-                                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                                    <div>
-                                        <h3 className="font-semibold text-slate-900 text-sm">Contratos de puesta a disposición (CPD) y protocolos PRL</h3>
-                                        <p className="text-xs text-slate-500">Documentación vinculante generada con arreglo a la normativa laboral ETT.</p>
-                                    </div>
-                                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-medium">
-                                        Firma digital válida
-                                    </span>
-                                </div>
-
-                                <div className="space-y-2 text-xs">
-                                    <div className="p-3.5 rounded-xl border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition">
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="w-5 h-5 text-indigo-600" />
-                                            <div>
-                                                <div className="font-semibold text-slate-900">CPD_Marco_TransLogistica_2026.pdf</div>
-                                                <div className="text-slate-400 text-[11px]">Firmado electrónicamente por Carlos Mendiluce (Cliente) y Marta Gómez (ETT)</div>
-                                            </div>
+                            <div className="space-y-4">
+                                <Card className="overflow-hidden">
+                                    <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <SectionTitle>Contratos y altas de las personas de esta petición</SectionTitle>
+                                            <p className="text-xs text-slate-500 mt-0.5">Cada plaza cubierta necesita su contrato de puesta a disposición firmado y el alta en la Seguridad Social antes de empezar.</p>
                                         </div>
-                                        <button className="text-indigo-600 font-semibold hover:underline">Descargar</button>
+                                        <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/laboral'; }}>Ir a Contratos y altas</Button>
                                     </div>
-
-                                    <div className="p-3.5 rounded-xl border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition">
-                                        <div className="flex items-center gap-3">
-                                            <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                                            <div>
-                                                <div className="font-semibold text-slate-900">Ficha_Informacion_Riesgos_PRL_ZAL_Bilbao.pdf</div>
-                                                <div className="text-slate-400 text-[11px]">Evaluación de riesgos puesto carretillero y mozo de almacén</div>
-                                            </div>
+                                    {posActual.incorporados === 0 ? (
+                                        <EmptyState icon={Users} title="Todavía no hay plazas cubiertas" text="Cuando asignes personas a las plazas, aquí verás su contrato y su alta." />
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                        <th className="py-2 px-4 font-medium">Persona</th>
+                                                        <th className="py-2 px-4 font-medium">Incorporación</th>
+                                                        <th className="py-2 px-4 font-medium">Contrato</th>
+                                                        <th className="py-2 px-4 font-medium">Alta en la Seguridad Social</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(plazas[peticion.id] || []).filter(p => p.estado === 'cubierta').map((plaza, i) => {
+                                                        const empezado = diasHasta(peticion.inicio) <= 0;
+                                                        const firmado = empezado || i % 3 !== 2;
+                                                        return (
+                                                            <tr key={plaza.id} className="border-b border-slate-100 last:border-0">
+                                                                <td className="py-2.5 px-4"><span className="inline-flex items-center gap-2"><Avatar name={plaza.nombre} size="sm" /><span className="font-medium text-slate-900">{plaza.nombre}</span></span></td>
+                                                                <td className="py-2.5 px-4 text-slate-600">{plaza.fechaIncorporacion}</td>
+                                                                <td className="py-2.5 px-4">{firmado ? <Badge tone="success">Firmado</Badge> : <Badge tone="warning">Pendiente de firma</Badge>}</td>
+                                                                <td className="py-2.5 px-4">{empezado ? <Badge tone="success">Comunicada</Badge> : firmado ? <Badge tone="info">Programada</Badge> : <Badge tone="neutral">Falta el contrato</Badge>}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         </div>
-                                        <button className="text-indigo-600 font-semibold hover:underline">Descargar</button>
-                                    </div>
-                                </div>
+                                    )}
+                                </Card>
+
+                                <Card className="p-4 space-y-2 text-xs">
+                                    <SectionTitle>Documentos del servicio</SectionTitle>
+                                    {[
+                                        { nombre: `CPD_${peticion.id}.pdf`, texto: `Contrato de puesta a disposición con ${peticion.clienteNombre}`, icono: FileText },
+                                        { nombre: `Riesgos_PRL_${peticion.tipo}.pdf`, texto: `Información de riesgos del puesto: ${peticion.puesto.toLowerCase()}`, icono: ShieldCheck },
+                                    ].map(doc => (
+                                        <div key={doc.nombre} className="p-3 rounded-lg border border-slate-200 flex items-center justify-between gap-3 hover:bg-slate-50">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <doc.icono className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                <div className="min-w-0">
+                                                    <div className="font-medium text-slate-900 truncate">{doc.nombre}</div>
+                                                    <div className="text-slate-500 text-[11px]">{doc.texto}</div>
+                                                </div>
+                                            </div>
+                                            <Button size="sm" variant="ghost" onClick={() => showToast(`Descarga simulada: ${doc.nombre}`)}>Descargar</Button>
+                                        </div>
+                                    ))}
+                                </Card>
                             </div>
                         )}
 
-                        {/* TAB 5: AUDITORÍA Y TRAZABILIDAD */}
+                        {/* TAB: ACTIVIDAD */}
                         {activeTab === 'auditoria' && (
-                            <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 space-y-4">
-                                <h3 className="font-semibold text-slate-900 text-sm border-b border-slate-100 pb-3">Registro de actividad y webhooks de portales</h3>
-                                <div className="space-y-3 text-xs">
-                                    <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-slate-800">Sincronización API InfoJobs completada</div>
-                                            <div className="text-slate-500 text-[11px]">Oferta ID IJ-893012 publicada con 8 vacantes. 14/02/2026 12:40:15</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                                        <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-slate-800">Actualización de horario guardada para POS-001</div>
-                                            <div className="text-slate-500 text-[11px]">Turno Mañana (06:00 - 14:00, 37.5 h/sem) por Marta Gómez. 14/02/2026 11:30:00</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-slate-800">Presupuesto PRE-2026-0048 aceptado y convertido en petición</div>
-                                            <div className="text-slate-500 text-[11px]">Aceptación confirmada por cliente. Importe 42.850,00 €. 12/02/2026 18:20:00</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <Card className="p-5">
+                                <SectionTitle>Actividad de la petición</SectionTitle>
+                                <ol className="mt-2 space-y-3 text-xs">
+                                    {[
+                                        posActual.incorporados > 0 && { color: 'bg-emerald-500', titulo: `${posActual.incorporados} ${posActual.incorporados === 1 ? 'plaza cubierta' : 'plazas cubiertas'}`, texto: `Última incorporación prevista el ${fechaCorta(peticion.inicio)}` },
+                                        peticion.portalesActivos > 0 && { color: 'bg-blue-500', titulo: `Publicada en ${peticion.portalesActivos} portales`, texto: `${peticion.candidaturas} candidaturas recibidas` },
+                                        { color: 'bg-indigo-500', titulo: `Horario guardado: ${currentSchedule.turnoNombre.toLowerCase()}`, texto: currentSchedule.ultimaModif },
+                                        { color: 'bg-slate-400', titulo: `Petición creada desde el presupuesto ${peticion.presupuestoOrigen}`, texto: `${fechaCorta(peticion.creada)} por ${peticion.responsable} · ${peticion.solicitados} de ${peticion.personasPuesto} personas del puesto` },
+                                    ].filter(Boolean).map((a, i) => (
+                                        <li key={i} className="flex items-start gap-3">
+                                            <span className={`w-2 h-2 rounded-full ${a.color} mt-1.5 shrink-0`}></span>
+                                            <div>
+                                                <div className="font-medium text-slate-800">{a.titulo}</div>
+                                                <div className="text-slate-500 text-[11px]">{a.texto}</div>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ol>
+                            </Card>
                         )}
                     </div>
                 )}
@@ -2010,7 +2135,7 @@ export default function PeticionesView() {
             {assignCandidateModal && (
                 <Modal
                   title={'Asignar candidato a la plaza'}
-                  subtitle={<>{assignCandidateModal.posId} · Plaza {assignCandidateModal.plaza.numero}</>}
+                  subtitle={<>{peticion.puesto} · Plaza {assignCandidateModal.plaza.numero}</>}
                   onClose={() => setAssignCandidateModal(null)}
                   size="max-w-2xl"
                   toolbar={<>
@@ -2047,7 +2172,7 @@ export default function PeticionesView() {
                                     return matchesSearch;
                                 })
                                 .map(candidato => {
-                                    const isRecommended = candidato.matchPosicion.includes(assignCandidateModal.posId);
+                                    const isRecommended = candidato.matchPosicion.includes(peticion.tipo);
                                     return (
                                         <div key={candidato.id} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-indigo-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                                             <div className="flex items-start gap-3">
@@ -2150,57 +2275,140 @@ export default function PeticionesView() {
             )}
 
             {/* --- MODAL 1: COPIAR HORARIO A OTRA POSICIÓN --- */}
-            {isCopyModalOpen && (
-                <Modal
-                  title={'Copiar horario a otra posición'}
-                  onClose={() => setIsCopyModalOpen(false)}
-                  size="max-w-md"
-                  footer={<>
-                            <button
-                                onClick={() => setIsCopyModalOpen(false)}
-                                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleConfirmCopySchedule}
-                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5"
-                            >
-                                <Copy className="w-3.5 h-3.5" />
-                                <span>Copiar Horario</span>
-                            </button>
-                  </>}
-                >
+            {/* DUPLICAR CON OTRO HORARIO: crea una petición hermana del mismo puesto */}
+            {duplicar && (() => {
+                const delPuesto = [peticion, ...hermanasDe(peticion, peticiones)].filter(p => p.estado !== 'Cancelada');
+                const repartidas = delPuesto.reduce((s, p) => s + p.solicitados, 0) + (Number(duplicar.solicitados) || 0);
+                return (
+                    <Modal
+                        title="Duplicar con otro horario"
+                        subtitle={`Nueva petición de ${peticion.puesto.toLowerCase()} · ${peticion.presupuestoOrigen}`}
+                        onClose={() => setDuplicar(null)}
+                        size="max-w-lg"
+                        footer={<>
+                            <Button onClick={() => setDuplicar(null)}>Cancelar</Button>
+                            <Button variant="primary" icon={Copy} disabled={!duplicar.inicio || !(Number(duplicar.solicitados) > 0)} onClick={confirmarDuplicar}>Crear petición</Button>
+                        </>}
+                    >
                         <div className="space-y-4 text-xs">
-                            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-                                <div className="text-[10px] font-semibold text-indigo-800">Posición Origen (Copia desde):</div>
-                                <div className="font-semibold text-slate-900 mt-0.5">{selectedPosId} — {selectedPositionObj.puesto}</div>
-                                <div className="text-[11px] text-indigo-600 mt-0.5">Turno: {currentSchedule.turnoNombre} ({totalHorasSemana} h/semana)</div>
+                            <p className="text-slate-600">Se crea otra petición del mismo puesto con las condiciones del presupuesto (salario, tarifa y conceptos extra). Tendrá su propio horario, sus plazas y su difusión.</p>
+                            <Field label="Turno">
+                                <Select value={duplicar.plantilla} onChange={(e) => setDuplicar(d => ({ ...d, plantilla: e.target.value }))} className="w-full">
+                                    {Object.entries(HORARIO_TEMPLATES).map(([id, t]) => <option key={id} value={id}>{t.nombre}{t.nombre === currentSchedule.turnoNombre ? ' (el de esta petición)' : ''}</option>)}
+                                </Select>
+                            </Field>
+                            <div className="grid grid-cols-3 gap-3">
+                                <Field label="Plazas"><TextInput type="number" min="1" value={duplicar.solicitados} onChange={(e) => setDuplicar(d => ({ ...d, solicitados: e.target.value }))} /></Field>
+                                <Field label="Inicio"><TextInput type="date" value={duplicar.inicio} onChange={(e) => setDuplicar(d => ({ ...d, inicio: e.target.value }))} /></Field>
+                                <Field label="Fin"><TextInput type="date" value={duplicar.fin} onChange={(e) => setDuplicar(d => ({ ...d, fin: e.target.value }))} /></Field>
                             </div>
-
-                            <div>
-                                <label className="font-semibold text-slate-700 block mb-1">
-                                    Seleccionar posición de destino:
-                                </label>
-                                <select
-                                    value={copyTargetPosId}
-                                    onChange={(e) => setCopyTargetPosId(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                >
-                                    {posiciones.map(p => (
-                                        <option key={p.id} value={p.id} disabled={p.id === selectedPosId}>
-                                            {p.id} — {p.puesto} {p.id === selectedPosId ? '(Origen actual)' : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="text-slate-500 text-[11px] bg-slate-50 p-3 rounded-xl border border-slate-200">
-                                <p>
-                                    Al confirmar, el cuadrante de <strong>{selectedPosId}</strong> reemplazará por completo el horario de <strong>{copyTargetPosId}</strong>. Esta acción se puede revertir o reconfigurar en cualquier momento.
-                                </p>
-                            </div>
+                            {repartidas !== peticion.personasPuesto ? (
+                                <Notice tone="warning" icon={AlertTriangle}>
+                                    El presupuesto tiene {peticion.personasPuesto} personas para este puesto y con esta petición habría {repartidas}. Se puede crear igualmente, pero conviene confirmarlo con el cliente.
+                                </Notice>
+                            ) : (
+                                <Notice tone="success" icon={CheckCircle2}>Con esta petición quedan repartidas las {peticion.personasPuesto} personas del puesto.</Notice>
+                            )}
                         </div>
+                    </Modal>
+                );
+            })()}
+
+            {/* NUEVA PETICIÓN: siempre desde un puesto de un presupuesto aceptado */}
+            {nuevaPeticion && (() => {
+                const presu = PRESUPUESTOS_ACEPTADOS.find(p => p.id === nuevaPeticion.presupuesto);
+                const puestoPresu = presu?.puestos.find(x => x.tipo === nuevaPeticion.tipo);
+                const yaRepartidas = puestoPresu ? peticiones.filter(p => p.presupuesto === presu.id && p.tipo === puestoPresu.tipo && p.estado !== 'Cancelada').reduce((s, p) => s + p.solicitados, 0) : 0;
+                const total = yaRepartidas + (Number(nuevaPeticion.solicitados) || 0);
+                return (
+                    <Modal
+                        title="Nueva petición"
+                        subtitle="Las peticiones salen de un puesto de un presupuesto aceptado"
+                        onClose={() => setNuevaPeticion(null)}
+                        size="max-w-lg"
+                        footer={<>
+                            <Button onClick={() => setNuevaPeticion(null)}>Cancelar</Button>
+                            <Button variant="primary" icon={Plus} disabled={!puestoPresu || !nuevaPeticion.inicio || !(Number(nuevaPeticion.solicitados) > 0)} onClick={confirmarNuevaPeticion}>Crear petición</Button>
+                        </>}
+                    >
+                        <div className="space-y-4 text-xs">
+                            <Field label="Presupuesto aceptado">
+                                <Select value={nuevaPeticion.presupuesto} onChange={(e) => setNuevaPeticion(n => ({ ...n, presupuesto: e.target.value, tipo: '' }))} className="w-full">
+                                    <option value="">Elige un presupuesto...</option>
+                                    {PRESUPUESTOS_ACEPTADOS.map(p => <option key={p.id} value={p.id}>{p.id} {p.version} · {CLIENTES[p.cliente].clienteNombre}</option>)}
+                                </Select>
+                            </Field>
+                            {presu && (
+                                <Field label="Puesto">
+                                    <div className="space-y-1.5">
+                                        {presu.puestos.map(x => {
+                                            const repartidas = peticiones.filter(p => p.presupuesto === presu.id && p.tipo === x.tipo && p.estado !== 'Cancelada').reduce((s, p) => s + p.solicitados, 0);
+                                            const elegido = nuevaPeticion.tipo === x.tipo;
+                                            return (
+                                                <button
+                                                    key={x.tipo}
+                                                    type="button"
+                                                    onClick={() => setNuevaPeticion(n => ({ ...n, tipo: x.tipo, solicitados: Math.max(1, x.personas - repartidas) }))}
+                                                    className={`w-full text-left rounded-lg border px-3 py-2 flex items-center justify-between gap-2 ${elegido ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                                                >
+                                                    <span className="font-medium text-slate-900">{PUESTOS[x.tipo].puesto}</span>
+                                                    <span className="text-slate-500">{x.personas} personas · {repartidas} ya en peticiones</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </Field>
+                            )}
+                            {puestoPresu && (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-[1.6fr_1fr_1.4fr] gap-3">
+                                        <Field label="Turno">
+                                            <Select value={nuevaPeticion.plantilla} onChange={(e) => setNuevaPeticion(n => ({ ...n, plantilla: e.target.value }))} className="w-full">
+                                                {Object.entries(HORARIO_TEMPLATES).map(([id, t]) => <option key={id} value={id}>{t.nombre}</option>)}
+                                            </Select>
+                                        </Field>
+                                        <Field label="Plazas"><TextInput type="number" min="1" value={nuevaPeticion.solicitados} onChange={(e) => setNuevaPeticion(n => ({ ...n, solicitados: e.target.value }))} /></Field>
+                                        <Field label="Inicio"><TextInput type="date" value={nuevaPeticion.inicio} onChange={(e) => setNuevaPeticion(n => ({ ...n, inicio: e.target.value }))} /></Field>
+                                    </div>
+                                    {total > puestoPresu.personas && (
+                                        <Notice tone="warning" icon={AlertTriangle}>
+                                            El presupuesto tiene {puestoPresu.personas} personas para este puesto y con esta petición habría {total}. Se puede crear igualmente.
+                                        </Notice>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </Modal>
+                );
+            })()}
+
+            {/* COPIAR LA DIFUSIÓN DE UNA PETICIÓN HERMANA */}
+            {copiarDifusion && (
+                <Modal
+                    title="Copiar la difusión de otra petición"
+                    subtitle="Se copia el contenido común de la publicación; después puedes ajustarlo"
+                    onClose={() => setCopiarDifusion(false)}
+                    size="max-w-md"
+                    footer={<Button onClick={() => setCopiarDifusion(false)}>Cancelar</Button>}
+                >
+                    <div className="space-y-1.5 text-xs">
+                        {hermanasDe(peticion, peticiones).map(h => (
+                            <button
+                                key={h.id}
+                                type="button"
+                                onClick={() => {
+                                    setContenidoComun({ ...contenidoDe(h, horarios[h.id]), titulo: contenidoDe(peticion, currentSchedule).titulo });
+                                    setComunSavedStatus('Modificado');
+                                    setCopiarDifusion(false);
+                                    showToast(`Difusión copiada de ${h.id}. Revisa el turno y guarda.`);
+                                }}
+                                className="w-full text-left rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50"
+                            >
+                                <div className="font-medium text-slate-900">{h.puesto} · {(horarios[h.id]?.turnoNombre || '').toLowerCase()}</div>
+                                <div className="text-[11px] text-slate-500">{h.id} · {h.portalesActivos} portales activos</div>
+                            </button>
+                        ))}
+                    </div>
                 </Modal>
             )}
 
