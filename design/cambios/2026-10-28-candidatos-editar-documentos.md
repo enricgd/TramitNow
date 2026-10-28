@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-28
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design` (ver el commit que añade esta nota)
+- **Rama y commits**: `design`, 8226f35
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/candidatos → abrir a Mohamed El Amrani
   (tiene el NIE y el carné caducados) o a Carlos Gómez Moreno (carné a punto de caducar).
 
