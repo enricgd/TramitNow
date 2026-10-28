@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-28
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, aún sin commit
+- **Rama y commits**: `design`, c36fd59
 - **Cómo verlo**: `npm --prefix apps/web run dev` y abrir cualquier pantalla en un monitor ancho (1920 px o más).
   En Empresas → una empresa → Contactos se ve el cambio más claro.
 
