@@ -61,7 +61,7 @@ export function Drawer({
         <Cabecera title={title} subtitle={subtitle} leading={leading} status={status} onClose={onClose} />
         {toolbar && <div className="shrink-0">{toolbar}</div>}
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
-        {footer && <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2 shrink-0">{footer}</div>}
+        {footer && <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-end gap-2 shrink-0">{footer}</div>}
       </div>
     </div>
   );
@@ -95,7 +95,7 @@ export function Modal({
         <Cabecera title={title} subtitle={subtitle} status={status} onClose={onClose} />
         {toolbar && <div className="shrink-0">{toolbar}</div>}
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
-        {footer && <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 rounded-b-xl flex items-center justify-end gap-2 shrink-0">{footer}</div>}
+        {footer && <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 rounded-b-xl flex flex-wrap items-center justify-end gap-2 shrink-0">{footer}</div>}
       </div>
     </div>
   );

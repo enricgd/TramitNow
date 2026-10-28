@@ -27,6 +27,7 @@ import PresupuestosView from './views/PresupuestosView.jsx';
 import CandidatosView from './views/CandidatosView.jsx';
 import MisionView from './views/MisionView.jsx';
 import HorasView from './views/HorasView.jsx';
+import FacturacionView from './views/FacturacionView.jsx';
 import Inicio from './Inicio';
 import Header from './Header';
 
@@ -68,7 +69,7 @@ const NAV: NavSection[] = [
   {
     title: 'Gestión',
     items: [
-      { id: 'facturacion', label: 'Facturación', icon: Receipt },
+      { id: 'facturacion', label: 'Facturación', icon: Receipt, view: FacturacionView },
       { id: 'informes', label: 'Informes', icon: BarChart3 },
       { id: 'documentos', label: 'Documentos', icon: FileText },
     ],

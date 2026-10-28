@@ -153,7 +153,12 @@ const generarPartes = () => {
     });
     return partes;
 };
-const CIERRES_INICIALES = Object.fromEntries(['2026-07', '2026-08', '2026-09'].map(m => [`PET-2026-0031|${m}`, { facturacion: '2026-10-02', nomina: '2026-10-01' }]));
+// Fechas alineadas con las facturas de Facturación (F2026-0087, 0094 y 0101)
+const CIERRES_INICIALES = {
+    'PET-2026-0031|2026-07': { facturacion: '2026-08-03', nomina: '2026-08-01' },
+    'PET-2026-0031|2026-08': { facturacion: '2026-09-02', nomina: '2026-09-01' },
+    'PET-2026-0031|2026-09': { facturacion: '2026-10-02', nomina: '2026-10-01' },
+};
 
 const conceptosParte = (parte, filtroMes) => {
     const pet = PETICIONES[parte.petId];
