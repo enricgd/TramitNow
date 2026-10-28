@@ -34,9 +34,9 @@ type Tarea = {
 };
 
 const INITIAL_TAREAS: Tarea[] = [
-  { id: 't1', tone: 'danger', icon: AlertTriangle, titulo: 'DNI caducado de Carlos Mendoza Vidal', contexto: 'Bloquea el alta · PET-2026-0048', plazo: 'Atrasada 1 día', urgente: true, hoy: true, accion: 'Pedir documento', ruta: 'laboral' },
-  { id: 't2', tone: 'warning', icon: ShieldCheck, titulo: 'Alta en Seguridad Social de Miguel Torres Navarro', contexto: 'Inicio el 03/11/2026 · PET-2026-0048', plazo: 'Hoy', urgente: true, hoy: true, accion: 'Tramitar alta', ruta: 'laboral' },
-  { id: 't3', tone: 'warning', icon: FileSignature, titulo: '3 contratos pendientes de firma', contexto: 'Trans-Logística Ibérica Norte, S.L.', plazo: 'Hoy', urgente: false, hoy: true, accion: 'Enviar a firma', ruta: 'laboral' },
+  { id: 't1', tone: 'danger', icon: AlertTriangle, titulo: 'NIE caducado de Mamadou Diallo', contexto: 'Bloquea el contrato · PET-2026-0048', plazo: 'Empieza en 6 días', urgente: true, hoy: true, accion: 'Pedir documento', ruta: 'laboral' },
+  { id: 't2', tone: 'warning', icon: ShieldCheck, titulo: 'Alta en Seguridad Social de Ainhoa Larrazabal Urkijo', contexto: 'Inicio el 03/11/2026 · PET-2026-0048', plazo: 'Hoy', urgente: true, hoy: true, accion: 'Comunicar alta', ruta: 'laboral' },
+  { id: 't3', tone: 'warning', icon: FileSignature, titulo: '3 CPD pendientes de firma de la empresa', contexto: 'Trans-Logística Ibérica Norte, S.L.', plazo: 'Hoy', urgente: false, hoy: true, accion: 'Recordar', ruta: 'laboral' },
   { id: 't3b', tone: 'warning', icon: FileSignature, titulo: 'Aprobar el margen de PRE-2026-0047', contexto: 'Carretillero/a al 13,8 % (mínimo 15 %) · Mediterránea Agrícola y Envasado', plazo: 'Hoy', urgente: false, hoy: true, accion: 'Revisar margen', ruta: 'presupuestos' },
   { id: 't4', tone: 'info', icon: UserSearch, titulo: '3 plazas sin cubrir', contexto: 'PET-2026-0049 · Operario/a de almacén · turno de tarde', plazo: 'Empieza en 6 días', urgente: false, hoy: false, accion: 'Buscar candidatos', ruta: 'peticiones' },
   { id: 't5', tone: 'info', icon: PhoneCall, titulo: 'Llamar a Mohamed El Amrani', contexto: 'Por contactar desde hace 2 días', plazo: 'Hoy', urgente: false, hoy: true, accion: 'Llamar', ruta: 'candidatos' },
@@ -46,8 +46,8 @@ const INITIAL_TAREAS: Tarea[] = [
 const AGENDA = [
   { hora: '09:30', texto: 'Entrevista · Ainhoa Larrazabal Urkijo', tipo: 'Entrevista', tone: 'accent' as Tone },
   { hora: '11:00', texto: 'Llamada de seguimiento · Distribuciones Cantábrico', tipo: 'Cliente', tone: 'neutral' as Tone },
-  { hora: '12:30', texto: 'Curso PRL · Ana López Serrano', tipo: 'Formación', tone: 'warning' as Tone },
-  { hora: '16:00', texto: 'Incorporación · Laura García Moreno', tipo: 'Incorporación', tone: 'success' as Tone },
+  { hora: '12:30', texto: 'Formación PRL · Laura Morales San Sebastián', tipo: 'Formación', tone: 'warning' as Tone },
+  { hora: '16:00', texto: 'Firma de contrato · Unai García Zabaleta', tipo: 'Incorporación', tone: 'success' as Tone },
 ];
 
 const COBERTURA = [
@@ -77,8 +77,8 @@ const INCORPORACIONES = [
 const ACTIVIDAD = [
   { hace: 'Hace 10 min', texto: 'Presupuesto PRE-2026-0048 aceptado por el cliente', tone: 'success' as Tone },
   { hace: 'Hace 1 h', texto: '12 candidaturas nuevas desde InfoJobs y LinkedIn', tone: 'info' as Tone },
-  { hace: 'Hace 3 h', texto: 'Laura García Moreno: expediente completo', tone: 'success' as Tone },
-  { hace: 'Ayer', texto: 'DNI de Carlos Mendoza Vidal marcado como caducado', tone: 'danger' as Tone },
+  { hace: 'Hace 3 h', texto: 'Jon Ander Etxebarria Bilbao: expediente completo', tone: 'success' as Tone },
+  { hace: 'Ayer', texto: 'NIE de Mamadou Diallo marcado como caducado', tone: 'danger' as Tone },
 ];
 
 const orden = (t: Tarea) => INITIAL_TAREAS.findIndex((x) => x.id === t.id);
@@ -130,7 +130,7 @@ export default function Inicio() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <KpiTile label="Peticiones abiertas" tone="accent" value="14" hint="8 en selección" onClick={() => ir('peticiones')} />
         <KpiTile label="Plazas por cubrir" tone="warning" value="10" hint="de 26 solicitadas" onClick={() => ir('peticiones')} />
-        <KpiTile label="Expedientes bloqueados" tone="danger" value="1" hint="DNI caducado" onClick={() => ir('laboral')} />
+        <KpiTile label="Expedientes bloqueados" tone="danger" value="1" hint="NIE caducado" onClick={() => ir('laboral')} />
         <KpiTile label="Presupuestos sin firmar" tone="info" value="2" hint="18.200 € en juego" onClick={() => ir('presupuestos')} />
         <KpiTile label="Personas en misión" tone="success" value="23" hint="2 terminan esta semana" onClick={() => ir('candidatos')} />
       </div>

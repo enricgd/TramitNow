@@ -508,12 +508,14 @@ const PLAZAS_BASE = {
 };
 
 // Plazas de cada petición. Las de logística salen de los ejemplos de arriba; el resto se generan.
-const NOMBRES_DEMO = ['Garazi Uribe Arana', 'Pablo Ruiz Cano', 'Sara Benítez Lago', 'Youssef Amrani', 'Lucía Ferrer Sanz', 'Marc Puig Soler', 'Aitana Roca Vidal', 'Daniel Sousa Prieto', 'Irene Campos Gil', 'Óscar León Mena', 'Noa Serra Pons', 'Hugo Martín Vera'];
+const NOMBRES_DEMO = ['Garazi Uribe Arana', 'Pablo Ruiz Cano', 'Sara Benítez Lago', 'Youssef Amrani', 'Lucía Ferrer Sanz', 'Marc Puig Soler', 'Aitana Roca Vidal', 'Daniel Sousa Prieto', 'Irene Campos Gil', 'Óscar León Mena', 'Noa Serra Pons', 'Hugo Martín Vera', 'Ane Goikoetxea Ruiz', 'Iván Molina Prat', 'Clara Esteve Ros', 'Bruno Lage Costa', 'Nerea Olabarria Gil', 'Adrián Vela Soto', 'Paula Rius Ferrer', 'Sergio Navas Peña'];
+// Primer nombre de cada petición generada, para que nadie esté en dos peticiones (las mismas personas que en Contratos y altas)
+const PRIMER_NOMBRE = { 'PET-2026-0044': 0, 'PET-2026-0045': 10, 'PET-2026-0031': 14 };
 const renumerarPlazas = (lista, codigo) => lista.map((p, i) => ({ ...p, id: `PLZ-${codigo}-${String(i + 1).padStart(2, '0')}`, numero: i + 1 }));
 const plazaVacante = { estado: 'vacante', candidatoId: null, nombre: null, dni: null, telefono: null, email: null, fechaIncorporacion: null, contratoTipo: null, scoring: null, foto: null };
 const generarPlazas = (p) => Array.from({ length: p.solicitados }, (_, i) => {
     if (i >= p.cubiertas) return { ...plazaVacante };
-    const nombre = NOMBRES_DEMO[(i + Number(p.id.slice(-2))) % NOMBRES_DEMO.length];
+    const nombre = NOMBRES_DEMO[((PRIMER_NOMBRE[p.id] ?? 0) + i) % NOMBRES_DEMO.length];
     return {
         estado: 'cubierta',
         candidatoId: `CND-${p.id.slice(-4)}${i}`,
