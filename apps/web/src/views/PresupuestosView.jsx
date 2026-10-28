@@ -73,6 +73,7 @@ default: [
       formasPago: [
 { id: 'confirming_60', label: 'Confirming bancario a 60 días fecha factura' },
 { id: 'transfer_30', label: 'Transferencia bancaria a 30 días' },
+{ id: 'transfer_60', label: 'Transferencia bancaria a 60 días' },
 { id: 'transfer_15', label: 'Transferencia bancaria quincenal (15 días)' },
 { id: 'domiciliacion_30', label: 'Recibo domiciliado SEPA B2B a 30 días' },
 { id: 'prepago_semanal', label: 'Prepago semanal con liquidación mensual' },
@@ -407,13 +408,110 @@ comentario: 'Campaña invierno finalizada con éxito.'
 
     const DEMO_LISTADO_PRESUPUESTOS = [
       { id: 'PRE-2026-0048', importe: 63800,  titulo: 'Servicio ETT campaña logística primavera HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Borrador', puestosCount: 2, tarifaMedia: 18.72, margenPct: 17.4, fechaValidez: '2026-11-27', esEditableDirecto: true },
-      { id: 'PRE-2026-0047', importe: 41200,  titulo: 'Refuerzo líneas de envasado y picking alimentario', cliente: 'Mediterránea Agrícola y Envasado, S.L.', comercial: 'Carlos Mendoza', estado: 'En preparación', puestosCount: 3, tarifaMedia: 16.90, margenPct: 18.2, fechaValidez: '2026-11-02', esEditableDirecto: true },
-      { id: 'PRE-2026-0046', importe: 28900, diasSinRespuesta: 2,  titulo: 'Camareros/as para temporada de congresos', cliente: 'Hostelería & Eventos Premium BCN, S.L.', comercial: 'Laura Vidal', estado: 'Pendiente de Firma', puestosCount: 2, tarifaMedia: 17.40, margenPct: 19.1, fechaValidez: '2026-11-10', esEditableDirecto: false },
-      { id: 'PRE-2026-0045', importe: 52300, diasSinRespuesta: 6,  titulo: 'Operarios/as soldadura y mecanizado metal 24/7', cliente: 'Manufacturas Metálicas del Henares, S.A.', comercial: 'Elena Rivas', estado: 'Enviado a Cliente', puestosCount: 1, tarifaMedia: 22.40, margenPct: 19.5, fechaValidez: '2026-11-15', esEditableDirecto: false },
-      { id: 'PRE-2026-0042', importe: 58200,  titulo: 'Campaña logística otoño HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Firmado / Aceptado', puestosCount: 2, tarifaMedia: 18.37, margenPct: 18.0, fechaValidez: '2026-10-20', esEditableDirecto: false },
-      { id: 'PRE-2026-0041', importe: 37600,  titulo: 'Servicio ETT camareros/as y cocina fiestas locales', cliente: 'Hostelería & Eventos Premium BCN, S.L.', comercial: 'Laura Vidal', estado: 'Firmado / Aceptado', puestosCount: 4, tarifaMedia: 18.10, margenPct: 21.0, fechaValidez: '2026-10-15', esEditableDirecto: false },
-      { id: 'PRE-2026-0038', importe: 12400,  titulo: 'Mozos de carga para inventario anual', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Carlos Mendoza', estado: 'Rechazado', puestosCount: 1, tarifaMedia: 16.20, margenPct: 14.0, fechaValidez: '2026-10-01', esEditableDirecto: false },
+      { id: 'PRE-2026-0047', importe: 97536,  titulo: 'Refuerzo líneas de envasado y picking alimentario', cliente: 'Mediterránea Agrícola y Envasado, S.L.', comercial: 'Carlos Mendoza', estado: 'En preparación', puestosCount: 3, tarifaMedia: 17.30, margenPct: 16.4, fechaValidez: '2026-11-02', esEditableDirecto: true },
+      { id: 'PRE-2026-0046', importe: 100224, diasSinRespuesta: 2,  titulo: 'Camareros/as para temporada de congresos', cliente: 'Hostelería & Eventos Premium BCN, S.L.', comercial: 'Laura Vidal', estado: 'Pendiente de Firma', puestosCount: 2, tarifaMedia: 17.40, margenPct: 20.0, fechaValidez: '2026-11-10', esEditableDirecto: false },
+      { id: 'PRE-2026-0045', importe: 64512, diasSinRespuesta: 6,  titulo: 'Operarios/as soldadura y mecanizado metal 24/7', cliente: 'Manufacturas Metálicas del Henares, S.A.', comercial: 'Elena Rivas', estado: 'Enviado a Cliente', puestosCount: 1, tarifaMedia: 22.40, margenPct: 16.9, fechaValidez: '2026-11-15', esEditableDirecto: false },
+      { id: 'PRE-2026-0042', importe: 105792,  titulo: 'Campaña logística otoño HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Firmado / Aceptado', puestosCount: 2, tarifaMedia: 18.73, margenPct: 14.0, fechaValidez: '2026-10-20', esEditableDirecto: false },
+      { id: 'PRE-2026-0041', importe: 166656,  titulo: 'Servicio ETT camareros/as y cocina fiestas locales', cliente: 'Hostelería & Eventos Premium BCN, S.L.', comercial: 'Laura Vidal', estado: 'Firmado / Aceptado', puestosCount: 4, tarifaMedia: 18.40, margenPct: 23.7, fechaValidez: '2026-10-15', esEditableDirecto: false },
+      { id: 'PRE-2026-0033', importe: 39360,  titulo: 'Envasado nocturno campaña de cítricos', cliente: 'Mediterránea Agrícola y Envasado, S.L.', comercial: 'Carlos Mendoza', estado: 'Firmado / Aceptado', puestosCount: 1, tarifaMedia: 16.40, margenPct: 16.4, fechaValidez: '2026-09-05', esEditableDirecto: false },
+      { id: 'PRE-2026-0038', importe: 38880,  titulo: 'Mozos de carga para inventario anual', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Carlos Mendoza', estado: 'Rechazado', puestosCount: 1, tarifaMedia: 16.20, margenPct: 13.5, fechaValidez: '2026-10-01', esEditableDirecto: false },
+      { id: 'PRE-2026-0029', importe: 48672,  titulo: 'Campaña logística verano HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Firmado / Aceptado', puestosCount: 1, tarifaMedia: 16.90, margenPct: 14.2, fechaValidez: '2026-06-20', esEditableDirecto: false },
     ];
+
+    // ==========================================
+    // DETALLE DE CADA PRESUPUESTO DEL LISTADO
+    // Cada presupuesto abre sus propios datos. Los aceptados llevan el reparto en peticiones que hay en Peticiones.
+    // ==========================================
+    const puestoDemo = (id, nombre, convenio, categoria, grupoNivel, salarioBaseAnual, plusConvenioMes, tarifaHoraOfertada, personas, descripcionTareas, extra = {}) => ({
+      ...JSON.parse(JSON.stringify(DEMO_PRESUPUESTO_INICIAL.posiciones[0])),
+      id, nombre, convenio, categoria, grupoNivel, salarioBaseAnual, plusConvenioMes, tarifaHoraOfertada, personas, descripcionTareas,
+      conceptos: undefined, extras: EXTRAS_DEFECTO.map(x => ({ ...x })), ...extra,
+    });
+    const CLIENTES_PRESUPUESTO = {
+      'Trans-Logística Ibérica Norte, S.L.': { empresaId: 'comp-1', cif: 'B-87654321', sector: 'Logística y almacén', ciudad: 'Basauri (Bizkaia)', convenioEmpresa: 'logistica_bizkaia', contacto: 'Marta Gómez Arana (Responsable de RRHH y Selección)', emailContacto: 'marta.gomez@translog-norte.es', telefonoContacto: '+34 654 987 321', formaPago: 'transfer_60' },
+      'Hostelería & Eventos Premium BCN, S.L.': { empresaId: 'comp-4', cif: 'B-99887766', sector: 'Hostelería y eventos', ciudad: 'Barcelona', convenioEmpresa: 'hosteleria_estatal', contacto: 'Sergi Pujol (Coordinador de Eventos)', emailContacto: 'spujol@premiumeventsbcn.cat', telefonoContacto: '+34 688 990 011', formaPago: 'transfer_30' },
+      'Mediterránea Agrícola y Envasado, S.L.': { empresaId: 'comp-3', cif: 'B-65432198', sector: 'Agroalimentario', ciudad: 'Valencia', convenioEmpresa: 'comercio_alimentacion', contacto: '', emailContacto: '', telefonoContacto: '', formaPago: 'transfer_30' },
+      'Manufacturas Metálicas del Henares, S.A.': { empresaId: 'comp-2', cif: 'A-28193847', sector: 'Industria metalúrgica', ciudad: 'Alcalá de Henares (Madrid)', convenioEmpresa: 'metal_madrid', contacto: 'Alfonso Serrano (Dir. Financiero)', emailContacto: 'aserrano@metalhenares.com', telefonoContacto: '+34 600 112 233', formaPago: 'confirming_60' },
+    };
+    const copiaProfunda = (x) => JSON.parse(JSON.stringify(x));
+    const DETALLES_PRESUPUESTOS = {
+      'PRE-2026-0042': {
+        fechaEmision: '2026-09-20', fechaInicioPrevista: '2026-11-03', duracionMeses: 3, modalidad: 'pico_produccion',
+        observacionesComerciales: 'Campaña de otoño. Turnos de mañana y tarde en el HUB central de Basauri.',
+        posiciones: [copiaProfunda(DEMO_PRESUPUESTO_INICIAL.posiciones[0]), copiaProfunda(DEMO_PRESUPUESTO_INICIAL.posiciones[1])],
+        peticionCreada: 'PET-2026-0048 a 0050',
+        peticionesCreadas: [
+          { codigo: 'PET-2026-0048', posId: 'pos-1', turno: 'Turno de mañana', plazas: 5 },
+          { codigo: 'PET-2026-0049', posId: 'pos-1', turno: 'Turno de tarde', plazas: 3 },
+          { codigo: 'PET-2026-0050', posId: 'pos-2', turno: 'Turno de tarde', plazas: 4 },
+        ],
+      },
+      'PRE-2026-0041': {
+        fechaEmision: '2026-09-15', fechaInicioPrevista: '2026-10-10', duracionMeses: 2, modalidad: 'pico_produccion',
+        observacionesComerciales: 'Temporada de congresos y fiestas locales en el recinto de congresos de Barcelona.',
+        posiciones: [
+          puestoDemo('pos-1', 'Camarero/a de sala', 'hosteleria_estatal', 'camarero_sala', 'g4', 16200, 90, 18.40, 10, 'Servicio de sala, montaje de mesas y servicio de cócteles y banquetes.'),
+          puestoDemo('pos-2', 'Ayudante de cocina', 'hosteleria_estatal', 'ayudante_cocina', 'g5', 15400, 80, 17.20, 4, 'Preparación, emplatado y limpieza de cocina.'),
+          puestoDemo('pos-3', 'Cocinero/a de partida', 'hosteleria_estatal', 'cocinero_partida', 'g3', 18100, 110, 19.60, 2, 'Elaboración de la partida asignada en banquetes.'),
+          puestoDemo('pos-4', 'Camarero/a de barra', 'hosteleria_estatal', 'camarero_sala', 'g4', 16200, 90, 18.40, 3, 'Servicio de barra en el turno de noche.'),
+        ],
+        peticionCreada: 'PET-2026-0044 a 0047',
+        peticionesCreadas: [
+          { codigo: 'PET-2026-0044', posId: 'pos-1', turno: 'Jornada partida', plazas: 10 },
+          { codigo: 'PET-2026-0045', posId: 'pos-2', turno: 'Jornada partida', plazas: 4 },
+          { codigo: 'PET-2026-0046', posId: 'pos-3', turno: 'Jornada partida', plazas: 2 },
+          { codigo: 'PET-2026-0047', posId: 'pos-4', turno: 'Turno de noche', plazas: 3 },
+        ],
+      },
+      'PRE-2026-0029': {
+        fechaEmision: '2026-06-01', fechaInicioPrevista: '2026-07-01', duracionMeses: 3, modalidad: 'pico_produccion',
+        observacionesComerciales: 'Campaña de verano, ya terminada.',
+        posiciones: [puestoDemo('pos-1', 'Mozo/a de almacén', 'logistica_bizkaia', 'op_almacen', 'g4', 16700, 110, 16.90, 6, 'Carga, descarga y reposición en la nave 2.')],
+        peticionCreada: 'PET-2026-0031',
+        peticionesCreadas: [{ codigo: 'PET-2026-0031', posId: 'pos-1', turno: 'Turno de mañana', plazas: 6 }],
+      },
+      'PRE-2026-0033': {
+        codigoVersion: 'PRE-2026-0033-v2', versionNumero: 2, fechaEmision: '2026-08-20', fechaInicioPrevista: '2026-09-15', duracionMeses: 3,
+        observacionesComerciales: 'El cliente aplazó la campaña después de aceptar: la petición PET-2026-0036 está cancelada.',
+        posiciones: [puestoDemo('pos-1', 'Operario/a de envasado', 'comercio_alimentacion', 'otro', 'g4', 16300, 60, 16.40, 5, 'Envasado y etiquetado en línea, turno de noche.', { categoriaCustom: 'Operario/a de envasado' })],
+        peticionCreada: 'PET-2026-0036',
+        peticionesCreadas: [{ codigo: 'PET-2026-0036', posId: 'pos-1', turno: 'Turno de noche', plazas: 5 }],
+      },
+      'PRE-2026-0047': {
+        posiciones: [
+          puestoDemo('pos-1', 'Operario/a de envasado', 'comercio_alimentacion', 'otro', 'g4', 16300, 60, 16.40, 6, 'Envasado y etiquetado en línea.', { categoriaCustom: 'Operario/a de envasado' }),
+          puestoDemo('pos-2', 'Preparador/a de pedidos', 'comercio_alimentacion', 'otro', 'g4', 16500, 60, 16.90, 4, 'Picking de producto fresco.', { categoriaCustom: 'Preparador/a de pedidos' }),
+          puestoDemo('pos-3', 'Carretillero/a', 'comercio_alimentacion', 'otro', 'g3', 18900, 90, 18.60, 2, 'Carga de camiones y ubicación en cámara.', { categoriaCustom: 'Carretillero/a' }),
+        ],
+      },
+      'PRE-2026-0046': {
+        posiciones: [
+          puestoDemo('pos-1', 'Camarero/a de sala', 'hosteleria_estatal', 'camarero_sala', 'g4', 16200, 90, 17.40, 8, 'Servicio de sala en congresos.'),
+          puestoDemo('pos-2', 'Camarero/a de barra', 'hosteleria_estatal', 'camarero_sala', 'g4', 16200, 90, 17.40, 4, 'Servicio de barra.'),
+        ],
+      },
+      'PRE-2026-0045': {
+        posiciones: [puestoDemo('pos-1', 'Soldador/a TIG/MIG', 'metal_madrid', 'soldador_tuv', 'g3', 21500, 150, 22.40, 6, 'Soldadura homologada en turnos rotativos 24/7.')],
+      },
+      'PRE-2026-0038': {
+        posiciones: [puestoDemo('pos-1', 'Mozo/a de carga', 'logistica_bizkaia', 'op_almacen', 'g4', 16200, 100, 16.20, 5, 'Recuento e inventario anual.')],
+      },
+    };
+    const detalleDePresupuesto = (fila) => {
+      if (fila.id === DEMO_PRESUPUESTO_INICIAL.id) return copiaProfunda(DEMO_PRESUPUESTO_INICIAL);
+      const base = copiaProfunda(DEMO_PRESUPUESTO_INICIAL);
+      const det = DETALLES_PRESUPUESTOS[fila.id] || {};
+      return {
+        ...base,
+        id: fila.id, codigoVersion: `${fila.id}-v1`, versionNumero: 1,
+        titulo: fila.titulo, cliente: fila.cliente, comercial: fila.comercial, estado: fila.estado,
+        esEditableDirecto: fila.esEditableDirecto, fechaValidez: fila.fechaValidez,
+        ...(CLIENTES_PRESUPUESTO[fila.cliente] || {}),
+        observacionesComerciales: '',
+        auditoria: [{ id: `aud-${fila.id}`, fecha: `${det.fechaEmision || base.fechaEmision} 10:00:00`, usuario: fila.comercial, accion: 'Creación de presupuesto', detalle: `Alta de ${fila.id}.` }],
+        ...copiaProfunda(det),
+      };
+    };
 
     // ==========================================
     // UTILIDADES DE CÁLCULO ECONÓMICO ETT
@@ -655,7 +753,20 @@ margenServicio
         mostrarToast(`Copia de ${p.id} creada como ${copia.id}. Elige la empresa.`, 'info');
       };
       const sinRespuesta = (p) => ['Enviado a Cliente', 'Pendiente de Firma'].includes(p.estado) && (p.diasSinRespuesta || 0) >= DIAS_RECORDATORIO;
-      const abrirPresupuesto = () => {
+      // Cada presupuesto abre sus datos; lo cambiado en esta sesión se conserva al volver a abrirlo
+      const [abiertos, setAbiertos] = useState({});
+      const abrirPresupuesto = (p) => {
+        if (p && p.id !== presupuesto.id) {
+          if (!esNuevo) setAbiertos(prev => ({ ...prev, [presupuesto.id]: presupuesto }));
+          const fila = listado.find(x => x.id === p.id) || p;
+          const d = abiertos[p.id] ? { ...abiertos[p.id], estado: fila.estado } : detalleDePresupuesto(fila);
+          setPresupuesto(d);
+          setFormularioPresupuesto(JSON.parse(JSON.stringify(d)));
+          setVersiones(p.id === DEMO_PRESUPUESTO_INICIAL.id ? VERSIONES_0048 : []);
+          setModoEdicion(false);
+          setEsNuevo(false);
+          setHayCambiosSinGuardar(false);
+        }
         setVistaActual('detalle');
         setPestanaActiva('resumen');
       };
@@ -674,7 +785,8 @@ margenServicio
       // Reparto en peticiones: una por puesto; un puesto se puede dividir (otro turno, otras fechas)
       const [repartoPeticiones, setRepartoPeticiones] = useState([]);
       const [motivosRechazo, setMotivosRechazo] = useState(['Precio', 'Plazo de incorporación', 'Eligió a la competencia', 'Cancela el proyecto', 'Sin respuesta del cliente']);
-      const [versiones, setVersiones] = useState([{ codigo: 'PRE-2026-0048-v1', fecha: '2026-03-10', autor: 'Elena Navarro', estado: 'Sustituido', comentario: 'Primera propuesta enviada; el cliente pidió ajustar la tarifa del carretillero.', datos: DEMO_VERSION_ANTERIOR }]);
+      const VERSIONES_0048 = [{ codigo: 'PRE-2026-0048-v1', fecha: '2026-03-10', autor: 'Elena Navarro', estado: 'Sustituido', comentario: 'Primera propuesta enviada; el cliente pidió ajustar la tarifa del carretillero.', datos: DEMO_VERSION_ANTERIOR }];
+      const [versiones, setVersiones] = useState(VERSIONES_0048);
       const [versionAComparar, setVersionAComparar] = useState(null);
 
       const [pestanaActiva, setPestanaActiva] = useState('resumen'); // 'resumen' | 'posiciones' | 'escandallo' | 'condiciones' | 'historial' | 'documentos' | 'auditoria'

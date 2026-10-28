@@ -2449,7 +2449,10 @@ export default function PeticionesView() {
                                             <SectionTitle>CPD, contrato y alta de cada persona</SectionTitle>
                                             <p className="text-xs text-slate-500 -mt-1">Cada persona necesita su CPD firmado por la empresa antes de empezar. Si a 2 días del inicio no está firmado, se bloquea la incorporación.</p>
                                         </div>
-                                        <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/laboral'; }}>Ir a Contratos y altas</Button>
+                                        <div className="flex flex-wrap gap-2">
+                                            {peticion.estado === 'En curso' && <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/mision'; }}>Personal en misión</Button>}
+                                            <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/laboral'; }}>Ir a Contratos y altas</Button>
+                                        </div>
                                     </div>
                                     {ocupadas.length === 0 ? (
                                         <EmptyState icon={Users} title="Todavía no hay plazas cubiertas" text="Cuando el cliente confirme a alguien, aquí verás su CPD, su contrato y su alta." />

@@ -419,6 +419,9 @@ export default function LaboralView() {
                                     <button type="button" onClick={() => { window.location.hash = '#/peticiones'; }} className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline">
                                         <ArrowUpRight className="w-3.5 h-3.5" />Ver {petId} en Peticiones
                                     </button>
+                                    {d < 0 && <button type="button" onClick={() => { window.location.hash = '#/mision'; }} className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline">
+                                        <ArrowUpRight className="w-3.5 h-3.5" />Personal en misión
+                                    </button>}
                                 </span>
                             }
                             actions={<>
@@ -489,6 +492,7 @@ export default function LaboralView() {
                         }
                         footer={<>
                             <Button variant="ghost" icon={ArrowUpRight} className="mr-auto" onClick={() => { window.location.hash = '#/candidatos'; }}>Ficha del candidato</Button>
+                            {completo(e) && <Button icon={ArrowUpRight} title="El expediente está completo: el primer día pasa a Personal en misión" onClick={() => { window.location.hash = '#/mision'; }}>Personal en misión</Button>}
                             <Button onClick={() => setAbierto(null)}>Cerrar</Button>
                         </>}
                     >

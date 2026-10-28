@@ -20,15 +20,15 @@ const ETT = {
 // Datos de facturación de la ficha del cliente (Empresas)
 const CLIENTES = {
     translog: {
-        nombre: 'Trans-Logística Ibérica Norte, S.L.', cif: 'B00000001',
+        nombre: 'Trans-Logística Ibérica Norte, S.L.', cif: 'B-87654321',
         direccion: 'Polígono Industrial Artunduaga, Pabellón 14, 48970 Basauri (Bizkaia)',
         iva: 21, retencion: 0, pago: 'Transferencia a 60 días', diasPago: 60, diasFijos: [10, 25],
         email: 'facturacion@translog-norte.es', fichaIncompleta: 'Falta el IBAN y la evaluación de riesgo.',
     },
     hosteleria: {
-        nombre: 'Hostelería & Eventos Premium BCN, S.L.', cif: 'B00000002', direccion: 'C/ Ejemplo 12, 08004 Barcelona',
+        nombre: 'Hostelería & Eventos Premium BCN, S.L.', cif: 'B-99887766', direccion: 'C/ Ejemplo 12, 08004 Barcelona',
         iva: 21, retencion: 0, pago: 'Transferencia a 30 días', diasPago: 30, diasFijos: [],
-        email: 'facturas@hosteleria-premium.example',
+        email: 'facturacion@premiumeventsbcn.cat',
     },
 };
 // Tarifa por hora del presupuesto aceptado; los recargos son los del presupuesto (EXTRAS_DEFECTO)

@@ -269,6 +269,7 @@ export default function MisionView() {
                         subtitle={`${pet.puesto} · ${pet.turno.toLowerCase()} · ${m.petId} · Plaza ${m.plaza}`}
                         footer={<>
                             <Button variant="ghost" icon={ArrowUpRight} className="mr-auto" onClick={() => { window.location.hash = '#/candidatos'; }}>Ficha del candidato</Button>
+                            <Button icon={Clock3} onClick={() => { window.location.hash = '#/horas'; }}>Horas e incidencias</Button>
                             <Button onClick={() => setAbierta(null)}>Cerrar</Button>
                         </>}
                     >

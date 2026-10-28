@@ -686,7 +686,7 @@ export default function HorasView() {
                                         <Button size="sm" variant="ghost" onClick={() => setDetalleMes(petId)}>Ver por persona</Button>
                                         <span className="flex-1" />
                                         {r.cierre.facturacion
-                                            ? <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" />En facturación desde el {fechaES(r.cierre.facturacion)}</span>
+                                            ? <button type="button" onClick={() => { window.location.hash = '#/facturacion'; }} className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline" title="Ver en Facturación"><CheckCircle2 className="w-3.5 h-3.5" />En facturación desde el {fechaES(r.cierre.facturacion)}<ArrowUpRight className="w-3.5 h-3.5" /></button>
                                             : <Button size="sm" icon={Receipt} disabled={!r.listo} title={r.listo ? undefined : 'Antes, el cliente tiene que validar todos los partes'} onClick={() => pasarMes(petId, mes, 'facturacion')}>Pasar a facturación</Button>}
                                         {r.cierre.nomina
                                             ? <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" />En nómina desde el {fechaES(r.cierre.nomina)}</span>

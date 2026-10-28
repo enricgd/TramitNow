@@ -15,42 +15,27 @@ import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Butt
 // ==========================================
 // DEMO INITIAL DATA & CONFIGURATION
 // ==========================================
+// Peticiones con plazas por cubrir (las mismas que en Peticiones). Una petición = un puesto.
 const INITIAL_PETITIONS = [
     {
-        id: 'PET-2026-0048',
-        client: 'Trans-Logística Ibérica Norte S.L.',
-        cif: 'B-98441209',
-        workplace: 'Centro Logístico Coslada - Nave 4 (Madrid)',
-        status: 'Abierta / En asignación',
-        startDate: '2026-03-01',
+        id: 'PET-2026-0049',
+        client: 'Trans-Logística Ibérica Norte, S.L.',
+        cif: 'B-87654321',
+        workplace: 'HUB central Basauri (Bizkaia) - Nave 2',
+        status: 'En selección',
+        startDate: '2026-11-03',
         positions: [
             {
-                id: 'POS-01',
-                title: 'Operario/a de almacén y preparación pedidos',
+                id: 'POS-0049',
+                title: 'Operario/a de almacén',
                 category: 'Logística',
-                turn: 'Turno Mañana (06:00 - 14:00)',
-                rate: '14,80 €/h',
-                requiredExperience: '6 meses en picking con radiofrecuencia',
-                mandatoryRequirements: ['Carnet de carretillero en vigor (UNE 58451)', 'DNI/NIE en vigor', 'Disponibilidad inmediata'],
-                plazasTotal: 4,
-                plazas: [
-                    { plazaNum: 1, status: 'Cubierta', candidateName: 'Marta Rivas Valero', candidateId: 'CAN-0102', assignedDate: '2026-02-18' },
-                    { plazaNum: 2, status: 'Vacante', candidateName: null, candidateId: null },
-                    { plazaNum: 3, status: 'Vacante', candidateName: null, candidateId: null },
-                    { plazaNum: 4, status: 'En selección', candidateName: 'David Castillo Ruiz', candidateId: 'CAN-0105', assignedDate: null }
-                ]
-            },
-            {
-                id: 'POS-02',
-                title: 'Reponedor/a nocturno / Carga y descarga',
-                category: 'Logística y Distribución',
-                turn: 'Turno Noche (22:00 - 06:00)',
-                rate: '16,40 €/h',
-                requiredExperience: 'Valorable experiencia en cámaras de frío',
-                mandatoryRequirements: ['DNI/NIE en vigor', 'Carnet de conducir B', 'Vehículo propio'],
+                turn: 'Turno de tarde (14:00 - 22:00)',
+                rate: 'Convenio de almacenes y logística (Bizkaia)',
+                requiredExperience: '6 meses en almacén o picking',
+                mandatoryRequirements: ['DNI/NIE en vigor', 'Disponibilidad inmediata'],
                 plazasTotal: 3,
                 plazas: [
-                    { plazaNum: 1, status: 'Cubierta', candidateName: 'Javier Navarro Gil', candidateId: 'CAN-0108', assignedDate: '2026-02-15' },
+                    { plazaNum: 1, status: 'En selección', candidateName: 'Elena Sánchez Pascual', candidateId: 'CAN-0104', assignedDate: null },
                     { plazaNum: 2, status: 'Vacante', candidateName: null, candidateId: null },
                     { plazaNum: 3, status: 'Vacante', candidateName: null, candidateId: null }
                 ]
@@ -58,21 +43,47 @@ const INITIAL_PETITIONS = [
         ]
     },
     {
-        id: 'PET-2026-0051',
-        client: 'FrigoDistribución Alimentaria S.A.',
-        cif: 'A-28994312',
-        workplace: 'Plataforma Frío Mercamadrid (Madrid)',
-        status: 'Abierta',
-        startDate: '2026-03-10',
+        id: 'PET-2026-0050',
+        client: 'Trans-Logística Ibérica Norte, S.L.',
+        cif: 'B-87654321',
+        workplace: 'HUB central Basauri (Bizkaia) - Nave 2',
+        status: 'En selección',
+        startDate: '2026-11-10',
         positions: [
             {
-                id: 'POS-03',
-                title: 'Carretillero/a retráctil frigorífico (-20ºC)',
+                id: 'POS-0050',
+                title: 'Carretillero/a',
                 category: 'Carretillero / Mozo especializado',
-                turn: 'Turno Rotativo M/T/N',
-                rate: '17,20 €/h',
-                requiredExperience: '2 años con retráctil en altura >10m',
-                mandatoryRequirements: ['Carnet de carretillero en vigor (UNE 58451)', 'Apto médico trabajos en frío'],
+                turn: 'Turno de tarde (14:00 - 22:00)',
+                rate: 'Convenio de almacenes y logística (Bizkaia)',
+                requiredExperience: '1 año con carretilla frontal o retráctil',
+                mandatoryRequirements: ['Carnet de carretillero en vigor (UNE 58451)', 'DNI/NIE en vigor'],
+                plazasTotal: 4,
+                plazas: [
+                    { plazaNum: 1, status: 'Cubierta', candidateName: 'Unai García Zabaleta', candidateId: 'CAN-0131', assignedDate: '2026-10-20' },
+                    { plazaNum: 2, status: 'Cubierta', candidateName: 'Carlos Manuel Ortiz Reyes', candidateId: 'CAN-0132', assignedDate: '2026-10-21' },
+                    { plazaNum: 3, status: 'En selección', candidateName: 'David Aranguren Sola', candidateId: null, assignedDate: null },
+                    { plazaNum: 4, status: 'En selección', candidateName: 'David Castillo Ruiz', candidateId: 'CAN-0105', assignedDate: null }
+                ]
+            }
+        ]
+    },
+    {
+        id: 'PET-2026-0046',
+        client: 'Hostelería & Eventos Premium BCN, S.L.',
+        cif: 'B-99887766',
+        workplace: 'Recinto de congresos - Barcelona',
+        status: 'En difusión',
+        startDate: '2026-11-05',
+        positions: [
+            {
+                id: 'POS-0046',
+                title: 'Cocinero/a de partida',
+                category: 'Hostelería',
+                turn: 'Jornada partida (08:30 - 17:30)',
+                rate: 'ALEH - convenio estatal hostelería',
+                requiredExperience: '2 años en cocina de banquetes',
+                mandatoryRequirements: ['DNI/NIE en vigor', 'Carné de manipulador de alimentos'],
                 plazasTotal: 2,
                 plazas: [
                     { plazaNum: 1, status: 'Vacante', candidateName: null, candidateId: null },
@@ -80,7 +91,102 @@ const INITIAL_PETITIONS = [
                 ]
             }
         ]
+    },
+    {
+        id: 'PET-2026-0047',
+        client: 'Hostelería & Eventos Premium BCN, S.L.',
+        cif: 'B-99887766',
+        workplace: 'Recinto de congresos - Barcelona',
+        status: 'Nueva',
+        startDate: '2026-11-12',
+        positions: [
+            {
+                id: 'POS-0047',
+                title: 'Camarero/a de barra',
+                category: 'Hostelería',
+                turn: 'Turno de noche (22:00 - 06:00)',
+                rate: 'ALEH - convenio estatal hostelería',
+                requiredExperience: '6 meses en barra',
+                mandatoryRequirements: ['DNI/NIE en vigor', 'Carné de manipulador de alimentos'],
+                plazasTotal: 3,
+                plazas: [
+                    { plazaNum: 1, status: 'Vacante', candidateName: null, candidateId: null },
+                    { plazaNum: 2, status: 'Vacante', candidateName: null, candidateId: null },
+                    { plazaNum: 3, status: 'Vacante', candidateName: null, candidateId: null }
+                ]
+            }
+        ]
     }
+];
+
+// Personas que ya trabajan, se incorporan o terminaron una misión (las mismas que en Contratos y altas,
+// Personal en misión y Horas e incidencias). Ficha resumida: el resto de datos se completa como en cualquier candidato.
+const LETRAS_DNI = 'TRWAGMYFPDXBNJZSQVHLCKE';
+const candidatoRecorrido = (n, nombreCompleto, { ciudad, provincia, km, centro, categoria, estado, mision, ultima, carnes = ['B'], turno, nie }) => {
+    const [name, ...resto] = nombreCompleto.split(' ');
+    const lastName = resto.join(' ');
+    const dni = nie || `0000${String(n).padStart(4, '0')}${LETRAS_DNI[n % 23]}`;
+    const usuario = `${name}.${resto[0] || ''}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return {
+        id: `CAN-0${n}`, name, lastName, dni, dniExpiry: nie ? '2026-09-30' : '2030-06-30', dniStatus: 'OK',
+        phone: `+34 600 000 ${String(n).padStart(3, '0')}`, email: `${usuario}@email.example`,
+        city: ciudad, province: provincia, distance: `${km} km de ${centro}`,
+        nss: `${provincia === 'Barcelona' ? '08' : '48'}/0000${String(n).padStart(4, '0')}/00`, nssStatus: 'OK',
+        rgpdStatus: 'Vigente', rgpdSignedDate: '2026-06-15', source: 'Portal Web ETT', sourceId: `WEB-${n}`,
+        lastContactDate: '2026-10-20', lastContactBy: 'Ane Uriarte', lastContactType: 'Llamada',
+        status: estado, category: categoria, experienceYears: 2, drivingLicenses: carnes, hasCar: false,
+        preferredShift: turno, skills: [], languages: ['Español (Nativo)'],
+        activeCandidatures: mision ? [`${mision.petitionId} (Plaza ${mision.plazaNum})`] : [],
+        assignedMission: mision || null,
+        documents: [
+            { name: `DNI_${name}.pdf`, type: 'DNI', status: nie ? 'Caducado' : 'Verificado', uploadDate: '2026-06-15' },
+            { name: `RGPD_${name}.pdf`, type: 'RGPD', status: 'Vigente', uploadDate: '2026-06-15' }
+        ],
+        communications: ultima ? [{ date: `${ultima.fecha} 10:00`, user: 'Ane Uriarte', channel: 'Llamada', result: ultima.resultado, note: ultima.nota }] : [],
+    };
+};
+const misionDe = (petitionId, client, positionTitle, plazaNum, startDate) => ({ petitionId, client, positionId: `POS-${petitionId.slice(-4)}`, positionTitle, plazaNum, startDate });
+const TRANSLOG = 'Trans-Logística Ibérica Norte, S.L.';
+const HOSTELERIA = 'Hostelería & Eventos Premium BCN, S.L.';
+const BIZKAIA = (ciudad, km) => ({ ciudad, provincia: 'Bizkaia', km, centro: 'Basauri' });
+const BCN = (ciudad, km) => ({ ciudad, provincia: 'Barcelona', km, centro: 'Barcelona' });
+const CANDIDATOS_RECORRIDO = [
+    // PET-2026-0044: en misión desde el 10/10 (Personal en misión)
+    ...[['Garazi Uribe Arana', 1, 'Barcelona', 3], ['Pablo Ruiz Cano', 2, "L'Hospitalet de Llobregat", 6], ['Youssef Amrani', 4, 'Badalona', 9],
+        ['Lucía Ferrer Sanz', 5, 'Barcelona', 4], ['Marc Puig Soler', 6, 'Cornellà de Llobregat', 10], ['Aitana Roca Vidal', 7, 'Sant Adrià de Besòs', 8],
+        ['Daniel Sousa Prieto', 8, 'Barcelona', 2], ['Irene Campos Gil', 9, 'Esplugues de Llobregat', 7], ['Óscar León Mena', 10, 'Barcelona', 5]]
+        .map(([nombre, plaza, ciudad, km], i) => candidatoRecorrido(110 + i, nombre, {
+            ...BCN(ciudad, km), categoria: 'Camarero/a de sala', estado: 'Asignado/En misión', turno: 'Jornada partida',
+            mision: misionDe('PET-2026-0044', HOSTELERIA, 'Camarero/a de sala', plaza, '2026-10-10'),
+        })),
+    candidatoRecorrido(119, 'Sara Benítez Lago', {
+        ...BCN('Barcelona', 4), categoria: 'Camarero/a de sala', estado: 'No disponible', turno: 'Jornada partida',
+        ultima: { fecha: '2026-10-16', resultado: 'Baja voluntaria', nota: 'Deja la plaza 3 de PET-2026-0044 por motivos personales.' },
+    }),
+    // PET-2026-0031: terminaron el 30/09
+    ...['Clara Esteve Ros', 'Bruno Lage Costa', 'Nerea Olabarria Gil', 'Adrián Vela Soto', 'Paula Rius Ferrer', 'Sergio Navas Peña']
+        .map((nombre, i) => candidatoRecorrido(120 + i, nombre, {
+            ...BIZKAIA(['Basauri', 'Bilbao', 'Galdakao', 'Barakaldo', 'Etxebarri', 'Bilbao'][i], [1, 8, 4, 14, 3, 9][i]),
+            categoria: 'Operario/a de almacén', estado: 'Disponible', turno: 'Turno de mañana',
+            ultima: { fecha: '2026-09-30', resultado: 'Fin de misión', nota: 'Termina la campaña de verano en PET-2026-0031. Quiere repetir.' },
+        })),
+    // Se incorporan: siguen en Contratos y altas hasta su primer día
+    ...[['Jon Ander Etxebarria Bilbao', 1, 'Bilbao', 9], ['Ainhoa Larrazabal Urkijo', 2, 'Galdakao', 4], ['Mamadou Diallo', 3, 'Basauri', 1, 'X0000000T'],
+        ['Laura Morales San Sebastián', 4, 'Barakaldo', 14], ['Iker Agirrebeitia Mendia', 5, 'Etxebarri', 3]]
+        .map(([nombre, plaza, ciudad, km, nie], i) => candidatoRecorrido(126 + i, nombre, {
+            ...BIZKAIA(ciudad, km), categoria: 'Operario/a de almacén', estado: 'En incorporación', turno: 'Turno de mañana', nie,
+            mision: misionDe('PET-2026-0048', TRANSLOG, 'Operario/a de almacén', plaza, '2026-11-03'),
+        })),
+    ...[['Unai García Zabaleta', 1, 'Leioa', 16], ['Carlos Manuel Ortiz Reyes', 2, 'Bilbao', 8]]
+        .map(([nombre, plaza, ciudad, km], i) => candidatoRecorrido(131 + i, nombre, {
+            ...BIZKAIA(ciudad, km), categoria: 'Carretillero/a', estado: 'En incorporación', turno: 'Turno de tarde', carnes: ['B', 'Carnet Carretillero UNE 58451'],
+            mision: misionDe('PET-2026-0050', TRANSLOG, 'Carretillero/a', plaza, '2026-11-10'),
+        })),
+    ...[['Noa Serra Pons', 1, 'Barcelona', 3], ['Hugo Martín Vera', 2, 'Badalona', 9], ['Ane Goikoetxea Ruiz', 3, 'Barcelona', 5], ['Iván Molina Prat', 4, "L'Hospitalet de Llobregat", 6]]
+        .map(([nombre, plaza, ciudad, km], i) => candidatoRecorrido(133 + i, nombre, {
+            ...BCN(ciudad, km), categoria: 'Ayudante de cocina', estado: 'En incorporación', turno: 'Jornada partida',
+            mision: misionDe('PET-2026-0045', HOSTELERIA, 'Ayudante de cocina', plaza, '2026-11-05'),
+        })),
 ];
 
 const CANDIDATOS_BASE = [
@@ -93,16 +199,16 @@ const CANDIDATOS_BASE = [
         dniStatus: 'OK', // OK, Caducado, Falta
         phone: '+34 611 234 567',
         email: 'carlos.gomez@email.es',
-        city: 'Alcalá de Henares',
-        province: 'Madrid',
-        distance: '14 km de Coslada',
-        nss: '28/12345678/90',
+        city: 'Bilbao',
+        province: 'Bizkaia',
+        distance: '9 km de Basauri',
+        nss: '48/12345678/90',
         nssStatus: 'OK',
         rgpdStatus: 'Vigente', // Vigente, Proximo, Caducado, Sin consentimiento
         rgpdSignedDate: '2025-09-12',
         source: 'InfoJobs',
         sourceId: 'INF-99824',
-        lastContactDate: '2026-02-22',
+        lastContactDate: '2026-10-22',
         lastContactBy: 'Ana Gómez',
         lastContactType: 'Llamada telefónica',
         status: 'Disponible', // Nuevo, Pendiente de contactar, Contactado, En entrevista, Disponible, No disponible, Asignado/En misión, Descartado
@@ -119,11 +225,11 @@ const CANDIDATOS_BASE = [
             { name: 'DNI_Anverso_Reverso.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-09-12' },
             { name: 'Certificado_Carretillero_UNE.pdf', type: 'Certificado', status: 'Verificado', uploadDate: '2025-10-04' },
             { name: 'Consentimiento_RGPD_Firmado.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2025-09-12' },
-            { name: 'CV_Carlos_Gomez_2026.pdf', type: 'CV', status: 'Actualizado', uploadDate: '2026-01-15' }
+            { name: 'CV_Carlos_Gomez_2026.pdf', type: 'CV', status: 'Actualizado', uploadDate: '2026-09-15' }
         ],
         communications: [
-            { date: '2026-02-22 11:30', user: 'Ana Gómez', channel: 'Llamada', result: 'Interesado y disponible', note: 'Disponible para incorporación inmediata en turno de mañana o noche.', nextAction: 'Presentar a PET-2026-0048' },
-            { date: '2026-01-15 09:40', user: 'Carlos M. (ETT)', channel: 'WhatsApp', result: 'Actualización CV', note: 'Envía carnet renovado de carretillero.' }
+            { date: '2026-10-22 11:30', user: 'Ana Gómez', channel: 'Llamada', result: 'Interesado y disponible', note: 'Disponible para incorporación inmediata en turno de mañana o noche.', nextAction: 'Presentar a PET-2026-0049' },
+            { date: '2026-09-15 09:40', user: 'Carlos M. (ETT)', channel: 'WhatsApp', result: 'Actualización CV', note: 'Envía carnet renovado de carretillero.' }
         ]
     },
     {
@@ -135,19 +241,19 @@ const CANDIDATOS_BASE = [
         dniStatus: 'OK',
         phone: '+34 670 981 234',
         email: 'marta.rivas@talent.org',
-        city: 'Coslada',
-        province: 'Madrid',
-        distance: '2 km de Coslada',
-        nss: '28/99887766/12',
+        city: 'Basauri',
+        province: 'Bizkaia',
+        distance: '1 km de Basauri',
+        nss: '48/99887766/12',
         nssStatus: 'OK',
         rgpdStatus: 'Vigente',
         rgpdSignedDate: '2025-06-20',
         source: 'LinkedIn',
         sourceId: 'IN-448190',
-        lastContactDate: '2026-02-18',
+        lastContactDate: '2026-10-18',
         lastContactBy: 'Ana Gómez',
         lastContactType: 'Email asignación',
-        status: 'Asignado/En misión',
+        status: 'Disponible',
         category: 'Operario/a de almacén',
         experienceYears: 3,
         drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
@@ -155,22 +261,15 @@ const CANDIDATOS_BASE = [
         preferredShift: 'Turno Mañana',
         skills: ['Picking voz', 'Control de stock', 'Ubicaciones altas'],
         languages: ['Español (Nativo)', 'Inglés (B1)'],
-        activeCandidatures: ['PET-2026-0048 (Asignada Plaza 1)'],
-        assignedMission: {
-            petitionId: 'PET-2026-0048',
-            client: 'Trans-Logística Ibérica Norte S.L.',
-            positionId: 'POS-01',
-            positionTitle: 'Operario/a de almacén',
-            plazaNum: 1,
-            startDate: '2026-03-01'
-        },
+        activeCandidatures: [],
+        assignedMission: null,
         documents: [
             { name: 'DNI_Marta_Rivas.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-06-20' },
             { name: 'Afiliacion_SS_Marta.pdf', type: 'NSS', status: 'Verificado', uploadDate: '2025-06-20' },
             { name: 'RGPD_Firmado_Digital.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2025-06-20' }
         ],
         communications: [
-            { date: '2026-02-18 16:15', user: 'Ana Gómez', channel: 'Email', result: 'Asignación confirmada', note: 'Enviada documentación de bienvenida y EPIs para inicio 01/03.' }
+            { date: '2026-10-18 16:15', user: 'Ana Gómez', channel: 'Email', result: 'Disponible', note: 'Termina su última misión. Prefiere turno de mañana.' }
         ]
     },
     {
@@ -178,20 +277,20 @@ const CANDIDATOS_BASE = [
         name: 'Mohamed',
         lastName: 'El Amrani',
         dni: 'X8923412K',
-        dniExpiry: '2026-01-10', // Caducado Demo
+        dniExpiry: '2026-09-10', // Caducado Demo
         dniStatus: 'Caducado',
         phone: '+34 633 445 566',
         email: 'mohamed.elamrani@mail.com',
-        city: 'Torrejón de Ardoz',
-        province: 'Madrid',
-        distance: '9 km de Coslada',
-        nss: '28/44332211/09',
+        city: 'Barakaldo',
+        province: 'Bizkaia',
+        distance: '14 km de Basauri',
+        nss: '48/44332211/09',
         nssStatus: 'OK',
         rgpdStatus: 'Próximo a caducar',
         rgpdSignedDate: '2024-03-15',
         source: 'Portal Web ETT',
         sourceId: 'WEB-1082',
-        lastContactDate: '2026-02-10',
+        lastContactDate: '2026-10-26',
         lastContactBy: 'Lucía Santos',
         lastContactType: 'SMS Recordatorio',
         status: 'Pendiente de contactar',
@@ -209,7 +308,7 @@ const CANDIDATOS_BASE = [
             { name: 'Carnet_Retractil_UNE.pdf', type: 'Certificado', status: 'Verificado', uploadDate: '2025-02-10' }
         ],
         communications: [
-            { date: '2026-02-10 10:15', user: 'Lucía Santos', channel: 'SMS', result: 'Solicitud renovación NIE', note: 'Enviado SMS automático para aportar resguardo renovación de tarjeta.' }
+            { date: '2026-10-10 10:15', user: 'Lucía Santos', channel: 'SMS', result: 'Solicitud renovación NIE', note: 'Enviado SMS automático para aportar resguardo renovación de tarjeta.' }
         ]
     },
     {
@@ -221,16 +320,16 @@ const CANDIDATOS_BASE = [
         dniStatus: 'OK',
         phone: '+34 689 112 233',
         email: 'elena.sanchez.p@fastmail.com',
-        city: 'San Fernando de Henares',
-        province: 'Madrid',
-        distance: '4 km de Coslada',
+        city: 'Galdakao',
+        province: 'Bizkaia',
+        distance: '4 km de Basauri',
         nss: 'FALTA',
         nssStatus: 'Falta',
         rgpdStatus: 'Vigente',
-        rgpdSignedDate: '2026-01-10',
+        rgpdSignedDate: '2026-09-10',
         source: 'Monster',
         sourceId: 'MON-33419',
-        lastContactDate: '2026-02-23',
+        lastContactDate: '2026-10-23',
         lastContactBy: 'Ana Gómez',
         lastContactType: 'WhatsApp',
         status: 'En entrevista',
@@ -241,14 +340,14 @@ const CANDIDATOS_BASE = [
         preferredShift: 'Turno Mañana o Tarde',
         skills: ['Reposición lineal', 'Inventarios', 'Etiquetado', 'Trato al cliente'],
         languages: ['Español (Nativo)'],
-        activeCandidatures: ['PET-2026-0048 (Entrevista POS-02)'],
+        activeCandidatures: ['PET-2026-0049 (En selección, plaza 1)'],
         assignedMission: null,
         documents: [
-            { name: 'DNI_Elena_Sanchez.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2026-01-10' },
-            { name: 'RGPD_Firmado.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2026-01-10' }
+            { name: 'DNI_Elena_Sanchez.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2026-09-10' },
+            { name: 'RGPD_Firmado.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2026-09-10' }
         ],
         communications: [
-            { date: '2026-02-23 12:00', user: 'Ana Gómez', channel: 'WhatsApp', result: 'Citada para entrevista', note: 'Entrevista telefónica técnica completada favorablemente. Pendiente aportar NSS.' }
+            { date: '2026-10-23 12:00', user: 'Ana Gómez', channel: 'WhatsApp', result: 'Citada para entrevista', note: 'Entrevista telefónica técnica completada favorablemente. Pendiente aportar NSS.' }
         ]
     },
     {
@@ -260,16 +359,16 @@ const CANDIDATOS_BASE = [
         dniStatus: 'OK',
         phone: '+34 654 321 987',
         email: 'david.castillo.log@outlook.com',
-        city: 'Madrid (Vicálvaro)',
-        province: 'Madrid',
-        distance: '8 km de Coslada',
-        nss: '28/77665544/88',
+        city: 'Bilbao (Santutxu)',
+        province: 'Bizkaia',
+        distance: '6 km de Basauri',
+        nss: '48/77665544/88',
         nssStatus: 'OK',
         rgpdStatus: 'Vigente',
         rgpdSignedDate: '2025-11-20',
         source: 'InfoJobs',
         sourceId: 'INF-88123',
-        lastContactDate: '2026-02-20',
+        lastContactDate: '2026-10-20',
         lastContactBy: 'Ana Gómez',
         lastContactType: 'Llamada',
         status: 'En entrevista',
@@ -280,7 +379,7 @@ const CANDIDATOS_BASE = [
         preferredShift: 'Turno Mañana',
         skills: ['Picking radiofrecuencia', 'Preparación pedidos', 'Paletizado'],
         languages: ['Español (Nativo)'],
-        activeCandidatures: ['PET-2026-0048 (Preseleccionado Plaza 4)'],
+        activeCandidatures: ['PET-2026-0050 (En selección, plaza 4)'],
         assignedMission: null,
         documents: [
             { name: 'DNI_David_Castillo.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-11-20' },
@@ -288,7 +387,7 @@ const CANDIDATOS_BASE = [
             { name: 'RGPD_ETT_Global.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2025-11-20' }
         ],
         communications: [
-            { date: '2026-02-20 15:40', user: 'Ana Gómez', channel: 'Llamada', result: 'Validada disponibilidad', note: 'Disponible para plaza 4 de PET-2026-0048.' }
+            { date: '2026-10-20 15:40', user: 'Ana Gómez', channel: 'Llamada', result: 'Validada disponibilidad', note: 'Disponible para plaza 4 de PET-2026-0050.' }
         ]
     },
     {
@@ -300,16 +399,16 @@ const CANDIDATOS_BASE = [
         dniStatus: 'OK',
         phone: '+34 612 889 900',
         email: 'laura.mendez.h@gmail.com',
-        city: 'Guadalajara',
-        province: 'Guadalajara',
-        distance: '38 km de Coslada',
+        city: 'Getxo',
+        province: 'Bizkaia',
+        distance: '20 km de Basauri',
         nss: '19/11223344/55',
         nssStatus: 'OK',
         rgpdStatus: 'Caducado', // Demo RGPD Caducado
         rgpdSignedDate: '2023-11-01',
         source: 'Alta Manual',
         sourceId: 'MAN-901',
-        lastContactDate: '2026-01-08',
+        lastContactDate: '2026-09-08',
         lastContactBy: 'Javier Pons',
         lastContactType: 'Email',
         status: 'Disponible',
@@ -327,7 +426,7 @@ const CANDIDATOS_BASE = [
             { name: 'RGPD_Caducado.pdf', type: 'RGPD', status: 'Caducado', uploadDate: '2023-11-01' }
         ],
         communications: [
-            { date: '2026-01-08 17:00', user: 'Javier Pons', channel: 'Email', result: 'Sondeo de interés', note: 'Indica que busca turnos fijos.' }
+            { date: '2026-09-08 17:00', user: 'Javier Pons', channel: 'Email', result: 'Sondeo de interés', note: 'Indica que busca turnos fijos.' }
         ]
     },
     {
@@ -339,16 +438,16 @@ const CANDIDATOS_BASE = [
         dniStatus: 'OK',
         phone: '+34 644 123 789',
         email: 'andres.vidal@empresa.com',
-        city: 'Alcalá de Henares',
-        province: 'Madrid',
-        distance: '16 km de Coslada',
-        nss: '28/65432109/88',
+        city: 'Durango',
+        province: 'Bizkaia',
+        distance: '22 km de Basauri',
+        nss: '48/65432109/88',
         nssStatus: 'OK',
         rgpdStatus: 'Vigente',
-        rgpdSignedDate: '2026-02-01',
+        rgpdSignedDate: '2026-10-01',
         source: 'LinkedIn',
         sourceId: 'IN-778219',
-        lastContactDate: '2026-02-24',
+        lastContactDate: '2026-10-24',
         lastContactBy: 'Ana Gómez',
         lastContactType: 'Email',
         status: 'Nuevo',
@@ -362,11 +461,11 @@ const CANDIDATOS_BASE = [
         activeCandidatures: [],
         assignedMission: null,
         documents: [
-            { name: 'DNI_Andres_Vidal.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2026-02-01' },
-            { name: 'RGPD_Andres.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2026-02-01' }
+            { name: 'DNI_Andres_Vidal.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2026-10-01' },
+            { name: 'RGPD_Andres.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2026-10-01' }
         ],
         communications: [
-            { date: '2026-02-24 09:15', user: 'Ana Gómez', channel: 'Email', result: 'Envío cuestionario', note: 'Perfil recibido hoy desde LinkedIn. Buen encaje para turno nocturno.' }
+            { date: '2026-10-24 09:15', user: 'Ana Gómez', channel: 'Email', result: 'Envío cuestionario', note: 'Perfil recibido hoy desde LinkedIn. Buen encaje para turno nocturno.' }
         ]
     },
     {
@@ -378,19 +477,19 @@ const CANDIDATOS_BASE = [
         dniStatus: 'OK',
         phone: '+34 622 901 823',
         email: 'javier.navarro@live.com',
-        city: 'Madrid (Barajas)',
-        province: 'Madrid',
-        distance: '6 km de Coslada',
-        nss: '28/90123456/77',
+        city: 'Etxebarri',
+        province: 'Bizkaia',
+        distance: '3 km de Basauri',
+        nss: '48/90123456/77',
         nssStatus: 'OK',
         rgpdStatus: 'Vigente',
         rgpdSignedDate: '2025-08-14',
         source: 'Portal Web ETT',
         sourceId: 'WEB-9921',
-        lastContactDate: '2026-02-15',
+        lastContactDate: '2026-10-15',
         lastContactBy: 'Ana Gómez',
         lastContactType: 'Llamada asignación',
-        status: 'Asignado/En misión',
+        status: 'Disponible',
         category: 'Reponedor nocturno / Carretillero',
         experienceYears: 4,
         drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
@@ -398,23 +497,17 @@ const CANDIDATOS_BASE = [
         preferredShift: 'Turno Noche',
         skills: ['Carga/descarga', 'Manejo apiladores', 'Trabajo en equipo'],
         languages: ['Español (Nativo)'],
-        activeCandidatures: ['PET-2026-0048 (Asignado POS-02 Plaza 1)'],
-        assignedMission: {
-            petitionId: 'PET-2026-0048',
-            client: 'Trans-Logística Ibérica Norte S.L.',
-            positionId: 'POS-02',
-            positionTitle: 'Reponedor/a nocturno',
-            plazaNum: 1,
-            startDate: '2026-03-01'
-        },
+        activeCandidatures: [],
+        assignedMission: null,
         documents: [
             { name: 'DNI_Javier_Navarro.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-08-14' },
             { name: 'SS_Javier.pdf', type: 'NSS', status: 'Verificado', uploadDate: '2025-08-14' }
         ],
         communications: [
-            { date: '2026-02-15 11:20', user: 'Ana Gómez', channel: 'Llamada', result: 'Asignado a misión', note: 'Acepta horario nocturno en Coslada.' }
+            { date: '2026-10-15 11:20', user: 'Ana Gómez', channel: 'Llamada', result: 'Disponible', note: 'Disponible para turno de noche en Basauri.' }
         ]
-    }
+    },
+    ...CANDIDATOS_RECORRIDO,
 ];
 
 // Estado del candidato -> texto y color. Mismos colores que el resto de la app (ver src/ui/Badge.tsx).
@@ -439,7 +532,7 @@ const CATALOGOS_INICIALES = {
         item('Soldador/a', 'Industria', 'soldadora', 'soldador TIG', 'soldador MIG'),
         item('Mecánico/a de mantenimiento', 'Industria', 'técnico de mantenimiento', 'mantenimiento industrial'),
         item('Electricista', 'Industria', 'oficial electricista'),
-        item('Camarero/a', 'Hostelería', 'camarera', 'camarero de sala', 'mesero'),
+        item('Camarero/a', 'Hostelería', 'camarera', 'camarero de sala', 'camarero/a de sala', 'camarera de sala', 'mesero'),
         item('Camarero/a de barra', 'Hostelería', 'barman', 'bartender', 'coctelero'),
         item('Cocinero/a', 'Hostelería', 'cocinera', 'jefe de partida', 'chef'),
         item('Ayudante de cocina', 'Hostelería', 'pinche', 'auxiliar de cocina'),
@@ -734,6 +827,7 @@ const INITIAL_CANDIDATES = CANDIDATOS_BASE.map(c => homogeneizar(completarCandid
 const ESTADO_CANDIDATO = {
     'Disponible': { tone: 'success', label: 'Disponible' },
     'Asignado/En misión': { tone: 'info', label: 'En misión' },
+    'En incorporación': { tone: 'accent', label: 'En incorporación' },
     'En entrevista': { tone: 'accent', label: 'En selección' },
     'Nuevo': { tone: 'neutral', label: 'Nuevo' },
     'Pendiente de contactar': { tone: 'warning', label: 'Por contactar' },
@@ -797,8 +891,8 @@ export default function CandidatosView() {
         candidate: null,
         candidatesBatch: [], // For bulk assignment
         step: 1, // 1: Select Petition, 2: Select Position, 3: Select Plaza, 4: Validate & Compatibility, 5: Confirmation
-        selectedPetitionId: 'PET-2026-0048',
-        selectedPositionId: 'POS-01',
+        selectedPetitionId: 'PET-2026-0049',
+        selectedPositionId: 'POS-0049',
         selectedPlazaNum: 2,
         assignmentMode: 'plaza', // 'plaza' (direct assignment) | 'candidature' (iniciar candidatura/terna)
         blockersFound: [],
@@ -1002,8 +1096,8 @@ export default function CandidatosView() {
 
     // Start Assign Wizard for a single candidate
     const startAssignWizard = (candidate) => {
-        // Pre-check blockers for default position (POS-01 on PET-2026-0048)
-        const pet = petitions.find(p => p.id === 'PET-2026-0048');
+        // Comprobaciones con la primera petición en selección (PET-2026-0049)
+        const pet = petitions.find(p => p.id === 'PET-2026-0049');
         const pos = pet?.positions[0];
         
         const blockers = [];
@@ -1027,8 +1121,8 @@ export default function CandidatosView() {
             candidate: candidate,
             candidatesBatch: [candidate],
             step: 1,
-            selectedPetitionId: 'PET-2026-0048',
-            selectedPositionId: 'POS-01',
+            selectedPetitionId: 'PET-2026-0049',
+            selectedPositionId: 'POS-0049',
             selectedPlazaNum: 2, // Default to first vacant
             assignmentMode: 'plaza',
             blockersFound: blockers,
@@ -1207,8 +1301,8 @@ export default function CandidatosView() {
             dniStatus: form.dni.value ? 'OK' : 'Falta',
             phone: form.phone.value,
             email: form.email.value,
-            city: form.city.value || 'Madrid',
-            province: form.province.value || 'Madrid',
+            city: form.city.value || 'Basauri',
+            province: form.province.value || 'Bizkaia',
             distance: 'A calcular',
             nss: form.nss.value || 'FALTA',
             nssStatus: form.nss.value ? 'OK' : 'Falta',
@@ -1260,10 +1354,10 @@ export default function CandidatosView() {
             dniStatus: 'OK',
             phone: `+34 6${Math.floor(10000000 + Math.random() * 90000000)}`,
             email: `${rand.name.toLowerCase()}.${rand.lastName.split(' ')[0].toLowerCase()}@candidato.es`,
-            city: 'Coslada',
-            province: 'Madrid',
-            distance: '3 km de Coslada',
-            nss: '28/99112233/44',
+            city: 'Basauri',
+            province: 'Bizkaia',
+            distance: '3 km de Basauri',
+            nss: '48/99112233/44',
             nssStatus: 'OK',
             rgpdStatus: 'Vigente',
             rgpdSignedDate: new Date().toISOString().split('T')[0],
@@ -1439,6 +1533,7 @@ export default function CandidatosView() {
                             <option value="ALL">Todos los estados</option>
                             <option value="Disponible">Disponible</option>
                             <option value="Asignado/En misión">En misión</option>
+                            <option value="En incorporación">En incorporación</option>
                             <option value="En entrevista">En selección</option>
                             <option value="Nuevo">Nuevo</option>
                             <option value="Pendiente de contactar">Por contactar</option>
@@ -1903,7 +1998,7 @@ export default function CandidatosView() {
                                                         {Object.keys(ESTADO_CANDIDATO).map(s => <option key={s} value={s}>{ESTADO_CANDIDATO[s].label}</option>)}
                                                     </Select>
                                                 </Field>
-                                                {c.assignedMission && <Notice tone="info" icon={Info}>Está en misión en {c.assignedMission.petitionId}: el estado cambia al terminar la misión.</Notice>}
+                                                {c.assignedMission && <Notice tone="info" icon={Info}>{c.status === 'En incorporación' ? `Se incorpora a ${c.assignedMission.petitionId}: el estado cambia el primer día.` : `Está en misión en ${c.assignedMission.petitionId}: el estado cambia al terminar la misión.`}</Notice>}
                                                 <div className="space-y-1">
                                                     <span className="block text-[11px] font-medium text-slate-600">Turnos en los que puede trabajar</span>
                                                     <div className="flex flex-wrap gap-2">
@@ -2531,11 +2626,11 @@ export default function CandidatosView() {
                                         const val = e.target.value;
                                         setContactTemplate(val);
                                         if (val === 'entrevista') {
-                                            setContactMessage(`Hola ${contactModalCandidate.name}, te contactamos de ETT Global para convocarte a una entrevista para vacante de logística en Coslada.`);
+                                            setContactMessage(`Hola ${contactModalCandidate.name}, te contactamos de ETT Global para convocarte a una entrevista para vacante de logística en Basauri.`);
                                         } else if (val === 'renovacionDoc') {
                                             setContactMessage(`Estimado/a ${contactModalCandidate.name}, te recordamos la necesidad de aportar documento de identidad renovado para mantener activas tus candidaturas en TramitNow ETT.`);
                                         } else if (val === 'ofertaUrgente') {
-                                            setContactMessage(`¡Oferta urgente de turno en Coslada! Buscamos operario para incorporación el próximo lunes. Confírmanos tu disponibilidad.`);
+                                            setContactMessage(`¡Oferta urgente de turno en Basauri! Buscamos operario para incorporación el próximo lunes. Confírmanos tu disponibilidad.`);
                                         }
                                     }}
                                     className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs"
@@ -2655,11 +2750,11 @@ export default function CandidatosView() {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="font-semibold text-slate-700 block mb-1">Población</label>
-                                        <input name="city" type="text" defaultValue="Coslada" className="w-full p-2 border border-slate-200 rounded-lg text-xs" />
+                                        <input name="city" type="text" defaultValue="Basauri" className="w-full p-2 border border-slate-200 rounded-lg text-xs" />
                                     </div>
                                     <div>
                                         <label className="font-semibold text-slate-700 block mb-1">Provincia</label>
-                                        <input name="province" type="text" defaultValue="Madrid" className="w-full p-2 border border-slate-200 rounded-lg text-xs" />
+                                        <input name="province" type="text" defaultValue="Bizkaia" className="w-full p-2 border border-slate-200 rounded-lg text-xs" />
                                     </div>
                                 </div>
 
@@ -2820,7 +2915,7 @@ export default function CandidatosView() {
                                 <>
                                     <p className="text-slate-700">Se enviará una comunicación por SMS/Email a los {selectedIds.length} candidatos seleccionados:</p>
                                     <textarea 
-                                        defaultValue="Hola, desde ETT Global te informamos de nuevas oportunidades de empleo en el sector logístico de Madrid. Responde a este mensaje para confirmar disponibilidad."
+                                        defaultValue="Hola, desde ETT Global te informamos de nuevas oportunidades de empleo en el sector logístico de Bizkaia. Responde a este mensaje para confirmar disponibilidad."
                                         rows={3}
                                         className="w-full p-2.5 border border-slate-200 rounded-lg text-xs"
                                     />
