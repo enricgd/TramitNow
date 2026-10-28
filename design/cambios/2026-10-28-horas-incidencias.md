@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-28
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 584feb4
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/horas. Para probar los reparos: "Corregir" en la
   semana del 12/10; para rellenar un parte: "Completar" en esta semana; para el cierre: pestaña "Cierre del mes".
 
