@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import pkg from './package.json' with { type: 'json' };
+import { fileURLToPath } from 'node:url';
 
 // Versión visible en la barra lateral: versión del package + commit, para saber qué hay desplegado.
 const commit = (() => {
@@ -25,5 +26,14 @@ export default defineConfig({
   },
   define: {
     __APP_VERSION__: JSON.stringify(`${pkg.version}-${commit}`),
+  },
+  // Dos páginas: el ERP (index.html) y el portal de candidatos y empresas (portal.html), que va aparte.
+  build: {
+    rollupOptions: {
+      input: {
+        erp: fileURLToPath(new URL('./index.html', import.meta.url)),
+        portal: fileURLToPath(new URL('./portal.html', import.meta.url)),
+      },
+    },
   },
 });

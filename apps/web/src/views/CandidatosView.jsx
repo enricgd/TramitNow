@@ -141,7 +141,8 @@ const candidatoRecorrido = (n, nombreCompleto, { ciudad, provincia, km, centro, 
         assignedMission: mision || null,
         documents: [
             { name: `DNI_${name}.pdf`, type: 'DNI', status: nie || dniCaducado ? 'Caducado' : 'Verificado', uploadDate: '2026-06-15' },
-            { name: `RGPD_${name}.pdf`, type: 'RGPD', status: 'Vigente', uploadDate: '2026-06-15' }
+            { name: `RGPD_${name}.pdf`, type: 'RGPD', status: 'Vigente', uploadDate: '2026-06-15' },
+            ...(carnes.some(x => /carretill/i.test(x)) ? [{ name: `Carne_carretillero_${name}.pdf`, type: 'Certificado', status: 'Verificado', uploadDate: '2026-06-15', expiry: n === 131 ? '2026-11-20' : '2028-05-31' }] : [])
         ],
         communications: ultima ? [{ date: `${ultima.fecha} 10:00`, user: 'Ane Uriarte', channel: 'Llamada', result: ultima.resultado, note: ultima.nota }] : [],
         ...(candidaturas ? { candidaturas, activeCandidatures: candidaturas.map(x => `${x.petId} (${x.estado}${x.plaza ? `, plaza ${x.plaza}` : ''})`) } : {}),
@@ -205,6 +206,11 @@ const CANDIDATOS_RECORRIDO = [
         .map(([nombre, plaza, ciudad, km], i) => candidatoRecorrido(131 + i, nombre, {
             ...BIZKAIA(ciudad, km), categoria: 'Carretillero/a', estado: 'En incorporación', turno: 'Turno de tarde', carnes: ['B', 'Carnet Carretillero UNE 58451'],
             mision: misionDe('PET-2026-0050', TRANSLOG, 'Carretillero/a', plaza, '2026-11-10'),
+            // Unai ya trabajó con la ETT el verano de 2025 (se ve en su portal: contrato pasado y nóminas)
+            candidaturas: i === 0 ? [
+                { petId: 'PET-2026-0050', plaza, estado: 'Confirmada', fecha: '2026-11-10' },
+                { petId: 'PET-2025-0087', plaza: null, estado: 'Finalizada', fecha: '2025-09-30', nota: 'Campaña de verano de 2025.' },
+            ] : undefined,
         })),
     ...[['Noa Serra Pons', 1, 'Barcelona', 3], ['Hugo Martín Vera', 2, 'Badalona', 9], ['Ane Goikoetxea Ruiz', 3, 'Barcelona', 5], ['Iván Molina Prat', 4, "L'Hospitalet de Llobregat", 6]]
         .map(([nombre, plaza, ciudad, km], i) => candidatoRecorrido(133 + i, nombre, {
@@ -889,6 +895,7 @@ const PETICIONES_INFO = {
     'PET-2026-0047': { puesto: 'Camarero/a de barra', turno: 'Turno de noche', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-11-12', fin: '2026-11-30' },
     'PET-2026-0048': { puesto: 'Operario/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-03', fin: '2027-01-29' },
     'PET-2026-0049': { puesto: 'Operario/a de almacén', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-03', fin: '2027-01-29' },
+    'PET-2025-0087': { puesto: 'Mozo/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2025-07-01', fin: '2025-09-30' },
     'PET-2026-0050': { puesto: 'Carretillero/a', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-10', fin: '2027-01-29' },
 };
 // Estados de una candidatura, en el orden del recorrido (los mismos pasos que la plaza en Peticiones)

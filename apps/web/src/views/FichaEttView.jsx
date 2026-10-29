@@ -967,7 +967,7 @@ export default function FichaEttView() {
                     {activeTab === 'portales' && (
                         <div className="space-y-4 fade-in">
                             <Card className="p-5 space-y-4">
-                                <SectionTitle actions={<Badge tone="success" dot>Activo</Badge>}>Dirección de los portales</SectionTitle>
+                                <SectionTitle actions={<span className="flex items-center gap-2"><Button size="sm" icon={ExternalLink} onClick={() => window.open('/portal.html', '_blank')}>Ver el portal de candidatos</Button><Badge tone="success" dot>Activo</Badge></span>}>Dirección de los portales</SectionTitle>
                                 <p className="text-xs text-slate-600 -mt-1">
                                     La ETT tiene su propio subdominio de TramitNOW con dos portales: uno para las empresas cliente y otro para los candidatos.
                                     Cada petición decide si se ve en ellos.
