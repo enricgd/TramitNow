@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-29
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 6f51a49
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/horas.
   - Varias peticiones: la semana que viene.
   - Diferencia con la factura: periodo «Últimos 3 meses», semanas de agosto.
