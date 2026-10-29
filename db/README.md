@@ -383,7 +383,8 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
   CNAE, regímenes de la Seguridad Social, tipos de documento de identidad (`client_centers.cnae_code` y
   `ss_regime_code` pasarán a FK). `professional_categories.cno_code`
   pasará a FK cuando exista el de ocupaciones.
-- Tablas salariales de convenio por año (niveles, salario base, pluses): las piden presupuestos ("precios de
-  convenio con entrada en vigor para el año") y se diseñarán con ese módulo.
+- Catálogo global de convenios, con tablas salariales por versión y cambios retroactivos: propuesta en
+  `docs/convenios-globales.md`. Cambia `collective_agreements` (nuevo `global_agreement_id`), así que
+  conviene decidirlo antes de cargar datos reales.
 - Sucursal activa para los roles `branch` (`seleccion`, `comercial`): hoy el JWT lleva todas sus sucursales.
 - Alta de usuarios e invitaciones desde la API (service_role), y portal de cliente.
