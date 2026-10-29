@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import {
     Receipt, Building2, Send, CheckCircle2, AlertTriangle, Info, X, Plus, Trash2, Eye, FileCheck2, Wallet,
-    ArrowUpRight, Clock, Undo2, BellRing, FileMinus2
+    ArrowUpRight, Clock, Undo2, BellRing, FileMinus2, CalendarDays, ChevronDown
 } from 'lucide-react';
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, SearchInput,
@@ -102,6 +102,32 @@ const estadoDe = (f) => {
     return { id: 'enviada', texto: 'Pendiente de cobro', tono: 'accent' };
 };
 const PENDIENTES_COBRO = ['emitida', 'enviada', 'parcial', 'vencida'];
+const PERIODOS = [
+    { id: 'anio', texto: 'Este año' },
+    { id: 'este_mes', texto: 'Este mes' },
+    { id: 'mes_pasado', texto: 'Mes pasado' },
+    { id: 'tres_meses', texto: 'Últimos 3 meses' },
+    { id: 'todo', texto: 'Todo' },
+    { id: 'fechas', texto: 'Entre dos fechas…' },
+];
+const finDeMes = (mes) => sumar(`${sumar(`${mes}-28`, 4).slice(0, 7)}-01`, -1);
+const rangoDe = (periodo, desde, hasta) => {
+    const hoy = hoyIso();
+    const mes = hoy.slice(0, 7);
+    const mesPasado = sumar(`${mes}-01`, -1).slice(0, 7);
+    switch (periodo) {
+        case 'este_mes': return [`${mes}-01`, finDeMes(mes)];
+        case 'mes_pasado': return [`${mesPasado}-01`, finDeMes(mesPasado)];
+        case 'tres_meses': return [sumar(hoy, -91), hoy];
+        case 'todo': return ['0000-01-01', '9999-12-31'];
+        case 'fechas': return [desde || '0000-01-01', hasta || '9999-12-31'];
+        default: return [`${hoy.slice(0, 4)}-01-01`, `${hoy.slice(0, 4)}-12-31`];
+    }
+};
+const normalizar = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const peticionesDe = (f) => [...new Set(f.lineas.filter(l => l.petId).map(l => l.petId))];
+// Fecha con la que se filtra: la de emisión, o el mes del borrador
+const fechaFiltro = (f) => f.emision || (/^\d{4}-\d{2}$/.test(f.periodo) ? `${f.periodo}-01` : hoyIso());
 
 const factura = (numero, cliente, periodo, emision, lineas, extra = {}) => ({
     id: numero, numero, cliente, periodo, emision, vencimiento: vencimientoDe(CLIENTES[cliente], emision),
@@ -128,6 +154,11 @@ export default function FacturacionView() {
     const [busqueda, setBusqueda] = useState('');
     const [filtroEstado, setFiltroEstado] = useState('');
     const [filtroCliente, setFiltroCliente] = useState('');
+    const [filtroPeticion, setFiltroPeticion] = useState('');
+    const [periodo, setPeriodo] = useState('anio');
+    const [desde, setDesde] = useState('');
+    const [hasta, setHasta] = useState('');
+    const [plegados, setPlegados] = useState([]);
     const [abierta, setAbierta] = useState(null);
     const [previa, setPrevia] = useState(false);
     const [linea, setLinea] = useState(null); // { concepto, cantidad, precio }
@@ -161,6 +192,13 @@ export default function FacturacionView() {
         });
         return Object.values(grupos).sort((a, b) => b.mes.localeCompare(a.mes));
     }, [horas, facturas]);
+    const [rangoDesde, rangoHasta] = rangoDe(periodo, desde, hasta);
+    const textoPeticion = (petId) => `${petId} ${PETICIONES[petId].puesto}`;
+    const porFacturarFiltrado = porFacturar
+        .filter(g => !filtroCliente || g.cliente === filtroCliente)
+        .filter(g => !filtroPeticion || g.horas.some(h => h.petId === filtroPeticion))
+        .filter(g => `${g.mes}-01` <= rangoHasta && finDeMes(g.mes) >= rangoDesde)
+        .filter(g => { const q = normalizar(busqueda.trim()); return !q || normalizar([CLIENTES[g.cliente].nombre, nombreMes(g.mes), ...g.horas.map(h => textoPeticion(h.petId))].join(' ')).includes(q); });
 
     const lista = useMemo(() => {
         const q = busqueda.trim().toLowerCase();
@@ -172,14 +210,17 @@ export default function FacturacionView() {
                 return e === filtroEstado;
             })
             .filter(f => !filtroCliente || f.cliente === filtroCliente)
-            .filter(f => !q || [f.numero || 'borrador', CLIENTES[f.cliente].nombre, f.periodo].some(t => t.toLowerCase().includes(q)))
+            .filter(f => !filtroPeticion || peticionesDe(f).includes(filtroPeticion))
+            .filter(f => fechaFiltro(f) >= rangoDesde && fechaFiltro(f) <= rangoHasta)
+            .filter(f => !q || normalizar([f.numero || 'borrador', CLIENTES[f.cliente].nombre, f.periodo, /^\d{4}-\d{2}$/.test(f.periodo) ? nombreMes(f.periodo) : '', ...peticionesDe(f).map(textoPeticion), ...f.lineas.map(l => l.concepto)].join(' ')).includes(normalizar(q)))
             .sort((a, b) => (a.estado === 'borrador' ? -1 : b.estado === 'borrador' ? 1 : b.emision.localeCompare(a.emision)));
-    }, [facturas, busqueda, filtroEstado, filtroCliente]);
+    }, [facturas, busqueda, filtroEstado, filtroCliente, filtroPeticion, rangoDesde, rangoHasta]);
     const pendientes = facturas.filter(f => PENDIENTES_COBRO.includes(estadoDe(f).id));
     const vencidas = facturas.filter(f => estadoDe(f).id === 'vencida');
     const suma = (l) => l.reduce((s, f) => s + totalesDe(f).pendiente, 0);
-    const hayFiltros = busqueda || filtroEstado || filtroCliente;
-    const limpiar = () => { setBusqueda(''); setFiltroEstado(''); setFiltroCliente(''); };
+    const hayFiltros = busqueda || filtroEstado || filtroCliente || filtroPeticion || periodo !== 'anio';
+    const limpiar = () => { setBusqueda(''); setFiltroEstado(''); setFiltroCliente(''); setFiltroPeticion(''); setPeriodo('anio'); setDesde(''); setHasta(''); };
+    const etiqueta = (texto, icono) => <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600">{icono}{texto}</span>;
     const f = facturas.find(x => x.id === abierta);
 
     const prepararFactura = (g) => {
@@ -242,14 +283,64 @@ export default function FacturacionView() {
                     <KpiTile label="Vencidas" tone="danger" value={euros(suma(vencidas))} hint={`${vencidas.length} ${vencidas.length === 1 ? 'factura' : 'facturas'}`} active={filtroEstado === 'vencida'} onClick={() => setFiltroEstado('vencida')} />
                 </div>
 
+                {/* FILTROS: los mismos que en Horas e incidencias, para «Por facturar» y para las facturas */}
+                <Card className="p-3">
+                    <div className="flex flex-wrap items-end gap-3">
+                        <label className="flex flex-col gap-1 min-w-[200px] flex-1 sm:flex-none sm:w-64">
+                            {etiqueta('Buscar')}
+                            <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Número, cliente, petición o puesto..." />
+                        </label>
+                        <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
+                            {etiqueta('Cliente', <Building2 className="w-3.5 h-3.5 text-slate-400" />)}
+                            <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
+                                <option value="">Todos los clientes</option>
+                                {Object.entries(CLIENTES).map(([id, c]) => { const n = facturas.filter(x => x.cliente === id).length; return <option key={id} value={id}>{c.nombre} · {n} {n === 1 ? 'factura' : 'facturas'}</option>; })}
+                            </Select>
+                        </label>
+                        {filtroCliente && (
+                            <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
+                                {etiqueta('Petición')}
+                                <Select value={filtroPeticion} onChange={(e) => setFiltroPeticion(e.target.value)} aria-label="Petición">
+                                    <option value="">Todas las peticiones del cliente</option>
+                                    {Object.entries(PETICIONES).filter(([, p]) => p.cliente === filtroCliente).map(([id, p]) => <option key={id} value={id}>{id} · {p.puesto}</option>)}
+                                </Select>
+                            </label>
+                        )}
+                        <label className="flex flex-col gap-1">
+                            {etiqueta('Fecha de emisión', <CalendarDays className="w-3.5 h-3.5 text-slate-400" />)}
+                            <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Periodo">
+                                {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.texto}</option>)}
+                            </Select>
+                        </label>
+                        {periodo === 'fechas' && <>
+                            <label className="flex flex-col gap-1">{etiqueta('Desde')}<TextInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="w-auto!" /></label>
+                            <label className="flex flex-col gap-1">{etiqueta('Hasta')}<TextInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="w-auto!" /></label>
+                        </>}
+                        <label className="flex flex-col gap-1">
+                            {etiqueta('Estado')}
+                            <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
+                                <option value="">Todos los estados</option>
+                                <option value="borrador">Borrador</option>
+                                <option value="pendientes">Pendientes de cobro (todas)</option>
+                                <option value="vencida">Vencidas</option>
+                                <option value="cobrada">Cobradas</option>
+                                <option value="anulada">Anuladas</option>
+                                <option value="rectificativa">Rectificativas</option>
+                            </Select>
+                        </label>
+                        {hayFiltros && <Button size="sm" variant="ghost" icon={X} onClick={limpiar}>Limpiar</Button>}
+                    </div>
+                    <p className="mt-2 text-[11px] text-slate-500">{rangoDesde > '0000-01-01' ? `Del ${fechaES(rangoDesde)}` : 'Desde el principio'}{rangoHasta < '9999-12-31' ? ` al ${fechaES(rangoHasta)}` : ''}. Los borradores cuentan por el mes que facturan.</p>
+                </Card>
+
                 {/* POR FACTURAR */}
                 <div id="por-facturar" className="space-y-2">
                     <SectionTitle>Por facturar</SectionTitle>
-                    {porFacturar.length === 0 ? (
-                        <Card className="p-4 text-xs text-slate-500">No hay horas pendientes de facturar.</Card>
+                    {porFacturarFiltrado.length === 0 ? (
+                        <Card className="p-4 text-xs text-slate-500">{porFacturar.length ? 'No hay horas por facturar con estos filtros.' : 'No hay horas pendientes de facturar.'}</Card>
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            {porFacturar.map(g => {
+                            {porFacturarFiltrado.map(g => {
                                 const cliente = CLIENTES[g.cliente];
                                 const listo = g.horas.every(h => h.listo);
                                 const faltan = g.horas.reduce((s, h) => s + (h.partesPendientes || 0), 0);
@@ -280,69 +371,79 @@ export default function FacturacionView() {
                     )}
                 </div>
 
-                {/* FACTURAS */}
-                <Card className="overflow-hidden">
-                    <div className="flex flex-wrap items-center gap-2 p-3 border-b border-slate-200">
-                        <SearchInput className="flex-1 min-w-[200px] max-w-xs" value={busqueda} onChange={setBusqueda} placeholder="Buscar número o cliente..." />
-                        <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
-                            <option value="">Todos los estados</option>
-                            <option value="borrador">Borrador</option>
-                            <option value="pendientes">Pendientes de cobro (todas)</option>
-                            <option value="vencida">Vencidas</option>
-                            <option value="cobrada">Cobradas</option>
-                            <option value="anulada">Anuladas</option>
-                            <option value="rectificativa">Rectificativas</option>
-                        </Select>
-                        <Select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} aria-label="Cliente">
-                            <option value="">Todos los clientes</option>
-                            {Object.entries(CLIENTES).map(([id, c]) => <option key={id} value={id}>{c.nombre}</option>)}
-                        </Select>
-                        {hayFiltros && <Button size="sm" variant="ghost" icon={X} onClick={limpiar}>Limpiar</Button>}
-                    </div>
-                    {lista.length === 0 ? (
-                        <EmptyState icon={Receipt} title="No hay facturas con estos filtros" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} />
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs">
-                                <thead>
-                                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
-                                        <th className="py-2 px-3 font-medium">Número</th>
-                                        <th className="py-2 px-3 font-medium">Cliente y periodo</th>
-                                        <th className="py-2 px-3 font-medium">Emisión</th>
-                                        <th className="py-2 px-3 font-medium">Vencimiento</th>
-                                        <th className="py-2 px-3 font-medium text-right">Total</th>
-                                        <th className="py-2 px-3 font-medium text-right">Pendiente</th>
-                                        <th className="py-2 px-3 font-medium">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {lista.map(x => {
-                                        const t = totalesDe(x);
-                                        const e = estadoDe(x);
-                                        const d = x.vencimiento ? diasEntre(hoyIso(), x.vencimiento) : null;
-                                        return (
-                                            <tr key={x.id} onClick={() => setAbierta(x.id)} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer">
-                                                <td className="py-2.5 px-3 whitespace-nowrap font-medium text-slate-900">{x.numero || <span className="text-slate-500">Borrador</span>}</td>
-                                                <td className="py-2.5 px-3">
-                                                    <span className="block text-slate-800">{x.cliente && CLIENTES[x.cliente].nombre}</span>
-                                                    <span className="text-[11px] text-slate-500">{/^\d{4}-\d{2}$/.test(x.periodo) ? mayus(nombreMes(x.periodo)) : x.periodo}{x.rectifica ? ` · rectifica ${x.rectifica}` : ''}</span>
-                                                </td>
-                                                <td className="py-2.5 px-3 whitespace-nowrap text-slate-700">{fechaES(x.emision)}</td>
-                                                <td className="py-2.5 px-3 whitespace-nowrap">
-                                                    <div className="text-slate-700">{x.rectifica ? '—' : fechaES(x.vencimiento)}</div>
-                                                    {PENDIENTES_COBRO.includes(e.id) && d != null && <div className={`text-[11px] ${d < 0 ? 'text-rose-700' : 'text-slate-500'}`}>{d < 0 ? `hace ${-d} días` : d === 0 ? 'hoy' : `en ${d} días`}</div>}
-                                                </td>
-                                                <td className="py-2.5 px-3 text-right whitespace-nowrap text-slate-900">{euros(t.total)}</td>
-                                                <td className="py-2.5 px-3 text-right whitespace-nowrap text-slate-700">{PENDIENTES_COBRO.includes(e.id) ? euros(t.pendiente) : <span className="text-slate-300">—</span>}</td>
-                                                <td className="py-2.5 px-3"><Badge tone={e.tono} dot>{e.texto}</Badge></td>
+                {/* FACTURAS, agrupadas por cliente */}
+                <SectionTitle>Facturas</SectionTitle>
+                {lista.length === 0 ? (
+                    <Card><EmptyState icon={Receipt} title="No hay facturas con estos filtros" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} /></Card>
+                ) : Object.keys(CLIENTES).filter(c => lista.some(x => x.cliente === c)).map(c => {
+                    const delCliente = lista.filter(x => x.cliente === c);
+                    const plegado = plegados.includes(c);
+                    const totalCliente = delCliente.filter(x => x.estado !== 'borrador' && !x.anulada).reduce((s, x) => s + totalesDe(x).total, 0);
+                    const pendienteCliente = delCliente.filter(x => PENDIENTES_COBRO.includes(estadoDe(x).id)).reduce((s, x) => s + totalesDe(x).pendiente, 0);
+                    const vencidasCliente = delCliente.filter(x => estadoDe(x).id === 'vencida').length;
+                    return (
+                        <Card key={c} className="overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setPlegados(prev => (prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]))}
+                                aria-expanded={!plegado}
+                                className={`w-full flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-left hover:bg-slate-50 ${plegado ? '' : 'border-b border-slate-200'}`}
+                            >
+                                <span className="flex items-center gap-2 min-w-0">
+                                    <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${plegado ? '-rotate-90' : ''}`} />
+                                    <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
+                                    <span className="text-sm font-semibold text-slate-900">{CLIENTES[c].nombre}</span>
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                    {delCliente.length} {delCliente.length === 1 ? 'factura' : 'facturas'} · {euros(totalCliente)} facturado · {euros(pendienteCliente)} pendiente
+                                    {vencidasCliente > 0 && <span className="text-rose-700"> · {vencidasCliente} {vencidasCliente === 1 ? 'vencida' : 'vencidas'}</span>}
+                                </span>
+                            </button>
+                            {!plegado && (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                <th className="py-2 px-3 font-medium">Número</th>
+                                                <th className="py-2 px-3 font-medium">Periodo y peticiones</th>
+                                                <th className="py-2 px-3 font-medium">Emisión</th>
+                                                <th className="py-2 px-3 font-medium">Vencimiento</th>
+                                                <th className="py-2 px-3 font-medium text-right">Total</th>
+                                                <th className="py-2 px-3 font-medium text-right">Pendiente</th>
+                                                <th className="py-2 px-3 font-medium">Estado</th>
                                             </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Card>
+                                        </thead>
+                                        <tbody>
+                                            {delCliente.map(x => {
+                                                const tt = totalesDe(x);
+                                                const e = estadoDe(x);
+                                                const d = x.vencimiento ? diasEntre(hoyIso(), x.vencimiento) : null;
+                                                const pets = peticionesDe(x);
+                                                return (
+                                                    <tr key={x.id} onClick={() => setAbierta(x.id)} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer">
+                                                        <td className="py-2.5 px-3 whitespace-nowrap font-medium text-slate-900">{x.numero || <span className="text-slate-500">Borrador</span>}</td>
+                                                        <td className="py-2.5 px-3">
+                                                            <span className="block text-slate-800">{/^\d{4}-\d{2}$/.test(x.periodo) ? mayus(nombreMes(x.periodo)) : x.periodo}{x.rectifica ? ` · rectifica ${x.rectifica}` : ''}</span>
+                                                            <span className="text-[11px] text-slate-500">{pets.length ? pets.map(p => `${p} · ${PETICIONES[p].puesto}`).join(', ') : 'Sin petición (líneas manuales)'}</span>
+                                                        </td>
+                                                        <td className="py-2.5 px-3 whitespace-nowrap text-slate-700">{fechaES(x.emision)}</td>
+                                                        <td className="py-2.5 px-3 whitespace-nowrap">
+                                                            <div className="text-slate-700">{x.rectifica ? '—' : fechaES(x.vencimiento)}</div>
+                                                            {PENDIENTES_COBRO.includes(e.id) && d != null && <div className={`text-[11px] ${d < 0 ? 'text-rose-700' : 'text-slate-500'}`}>{d < 0 ? `hace ${-d} días` : d === 0 ? 'hoy' : `en ${d} días`}</div>}
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-right whitespace-nowrap text-slate-900">{euros(tt.total)}</td>
+                                                        <td className="py-2.5 px-3 text-right whitespace-nowrap text-slate-700">{PENDIENTES_COBRO.includes(e.id) ? euros(tt.pendiente) : <span className="text-slate-300">—</span>}</td>
+                                                        <td className="py-2.5 px-3"><Badge tone={e.tono} dot>{e.texto}</Badge></td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </Card>
+                    );
+                })}
                 <Notice tone="neutral" icon={Info}>Las tarifas son las del presupuesto aceptado de cada petición. El coste y el margen solo se ven en Presupuestos.</Notice>
             </Page>
 
