@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-29
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 5e74a67
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/candidatos.
   - Ficha de Mohamed El Amrani: datos que faltan y NIE caducado.
   - Ficha de Carlos Gómez Moreno: ficha casi completa, con experiencia y formación.
