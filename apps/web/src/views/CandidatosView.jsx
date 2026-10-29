@@ -756,15 +756,32 @@ const TIPOS_DOCUMENTO_CANDIDATO = ['DNI/NIE', 'Seguridad Social', 'RGPD', 'Carn�
 const URL_PORTAL_CANDIDATOS = 'https://ettglobal.tramitnow.com/candidatos';
 const hoyIso = () => new Date().toISOString().slice(0, 10);
 const fechaES = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+const edadDe = (iso) => Math.floor((new Date(hoyIso()) - new Date(iso)) / (365.25 * 86400000));
 const diasPara = (iso) => (iso ? Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toDateString())) / 86400000) : null);
 const sumarAnios = (iso, n) => { const d = new Date(`${iso}T00:00:00`); d.setFullYear(d.getFullYear() + n); return d.toISOString().slice(0, 10); };
 const estadoDocumento = (doc) => {
     if (doc.status === 'Pendiente de validar') return { id: 'pendiente', texto: 'Pendiente de validar', tono: 'info' };
+    if (doc.status === 'Rechazado') return { id: 'rechazado', texto: 'Rechazado', tono: 'danger' };
     const d = diasPara(doc.expiry);
     if (d === null) return { id: 'sin', texto: 'Sin caducidad', tono: 'neutral' };
     if (d < 0) return { id: 'caducado', texto: 'Caducado', tono: 'danger' };
     if (d <= DIAS_AVISO_CADUCIDAD) return { id: 'pronto', texto: `Caduca en ${d} ${d === 1 ? 'día' : 'días'}`, tono: 'warning' };
     return { id: 'vigente', texto: 'Vigente', tono: 'success' };
+};
+const faltantes = (c) => {
+    const f = [];
+    const doc = (tipo) => (c.documents || []).find(d => d.type === tipo);
+    if (!c.dni || !doc('DNI/NIE')) f.push({ texto: 'Documento de identidad', detalle: 'Falta el DNI o NIE escaneado.', pestana: 'documentos' });
+    else if (estadoDocumento(doc('DNI/NIE')).id === 'caducado') f.push({ texto: 'Documento de identidad caducado', detalle: 'Pide el documento renovado.', pestana: 'documentos' });
+    if (!doc('RGPD') || estadoDocumento(doc('RGPD')).id === 'caducado') f.push({ texto: 'Consentimiento RGPD', detalle: 'Sin él no se puede presentar al cliente.', pestana: 'documentos' });
+    (c.documents || []).filter(d => ['Pendiente de validar', 'Rechazado'].includes(d.status)).forEach(d => f.push({ texto: `${d.type} ${d.status === 'Rechazado' ? 'rechazado' : 'sin validar'}`, detalle: d.status === 'Rechazado' ? `Motivo: ${d.motivoRechazo}. Hay que pedirlo de nuevo.` : 'Ábrelo y comprueba que es correcto.', pestana: 'documentos' }));
+    if (!c.nss) f.push({ texto: 'Número de la Seguridad Social', detalle: 'Necesario para el alta.', pestana: 'personal' });
+    if (!c.iban) f.push({ texto: 'Cuenta bancaria', detalle: 'Necesaria para pagar la nómina.', pestana: 'personal' });
+    const personales = [['fechaNacimiento', 'fecha de nacimiento'], ['nacionalidad', 'nacionalidad'], ['direccion', 'dirección'], ['codigoPostal', 'código postal']].filter(([k]) => !c[k]).map(([, n]) => n);
+    if (personales.length) f.push({ texto: 'Datos personales', detalle: `Falta: ${personales.join(', ')}.`, pestana: 'personal' });
+    if (!(c.languages || []).length) f.push({ texto: 'Idiomas', detalle: 'Sin idiomas indicados.', pestana: 'profesional' });
+    if (!(c.experiencias || []).length) f.push({ texto: 'Experiencia laboral', detalle: c.experienceYears ? `Indica ${c.experienceYears} años, pero sin detallar empresas ni puestos.` : 'Sin experiencia indicada.', pestana: 'profesional' });
+    return f;
 };
 const docsPorRenovar = (c) => (c.documents || []).filter(d => ['caducado', 'pronto'].includes(estadoDocumento(d).id));
 
@@ -790,8 +807,41 @@ const CADUCIDADES_DEMO = {
     'Certificado_Carretillas.pdf': '2029-11-20',
 };
 const TIPO_NORMALIZADO = { DNI: 'DNI/NIE', NSS: 'Seguridad Social' };
+
+// Código postal → provincia (los dos primeros dígitos). La población, de un listado de ejemplo; en real, del callejero.
+const PROVINCIAS_CP = {
+    '01': 'Araba/Álava', '02': 'Albacete', '03': 'Alicante', '04': 'Almería', '05': 'Ávila', '06': 'Badajoz', '07': 'Illes Balears',
+    '08': 'Barcelona', '09': 'Burgos', '10': 'Cáceres', '11': 'Cádiz', '12': 'Castellón', '13': 'Ciudad Real', '14': 'Córdoba',
+    '15': 'A Coruña', '16': 'Cuenca', '17': 'Girona', '18': 'Granada', '19': 'Guadalajara', '20': 'Gipuzkoa', '21': 'Huelva',
+    '22': 'Huesca', '23': 'Jaén', '24': 'León', '25': 'Lleida', '26': 'La Rioja', '27': 'Lugo', '28': 'Madrid', '29': 'Málaga',
+    '30': 'Murcia', '31': 'Navarra', '32': 'Ourense', '33': 'Asturias', '34': 'Palencia', '35': 'Las Palmas', '36': 'Pontevedra',
+    '37': 'Salamanca', '38': 'Santa Cruz de Tenerife', '39': 'Cantabria', '40': 'Segovia', '41': 'Sevilla', '42': 'Soria',
+    '43': 'Tarragona', '44': 'Teruel', '45': 'Toledo', '46': 'Valencia', '47': 'Valladolid', '48': 'Bizkaia', '49': 'Zamora',
+    '50': 'Zaragoza', '51': 'Ceuta', '52': 'Melilla',
+};
+const POBLACIONES_CP = {
+    '48001': 'Bilbao', '48002': 'Bilbao', '48004': 'Bilbao', '48970': 'Basauri', '48901': 'Barakaldo', '48960': 'Galdakao',
+    '48450': 'Etxebarri', '48940': 'Leioa', '48990': 'Getxo', '48200': 'Durango', '08001': 'Barcelona', '08004': 'Barcelona',
+    '08008': 'Barcelona', '08901': "L'Hospitalet de Llobregat", '08911': 'Badalona', '08940': 'Cornellà de Llobregat',
+    '08930': 'Sant Adrià de Besòs', '08950': 'Esplugues de Llobregat',
+};
+const cpDePoblacion = (ciudad = '') => Object.entries(POBLACIONES_CP).find(([, p]) => ciudad.startsWith(p))?.[0] || '';
+// Datos personales y experiencia de ejemplo de los candidatos de la base (el resto los tiene sin rellenar)
+const DATOS_EXTRA = {
+    'CAN-0101': { fechaNacimiento: '1992-04-18', nacionalidad: 'Española', direccion: 'C/ Ejemplo 3, 2º B', iban: 'ES00 0000 0000 0000 0000 0101',
+        experiencias: [{ empresa: 'Distribuciones Ejemplo, S.L.', puesto: 'Operario/a de almacén', desde: '2021-03', hasta: '2025-12', funciones: 'Picking con PDA y carga de camiones.' }],
+        formacion: [{ titulo: 'Curso de carretillas elevadoras (UNE 58451)', centro: 'Centro de formación de ejemplo', anio: '2022' }] },
+    'CAN-0102': { fechaNacimiento: '1995-09-02', nacionalidad: 'Española', direccion: 'Av. Ejemplo 14, 1º A', iban: 'ES00 0000 0000 0000 0000 0102',
+        experiencias: [{ empresa: 'Logística Ejemplo, S.A.', puesto: 'Preparador/a de pedidos', desde: '2023-01', hasta: '2026-06', funciones: 'Preparación de pedidos y control de stock.' }] },
+    'CAN-0103': { fechaNacimiento: '1988-12-11', nacionalidad: 'Marroquí', direccion: 'C/ Ejemplo 22, bajo' },
+    'CAN-0104': { fechaNacimiento: '1999-06-25', nacionalidad: 'Española' },
+    'CAN-0105': { fechaNacimiento: '1993-02-14', nacionalidad: 'Española', direccion: 'C/ Ejemplo 7, 3º D', iban: 'ES00 0000 0000 0000 0000 0105' },
+};
 const completarCandidato = (c) => ({
     ...c,
+    fechaNacimiento: '', nacionalidad: '', direccion: '', iban: '', experiencias: [], formacion: [],
+    codigoPostal: cpDePoblacion(c.city),
+    ...DATOS_EXTRA[c.id],
     otherProfiles: c.otherProfiles || [],
     turnos: c.turnos || turnosDesde(c.preferredShift),
     incorporacion: c.incorporacion || 'Inmediata',
@@ -824,14 +874,14 @@ const sincronizarEstados = (c) => {
 
 // Puesto, turno, cliente y centro de cada petición (las mismas que en Peticiones). Una petición = un puesto.
 const PETICIONES_INFO = {
-    'PET-2026-0031': { puesto: 'Mozo/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2' },
-    'PET-2026-0044': { puesto: 'Camarero/a de sala', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona' },
-    'PET-2026-0045': { puesto: 'Ayudante de cocina', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona' },
-    'PET-2026-0046': { puesto: 'Cocinero/a de partida', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona' },
-    'PET-2026-0047': { puesto: 'Camarero/a de barra', turno: 'Turno de noche', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona' },
-    'PET-2026-0048': { puesto: 'Operario/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2' },
-    'PET-2026-0049': { puesto: 'Operario/a de almacén', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2' },
-    'PET-2026-0050': { puesto: 'Carretillero/a', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2' },
+    'PET-2026-0031': { puesto: 'Mozo/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-07-01', fin: '2026-09-30' },
+    'PET-2026-0044': { puesto: 'Camarero/a de sala', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-10-10', fin: '2026-11-30' },
+    'PET-2026-0045': { puesto: 'Ayudante de cocina', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-11-05', fin: '2026-11-30' },
+    'PET-2026-0046': { puesto: 'Cocinero/a de partida', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-11-05', fin: '2026-11-30' },
+    'PET-2026-0047': { puesto: 'Camarero/a de barra', turno: 'Turno de noche', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-11-12', fin: '2026-11-30' },
+    'PET-2026-0048': { puesto: 'Operario/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-03', fin: '2027-01-29' },
+    'PET-2026-0049': { puesto: 'Operario/a de almacén', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-03', fin: '2027-01-29' },
+    'PET-2026-0050': { puesto: 'Carretillero/a', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-10', fin: '2027-01-29' },
 };
 // Estados de una candidatura, en el orden del recorrido (los mismos pasos que la plaza en Peticiones)
 const ESTADOS_CANDIDATURA = {
@@ -973,6 +1023,8 @@ export default function CandidatosView() {
     const [edicion, setEdicion] = useState(null); // { seccion, datos, errores }
     const [candidatoAEliminar, setCandidatoAEliminar] = useState(null);
     const [docModal, setDocModal] = useState(null); // { doc?, tipo, archivo, expiry }
+    const [docVer, setDocVer] = useState(null); // id del documento abierto
+    const [rechazo, setRechazo] = useState(null); // { motivo, nota }
     const [docAEliminar, setDocAEliminar] = useState(null);
     const [avisoDocs, setAvisoDocs] = useState(null); // { asunto, mensaje, recordar, docIds }
 
@@ -993,6 +1045,10 @@ export default function CandidatosView() {
     const SECCIONES_EDICION = { personal: 'Datos personales', profesional: 'Perfil y carnés', disponibilidad: 'Disponibilidad' };
     const empezarEdicion = (seccion) => setEdicion({ seccion, datos: JSON.parse(JSON.stringify(selectedCandidateForDetail)), errores: {} });
     const campo = (k, v) => setEdicion(e => ({ ...e, datos: { ...e.datos, [k]: v } }));
+    const cambiarCp = (v) => {
+        const cp = v.replace(/\D/g, '').slice(0, 5);
+        setEdicion(e => ({ ...e, datos: { ...e.datos, codigoPostal: cp, ...(cp.length >= 2 && PROVINCIAS_CP[cp.slice(0, 2)] ? { province: PROVINCIAS_CP[cp.slice(0, 2)] } : {}), ...(POBLACIONES_CP[cp] ? { city: POBLACIONES_CP[cp] } : {}) } }));
+    };
     const guardarEdicion = () => {
         const d = edicion.datos;
         const errores = {};
@@ -1002,6 +1058,8 @@ export default function CandidatosView() {
             if (!/^[XYZ]?\d{7,8}[A-Z]$/i.test(d.dni.trim())) errores.dni = 'Formato de DNI o NIE no válido';
             if (!d.phone.trim()) errores.phone = 'Obligatorio';
             if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) errores.email = 'Email no válido';
+            if (d.codigoPostal && !/^\d{5}$/.test(d.codigoPostal)) errores.codigoPostal = 'Cinco cifras';
+            if (d.iban && !/^ES\d{22}$/.test(d.iban.replace(/\s/g, '').toUpperCase())) errores.iban = 'IBAN español: ES y 22 cifras';
         }
         if (edicion.seccion === 'disponibilidad' && d.incorporacion === 'A partir de una fecha' && !d.incorporacionFecha) errores.incorporacionFecha = 'Indica la fecha';
         if (Object.keys(errores).length) { setEdicion(e => ({ ...e, errores })); return; }
@@ -1040,8 +1098,14 @@ export default function CandidatosView() {
         showToast(doc ? 'Documento renovado' : 'Documento subido', `${archivo} queda pendiente de validar.`);
     };
     const validarDocumento = (doc) => {
-        actualizarCandidato(selectedCandidateForDetail.id, (x) => ({ documents: x.documents.map(d => (d.id === doc.id ? { ...d, status: 'Verificado' } : d)) }), { result: 'Documento validado', note: doc.name });
-        showToast('Documento validado', doc.name);
+        actualizarCandidato(selectedCandidateForDetail.id, (x) => ({ documents: x.documents.map(d => (d.id === doc.id ? { ...d, status: 'Verificado', validadoPor: 'Usuario Demo', validadoEl: hoyIso(), motivoRechazo: undefined } : d)) }), { result: 'Documento validado', note: doc.name });
+        showToast('Documento validado', `${doc.type}: comprobado y correcto.`);
+    };
+    const rechazarDocumento = (doc) => {
+        const motivo = rechazo.motivo === 'Otro' ? rechazo.nota || 'Otro' : rechazo.motivo;
+        actualizarCandidato(selectedCandidateForDetail.id, (x) => ({ documents: x.documents.map(d => (d.id === doc.id ? { ...d, status: 'Rechazado', motivoRechazo: motivo, validadoPor: 'Usuario Demo', validadoEl: hoyIso() } : d)) }), { result: 'Documento rechazado', note: `${doc.name}: ${motivo}` });
+        setRechazo(null);
+        showToast('Documento rechazado', `${doc.type}: ${motivo}. Pide al candidato que lo envíe de nuevo.`, 'info');
     };
     const eliminarDocumento = () => {
         const doc = docAEliminar;
@@ -1843,9 +1907,55 @@ export default function CandidatosView() {
                                             </span>
                                         </Notice>
                                     )}
-                                    {/* Document Status Alert Cards */}
+                                    {/* Lo que falta en la ficha */}
+                                    {(() => {
+                                        const f = faltantes(selectedCandidateForDetail);
+                                        return f.length > 0 ? (
+                                            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 text-xs">
+                                                <div className="flex items-center gap-2 font-semibold text-slate-900 mb-2"><AlertTriangle className="w-4 h-4 text-amber-600" />Datos que faltan ({f.length})</div>
+                                                <ul className="space-y-1.5">
+                                                    {f.map((x, i) => (
+                                                        <li key={i} className="flex flex-wrap items-center justify-between gap-2">
+                                                            <span><span className="text-slate-900">{x.texto}</span> <span className="text-slate-600">· {x.detalle}</span></span>
+                                                            <Button size="sm" variant="ghost" onClick={() => { cambiarPestanaFicha(x.pestana); if (x.pestana !== 'documentos') empezarEdicion(x.pestana); }}>Completar</Button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        ) : <Notice tone="success" icon={CheckCircle2}>Ficha completa: datos personales, documentos, idiomas y experiencia.</Notice>;
+                                    })()}
+
+                                    {/* Relación con la ETT: contratos y peticiones */}
+                                    {(() => {
+                                        const cand = selectedCandidateForDetail.candidaturas || [];
+                                        const contratos = cand.filter(x => ['Confirmada', 'En misión', 'Finalizada', 'Baja'].includes(x.estado));
+                                        const otras = cand.filter(x => !contratos.includes(x));
+                                        return (
+                                            <div className="rounded-xl border border-slate-200 p-3.5 text-xs space-y-2">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="font-semibold text-slate-900">Relación con la ETT</span>
+                                                    <button type="button" onClick={() => cambiarPestanaFicha('candidaturas')} className="text-indigo-600 hover:underline">Ver candidaturas</button>
+                                                </div>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                    <div><div className="text-[11px] text-slate-500">Contratos con la ETT</div><div className="text-base text-slate-900">{contratos.length}</div></div>
+                                                    <div><div className="text-[11px] text-slate-500">Peticiones en las que ha participado</div><div className="text-base text-slate-900">{cand.length}</div></div>
+                                                    <div><div className="text-[11px] text-slate-500">En selección ahora</div><div className="text-base text-slate-900">{otras.filter(x => ['En selección', 'Propuesta al cliente'].includes(x.estado)).length}</div></div>
+                                                </div>
+                                                {contratos.length === 0 ? <p className="text-slate-500">Nunca ha tenido contrato con la ETT.</p> : (
+                                                    <ul className="space-y-1">
+                                                        {contratos.map(x => {
+                                                            const info = PETICIONES_INFO[x.petId] || {};
+                                                            return <li key={x.petId} className="text-slate-700">{x.petId} · {info.puesto} · {info.cliente} · {fechaES(info.inicio)} a {fechaES(x.estado === 'Baja' || x.estado === 'Finalizada' ? x.fecha : info.fin)} <Badge tone={ESTADOS_CANDIDATURA[x.estado].tono}>{x.estado}</Badge></li>;
+                                                        })}
+                                                    </ul>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Documentos clave: se pulsan para verlos */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <div className={`p-3.5 rounded-xl border ${selectedCandidateForDetail.dniStatus === 'OK' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50 border-rose-300'}`}>
+                                        <div role="button" tabIndex={0} title="Ver el documento" onClick={() => { const doc = selectedCandidateForDetail.documents.find(x => x.type === 'DNI/NIE'); doc ? setDocVer(doc.id) : cambiarPestanaFicha('documentos'); }} className={`cursor-pointer hover:ring-2 hover:ring-indigo-200 p-3.5 rounded-xl border ${selectedCandidateForDetail.dniStatus === 'OK' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50 border-rose-300'}`}>
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="text-xs font-semibold text-slate-700">Documento Identidad</span>
                                                 {selectedCandidateForDetail.dniStatus === 'OK' ? (
@@ -1858,9 +1968,10 @@ export default function CandidatosView() {
                                             <p className="text-[11px] text-slate-500 mt-0.5">
                                                 {selectedCandidateForDetail.dniStatus === 'OK' ? `Válido hasta el ${fechaES(selectedCandidateForDetail.dniExpiry)}` : `Caducado el ${fechaES(selectedCandidateForDetail.dniExpiry)}`}
                                             </p>
+                                            <p className="text-[11px] text-indigo-700 mt-1">Ver documento</p>
                                         </div>
 
-                                        <div className={`p-3.5 rounded-xl border ${selectedCandidateForDetail.rgpdStatus === 'Vigente' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-amber-50 border-amber-300'}`}>
+                                        <div role="button" tabIndex={0} title="Ver el documento" onClick={() => { const doc = selectedCandidateForDetail.documents.find(x => x.type === 'RGPD'); doc ? setDocVer(doc.id) : cambiarPestanaFicha('documentos'); }} className={`cursor-pointer hover:ring-2 hover:ring-indigo-200 p-3.5 rounded-xl border ${selectedCandidateForDetail.rgpdStatus === 'Vigente' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-amber-50 border-amber-300'}`}>
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="text-xs font-semibold text-slate-700">Consentimiento RGPD</span>
                                                 <Shield className={`w-4 h-4 ${selectedCandidateForDetail.rgpdStatus === 'Vigente' ? 'text-emerald-600' : 'text-amber-600'}`} />
@@ -1869,9 +1980,10 @@ export default function CandidatosView() {
                                             <p className="text-[11px] text-slate-500 mt-0.5">
                                                 {selectedCandidateForDetail.rgpdSignedDate ? `Firmado el ${fechaES(selectedCandidateForDetail.rgpdSignedDate)}` : 'No firmado'}
                                             </p>
+                                            <p className="text-[11px] text-indigo-700 mt-1">Ver documento</p>
                                         </div>
 
-                                        <div className={`p-3.5 rounded-xl border ${selectedCandidateForDetail.nssStatus === 'OK' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-amber-50 border-amber-300'}`}>
+                                        <div role="button" tabIndex={0} title="Ver datos personales" onClick={() => cambiarPestanaFicha('personal')} className={`cursor-pointer hover:ring-2 hover:ring-indigo-200 p-3.5 rounded-xl border ${selectedCandidateForDetail.nssStatus === 'OK' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-amber-50 border-amber-300'}`}>
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="text-xs font-semibold text-slate-700">Seguridad Social (NSS)</span>
                                                 <Check className={`w-4 h-4 ${selectedCandidateForDetail.nssStatus === 'OK' ? 'text-emerald-600' : 'text-amber-600'}`} />
@@ -1971,9 +2083,14 @@ export default function CandidatosView() {
                                                 <Field label="Caducidad del documento"><TextInput type="date" value={d.dniExpiry || ''} onChange={(e) => campo('dniExpiry', e.target.value)} /></Field>
                                                 <Field label="Teléfono móvil"><TextInput value={d.phone} onChange={(e) => campo('phone', e.target.value)} /><Fallo k="phone" /></Field>
                                                 <Field label="Email"><TextInput type="email" value={d.email} onChange={(e) => campo('email', e.target.value)} /><Fallo k="email" /></Field>
+                                                <Field label="Fecha de nacimiento"><TextInput type="date" value={d.fechaNacimiento || ''} onChange={(e) => campo('fechaNacimiento', e.target.value)} /></Field>
+                                                <Field label="Nacionalidad"><TextInput value={d.nacionalidad || ''} onChange={(e) => campo('nacionalidad', e.target.value)} placeholder="Por ejemplo: Española" /></Field>
+                                                <div className="sm:col-span-2"><Field label="Dirección"><TextInput value={d.direccion || ''} onChange={(e) => campo('direccion', e.target.value)} placeholder="Calle, número, piso y puerta" /></Field></div>
+                                                <Field label="Código postal" hint="Rellena la provincia (y la población, si la conoce)."><TextInput inputMode="numeric" value={d.codigoPostal || ''} onChange={(e) => cambiarCp(e.target.value)} placeholder="48970" /><Fallo k="codigoPostal" /></Field>
                                                 <Field label="Población"><TextInput value={d.city} onChange={(e) => campo('city', e.target.value)} /></Field>
                                                 <Field label="Provincia"><TextInput value={d.province} onChange={(e) => campo('province', e.target.value)} /></Field>
                                                 <Field label="Número de la Seguridad Social" hint="Si falta, no se puede tramitar el alta."><TextInput value={d.nss || ''} onChange={(e) => campo('nss', e.target.value)} /></Field>
+                                                <div className="sm:col-span-2"><Field label="Cuenta bancaria (IBAN)" hint="Para pagar la nómina."><TextInput value={d.iban || ''} onChange={(e) => campo('iban', e.target.value.toUpperCase())} placeholder="ES00 0000 0000 0000 0000 0000" /><Fallo k="iban" /></Field></div>
                                             </div>
                                         ) : (
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1985,8 +2102,12 @@ export default function CandidatosView() {
                                                 <Dato label="Caducidad del documento">{fechaES(c.dniExpiry)}</Dato>
                                                 <Dato label="Teléfono móvil">{c.phone}</Dato>
                                                 <Dato label="Email">{c.email}</Dato>
+                                                <Dato label="Fecha de nacimiento">{c.fechaNacimiento ? `${fechaES(c.fechaNacimiento)} (${edadDe(c.fechaNacimiento)} años)` : <span className="text-amber-700">Falta</span>}</Dato>
+                                                <Dato label="Nacionalidad">{c.nacionalidad || <span className="text-amber-700">Falta</span>}</Dato>
+                                                <Dato label="Dirección">{c.direccion ? `${c.direccion}${c.codigoPostal ? ` · ${c.codigoPostal}` : ''}` : <span className="text-amber-700">Falta</span>}</Dato>
                                                 <Dato label="Población y provincia">{c.city}{c.province ? `, ${c.province}` : ''}</Dato>
                                                 <Dato label="Número de la Seguridad Social">{c.nss ? <span className="font-mono">{c.nss}</span> : <span className="text-amber-700">Falta: no se puede tramitar el alta</span>}</Dato>
+                                                <Dato label="Cuenta bancaria (IBAN)">{c.iban ? <span className="font-mono">{c.iban}</span> : <span className="text-amber-700">Falta: necesaria para la nómina</span>}</Dato>
                                             </dl>
                                         ))}
 
@@ -2008,6 +2129,37 @@ export default function CandidatosView() {
                                                     <input type="checkbox" checked={!!d.hasCar} onChange={(e) => campo('hasCar', e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                                     Tiene vehículo propio
                                                 </label>
+                                                <div className="space-y-2">
+                                                    <SectionTitle actions={<Button size="sm" icon={Plus} onClick={() => campo('experiencias', [...(d.experiencias || []), { empresa: '', puesto: '', desde: '', hasta: '', funciones: '' }])}>Añadir experiencia</Button>}>Experiencia laboral</SectionTitle>
+                                                    {(d.experiencias || []).length === 0 && <p className="text-slate-500">Sin experiencias. Añade empresa, puesto y fechas.</p>}
+                                                    {(d.experiencias || []).map((x, i) => {
+                                                        const cambiar = (k, v) => campo('experiencias', d.experiencias.map((y, j) => (j === i ? { ...y, [k]: v } : y)));
+                                                        return (
+                                                            <div key={i} className="rounded-lg border border-slate-200 p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                <Field label="Empresa"><TextInput value={x.empresa} onChange={(e) => cambiar('empresa', e.target.value)} /></Field>
+                                                                <Field label="Puesto"><TextInput value={x.puesto} onChange={(e) => cambiar('puesto', e.target.value)} /></Field>
+                                                                <Field label="Desde"><TextInput type="month" value={x.desde} onChange={(e) => cambiar('desde', e.target.value)} /></Field>
+                                                                <Field label="Hasta" hint="Vacío si sigue"><TextInput type="month" value={x.hasta} onChange={(e) => cambiar('hasta', e.target.value)} /></Field>
+                                                                <div className="sm:col-span-2"><Field label="Funciones"><TextInput value={x.funciones} onChange={(e) => cambiar('funciones', e.target.value)} /></Field></div>
+                                                                <div className="sm:col-span-2 flex justify-end"><Button size="sm" variant="ghost" icon={Trash2} onClick={() => campo('experiencias', d.experiencias.filter((_, j) => j !== i))}>Quitar</Button></div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <SectionTitle actions={<Button size="sm" icon={Plus} onClick={() => campo('formacion', [...(d.formacion || []), { titulo: '', centro: '', anio: '' }])}>Añadir formación</Button>}>Formación</SectionTitle>
+                                                    {(d.formacion || []).length === 0 && <p className="text-slate-500">Sin formación indicada.</p>}
+                                                    {(d.formacion || []).map((x, i) => {
+                                                        const cambiar = (k, v) => campo('formacion', d.formacion.map((y, j) => (j === i ? { ...y, [k]: v } : y)));
+                                                        return (
+                                                            <div key={i} className="rounded-lg border border-slate-200 p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                                                                <Field label="Título o curso"><TextInput value={x.titulo} onChange={(e) => cambiar('titulo', e.target.value)} /></Field>
+                                                                <Field label="Centro"><TextInput value={x.centro} onChange={(e) => cambiar('centro', e.target.value)} /></Field>
+                                                                <div className="flex items-end gap-2"><Field label="Año"><TextInput value={x.anio} onChange={(e) => cambiar('anio', e.target.value)} /></Field><IconButton icon={Trash2} title="Quitar" onClick={() => campo('formacion', d.formacion.filter((_, j) => j !== i))} /></div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         ) : (
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2018,6 +2170,21 @@ export default function CandidatosView() {
                                                 <Dato label="Habilidades">{c.skills?.join(', ')}</Dato>
                                                 <Dato label="Idiomas">{c.languages?.join(', ')}</Dato>
                                                 <Dato label="Vehículo propio">{c.hasCar ? 'Sí' : 'No'}</Dato>
+                                                <div className="sm:col-span-2">
+                                                    <dt className="text-[11px] text-slate-500">Experiencia laboral</dt>
+                                                    <dd className="mt-1 space-y-1.5">
+                                                        {(c.experiencias || []).length === 0 ? <span className="text-amber-700">Sin detallar</span> : c.experiencias.map((x, i) => (
+                                                            <div key={i} className="rounded-lg border border-slate-200 px-3 py-2">
+                                                                <div className="text-slate-900">{x.puesto} · {x.empresa}</div>
+                                                                <div className="text-[11px] text-slate-500">{x.desde ? x.desde.split('-').reverse().join('/') : '¿?'} a {x.hasta ? x.hasta.split('-').reverse().join('/') : 'la actualidad'}{x.funciones ? ` · ${x.funciones}` : ''}</div>
+                                                            </div>
+                                                        ))}
+                                                    </dd>
+                                                </div>
+                                                <div className="sm:col-span-2">
+                                                    <dt className="text-[11px] text-slate-500">Formación</dt>
+                                                    <dd className="mt-1 text-slate-900">{(c.formacion || []).length ? c.formacion.map(x => `${x.titulo}${x.centro ? ` (${x.centro}${x.anio ? `, ${x.anio}` : ''})` : ''}`).join(' · ') : '—'}</dd>
+                                                </div>
                                             </dl>
                                         ))}
 
@@ -2118,16 +2285,18 @@ export default function CandidatosView() {
                                                                     <span className="font-medium text-slate-900 truncate">{doc.type}</span>
                                                                     <Badge tone={doc.est.tono}>{doc.est.texto}</Badge>
                                                                 </div>
-                                                                <div className="text-[11px] text-slate-500 truncate">
+                                                                <button type="button" onClick={() => setDocVer(doc.id)} className="block text-left text-[11px] text-slate-500 truncate hover:text-indigo-700 hover:underline">
                                                                     {doc.name} · subido el {fechaES(doc.uploadDate)}{doc.expiry ? ` · caduca el ${fechaES(doc.expiry)}` : ''}
-                                                                </div>
+                                                                </button>
+                                                                {doc.status === 'Verificado' && doc.validadoPor && <div className="text-[11px] text-emerald-700">Comprobado por {doc.validadoPor} el {fechaES(doc.validadoEl)}</div>}
+                                                                {doc.status === 'Rechazado' && <div className="text-[11px] text-rose-700">Rechazado: {doc.motivoRechazo}</div>}
                                                                 {doc.avisoEnviado && <div className="text-[11px] text-slate-500">Aviso de renovación enviado el {fechaES(doc.avisoEnviado)}</div>}
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-1 self-end sm:self-center shrink-0">
                                                             {doc.est.id === 'pendiente' && <Button size="sm" variant="ghost" icon={Check} onClick={() => validarDocumento(doc)}>Validar</Button>}
                                                             {['caducado', 'pronto'].includes(doc.est.id) && <Button size="sm" icon={RefreshCw} onClick={() => setDocModal({ doc, tipo: doc.type, archivo: '', expiry: '' })}>Renovar</Button>}
-                                                            <IconButton icon={Eye} title="Ver" onClick={() => showToast('Vista previa', `${doc.name} (simulado).`, 'info')} />
+                                                            <Button size="sm" variant="ghost" icon={Eye} onClick={() => setDocVer(doc.id)}>Ver</Button>
                                                             <IconButton icon={Download} title="Descargar" onClick={() => showToast('Descarga', `${doc.name} (simulado).`, 'info')} />
                                                             <IconButton icon={Trash2} title="Eliminar" className="hover:text-rose-600 hover:bg-rose-50" onClick={() => setDocAEliminar(doc)} />
                                                         </div>
@@ -2879,6 +3048,92 @@ export default function CandidatosView() {
             )}
 
             {/* SUBIR O RENOVAR UN DOCUMENTO DEL CANDIDATO */}
+            {/* VER UN DOCUMENTO: vista previa, comprobaciones, validar o rechazar */}
+            {docVer && selectedCandidateForDetail && (() => {
+                const c = selectedCandidateForDetail;
+                const doc = c.documents.find(x => x.id === docVer);
+                if (!doc) return null;
+                const est = estadoDocumento(doc);
+                const comprobaciones = doc.type === 'DNI/NIE'
+                    ? [`El nombre es ${c.name} ${c.lastName}`, `El número es ${c.dni}`, `Caduca el ${fechaES(c.dniExpiry)}${est.id === 'caducado' ? ' (caducado)' : ''}`, 'La foto y la firma se ven bien, por las dos caras']
+                    : doc.type === 'RGPD'
+                        ? [`Está firmado por ${c.name} ${c.lastName}`, `Fecha de firma: ${fechaES(c.rgpdSignedDate)}`, 'Incluye la cesión de datos a las empresas cliente']
+                        : ['El documento es legible', 'Corresponde a esta persona', doc.expiry ? `Caduca el ${fechaES(doc.expiry)}` : 'No caduca'];
+                return (
+                    <Modal
+                        title={`${doc.type} · ${c.name} ${c.lastName}`}
+                        subtitle={`${doc.name} · subido el ${fechaES(doc.uploadDate)}`}
+                        status={<Badge tone={est.tono} dot>{doc.status === 'Verificado' && est.id === 'vigente' ? 'Comprobado' : est.texto}</Badge>}
+                        onClose={() => { setDocVer(null); setRechazo(null); }}
+                        size="max-w-3xl"
+                        footer={<>
+                            <Button variant="ghost" icon={Download} className="mr-auto" onClick={() => showToast('Descarga', `${doc.name} (simulado).`, 'info')}>Descargar</Button>
+                            {['caducado', 'pronto', 'rechazado'].includes(est.id) && <Button icon={RefreshCw} onClick={() => { setDocVer(null); setDocModal({ doc, tipo: doc.type, archivo: '', expiry: '' }); }}>Renovar</Button>}
+                            {doc.status !== 'Rechazado' && !rechazo && <Button icon={X} onClick={() => setRechazo({ motivo: 'Ilegible o borroso', nota: '' })}>Rechazar</Button>}
+                            {doc.status !== 'Verificado' && est.id !== 'caducado' && <Button variant="primary" icon={Check} onClick={() => validarDocumento(doc)}>Es correcto</Button>}
+                        </>}
+                    >
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            {/* Vista previa (en la demo, una representación del documento) */}
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                {doc.type === 'DNI/NIE' ? (
+                                    <div className="relative aspect-[1.58] rounded-lg bg-gradient-to-br from-sky-100 to-indigo-100 border border-indigo-200 p-3 overflow-hidden">
+                                        <div className="text-[10px] font-semibold text-indigo-900">{c.dni.match(/^[XYZ]/i) ? 'TARJETA DE IDENTIDAD DE EXTRANJERO' : 'DOCUMENTO NACIONAL DE IDENTIDAD'}</div>
+                                        <div className="flex gap-3 mt-2">
+                                            <div className="w-16 h-20 rounded bg-slate-300/70 flex items-center justify-center"><Users className="w-8 h-8 text-slate-500" /></div>
+                                            <div className="space-y-1 text-[10px] text-slate-800">
+                                                <div><span className="text-slate-500">Apellidos</span><br />{c.lastName.toUpperCase()}</div>
+                                                <div><span className="text-slate-500">Nombre</span><br />{c.name.toUpperCase()}</div>
+                                                <div><span className="text-slate-500">Válido hasta</span><br />{fechaES(c.dniExpiry)}</div>
+                                            </div>
+                                        </div>
+                                        <div className="absolute bottom-2 left-3 font-mono text-sm text-slate-900">{c.dni}</div>
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="rotate-[-20deg] text-2xl font-semibold text-indigo-900/10">EJEMPLO</span></div>
+                                    </div>
+                                ) : (
+                                    <div className="relative aspect-[0.75] rounded-lg bg-white border border-slate-200 p-4 overflow-hidden">
+                                        <div className="text-[11px] font-semibold text-slate-900">{doc.type === 'RGPD' ? 'Consentimiento para el tratamiento de datos personales' : doc.type}</div>
+                                        <div className="mt-3 space-y-1.5">{Array.from({ length: 9 }).map((_, i) => <div key={i} className={`h-1.5 rounded bg-slate-200 ${i % 3 === 2 ? 'w-2/3' : 'w-full'}`} />)}</div>
+                                        {doc.type === 'RGPD' && <div className="absolute bottom-4 left-4 right-4 text-[10px] text-slate-600 border-t border-slate-300 pt-1">Firmado: {c.name} {c.lastName} · {fechaES(c.rgpdSignedDate)}</div>}
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="rotate-[-20deg] text-2xl font-semibold text-slate-900/10">EJEMPLO</span></div>
+                                    </div>
+                                )}
+                                <p className="mt-2 text-[11px] text-slate-500">En la demo se muestra una representación. En real se verá el fichero subido (PDF o imagen), con zoom.</p>
+                            </div>
+                            {/* Datos y comprobaciones */}
+                            <div className="space-y-3">
+                                <dl className="grid grid-cols-2 gap-2">
+                                    <div><dt className="text-[11px] text-slate-500">Tipo</dt><dd className="text-slate-900">{doc.type}</dd></div>
+                                    <div><dt className="text-[11px] text-slate-500">Caduca</dt><dd className="text-slate-900">{doc.expiry ? fechaES(doc.expiry) : 'No caduca'}</dd></div>
+                                    <div className="col-span-2"><dt className="text-[11px] text-slate-500">Estado</dt><dd className="text-slate-900">{doc.status === 'Verificado' ? `Comprobado${doc.validadoPor ? ` por ${doc.validadoPor} el ${fechaES(doc.validadoEl)}` : ''}` : doc.status === 'Rechazado' ? `Rechazado: ${doc.motivoRechazo}` : est.texto}</dd></div>
+                                </dl>
+                                <div className="rounded-lg border border-slate-200 p-3 space-y-1.5">
+                                    <div className="font-medium text-slate-900">Comprueba que</div>
+                                    {comprobaciones.map(x => <div key={x} className="flex items-start gap-2 text-slate-700"><CheckSquare className="w-3.5 h-3.5 mt-0.5 text-slate-400 shrink-0" />{x}</div>)}
+                                </div>
+                                {rechazo && (
+                                    <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-3 space-y-2">
+                                        <Field label="Motivo del rechazo">
+                                            <Select value={rechazo.motivo} onChange={(e) => setRechazo(r => ({ ...r, motivo: e.target.value }))} className="w-full">
+                                                {['Ilegible o borroso', 'No coincide con los datos de la ficha', 'Caducado', 'Falta una cara', 'Sin firmar', 'Otro'].map(m => <option key={m} value={m}>{m}</option>)}
+                                            </Select>
+                                        </Field>
+                                        {rechazo.motivo === 'Otro' && <Field label="Explica el motivo"><TextInput value={rechazo.nota} onChange={(e) => setRechazo(r => ({ ...r, nota: e.target.value }))} /></Field>}
+                                        <div className="flex justify-end gap-2">
+                                            <Button size="sm" onClick={() => setRechazo(null)}>Cancelar</Button>
+                                            <Button size="sm" variant="danger" icon={X} onClick={() => rechazarDocumento(doc)}>Rechazar documento</Button>
+                                        </div>
+                                    </div>
+                                )}
+                                {doc.status === 'Rechazado' && (
+                                    <Button size="sm" icon={Send} onClick={() => { setDocVer(null); abrirAvisoDocs(c, [doc]); }}>Pedir de nuevo por email</Button>
+                                )}
+                            </div>
+                        </div>
+                    </Modal>
+                );
+            })()}
+
             {docModal && selectedCandidateForDetail && (
                 <Modal
                     title={docModal.doc ? `Renovar ${docModal.doc.type}` : 'Subir documento'}
