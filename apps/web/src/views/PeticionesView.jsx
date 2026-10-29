@@ -8,68 +8,184 @@ import {
     Layers, Sliders, History, Info, ChevronUp, Bell, ArrowUpRight,
     CheckSquare, AlertTriangle, FileSpreadsheet, Lock, Radio,
     Home, UserCheck, UserPlus, DollarSign, BarChart3, Settings,
-    Shield, Cpu, BookOpen, Layers2, FolderKanban
+    Shield, Cpu, BookOpen, Layers2, FolderKanban, List, SquareKanban, GripVertical
 } from 'lucide-react';
+import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal } from '../ui';
+import { contactoDemo } from './personasDemo';
 
-// --- MOCK INITIAL DATA ---
-const INITIAL_PETICION = {
-    id: 'PET-2026-0048',
-    titulo: 'Refuerzo Campaña Logística Primavera 2026',
-    clienteId: 'CLI-8492',
-    clienteNombre: 'Trans-Logística Ibérica Norte, S.L.',
-    cif: 'B-84920194',
-    sector: 'Transporte y Almacenamiento',
-    presupuestoOrigen: 'PRE-2026-0048 v1',
-    presupuestoFechaAprobacion: '12 Feb 2026',
-    presupuestoImporteMax: '42.850,00 €',
-    estado: 'En Selección', // Borrador, En Aprobación, Publicada / En Selección, En Cobertura, Cerrada
-    fechaSolicitud: '14/02/2026',
-    fechaInicioPrevista: '01/03/2026',
-    fechaFinEstimada: '30/06/2026',
-    responsableETT: 'Marta Gómez (Consultora Senior)',
-    contactoCliente: 'Carlos Mendiluce (Dir. Operaciones)',
-    telefonoContacto: '+34 944 821 033',
-    emailContacto: 'c.mendiluce@translogistica.es',
-    centroTrabajo: 'Hub Logístico ZAL Puerto Bilbao - Muelle 4B'
+// --- DATOS DE EJEMPLO ---
+// Una petición = un puesto. Las peticiones siempre salen de un presupuesto aceptado. Un mismo puesto del presupuesto
+// se puede repartir en varias peticiones (por ejemplo, una por turno o por fechas); todas comparten sus condiciones.
+const ESTADOS_PETICION = [
+    { estado: 'Nueva', tono: 'neutral' },
+    { estado: 'En difusión', tono: 'info' },
+    { estado: 'En selección', tono: 'accent' },
+    { estado: 'Cubierta', tono: 'success' },
+    { estado: 'En curso', tono: 'success' },
+    { estado: 'Cerrada', tono: 'neutral' },
+    { estado: 'Cancelada', tono: 'danger' },
+];
+const tonoEstado = (estado) => ESTADOS_PETICION.find(e => e.estado === estado)?.tono || 'neutral';
+const ESTADOS_ACTIVOS = ['Nueva', 'En difusión', 'En selección', 'Cubierta', 'En curso'];
+const RESPONSABLES = ['Ane Uriarte', 'Jon Ibarra', 'Nuria Castells'];
+
+const CLIENTES = {
+    translog: {
+        clienteNombre: 'Trans-Logística Ibérica Norte, S.L.',
+        cif: 'B-87654321',
+        sector: 'Logística y almacén',
+        contactoCliente: 'Marta Gómez Arana (Responsable de RRHH y Selección)',
+        emailContacto: 'marta.gomez@translog-norte.es',
+        telefonoContacto: '+34 654 987 321',
+        centroTrabajo: 'HUB central Basauri (Bizkaia) - Nave 2',
+        ciudad: 'Basauri (Bizkaia)',
+    },
+    hosteleria: {
+        clienteNombre: 'Hostelería & Eventos Premium BCN, S.L.',
+        cif: 'B-00000041',
+        sector: 'Hostelería y eventos',
+        contactoCliente: 'Responsable de eventos',
+        emailContacto: 'eventos@ejemplo-hosteleria.es',
+        telefonoContacto: '+34 600 000 041',
+        centroTrabajo: 'Recinto de congresos - Barcelona',
+        ciudad: 'Barcelona',
+    },
+    mediterranea: {
+        clienteNombre: 'Mediterránea Agrícola y Envasado, S.L.',
+        cif: 'B-00000047',
+        sector: 'Agroalimentario',
+        contactoCliente: 'Jefe de planta',
+        emailContacto: 'planta@ejemplo-mediterranea.es',
+        telefonoContacto: '+34 600 000 047',
+        centroTrabajo: 'Planta de envasado - Lleida',
+        ciudad: 'Lleida',
+    },
 };
 
-const INITIAL_POSICIONES = [
-    {
-        id: 'POS-001',
-        puesto: 'Operario/a de almacén y preparación de pedidos',
+// Puestos tal como vienen del presupuesto: convenio, categoría, salario, tarifa y requisitos
+const PUESTOS = {
+    operario: {
+        puesto: 'Operario/a de almacén',
         categoria: 'Especialistas / Logística (Grupo 4)',
-        solicitados: 8,
-        incorporados: 5,
-        enProceso: 4,
-        tarifaVentaHora: '19,45 €/h',
-        salarioBrutoConvenio: '12,30 €/h',
         cctConvenio: 'Convenio Logística y Distribución Bizkaia',
-        turnoDefecto: 'Turno Mañana (06:00 - 14:00)',
-        requiereEpi: 'Calzado S3, Chaleco Alta Visibilidad, Guantes corte 3',
-        carnetRequerido: 'Ninguno / Manipulador Alimentos opcional',
-        descripcionCorta: 'Picking por radiofrecuencia, preparación de palets y control de albaranes de entrada.'
+        salarioBrutoConvenio: '10,45 €/h',
+        tarifaVentaHora: '17,65 €/h',
+        requiereEpi: 'Calzado S3, chaleco de alta visibilidad, guantes anticorte',
+        carnetRequerido: 'Ninguno',
+        descripcionCorta: 'Recepción, control de bultos, picking por radiofrecuencia, preparación de pedidos e inventario rotativo.',
+    },
+    carretillero: {
+        puesto: 'Carretillero/a frontal y retráctil',
+        categoria: 'Mozo/a especialista (Grupo 3)',
+        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
+        salarioBrutoConvenio: '12,11 €/h',
+        tarifaVentaHora: '19,80 €/h',
+        requiereEpi: 'Calzado S3, chaleco, protectores auditivos',
+        carnetRequerido: 'Carnet de carretillero vigente (UNE 58451)',
+        descripcionCorta: 'Ubicación en altura en estanterías dinámicas (hasta 9 m), descarga de tráileres y abastecimiento de líneas.',
+    },
+    mozo: {
+        puesto: 'Mozo/a de almacén',
+        categoria: 'Mozo/a (Grupo 5)',
+        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
+        salarioBrutoConvenio: '10,10 €/h',
+        tarifaVentaHora: '16,20 €/h',
+        requiereEpi: 'Calzado S3, chaleco de alta visibilidad',
+        carnetRequerido: 'Ninguno',
+        descripcionCorta: 'Carga y descarga manual, recuento de inventario y etiquetado.',
+    },
+    camarero: {
+        puesto: 'Camarero/a de sala',
+        categoria: 'Camarero/a (Nivel IV)',
+        cctConvenio: 'Convenio de Hostelería de Cataluña',
+        salarioBrutoConvenio: '10,60 €/h',
+        tarifaVentaHora: '17,40 €/h',
+        requiereEpi: 'Calzado antideslizante',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Servicio de sala y banquetes, montaje y desmontaje de mesas.',
+    },
+    camarero_barra: {
+        puesto: 'Camarero/a de barra',
+        categoria: 'Camarero/a (Nivel IV)',
+        cctConvenio: 'Convenio de Hostelería de Cataluña',
+        salarioBrutoConvenio: '10,60 €/h',
+        tarifaVentaHora: '17,40 €/h',
+        requiereEpi: 'Calzado antideslizante',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Servicio de barra y coctelería en eventos nocturnos.',
+    },
+    ayudante_cocina: {
+        puesto: 'Ayudante de cocina',
+        categoria: 'Ayudante (Nivel V)',
+        cctConvenio: 'Convenio de Hostelería de Cataluña',
+        salarioBrutoConvenio: '10,20 €/h',
+        tarifaVentaHora: '16,90 €/h',
+        requiereEpi: 'Calzado antideslizante, uniforme de cocina',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Preparación de elaboraciones frías y calientes, limpieza y orden de la cocina.',
+    },
+    cocinero: {
+        puesto: 'Cocinero/a',
+        categoria: 'Cocinero/a (Nivel III)',
+        cctConvenio: 'Convenio de Hostelería de Cataluña',
+        salarioBrutoConvenio: '11,90 €/h',
+        tarifaVentaHora: '19,60 €/h',
+        requiereEpi: 'Calzado antideslizante, uniforme de cocina',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Elaboración de menús de banquete y coordinación de la partida.',
+    },
+    envasado: {
+        puesto: 'Operario/a de envasado',
+        categoria: 'Peón especialista',
+        cctConvenio: 'Convenio de la industria de conservas vegetales',
+        salarioBrutoConvenio: '9,90 €/h',
+        tarifaVentaHora: '16,90 €/h',
+        requiereEpi: 'Calzado de seguridad, guantes, cofia',
+        carnetRequerido: 'Manipulador/a de alimentos',
+        descripcionCorta: 'Alimentación de línea, control de calidad visual y paletizado.',
+    },
+};
+
+// Presupuestos aceptados de los que se pueden crear peticiones (de cada puesto, las personas presupuestadas)
+const PRESUPUESTOS_ACEPTADOS = [
+    {
+        id: 'PRE-2026-0042', version: 'v1', cliente: 'translog', aceptado: '2026-10-14',
+        titulo: 'Campaña logística otoño HUB central',
+        puestos: [{ tipo: 'operario', personas: 8 }, { tipo: 'carretillero', personas: 4 }],
     },
     {
-        id: 'POS-002',
-        puesto: 'Carretillero/a frontal y retráctil',
-        categoria: 'Oficiales de 2ª / Carretilleros (Grupo 3)',
-        solicitados: 4,
-        incorporados: 2,
-        enProceso: 3,
-        tarifaVentaHora: '22,80 €/h',
-        salarioBrutoConvenio: '14,10 €/h',
-        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
-        turnoDefecto: 'Turno Tarde (14:00 - 22:00)',
-        requiereEpi: 'Calzado S3, Chaleco, Protectores auditivos ZAL',
-        carnetRequerido: 'Carnet de Carretillero vigente UNE 58451 (5 tipos)',
-        descripcionCorta: 'Ubicación en estanterías dinámicas 11m, carga/descarga de tráileres y uso de retráctil.'
-    }
+        id: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', aceptado: '2026-09-30',
+        titulo: 'Servicio ETT camareros/as y cocina fiestas locales',
+        puestos: [{ tipo: 'camarero', personas: 10 }, { tipo: 'camarero_barra', personas: 3 }, { tipo: 'ayudante_cocina', personas: 4 }, { tipo: 'cocinero', personas: 2 }],
+    },
 ];
+
+// plantilla: turno del horario (HORARIO_TEMPLATES). cubiertas: plazas ya cubiertas en la demo.
+const PETICIONES_BASE = [
+    { id: 'PET-2026-0048', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'manana', solicitados: 5, cubiertas: 5, estado: 'Cubierta', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 3, candidaturas: 41 },
+    { id: 'PET-2026-0049', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'tarde', solicitados: 3, cubiertas: 0, estado: 'En selección', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 4, candidaturas: 22 },
+    { id: 'PET-2026-0050', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'carretillero', personasPuesto: 4, plantilla: 'tarde', solicitados: 4, cubiertas: 2, estado: 'En selección', inicio: '2026-11-10', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Jon Ibarra', portalesActivos: 4, candidaturas: 17 },
+    { id: 'PET-2026-0044', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero', personasPuesto: 10, plantilla: 'partida', solicitados: 10, cubiertas: 10, estado: 'En curso', inicio: '2026-10-10', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 2, candidaturas: 58 },
+    { id: 'PET-2026-0045', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'ayudante_cocina', personasPuesto: 4, plantilla: 'partida', solicitados: 4, cubiertas: 4, estado: 'Cubierta', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 1, candidaturas: 19 },
+    { id: 'PET-2026-0046', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'cocinero', personasPuesto: 2, plantilla: 'partida', solicitados: 2, cubiertas: 0, estado: 'En difusión', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 3, candidaturas: 6 },
+    { id: 'PET-2026-0047', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero_barra', personasPuesto: 3, plantilla: 'noche', solicitados: 3, cubiertas: 0, estado: 'Nueva', inicio: '2026-11-12', fin: '2026-11-30', creada: '2026-10-27', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 0 },
+    { id: 'PET-2026-0031', presupuesto: 'PRE-2026-0029', version: 'v1', cliente: 'translog', tipo: 'mozo', personasPuesto: 6, plantilla: 'manana', solicitados: 6, cubiertas: 6, estado: 'Cerrada', inicio: '2026-07-01', fin: '2026-09-30', creada: '2026-06-12', responsable: 'Ane Uriarte', portalesActivos: 0, candidaturas: 47 },
+    { id: 'PET-2026-0036', presupuesto: 'PRE-2026-0033', version: 'v2', cliente: 'mediterranea', tipo: 'envasado', personasPuesto: 5, plantilla: 'noche', solicitados: 5, cubiertas: 0, estado: 'Cancelada', inicio: '2026-09-15', fin: '2026-12-15', creada: '2026-08-28', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 9, motivoCancelacion: 'El cliente aplaza la campaña' },
+];
+
+const completarPeticion = (p) => ({ ...CLIENTES[p.cliente], ...PUESTOS[p.tipo], ...p, presupuestoOrigen: `${p.presupuesto} ${p.version}` });
+const INITIAL_PETICIONES = PETICIONES_BASE.map(completarPeticion);
+
+const fechaCorta = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
+const diasHasta = (iso) => Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
+// Peticiones del mismo puesto del mismo presupuesto (por ejemplo, otro turno)
+const hermanasDe = (p, lista) => lista.filter(x => x.id !== p.id && x.presupuesto === p.presupuesto && x.tipo === p.tipo);
+const siguienteCodigo = (lista) => `PET-2026-${String(Math.max(...lista.map(p => Number(p.id.slice(-4)))) + 1).padStart(4, '0')}`;
 
 // Plantillas horarias
 const HORARIO_TEMPLATES = {
     manana: {
-        nombre: 'Turno Mañana',
+        nombre: 'Turno de mañana',
         dias: [
             { dia: 'Lunes', laborable: true, inicio: '06:00', fin: '14:00', descanso: 30, horas: 7.5 },
             { dia: 'Martes', laborable: true, inicio: '06:00', fin: '14:00', descanso: 30, horas: 7.5 },
@@ -81,7 +197,7 @@ const HORARIO_TEMPLATES = {
         ]
     },
     tarde: {
-        nombre: 'Turno Tarde',
+        nombre: 'Turno de tarde',
         dias: [
             { dia: 'Lunes', laborable: true, inicio: '14:00', fin: '22:00', descanso: 30, horas: 7.5 },
             { dia: 'Martes', laborable: true, inicio: '14:00', fin: '22:00', descanso: 30, horas: 7.5 },
@@ -93,7 +209,7 @@ const HORARIO_TEMPLATES = {
         ]
     },
     noche: {
-        nombre: 'Turno Noche',
+        nombre: 'Turno de noche',
         dias: [
             { dia: 'Lunes', laborable: true, inicio: '22:00', fin: '06:00', descanso: 30, horas: 7.5 },
             { dia: 'Martes', laborable: true, inicio: '22:00', fin: '06:00', descanso: 30, horas: 7.5 },
@@ -105,7 +221,7 @@ const HORARIO_TEMPLATES = {
         ]
     },
     partida: {
-        nombre: 'Jornada Partida',
+        nombre: 'Jornada partida',
         dias: [
             { dia: 'Lunes', laborable: true, inicio: '08:30', fin: '17:30', descanso: 60, horas: 8.0 },
             { dia: 'Martes', laborable: true, inicio: '08:30', fin: '17:30', descanso: 60, horas: 8.0 },
@@ -118,27 +234,21 @@ const HORARIO_TEMPLATES = {
     }
 };
 
-const INITIAL_HORARIOS = {
-    'POS-001': {
-        turnoNombre: 'Turno Mañana',
-        tipoJornada: 'Completa (37,5 h/semana)',
-        centro: 'Hub Logístico ZAL Puerto Bilbao - Nave 2',
-        dias: JSON.parse(JSON.stringify(HORARIO_TEMPLATES.manana.dias)),
-        guardado: true,
-        ultimaModif: '14/02/2026 11:30 por Marta Gómez'
-    },
-    'POS-002': {
-        turnoNombre: 'Turno Tarde',
-        tipoJornada: 'Completa (37,5 h/semana)',
-        centro: 'Hub Logístico ZAL Puerto Bilbao - Muelle 4B',
-        dias: JSON.parse(JSON.stringify(HORARIO_TEMPLATES.tarde.dias)),
-        guardado: true,
-        ultimaModif: '14/02/2026 11:32 por Marta Gómez'
-    }
-};
+// Un horario por petición. Otro turno del mismo puesto = otra petición.
+const horarioDesdePlantilla = (plantilla, centro, nota) => ({
+    turnoNombre: HORARIO_TEMPLATES[plantilla].nombre,
+    tipoJornada: 'Completa (37,5 h/semana)',
+    centro,
+    dias: JSON.parse(JSON.stringify(HORARIO_TEMPLATES[plantilla].dias)),
+    guardado: true,
+    ultimaModif: nota
+});
+const INITIAL_HORARIOS = Object.fromEntries(
+    INITIAL_PETICIONES.map(p => [p.id, horarioDesdePlantilla(p.plantilla, p.centroTrabajo, `${fechaCorta(p.creada)} por ${p.responsable}`)])
+);
 
 const INITIAL_CONTENIDO_COMUN = {
-    titulo: 'Operarios/as de Almacén y Carretilleros/as - Campaña Logística 2026',
+    titulo: 'Operarios/as de almacén y carretilleros/as - campaña logística 2026',
     descripcion: 'Importante empresa multinacional del sector transporte y logística ubicada en la ZAL del Puerto de Bilbao precisa incorporar operarios/as y carretilleros/as para refuerzo continuado.',
     funciones: '• Preparación de pedidos mediante terminal de radiofrecuencia (picking).\n• Clasificación, paletizado y filmado de mercancía.\n• Carga y descarga de camiones mediante carretilla frontal y retráctil (según puesto).\n• Verificación de albaranes y control básico de stock.',
     requisitos: '• Experiencia previa mínima de 1 año en plataformas logísticas.\n• Disponibilidad para turno fijo (mañana o tarde) de lunes a viernes.\n• Vehículo propio para acceder al centro de trabajo.\n• Para puesto de carretillero: Carnet de carretillas en vigor según norma UNE 58451.',
@@ -165,7 +275,7 @@ const INITIAL_PORTALES = [
     {
         id: 'linkedin',
         nombre: 'LinkedIn Talent Solutions',
-        badgeColor: 'bg-sky-700',
+        badgeColor: 'bg-blue-700',
         logoText: 'in',
         activo: true,
         estadoApi: 'Sincronizado',
@@ -173,7 +283,7 @@ const INITIAL_PORTALES = [
         ultSinc: '14/02/2026 12:40',
         personalizado: true,
         customContent: {
-            titulo: 'Operario/a de almacén & Carretillero/a — ZAL Bilbao',
+            titulo: 'Operario/a de almacén y carretillero/a — ZAL Bilbao',
             descripcion: 'Trans-Logística Ibérica Norte busca talento para su hub de Bilbao. Únete a un equipo dinámico con oportunidades de desarrollo profesional.',
             funciones: '• Gestión ágil de pedidos con RF y sistemas WMS.\n• Manejo de carretillas retráctiles y frontales.\n• Cumplimiento de estándares de seguridad y calidad en muelle.',
             requisitos: '• Experiencia sólida en logística moderna.\n• Carnet UNE 58451 carretillas.\n• Orientación a la seguridad y trabajo en equipo.',
@@ -186,7 +296,7 @@ const INITIAL_PORTALES = [
     },
     {
         id: 'indeed',
-        nombre: 'Indeed & Glassdoor',
+        nombre: 'Indeed y Glassdoor',
         badgeColor: 'bg-indigo-600',
         logoText: 'inD',
         activo: true,
@@ -199,7 +309,7 @@ const INITIAL_PORTALES = [
     {
         id: 'monster',
         nombre: 'Monster',
-        badgeColor: 'bg-purple-600',
+        badgeColor: 'bg-indigo-600',
         logoText: 'M',
         activo: false,
         estadoApi: 'Pausado',
@@ -223,77 +333,77 @@ const INITIAL_PORTALES = [
 ];
 
 // --- MOCK DATA: PLAZAS Y CANDIDATOS POR POSICIÓN ---
-const INITIAL_PLAZAS = {
-    'POS-001': [
+const PLAZAS_BASE = {
+    'operario': [
         {
             id: 'PLZ-001-01',
             numero: 1,
             estado: 'cubierta', // 'cubierta' | 'vacante' | 'en_proceso'
-            candidatoId: 'CND-1049',
+            candidatoId: 'CAN-0126',
             nombre: 'Jon Ander Etxebarria Bilbao',
             dni: '45892134K',
             telefono: '+34 654 112 890',
             email: 'jonander.etxebarria@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 96,
-            foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
+            foto: null
         },
         {
             id: 'PLZ-001-02',
             numero: 2,
             estado: 'cubierta',
-            candidatoId: 'CND-1082',
+            candidatoId: 'CAN-0127',
             nombre: 'Ainhoa Larrazabal Urkijo',
             dni: '78912340M',
             telefono: '+34 688 234 561',
             email: 'ainhoa.larrazabal@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 92,
-            foto: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80'
+            foto: null
         },
         {
             id: 'PLZ-001-03',
             numero: 3,
             estado: 'cubierta',
-            candidatoId: 'CND-1104',
+            candidatoId: 'CAN-0128',
             nombre: 'Mamadou Diallo',
             dni: 'X8923412P',
             telefono: '+34 611 902 443',
             email: 'mamadou.diallo@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 88,
-            foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80'
+            foto: null
         },
         {
             id: 'PLZ-001-04',
             numero: 4,
             estado: 'cubierta',
-            candidatoId: 'CND-1120',
+            candidatoId: 'CAN-0129',
             nombre: 'Laura Morales San Sebastián',
             dni: '16098234L',
             telefono: '+34 670 445 119',
             email: 'laura.morales@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 94,
-            foto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80'
+            foto: null
         },
         {
             id: 'PLZ-001-05',
             numero: 5,
             estado: 'cubierta',
-            candidatoId: 'CND-1155',
+            candidatoId: 'CAN-0130',
             nombre: 'Iker Agirrebeitia Mendia',
             dni: '30691288B',
             telefono: '+34 699 871 203',
             email: 'iker.agirre@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 90,
-            foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80'
+            foto: null
         },
         {
             id: 'PLZ-001-06',
@@ -338,34 +448,34 @@ const INITIAL_PLAZAS = {
             foto: null
         }
     ],
-    'POS-002': [
+    'carretillero': [
         {
             id: 'PLZ-002-01',
             numero: 1,
             estado: 'cubierta',
-            candidatoId: 'CND-0988',
+            candidatoId: 'CAN-0131',
             nombre: 'Unai García Zabaleta',
             dni: '44901238R',
             telefono: '+34 633 901 223',
             email: 'unai.garcia@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 98,
-            foto: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=120&auto=format&fit=crop&q=80'
+            foto: null
         },
         {
             id: 'PLZ-002-02',
             numero: 2,
             estado: 'cubierta',
-            candidatoId: 'CND-1033',
+            candidatoId: 'CAN-0132',
             nombre: 'Carlos Manuel Ortiz Reyes',
             dni: 'Y1290384T',
             telefono: '+34 677 340 192',
             email: 'carlos.ortiz@email.com',
-            fechaIncorporacion: '01/03/2026',
+            fechaIncorporacion: '03/11/2026',
             contratoTipo: 'CPD Obra y Servicio (ETT)',
             scoring: 95,
-            foto: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80'
+            foto: null
         },
         {
             id: 'PLZ-002-03',
@@ -398,9 +508,45 @@ const INITIAL_PLAZAS = {
     ]
 };
 
-const INITIAL_CANDIDATOS_POOL = [
+// Plazas de cada petición. Las de logística salen de los ejemplos de arriba; el resto se generan.
+const NOMBRES_DEMO = ['Garazi Uribe Arana', 'Pablo Ruiz Cano', 'Sara Benítez Lago', 'Youssef Amrani', 'Lucía Ferrer Sanz', 'Marc Puig Soler', 'Aitana Roca Vidal', 'Daniel Sousa Prieto', 'Irene Campos Gil', 'Óscar León Mena', 'Noa Serra Pons', 'Hugo Martín Vera', 'Ane Goikoetxea Ruiz', 'Iván Molina Prat', 'Clara Esteve Ros', 'Bruno Lage Costa', 'Nerea Olabarria Gil', 'Adrián Vela Soto', 'Paula Rius Ferrer', 'Sergio Navas Peña'];
+// Primer nombre de cada petición generada, para que nadie esté en dos peticiones (las mismas personas que en Contratos y altas)
+const PRIMER_NOMBRE = { 'PET-2026-0044': 0, 'PET-2026-0045': 10, 'PET-2026-0031': 14 };
+const renumerarPlazas = (lista, codigo) => lista.map((p, i) => ({ ...p, id: `PLZ-${codigo}-${String(i + 1).padStart(2, '0')}`, numero: i + 1 }));
+const plazaVacante = { estado: 'vacante', candidatoId: null, nombre: null, dni: null, telefono: null, email: null, fechaIncorporacion: null, contratoTipo: null, scoring: null, foto: null };
+const generarPlazas = (p) => Array.from({ length: p.solicitados }, (_, i) => {
+    if (i >= p.cubiertas) return { ...plazaVacante };
+    const nombre = NOMBRES_DEMO[((PRIMER_NOMBRE[p.id] ?? 0) + i) % NOMBRES_DEMO.length];
+    return {
+        estado: 'cubierta',
+        candidatoId: null, // se rellena con el código de Candidatos (conContacto)
+        nombre,
+        dni: '00000000T',
+        telefono: '+34 600 000 000',
+        email: `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
+        fechaIncorporacion: fechaCorta(p.inicio),
+        contratoTipo: 'CPD circunstancias de la producción (ETT)',
+        scoring: 85 + (i % 10),
+        foto: null
+    };
+});
+// Las personas de las plazas son las de Candidatos: mismo código, DNI, teléfono y email (personasDemo.js)
+const conContacto = (plz) => {
+    const c = plz.nombre && contactoDemo(plz.nombre);
+    return c ? { ...plz, candidatoId: c.id, dni: c.dni, telefono: c.telefono, email: c.email } : plz;
+};
+const PLAZAS_INICIO = Object.fromEntries(INITIAL_PETICIONES.map(p => {
+    const codigo = p.id.slice(-4);
+    const lista = p.id === 'PET-2026-0048' ? PLAZAS_BASE['operario'].slice(0, 5)
+        : p.id === 'PET-2026-0049' ? PLAZAS_BASE['operario'].slice(5)
+            : p.id === 'PET-2026-0050' ? PLAZAS_BASE['carretillero']
+                : generarPlazas(p);
+    return [p.id, renumerarPlazas(lista.map(conContacto), codigo)];
+}));
+
+const CANDIDATOS_BASE = [
     {
-        id: 'CND-1201',
+        id: 'CAN-0201',
         nombre: 'Nerea Barandiarán Goikoetxea',
         dni: '45903218V',
         telefono: '+34 644 192 830',
@@ -410,14 +556,14 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'Inmediata (Turnos Mañana / Tarde)',
         carnets: 'Carnet B + Manipuladora de alimentos',
         scoring: 95,
-        matchPosicion: ['POS-001'],
+        matchPosicion: ['operario'],
         ubicacion: 'Barakaldo (Bizkaia)',
-        valoracionETT: 'Candidata muy formal, experiencia comprobada en Grupo Eroski logística.',
+        valoracionETT: 'Candidata muy formal, experiencia comprobada en un operador logístico de alimentación.',
         estadoSeleccion: 'Disponible para asignación',
-        foto: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80'
+        foto: null
     },
     {
-        id: 'CND-1202',
+        id: 'CAN-0202',
         nombre: 'David Aranguren Sola',
         dni: '72890123C',
         telefono: '+34 605 882 104',
@@ -427,14 +573,14 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'Inmediata',
         carnets: 'Carnet Carretillas UNE 58451 (5 tipos) + C1',
         scoring: 98,
-        matchPosicion: ['POS-002'],
+        matchPosicion: ['carretillero'],
         ubicacion: 'Santurtzi (Bizkaia)',
-        valoracionETT: 'Alta destreza en retráctil, referencias positivas en DHL Bilbao.',
+        valoracionETT: 'Alta destreza en retráctil, buenas referencias de un operador logístico de Bilbao.',
         estadoSeleccion: 'Disponible para asignación',
-        foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80'
+        foto: null
     },
     {
-        id: 'CND-1203',
+        id: 'CAN-0203',
         nombre: 'Yeray Fernández Ramos',
         dni: '16102934D',
         telefono: '+34 682 301 928',
@@ -444,31 +590,31 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'Inmediata (Mañanas)',
         carnets: 'Carnet B + PRL básico 60h',
         scoring: 89,
-        matchPosicion: ['POS-001'],
+        matchPosicion: ['operario'],
         ubicacion: 'Bilbao (Bizkaia)',
         valoracionETT: 'Muy motivado, disponibilidad para horas extra si procede.',
         estadoSeleccion: 'Disponible para asignación',
-        foto: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=120&auto=format&fit=crop&q=80'
+        foto: null
     },
     {
-        id: 'CND-1204',
+        id: 'CAN-0204',
         nombre: 'Kepa Iturriaga Elorrieta',
         dni: '30654891Q',
         telefono: '+34 618 450 912',
         email: 'kepa.iturriaga@email.com',
         puestoPrincipal: 'Conductor / Carretillero homologado',
         experiencia: '4 años en almacén logístico portuario ZAL',
-        disponibilidad: 'A partir del 25/02/2026',
+        disponibilidad: 'A partir del 02/11/2026',
         carnets: 'Carnet Carretillero UNE 58451 + C+E',
         scoring: 91,
-        matchPosicion: ['POS-002'],
+        matchPosicion: ['carretillero'],
         ubicacion: 'Portugalete (Bizkaia)',
         valoracionETT: 'Conoce los muelles de la ZAL de Santurtzi a la perfección.',
         estadoSeleccion: 'Disponible para asignación',
-        foto: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80'
+        foto: null
     },
     {
-        id: 'CND-1205',
+        id: 'CAN-0205',
         nombre: 'Sofía Valderrama Galdós',
         dni: '79012384H',
         telefono: '+34 690 128 347',
@@ -478,19 +624,245 @@ const INITIAL_CANDIDATOS_POOL = [
         disponibilidad: 'Inmediata',
         carnets: 'Carnet B',
         scoring: 87,
-        matchPosicion: ['POS-001'],
+        matchPosicion: ['operario'],
         ubicacion: 'Galdakao (Bizkaia)',
         valoracionETT: 'Rapidez en picking y manejo ágil de lector de código de barras.',
         estadoSeleccion: 'Disponible para asignación',
-        foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
+        foto: null
     }
 ];
 
 // --- ROOT COMPONENT ---
+// Perfil de cada candidato para comprobarlo contra la petición: turnos en los que puede trabajar, carnés,
+// si su documentación está en vigor y de dónde vino.
+const PERFIL_CANDIDATOS = {
+    'CAN-0201': { turnos: ['manana', 'tarde'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' },
+    'CAN-0202': { turnos: ['manana', 'tarde', 'noche'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' },
+    'CAN-0203': { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' },
+    'CAN-0204': { turnos: ['tarde', 'noche'], carnes: ['carretilla'], docOk: false, origen: 'Indeed' },
+    'CAN-0205': { turnos: ['manana', 'tarde'], carnes: [], docOk: true, origen: 'Base de datos' },
+};
+const persona = (id, nombre, puestoPrincipal, ubicacion, scoring, matchPosicion, perfil, experiencia) => ({
+    id, nombre, dni: '00000000T', telefono: '+34 600 000 000', email: `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
+    puestoPrincipal, experiencia, disponibilidad: 'Inmediata', carnets: perfil.carnes.map(c => NOMBRE_CARNE[c]).join(', ') || 'Ninguno',
+    scoring, matchPosicion, ubicacion, valoracionETT: 'Pendiente de entrevista.', estadoSeleccion: 'En proceso', foto: null, ...perfil
+});
+const NOMBRE_CARNE = { carretilla: 'Carné de carretillero', manipulador: 'Manipulador/a de alimentos' };
+const INITIAL_CANDIDATOS_POOL = [
+    ...CANDIDATOS_BASE.map(c => ({ ...c, ...PERFIL_CANDIDATOS[c.id] })),
+    // En selección también en Candidatos (con sus datos de allí)
+    { ...persona('CAN-0104', 'Elena Sánchez Pascual', 'Reponedora / Moza de almacén', 'Galdakao (Bizkaia)', 90, ['operario'], { turnos: ['manana', 'tarde'], carnes: [], docOk: true, origen: 'Monster' }, '2 años en reposición y almacén'), dni: '02891277W', telefono: '+34 689 112 233', email: 'elena.sanchez.p@fastmail.com' },
+    { ...persona('CAN-0105', 'David Castillo Ruiz', 'Operario de almacén', 'Bilbao (Bizkaia)', 89, ['operario', 'carretillero'], { turnos: ['manana', 'tarde'], carnes: ['carretilla'], docOk: true, origen: 'Portal de candidatos' }, '3 años en almacén y carretilla frontal'), dni: '50449912K', telefono: '+34 654 321 987', email: 'david.castillo.log@outlook.com' },
+    persona('CAN-0206', 'Ibai Zubizarreta Lasa', 'Operario de almacén', 'Basauri (Bizkaia)', 88, ['operario'], { turnos: ['tarde'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, '2 años en almacén de recambios'),
+    persona('CAN-0207', 'Leire Ortuzar Bengoa', 'Operaria de almacén', 'Etxebarri (Bizkaia)', 80, ['operario'], { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, 'Sin experiencia en logística; viene de comercio'),
+    persona('CAN-0208', 'Gorka Bilbao Arrieta', 'Carretillero', 'Arrigorriaga (Bizkaia)', 86, ['carretillero'], { turnos: ['tarde'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' }, '4 años con carretilla retráctil'),
+    persona('CAN-0301', 'Marina Soler Bosch', 'Camarera de sala y barra', 'Barcelona', 92, ['camarero', 'camarero_barra'], { turnos: ['partida', 'noche'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' }, '5 temporadas en banquetes y eventos'),
+    persona('CAN-0302', 'Jordi Vila Mas', 'Cocinero', 'L\'Hospitalet de Llobregat', 90, ['cocinero', 'ayudante_cocina'], { turnos: ['partida'], carnes: ['manipulador'], docOk: true, origen: 'InfoJobs' }, 'Jefe de partida en restaurante de 120 cubiertos'),
+    persona('CAN-0303', 'Fatima Zahra El Idrissi', 'Ayudante de cocina', 'Badalona', 84, ['ayudante_cocina'], { turnos: ['partida', 'manana'], carnes: ['manipulador'], docOk: false, origen: 'Portal de candidatos' }, '1 año en cocina de colectividades'),
+    persona('CAN-0304', 'Álex Romero Gil', 'Camarero de barra', 'Barcelona', 81, ['camarero_barra'], { turnos: ['noche'], carnes: [], docOk: true, origen: 'Indeed' }, 'Coctelería en locales de ocio nocturno'),
+].map(c => ({ ...c, ...(contactoDemo(c.nombre) ? (({ dni, telefono, email }) => ({ dni, telefono, email }))(contactoDemo(c.nombre)) : {}) }));
+
+// Requisitos de la petición que se comprueban al proponer a alguien
+const REQUISITO_CARNE = { carretillero: 'carretilla', camarero: 'manipulador', camarero_barra: 'manipulador', ayudante_cocina: 'manipulador', cocinero: 'manipulador', envasado: 'manipulador' };
+const comprobarRequisitos = (c, pet, plantilla) => {
+    const carne = REQUISITO_CARNE[pet.tipo];
+    return [
+        { id: 'carne', texto: carne ? NOMBRE_CARNE[carne] : 'Sin carné específico', ok: !carne || (c.carnes || []).includes(carne) },
+        { id: 'turno', texto: HORARIO_TEMPLATES[plantilla]?.nombre || 'Turno', ok: (c.turnos || []).includes(plantilla) },
+        { id: 'doc', texto: 'Documentación en vigor', ok: c.docOk !== false },
+    ];
+};
+
+// Embudo de selección de cada petición
+const ETAPAS = [
+    { id: 'inscrito', texto: 'Inscritos', tono: 'neutral' },
+    { id: 'preseleccionado', texto: 'Preseleccionados', tono: 'info' },
+    { id: 'entrevista', texto: 'Entrevista', tono: 'accent' },
+    { id: 'propuesto', texto: 'Propuestos al cliente', tono: 'warning' },
+    { id: 'aceptado', texto: 'Aceptados', tono: 'success' },
+    { id: 'descartado', texto: 'Descartados', tono: 'danger' },
+];
+const ETAPAS_EN_PROCESO = ['preseleccionado', 'entrevista', 'propuesto'];
+const enProcesoDe = (lista) => (lista || []).filter(x => ETAPAS_EN_PROCESO.includes(x.etapa)).length;
+const INITIAL_EMBUDO = {
+    'PET-2026-0049': [
+        { id: 'CAN-0201', etapa: 'entrevista', fecha: '2026-10-24' },
+        { id: 'CAN-0205', etapa: 'entrevista', fecha: '2026-10-22' },
+        { id: 'CAN-0203', etapa: 'preseleccionado', fecha: '2026-10-25' },
+        { id: 'CAN-0206', etapa: 'preseleccionado', fecha: '2026-10-26' },
+        { id: 'CAN-0207', etapa: 'inscrito', fecha: '2026-10-27' },
+        { id: 'CAN-0104', etapa: 'entrevista', fecha: '2026-10-23' },
+    ],
+    'PET-2026-0050': [
+        { id: 'CAN-0202', etapa: 'propuesto', fecha: '2026-10-20' },
+        { id: 'CAN-0204', etapa: 'entrevista', fecha: '2026-10-23' },
+        { id: 'CAN-0208', etapa: 'preseleccionado', fecha: '2026-10-26' },
+        { id: 'CAN-0105', etapa: 'entrevista', fecha: '2026-10-20' },
+    ],
+    'PET-2026-0046': [
+        { id: 'CAN-0302', etapa: 'entrevista', fecha: '2026-10-21' },
+        { id: 'CAN-0303', etapa: 'inscrito', fecha: '2026-10-27' },
+    ],
+    'PET-2026-0047': [
+        { id: 'CAN-0301', etapa: 'inscrito', fecha: '2026-10-27' },
+        { id: 'CAN-0304', etapa: 'inscrito', fecha: '2026-10-28' },
+    ],
+};
+
+// Estados de una plaza: por cubrir → pendiente del cliente → cubierta → incorporada; y baja si alguien se va
+const ESTADOS_PLAZA = {
+    vacante: { texto: 'Por cubrir', tono: 'warning' },
+    reservada: { texto: 'Pendiente del cliente', tono: 'info' },
+    cubierta: { texto: 'Cubierta', tono: 'success' },
+    incorporada: { texto: 'Incorporada', tono: 'success' },
+    baja: { texto: 'Baja', tono: 'danger' },
+};
+const PLAZA_OCUPADA = ['reservada', 'cubierta', 'incorporada'];
+const MOTIVOS_BAJA = ['No se presentó', 'Renuncia', 'No supera el periodo de prueba', 'A petición del cliente', 'Fin de la necesidad'];
+
+// CPD por persona (se genera al confirmar la plaza) y CPD previo por petición (condiciones, antes de tener personas)
+const ESTADOS_CPD = {
+    sin_generar: { texto: 'Se genera al confirmar', tono: 'neutral' },
+    enviado: { texto: 'Pendiente de firma', tono: 'warning' },
+    firmado: { texto: 'Firmado', tono: 'success' },
+};
+const ESTADOS_CPD_PREVIO = {
+    sin_enviar: { texto: 'Sin enviar', tono: 'neutral' },
+    enviado: { texto: 'Enviado, sin revisar', tono: 'warning' },
+    revisado: { texto: 'Revisado por el cliente', tono: 'success' },
+};
+const INITIAL_CPD_PREVIO = Object.fromEntries(INITIAL_PETICIONES.map(p => [p.id,
+    p.estado === 'Nueva' ? { estado: 'sin_enviar' } : ['PET-2026-0049', 'PET-2026-0046'].includes(p.id) ? { estado: 'enviado', fecha: p.creada } : { estado: 'revisado', fecha: p.creada }
+]));
+
+// Portales propios de la ETT (subdominio configurado en Mi ETT): uno para empresas y otro para candidatos
+const SUBDOMINIO_ETT = 'ettglobal';
+const urlPortal = (tipo, petId) => `https://${SUBDOMINIO_ETT}.tramitnow.com/${tipo === 'empresa' ? 'empresas' : `candidatos/ofertas/${petId}`}`;
+const INITIAL_PORTALES_PROPIOS = Object.fromEntries(INITIAL_PETICIONES.map(p => [p.id, {
+    empresa: ESTADOS_ACTIVOS.includes(p.estado) && p.estado !== 'Nueva',
+    candidatos: ['En difusión', 'En selección'].includes(p.estado),
+    bienvenidaEmpresa: true,
+    bienvenidaCandidatos: true,
+    bienvenidaEmpresaEnviada: p.estado !== 'Nueva' ? p.creada : null,
+}]));
+
+// Plazas con su estado y su CPD. Las cubiertas de peticiones ya empezadas pasan a incorporadas.
+const INITIAL_PLAZAS = Object.fromEntries(Object.entries(PLAZAS_INICIO).map(([petId, lista]) => {
+    const pet = INITIAL_PETICIONES.find(p => p.id === petId);
+    const empezada = diasHasta(pet.inicio) <= 0;
+    return [petId, lista.map(pl => {
+        const p = { ...pl, motivoBaja: null, bajaDe: null, cpd: null };
+        if (p.estado !== 'cubierta') return { ...p, estado: 'vacante' };
+        return { ...p, estado: empezada ? 'incorporada' : 'cubierta', cpd: 'firmado', fechaIncorporacion: fechaCorta(pet.inicio), contratoTipo: 'Circunstancias de la producción' };
+    })];
+}));
+// Casos de la demo: CPD aún sin firmar, una persona propuesta al cliente y una baja
+INITIAL_PLAZAS['PET-2026-0048'][3].cpd = 'enviado';
+INITIAL_PLAZAS['PET-2026-0048'][4].cpd = 'enviado';
+INITIAL_PLAZAS['PET-2026-0050'][1].cpd = 'enviado';
+(() => {
+    const c = INITIAL_CANDIDATOS_POOL.find(x => x.id === 'CAN-0202');
+    Object.assign(INITIAL_PLAZAS['PET-2026-0050'][2], { estado: 'reservada', candidatoId: c.id, nombre: c.nombre, dni: c.dni, telefono: c.telefono, email: c.email, scoring: c.scoring, fechaIncorporacion: '10/11/2026', contratoTipo: 'Circunstancias de la producción', cpd: 'sin_generar' });
+    const baja = INITIAL_PLAZAS['PET-2026-0044'][2];
+    Object.assign(baja, { estado: 'baja', motivoBaja: 'No se presentó', bajaDe: baja.nombre, candidatoId: null, nombre: null, cpd: null });
+})();
+
+// Requisitos de un candidato frente a la petición: carné, turno y documentación
+function Requisitos({ lista, compacto = false }) {
+    const corto = { carne: 'Carné', turno: 'Turno', doc: 'Documentos' };
+    return (
+        <span className="flex flex-wrap gap-1">
+            {lista.map(r => (
+                <span key={r.id} title={`${r.texto}: ${r.ok ? 'cumple' : 'no cumple'}`} className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${r.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                    {r.ok ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                    {compacto ? corto[r.id] : r.texto}
+                </span>
+            ))}
+        </span>
+    );
+}
+
+const cubiertasDe = (lista) => (lista || []).filter(p => ['cubierta', 'incorporada'].includes(p.estado)).length;
+
+// Contenido común de la publicación en portales, a partir del puesto y el turno de la petición
+const contenidoDe = (p, horario) => {
+    const turno = (horario?.turnoNombre || 'el turno indicado').toLowerCase();
+    return {
+        ...INITIAL_CONTENIDO_COMUN,
+        titulo: `${p.puesto} - ${turno} - ${p.ciudad}`,
+        descripcion: `Empresa del sector ${p.sector.toLowerCase()} en ${p.ciudad} busca ${p.solicitados} ${p.solicitados === 1 ? 'persona' : 'personas'} para el puesto de ${p.puesto.toLowerCase()}, del ${fechaCorta(p.inicio)} al ${fechaCorta(p.fin)}.`,
+        funciones: `• ${p.descripcionCorta}`,
+        requisitos: `• Disponibilidad para ${turno}.\n• ${p.carnetRequerido === 'Ninguno' ? 'No se necesita carné específico.' : `${p.carnetRequerido}.`}\n• EPIs que facilita la empresa: ${p.requiereEpi.toLowerCase()}.`,
+        categoria: `${p.sector} — ${p.puesto}`,
+        ubicacion: p.ciudad,
+        jornada: horario?.tipoJornada || INITIAL_CONTENIDO_COMUN.jornada,
+    };
+};
+
+// Pipeline de peticiones: una columna por estado; las tarjetas se arrastran para cambiar de estado
+function PipelinePeticiones({ lista, plazas, horarios, onAbrir, onMover }) {
+    const [sobre, setSobre] = useState(null);
+    return (
+        <div className="flex gap-3 overflow-x-auto pb-2">
+            {ESTADOS_PETICION.map(col => {
+                const items = lista.filter(p => p.estado === col.estado);
+                return (
+                    <div
+                        key={col.estado}
+                        onDragOver={(e) => { e.preventDefault(); setSobre(col.estado); }}
+                        onDragLeave={() => setSobre(null)}
+                        onDrop={(e) => { e.preventDefault(); setSobre(null); onMover(e.dataTransfer.getData('text/plain'), col.estado); }}
+                        className={`w-64 shrink-0 rounded-xl border p-2 space-y-2 transition-colors ${sobre === col.estado ? 'border-indigo-400 bg-indigo-50/60' : 'border-slate-200 bg-slate-50'}`}
+                    >
+                        <div className="flex items-center justify-between px-1 pt-1">
+                            <Badge tone={col.tono} dot>{col.estado}</Badge>
+                            <span className="text-[11px] text-slate-500">{items.length} · {items.reduce((s, p) => s + p.solicitados, 0)} plazas</span>
+                        </div>
+                        {items.length === 0 && <div className="px-2 py-6 text-center text-[11px] text-slate-400">Arrastra aquí</div>}
+                        {items.map(p => {
+                            const cubiertas = cubiertasDe(plazas[p.id]);
+                            const pct = Math.round((cubiertas / p.solicitados) * 100);
+                            return (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    draggable
+                                    onDragStart={(e) => e.dataTransfer.setData('text/plain', p.id)}
+                                    onClick={() => onAbrir(p)}
+                                    className="w-full text-left rounded-lg border border-slate-200 bg-white p-3 shadow-xs hover:border-indigo-300 cursor-grab active:cursor-grabbing"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="font-mono text-[11px] text-slate-500">{p.id}</span>
+                                        <GripVertical className="w-3.5 h-3.5 text-slate-300" />
+                                    </div>
+                                    <div className="mt-1 text-xs font-medium text-slate-900 line-clamp-2">{p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}</div>
+                                    <div className="text-[11px] text-slate-500 line-clamp-1">{p.clienteNombre}</div>
+                                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                                        <span>{cubiertas} de {p.solicitados} plazas</span>
+                                        <span>Inicio {fechaCorta(p.inicio)}</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 rounded-full h-1 mt-1 overflow-hidden">
+                                        <div className={`${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-600'} h-1 rounded-full`} style={{ width: `${pct}%` }}></div>
+                                    </div>
+                                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
+                                        <span>{p.presupuestoOrigen}</span>
+                                        <span>{p.responsable}</span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function PeticionesView() {
     // Navigation
-    const [currentView, setCurrentView] = useState('detalle'); // 'bandeja' | 'detalle'
-    const [activeTab, setActiveTab] = useState('horarios'); // 'resumen', 'posiciones', 'horarios', 'portales', 'documentos', 'auditoria'
+    const [currentView, setCurrentView] = useState('bandeja'); // 'bandeja' | 'detalle'
+    const [busquedaPeticiones, setBusquedaPeticiones] = useState('');
+    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen', 'horarios', 'plazas', 'portales', 'documentos', 'auditoria'
 
     // Notifications / Toast
     const [toast, setToast] = useState(null);
@@ -500,21 +872,58 @@ export default function PeticionesView() {
     };
 
     // Main States
-    const [peticion, setPeticion] = useState(INITIAL_PETICION);
-    const [posiciones, setPosiciones] = useState(INITIAL_POSICIONES);
+    const [peticiones, setPeticiones] = useState(INITIAL_PETICIONES);
+    const [peticionId, setPeticionId] = useState(INITIAL_PETICIONES[0].id);
+    const peticion = peticiones.find(p => p.id === peticionId) || peticiones[0];
     const [horarios, setHorarios] = useState(INITIAL_HORARIOS);
-    const [selectedPosId, setSelectedPosId] = useState('POS-001');
+    // Cada petición tiene un solo puesto: la "posición seleccionada" es siempre la propia petición
+    const selectedPosId = peticion.id;
     const [savingHorario, setSavingHorario] = useState(false);
     const [horarioChangesUnsaved, setHorarioChangesUnsaved] = useState(false);
 
-    // Copy Schedule Modal
-    const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
-    const [copyTargetPosId, setCopyTargetPosId] = useState('POS-002');
+    // Listado: filtros, vista y agrupación
+    const [filtroEstado, setFiltroEstado] = useState('activas');
+    const [filtroCliente, setFiltroCliente] = useState('');
+    const [filtroPresupuesto, setFiltroPresupuesto] = useState('');
+    const [filtroResponsable, setFiltroResponsable] = useState('');
+    const [vistaListado, setVistaListado] = useState('tabla'); // 'tabla' | 'pipeline'
+    const [agruparPorPresupuesto, setAgruparPorPresupuesto] = useState(false);
+
+    // Ventanas: duplicar con otro horario, nueva petición y copiar difusión
+    const [duplicar, setDuplicar] = useState(null);
+    const [nuevaPeticion, setNuevaPeticion] = useState(null);
+    const [copiarDifusion, setCopiarDifusion] = useState(false);
+
+    // Plazas y candidatos: embudo, bajas, CPD previo y portales propios de cada petición
+    const [embudo, setEmbudo] = useState(INITIAL_EMBUDO);
+    const [filtroEtapa, setFiltroEtapa] = useState('');
+    const [verTodosCandidatos, setVerTodosCandidatos] = useState(false);
+    const [bajaPlaza, setBajaPlaza] = useState(null);
+    const [motivosBaja, setMotivosBaja] = useState(MOTIVOS_BAJA);
+    const [cpdPrevio, setCpdPrevio] = useState(INITIAL_CPD_PREVIO);
+    const [verCpdPrevio, setVerCpdPrevio] = useState(false);
+    const [portalesPropios, setPortalesPropios] = useState(INITIAL_PORTALES_PROPIOS);
+    const enviarCpdPrevio = () => {
+        setCpdPrevio(prev => ({ ...prev, [peticion.id]: { estado: 'enviado', fecha: new Date().toISOString().slice(0, 10) } }));
+        showToast(`Condiciones del CPD enviadas a ${peticion.emailContacto}${portalesPropios[peticion.id]?.empresa ? ' y publicadas en su portal' : ''}.`);
+    };
+    const cambiarPortalPropio = (tipo, activo) => {
+        const pp = portalesPropios[peticion.id] || {};
+        const bienvenida = activo && tipo === 'empresa' && pp.bienvenidaEmpresa && !pp.bienvenidaEmpresaEnviada;
+        setPortalesPropios(prev => ({
+            ...prev,
+            [peticion.id]: { ...pp, [tipo]: activo, ...(bienvenida ? { bienvenidaEmpresaEnviada: new Date().toISOString().slice(0, 10) } : {}) },
+        }));
+        const nombre = tipo === 'empresa' ? 'Portal de empresas' : 'Portal de candidatos';
+        showToast(activo
+            ? `${nombre} activado para ${peticion.id}.${bienvenida ? ` Bienvenida enviada a ${peticion.emailContacto}.` : ''}`
+            : `${nombre} desactivado para ${peticion.id}.`);
+    };
 
     // Portales & Content
-    const [contenidoComun, setContenidoComun] = useState(INITIAL_CONTENIDO_COMUN);
+    const [contenidoComun, setContenidoComun] = useState(() => contenidoDe(INITIAL_PETICIONES[0], INITIAL_HORARIOS[INITIAL_PETICIONES[0].id]));
     const [comunSavedStatus, setComunSavedStatus] = useState('Guardado'); // 'Guardado', 'Modificado', 'Guardando...'
-    const [portales, setPortales] = useState(INITIAL_PORTALES);
+    const [portales, setPortales] = useState(() => INITIAL_PORTALES.map((x, i) => ({ ...x, activo: i < INITIAL_PETICIONES[0].portalesActivos })));
 
     // Plazas y Candidatos Management State
     const [plazas, setPlazas] = useState(INITIAL_PLAZAS);
@@ -522,7 +931,6 @@ export default function PeticionesView() {
     const [candidatoFichaModal, setCandidatoFichaModal] = useState(null); // Candidate object or null to display profile
     const [assignCandidateModal, setAssignCandidateModal] = useState(null); // { posId, plaza } or null
     const [candidateSearchFilter, setCandidateSearchFilter] = useState('');
-    const [activePlazaPosView, setActivePlazaPosView] = useState('POS-001');
 
     // Modals for Portals
     const [editPortalModal, setEditPortalModal] = useState(null); // portal object or null
@@ -535,13 +943,116 @@ export default function PeticionesView() {
     const [syncStep, setSyncStep] = useState(0); // 0: review, 1: validando, 2: adaptando, 3: enviando, 4: exito
 
     // Helper calculation
-    const currentSchedule = useMemo(() => horarios[selectedPosId] || horarios['POS-001'], [horarios, selectedPosId]);
-    const selectedPositionObj = useMemo(() => posiciones.find(p => p.id === selectedPosId) || posiciones[0], [posiciones, selectedPosId]);
+    const currentSchedule = useMemo(() => horarios[selectedPosId], [horarios, selectedPosId]);
+    const selectedPositionObj = peticion;
 
     const totalHorasSemana = useMemo(() => {
         if (!currentSchedule || !currentSchedule.dias) return 0;
         return currentSchedule.dias.reduce((acc, d) => acc + (d.laborable ? Number(d.horas || 0) : 0), 0);
     }, [currentSchedule]);
+
+    // La petición como "posición" única, para las partes que trabajan con plazas y horario
+    const posActual = useMemo(() => ({ ...peticion, incorporados: cubiertasDe(plazas[peticion.id]) }), [peticion, plazas]);
+    const posiciones = [posActual];
+
+    // Listado
+    const hayFiltros = filtroEstado !== 'activas' || filtroCliente || filtroPresupuesto || filtroResponsable || busquedaPeticiones;
+    const limpiarFiltros = () => {
+        setFiltroEstado('activas'); setFiltroCliente(''); setFiltroPresupuesto(''); setFiltroResponsable(''); setBusquedaPeticiones('');
+    };
+    const peticionesFiltradas = useMemo(() => {
+        const q = busquedaPeticiones.trim().toLowerCase();
+        return peticiones.filter(p =>
+            (filtroEstado === 'todas' || (filtroEstado === 'activas' ? ESTADOS_ACTIVOS.includes(p.estado) : p.estado === filtroEstado)) &&
+            (!filtroCliente || p.cliente === filtroCliente) &&
+            (!filtroPresupuesto || p.presupuesto === filtroPresupuesto) &&
+            (!filtroResponsable || p.responsable === filtroResponsable) &&
+            (!q || [p.id, p.clienteNombre, p.puesto, p.presupuesto].some(t => t.toLowerCase().includes(q)))
+        );
+    }, [peticiones, filtroEstado, filtroCliente, filtroPresupuesto, filtroResponsable, busquedaPeticiones]);
+    const gruposListado = useMemo(() => {
+        if (!agruparPorPresupuesto) return [{ id: 'todas', items: peticionesFiltradas }];
+        const grupos = [];
+        peticionesFiltradas.forEach(p => {
+            let g = grupos.find(x => x.id === p.presupuestoOrigen);
+            if (!g) { g = { id: p.presupuestoOrigen, cliente: p.clienteNombre, items: [] }; grupos.push(g); }
+            g.items.push(p);
+        });
+        return grupos;
+    }, [peticionesFiltradas, agruparPorPresupuesto]);
+    const resumenListado = useMemo(() => {
+        const activas = peticiones.filter(p => ESTADOS_ACTIVOS.includes(p.estado));
+        const plazasTot = activas.reduce((s, p) => s + p.solicitados, 0);
+        const cubiertas = activas.reduce((s, p) => s + cubiertasDe(plazas[p.id]), 0);
+        return {
+            activas: activas.length,
+            enSeleccion: activas.filter(p => ['En difusión', 'En selección'].includes(p.estado)).length,
+            plazas: plazasTot,
+            cubiertas,
+            porCubrir: plazasTot - cubiertas,
+            empiezanPronto: activas.filter(p => { const d = diasHasta(p.inicio); return d >= 0 && d <= 7 && cubiertasDe(plazas[p.id]) < p.solicitados; }).length,
+            candidaturas: activas.reduce((s, p) => s + p.candidaturas, 0),
+        };
+    }, [peticiones, plazas]);
+
+    const abrirPeticion = (id) => {
+        const p = peticiones.find(x => x.id === id);
+        setPeticionId(id);
+        setActiveTab('resumen');
+        setHorarioChangesUnsaved(false);
+        if (p) {
+            setContenidoComun(contenidoDe(p, horarios[id]));
+            setComunSavedStatus('Guardado');
+            setPortales(prev => prev.map((x, i) => ({ ...x, activo: i < p.portalesActivos })));
+        }
+        setCurrentView('detalle');
+    };
+    useEffect(() => {
+        const activos = portales.filter(x => x.activo).length;
+        setPeticiones(prev => prev.map(p => (p.id === peticionId && p.portalesActivos !== activos ? { ...p, portalesActivos: activos } : p)));
+    }, [portales]);
+
+    const moverPeticion = (id, estado) => {
+        if (!ESTADOS_PETICION.some(e => e.estado === estado)) return;
+        setPeticiones(prev => prev.map(p => (p.id === id ? { ...p, estado } : p)));
+        showToast(`${id} pasa a ${estado}.`);
+    };
+
+    // Crear peticiones: siempre de un puesto de un presupuesto aceptado
+    const crearPeticionNueva = (base, plantilla) => {
+        const id = siguienteCodigo(peticiones);
+        const nueva = completarPeticion({ ...base, id, plantilla, cubiertas: 0, estado: 'Nueva', creada: new Date().toISOString().slice(0, 10), portalesActivos: 0, candidaturas: 0 });
+        setPeticiones(prev => [nueva, ...prev]);
+        setHorarios(prev => ({ ...prev, [id]: horarioDesdePlantilla(plantilla, nueva.centroTrabajo, `${fechaCorta(nueva.creada)} por ${nueva.responsable}`) }));
+        setPlazas(prev => ({ ...prev, [id]: renumerarPlazas(Array.from({ length: nueva.solicitados }, () => ({ ...plazaVacante })), id.slice(-4)) }));
+        setPeticionId(id);
+        setContenidoComun(contenidoDe(nueva, { turnoNombre: HORARIO_TEMPLATES[plantilla].nombre }));
+        setPortales(prev => prev.map(x => ({ ...x, activo: false })));
+        setActiveTab('resumen');
+        setCurrentView('detalle');
+        return id;
+    };
+    const abrirDuplicar = () => {
+        const otra = Object.keys(HORARIO_TEMPLATES).find(k => HORARIO_TEMPLATES[k].nombre !== currentSchedule.turnoNombre) || 'manana';
+        setDuplicar({ plantilla: otra, solicitados: 1, inicio: peticion.inicio, fin: peticion.fin });
+    };
+    const confirmarDuplicar = () => {
+        const { id, cubiertas, estado, creada, portalesActivos, candidaturas, motivoCancelacion, ...base } = PETICIONES_BASE.find(b => b.id === peticion.id) || peticion;
+        const nuevoId = crearPeticionNueva({ ...base, solicitados: Number(duplicar.solicitados), inicio: duplicar.inicio, fin: duplicar.fin }, duplicar.plantilla);
+        setDuplicar(null);
+        showToast(`Petición ${nuevoId} creada: ${peticion.puesto.toLowerCase()}, ${HORARIO_TEMPLATES[duplicar.plantilla].nombre.toLowerCase()}.`);
+    };
+    const confirmarNuevaPeticion = () => {
+        const presu = PRESUPUESTOS_ACEPTADOS.find(p => p.id === nuevaPeticion.presupuesto);
+        const puesto = presu.puestos.find(x => x.tipo === nuevaPeticion.tipo);
+        const fin = new Date(`${nuevaPeticion.inicio}T00:00:00`); fin.setMonth(fin.getMonth() + 3);
+        const nuevoId = crearPeticionNueva({
+            presupuesto: presu.id, version: presu.version, cliente: presu.cliente, tipo: puesto.tipo, personasPuesto: puesto.personas,
+            solicitados: Number(nuevaPeticion.solicitados), inicio: nuevaPeticion.inicio, fin: fin.toISOString().slice(0, 10), responsable: RESPONSABLES[0],
+        }, nuevaPeticion.plantilla);
+        setNuevaPeticion(null);
+        showToast(`Petición ${nuevoId} creada desde ${presu.id}.`);
+    };
 
     // Handlers: Plazas & Candidatos
     const handleOpenCandidatoFichaById = (candidatoId) => {
@@ -579,70 +1090,56 @@ export default function PeticionesView() {
         }
     };
 
-    const handleAssignCandidateToPlaza = (posId, plazaId, candidato) => {
-        setPlazas(prev => {
-            const posPlazas = [...(prev[posId] || [])];
-            const idx = posPlazas.findIndex(p => p.id === plazaId);
-            if (idx !== -1) {
-                posPlazas[idx] = {
-                    ...posPlazas[idx],
-                    estado: 'cubierta',
-                    candidatoId: candidato.id,
-                    nombre: candidato.nombre,
-                    dni: candidato.dni,
-                    telefono: candidato.telefono,
-                    email: candidato.email,
-                    fechaIncorporacion: '01/03/2026',
-                    contratoTipo: 'CPD Obra y Servicio (ETT)',
-                    scoring: candidato.scoring,
-                    foto: candidato.foto
-                };
-            }
-            return { ...prev, [posId]: posPlazas };
+    // Plazas: proponer → el cliente confirma (en su portal) → cubierta con CPD enviado a firma → incorporada
+    const cambiarPlaza = (petId, plazaId, cambios) => {
+        setPlazas(prev => ({ ...prev, [petId]: (prev[petId] || []).map(p => (p.id === plazaId ? { ...p, ...cambios } : p)) }));
+    };
+    const cambiarEtapa = (petId, candidatoId, etapa) => {
+        setEmbudo(prev => {
+            const lista = prev[petId] || [];
+            const existe = lista.some(x => x.id === candidatoId);
+            return { ...prev, [petId]: existe ? lista.map(x => (x.id === candidatoId ? { ...x, etapa } : x)) : [...lista, { id: candidatoId, etapa, fecha: new Date().toISOString().slice(0, 10) }] };
         });
-
-        // Update position count in state
-        setPosiciones(prev => prev.map(p => {
-            if (p.id === posId) {
-                return { ...p, incorporados: Math.min(p.solicitados, p.incorporados + 1) };
-            }
-            return p;
-        }));
-
-        setAssignCandidateModal(null);
-        showToast(`Candidato ${candidato.nombre} asignado con éxito a la plaza ${plazaId}.`);
+    };
+    // Dónde está ya ocupada una persona (en cualquier petición)
+    const plazaDe = (candidatoId) => {
+        for (const petId in plazas) {
+            const pl = plazas[petId].find(p => p.candidatoId === candidatoId && PLAZA_OCUPADA.includes(p.estado));
+            if (pl) return { petId, plaza: pl };
+        }
+        return null;
     };
 
-    const handleUnassignPlaza = (posId, plazaId) => {
-        setPlazas(prev => {
-            const posPlazas = [...(prev[posId] || [])];
-            const idx = posPlazas.findIndex(p => p.id === plazaId);
-            if (idx !== -1) {
-                posPlazas[idx] = {
-                    ...posPlazas[idx],
-                    estado: 'vacante',
-                    candidatoId: null,
-                    nombre: null,
-                    dni: null,
-                    telefono: null,
-                    email: null,
-                    fechaIncorporacion: null,
-                    contratoTipo: null,
-                    scoring: null,
-                    foto: null
-                };
-            }
-            return { ...prev, [posId]: posPlazas };
+    const handleAssignCandidateToPlaza = (petId, plazaId, candidato) => {
+        const plaza = (plazas[petId] || []).find(p => p.id === plazaId);
+        cambiarPlaza(petId, plazaId, {
+            estado: 'reservada', candidatoId: candidato.id, nombre: candidato.nombre, dni: candidato.dni, telefono: candidato.telefono,
+            email: candidato.email, scoring: candidato.scoring, foto: candidato.foto, fechaIncorporacion: fechaCorta(peticion.inicio),
+            contratoTipo: 'Circunstancias de la producción', cpd: 'sin_generar',
         });
-
-        setPosiciones(prev => prev.map(p => {
-            if (p.id === posId) {
-                return { ...p, incorporados: Math.max(0, p.incorporados - 1) };
-            }
-            return p;
-        }));
-
-        showToast(`Plaza ${plazaId} liberada y puesta nuevamente en estado Vacante.`);
+        cambiarEtapa(petId, candidato.id, 'propuesto');
+        setAssignCandidateModal(null);
+        showToast(portalesPropios[petId]?.empresa
+            ? `${candidato.nombre} propuesto/a para la plaza ${plaza?.numero}. El cliente lo confirmará en su portal.`
+            : `${candidato.nombre} propuesto/a para la plaza ${plaza?.numero}. Confírmalo cuando responda el cliente.`);
+    };
+    const confirmarPlaza = (petId, plaza) => {
+        cambiarPlaza(petId, plaza.id, { estado: 'cubierta', cpd: 'enviado' });
+        cambiarEtapa(petId, plaza.candidatoId, 'aceptado');
+        showToast(`Plaza ${plaza.numero} cubierta. CPD de ${plaza.nombre} generado y enviado a firma a ${peticion.emailContacto}.`);
+    };
+    const retirarPropuesta = (petId, plaza) => {
+        cambiarPlaza(petId, plaza.id, { ...plazaVacante, cpd: null });
+        cambiarEtapa(petId, plaza.candidatoId, 'entrevista');
+        showToast(`Propuesta de ${plaza.nombre} retirada. Vuelve a entrevista.`);
+    };
+    const recordarCpd = (plaza) => showToast(`Recordatorio de firma del CPD de ${plaza.nombre} enviado a ${peticion.emailContacto}.`);
+    const confirmarBaja = () => {
+        const { plaza, motivo, notas } = bajaPlaza;
+        cambiarPlaza(peticion.id, plaza.id, { ...plazaVacante, estado: 'baja', motivoBaja: notas ? `${motivo}: ${notas}` : motivo, bajaDe: plaza.nombre, cpd: null });
+        if (plaza.candidatoId) cambiarEtapa(peticion.id, plaza.candidatoId, 'descartado');
+        setBajaPlaza(null);
+        showToast(`Baja de ${plaza.nombre} registrada (${motivo}). La plaza ${plaza.numero} queda para buscar sustituto.`);
     };
 
     // Handlers: Horarios
@@ -720,34 +1217,15 @@ export default function PeticionesView() {
                 [selectedPosId]: {
                     ...prev[selectedPosId],
                     guardado: true,
-                    ultimaModif: `${nowStr} por Marta Gómez`
+                    ultimaModif: `${nowStr} por Ane Uriarte`
                 }
             }));
             setSavingHorario(false);
             setHorarioChangesUnsaved(false);
-            showToast(`Horario y turno guardados correctamente para la posición ${selectedPosId}.`);
+            showToast(`Horario y turno guardados correctamente de ${selectedPosId}.`);
         }, 700);
     };
 
-    const handleConfirmCopySchedule = () => {
-        if (copyTargetPosId === selectedPosId) {
-            showToast('Selecciona una posición de destino diferente', 'error');
-            return;
-        }
-        const sourceData = horarios[selectedPosId];
-        setHorarios(prev => ({
-            ...prev,
-            [copyTargetPosId]: {
-                ...prev[copyTargetPosId],
-                turnoNombre: sourceData.turnoNombre,
-                dias: JSON.parse(JSON.stringify(sourceData.dias)),
-                guardado: true,
-                ultimaModif: `Copiado de ${selectedPosId} el ${new Date().toLocaleDateString('es-ES')}`
-            }
-        }));
-        setIsCopyModalOpen(false);
-        showToast(`Horario de ${selectedPosId} copiado exitosamente a ${copyTargetPosId}.`);
-    };
 
     // Handlers: Portales & Contenido
     const handleSaveContenidoComun = (e) => {
@@ -834,10 +1312,10 @@ export default function PeticionesView() {
     };
 
     return (
-        <div className="flex min-h-full bg-slate-100/80">
+        <div className="flex min-h-full">
             {/* TOAST ALERT */}
             {toast && (
-                <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 animate-fade-in text-sm font-medium">
+                <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-lg border border-slate-700 animate-fade-in text-sm font-medium">
                     {toast.type === 'error' ? (
                         <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
                     ) : (
@@ -853,783 +1331,538 @@ export default function PeticionesView() {
             {/* MAIN SIDEBAR UNIFIED */}
 
             {/* MAIN CONTENT AREA */}
-            <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-                {/* Topbar */}
-                <header className="bg-white border-b border-slate-200 sticky top-0 z-20 px-6 py-3 flex items-center justify-between shadow-xs">
-                    <div className="flex items-center gap-3">
-                        {currentView === 'detalle' && (
-                            <button
-                                onClick={() => setCurrentView('bandeja')}
-                                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition"
-                            >
-                                <ArrowLeft className="w-3.5 h-3.5" />
-                                <span>Volver a Peticiones</span>
-                            </button>
-                        )}
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <span>ERP ETT</span>
-                            <ChevronRight className="w-3 h-3 text-slate-400" />
-                            <span className="font-medium text-slate-700">Peticiones Operativas</span>
-                            {currentView === 'detalle' && (
-                                <>
-                                    <ChevronRight className="w-3 h-3 text-slate-400" />
-                                    <span className="font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                                        PET-2026-0048
-                                    </span>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-md">
-                            <Lock className="w-3.5 h-3.5 text-amber-600" />
-                            <span>Presupuesto Origen Bloqueado (<strong>PRE-2026-0048</strong>)</span>
-                        </div>
-                        <button
-                            onClick={() => startSyncProcess()}
-                            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition shadow-indigo-600/20"
-                        >
-                            <Share2 className="w-3.5 h-3.5" />
-                            <span>Revisar y Enviar a Portales</span>
-                        </button>
-                    </div>
-                </header>
-
-                {/* VIEW 1: BANDEJA DE PETICIONES */}
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* VIEW 1: LISTADO DE PETICIONES (una fila por petición; cada petición es un puesto) */}
                 {currentView === 'bandeja' && (
-                    <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Peticiones Operativas de Personal</h1>
-                                <p className="text-sm text-slate-500 mt-0.5">
-                                    Gestión de pedidos de trabajadores derivados de presupuestos aprobados, asignación de turnos y multidifusión API.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-medium shadow-xs">
-                                    <Filter className="w-3.5 h-3.5 text-slate-500" />
-                                    Filtro: Activas
-                                </span>
-                            </div>
+                    <Page>
+                        <PageHeader
+                            title="Peticiones"
+                            count={peticiones.length}
+                            subtitle="Cada petición es un puesto de un presupuesto aceptado, con su horario, sus plazas y su difusión en portales."
+                            actions={<Button variant="primary" icon={Plus} onClick={() => setNuevaPeticion({ presupuesto: '', tipo: '', plantilla: 'manana', solicitados: 1, inicio: '' })}>Nueva petición</Button>}
+                        />
+
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <KpiTile label="Activas" tone="accent" value={resumenListado.activas} hint={`${resumenListado.enSeleccion} en selección o difusión`} active={filtroEstado === 'activas'} onClick={() => setFiltroEstado('activas')} />
+                            <KpiTile label="Plazas por cubrir" tone="warning" value={resumenListado.porCubrir} hint={`${resumenListado.cubiertas} de ${resumenListado.plazas} cubiertas en las activas`} />
+                            <KpiTile label="Empiezan en 7 días" value={resumenListado.empiezanPronto} hint="Con plazas aún sin cubrir" />
+                            <KpiTile label="Candidaturas de portales" value={resumenListado.candidaturas} hint="En las peticiones activas" />
                         </div>
 
-                        {/* Metric cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                                <div className="text-xs font-medium text-slate-500">Peticiones en Selección</div>
-                                <div className="text-2xl font-bold text-indigo-600 mt-1">8</div>
-                                <div className="text-[11px] text-emerald-600 mt-1 font-medium">3 con difusión API activa</div>
-                            </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                                <div className="text-xs font-medium text-slate-500">Posiciones Solicitadas</div>
-                                <div className="text-2xl font-bold text-slate-900 mt-1">26</div>
-                                <div className="text-[11px] text-slate-500 mt-1">16 cubiertas / 10 pendientes</div>
-                            </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                                <div className="text-xs font-medium text-slate-500">Candidaturas Recibidas (Portales)</div>
-                                <div className="text-2xl font-bold text-slate-900 mt-1">63</div>
-                                <div className="text-[11px] text-indigo-600 mt-1 font-medium">+15 en últimas 24h</div>
-                            </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                                <div className="text-xs font-medium text-slate-500">Tiempo Medio Cobertura</div>
-                                <div className="text-2xl font-bold text-slate-900 mt-1">4.2 días</div>
-                                <div className="text-[11px] text-emerald-600 mt-1">Objetivo SLA cumplido (&lt; 5d)</div>
-                            </div>
-                        </div>
-
-                        {/* Table list */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-                            <div className="p-4 border-b border-slate-200 flex items-center justify-between gap-4">
-                                <div className="relative flex-1 max-w-sm">
-                                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar por código, cliente o puesto..."
-                                        className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
-                                        defaultValue="PET-2026-0048"
+                        <Card className="overflow-hidden">
+                            <div className="flex flex-wrap items-center gap-2 p-3 border-b border-slate-200">
+                                <SearchInput
+                                    className="flex-1 min-w-[220px] max-w-sm"
+                                    value={busquedaPeticiones}
+                                    onChange={setBusquedaPeticiones}
+                                    placeholder="Buscar por código, cliente, puesto o presupuesto..."
+                                />
+                                <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
+                                    <option value="activas">Activas</option>
+                                    <option value="todas">Todos los estados</option>
+                                    {ESTADOS_PETICION.map(e => <option key={e.estado} value={e.estado}>{e.estado}</option>)}
+                                </Select>
+                                <Select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} aria-label="Cliente">
+                                    <option value="">Todos los clientes</option>
+                                    {Object.entries(CLIENTES).map(([id, c]) => <option key={id} value={id}>{c.clienteNombre}</option>)}
+                                </Select>
+                                <Select value={filtroPresupuesto} onChange={(e) => setFiltroPresupuesto(e.target.value)} aria-label="Presupuesto">
+                                    <option value="">Todos los presupuestos</option>
+                                    {[...new Set(peticiones.map(p => p.presupuesto))].map(id => <option key={id} value={id}>{id}</option>)}
+                                </Select>
+                                <Select value={filtroResponsable} onChange={(e) => setFiltroResponsable(e.target.value)} aria-label="Responsable">
+                                    <option value="">Todos los responsables</option>
+                                    {RESPONSABLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                </Select>
+                                {hayFiltros && <Button size="sm" variant="ghost" onClick={limpiarFiltros}>Limpiar</Button>}
+                                <div className="ml-auto flex items-center gap-2">
+                                    {vistaListado === 'tabla' && (
+                                        <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                                            <input type="checkbox" checked={agruparPorPresupuesto} onChange={(e) => setAgruparPorPresupuesto(e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                            Agrupar por presupuesto
+                                        </label>
+                                    )}
+                                    <Segmented
+                                        value={vistaListado}
+                                        onChange={setVistaListado}
+                                        options={[{ id: 'tabla', title: 'Tabla', icon: List }, { id: 'pipeline', title: 'Pipeline', icon: SquareKanban }]}
                                     />
                                 </div>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs text-slate-600">
-                                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold uppercase text-[10px] tracking-wider">
-                                        <tr>
-                                            <th className="py-3 px-4">Código & Petición</th>
-                                            <th className="py-3 px-4">Cliente & Presupuesto</th>
-                                            <th className="py-3 px-4">Posiciones & Cobertura</th>
-                                            <th className="py-3 px-4">Turnos Asignados</th>
-                                            <th className="py-3 px-4">Estado API</th>
-                                            <th className="py-3 px-4">Estado</th>
-                                            <th className="py-3 px-4 text-right">Acción</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        <tr className="hover:bg-indigo-50/40 transition cursor-pointer" onClick={() => setCurrentView('detalle')}>
-                                            <td className="py-3.5 px-4">
-                                                <div className="font-bold text-indigo-600">{peticion.id}</div>
-                                                <div className="text-slate-900 font-medium">{peticion.titulo}</div>
-                                            </td>
-                                            <td className="py-3.5 px-4">
-                                                <div className="font-medium text-slate-900">{peticion.clienteNombre}</div>
-                                                <div className="text-[11px] text-slate-500 font-mono">Presup: {peticion.presupuestoOrigen}</div>
-                                            </td>
-                                            <td className="py-3.5 px-4">
-                                                <div className="font-medium text-slate-900">7 / 12 incorporados</div>
-                                                <div className="w-32 bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden">
-                                                    <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: '58%' }}></div>
-                                                </div>
-                                            </td>
-                                            <td className="py-3.5 px-4">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-medium">Mañana (POS-1)</span>
-                                                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-medium">Tarde (POS-2)</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3.5 px-4">
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-medium">
-                                                    <Globe2 className="w-3 h-3" /> 4 Portales Activos
-                                                </span>
-                                            </td>
-                                            <td className="py-3.5 px-4">
-                                                <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-xs font-semibold">
-                                                    {peticion.estado}
-                                                </span>
-                                            </td>
-                                            <td className="py-3.5 px-4 text-right">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setCurrentView('detalle'); }}
-                                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition"
-                                                >
-                                                    Abrir Ficha 360º
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+
+                            {peticionesFiltradas.length === 0 ? (
+                                <EmptyState icon={Search} title="No hay peticiones con estos filtros" action={<Button onClick={limpiarFiltros}>Limpiar filtros</Button>} />
+                            ) : vistaListado === 'pipeline' ? (
+                                <div className="p-3">
+                                    <PipelinePeticiones lista={peticionesFiltradas} plazas={plazas} horarios={horarios} onAbrir={(p) => abrirPeticion(p.id)} onMover={moverPeticion} />
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-500">
+                                                <th className="py-2 px-3 font-medium">Petición</th>
+                                                <th className="py-2 px-3 font-medium">Cliente y presupuesto</th>
+                                                <th className="py-2 px-3 font-medium">Fechas</th>
+                                                <th className="py-2 px-3 font-medium">Cobertura</th>
+                                                <th className="py-2 px-3 font-medium">Portales</th>
+                                                <th className="py-2 px-3 font-medium">Responsable</th>
+                                                <th className="py-2 px-3 font-medium">Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {gruposListado.map(grupo => (
+                                                <React.Fragment key={grupo.id}>
+                                                    {agruparPorPresupuesto && (
+                                                        <tr className="bg-slate-50/70 border-b border-slate-200">
+                                                            <td colSpan={7} className="py-2 px-3">
+                                                                <span className="font-medium text-slate-800">{grupo.id}</span>
+                                                                <span className="text-slate-500"> · {grupo.cliente} · {grupo.items.length} {grupo.items.length === 1 ? 'petición' : 'peticiones'} · {grupo.items.reduce((s, p) => s + p.solicitados, 0)} plazas</span>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                    {grupo.items.map(p => {
+                                                        const cubiertas = cubiertasDe(plazas[p.id]);
+                                                        const pct = Math.round((cubiertas / p.solicitados) * 100);
+                                                        const dias = diasHasta(p.inicio);
+                                                        return (
+                                                            <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => abrirPeticion(p.id)}>
+                                                                <td className="py-2.5 px-3">
+                                                                    <div className="font-medium text-slate-900">{p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}</div>
+                                                                    <div className="text-[11px] text-slate-500">{p.id} · {p.centroTrabajo}</div>
+                                                                </td>
+                                                                <td className="py-2.5 px-3">
+                                                                    <div className="text-slate-700">{p.clienteNombre}</div>
+                                                                    <div className="text-[11px] text-slate-500">{p.presupuestoOrigen}</div>
+                                                                </td>
+                                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                                    <div className="text-slate-700">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</div>
+                                                                    {ESTADOS_ACTIVOS.includes(p.estado) && dias >= 0 && dias <= 7 && cubiertas < p.solicitados && (
+                                                                        <div className="text-[11px] text-amber-700">Empieza en {dias} {dias === 1 ? 'día' : 'días'}</div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-2.5 px-3">
+                                                                    <div className="text-slate-700">{cubiertas} de {p.solicitados} plazas</div>
+                                                                    <div className="w-28 bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
+                                                                        <div className={`${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-600'} h-1.5 rounded-full`} style={{ width: `${pct}%` }}></div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="py-2.5 px-3">
+                                                                    {p.portalesActivos > 0 ? <Badge tone="success">{p.portalesActivos} {p.portalesActivos === 1 ? 'activo' : 'activos'}</Badge> : <span className="text-slate-400">Sin publicar</span>}
+                                                                </td>
+                                                                <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{p.responsable}</td>
+                                                                <td className="py-2.5 px-3">
+                                                                    <Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge>
+                                                                    {p.motivoCancelacion && <div className="text-[11px] text-slate-500 mt-0.5">{p.motivoCancelacion}</div>}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </React.Fragment>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </Card>
+                    </Page>
                 )}
 
-                {/* VIEW 2: DETALLE 360º DE PET-2026-0048 */}
+                {/* VIEW 2: FICHA DE UNA PETICIÓN (un solo puesto) */}
                 {currentView === 'detalle' && (
-                    <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
-                        {/* FICHA CABECERA PETICIÓN */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-5">
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-                                <div>
-                                    <div className="flex flex-wrap items-center gap-2.5">
-                                        <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-bold rounded-md text-xs">
-                                            {peticion.id}
-                                        </span>
-                                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium rounded-md text-xs flex items-center gap-1.5">
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                            {peticion.estado}
-                                        </span>
-                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-xs font-medium">
-                                            <FileText className="w-3.5 h-3.5 text-amber-600" />
-                                            <span>Derivado de Presupuesto Aceptado: <strong>{peticion.presupuestoOrigen}</strong> ({peticion.presupuestoImporteMax})</span>
-                                        </div>
-                                    </div>
-                                    <h1 className="text-xl font-bold text-slate-900 mt-2 tracking-tight">
-                                        {peticion.titulo}
-                                    </h1>
-                                    <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 mt-1">
-                                        <span className="flex items-center gap-1 text-slate-700 font-semibold">
-                                            <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                                            {peticion.clienteNombre} (CIF: {peticion.cif})
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                            {peticion.centroTrabajo}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                            Periodo: {peticion.fechaInicioPrevista} al {peticion.fechaFinEstimada}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-3 shrink-0">
-                                    <button
-                                        onClick={() => {
-                                            setActiveTab('portales');
-                                            showToast('Navegando a configuración de difusión en portales.');
-                                        }}
-                                        className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition"
-                                    >
-                                        <Globe2 className="w-4 h-4 text-indigo-600" />
-                                        <span>Portales de Empleo (5)</span>
+                    <div className="w-full px-4 sm:px-6 py-5 space-y-4">
+                        <PageHeader
+                            breadcrumbs={[{ label: 'Peticiones', onClick: () => setCurrentView('bandeja') }, { label: peticion.id }]}
+                            title={`${peticion.puesto} · ${currentSchedule.turnoNombre.toLowerCase()}`}
+                            status={<Badge tone={tonoEstado(peticion.estado)} dot>{peticion.estado}</Badge>}
+                            subtitle={
+                                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <span className="inline-flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-slate-400" />{peticion.clienteNombre}</span>
+                                    <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" />{peticion.centroTrabajo}</span>
+                                    <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />{fechaCorta(peticion.inicio)} a {fechaCorta(peticion.fin)}</span>
+                                    <button type="button" onClick={() => { window.location.hash = '#/presupuestos'; }} className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline">
+                                        <FileText className="w-3.5 h-3.5" />Presupuesto {peticion.presupuestoOrigen}
                                     </button>
-                                    <button
-                                        onClick={() => startSyncProcess()}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition shadow-indigo-600/20"
-                                    >
-                                        <Share2 className="w-4 h-4" />
-                                        <span>Publicar / Sincronizar Cambios</span>
-                                    </button>
-                                </div>
-                            </div>
+                                </span>
+                            }
+                            actions={
+                                <>
+                                    <Select value={peticion.estado} onChange={(e) => moverPeticion(peticion.id, e.target.value)} aria-label="Cambiar estado">
+                                        {ESTADOS_PETICION.map(e => <option key={e.estado} value={e.estado}>{e.estado}</option>)}
+                                    </Select>
+                                    <Button icon={Copy} onClick={abrirDuplicar}>Duplicar con otro horario</Button>
+                                    <Button variant="primary" icon={Share2} onClick={() => startSyncProcess()}>Publicar cambios</Button>
+                                </>
+                            }
+                        />
 
-                            {/* Progress Banner */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
-                                <div>
-                                    <div className="text-[11px] font-medium text-slate-500">Cobertura Total Posiciones</div>
-                                    <div className="text-lg font-bold text-slate-900 mt-0.5">7 / 12 Trabajadores</div>
-                                    <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
-                                        <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: '58.3%' }}></div>
-                                    </div>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <KpiTile label="Plazas cubiertas" value={`${posActual.incorporados} de ${posActual.solicitados}`} onClick={() => setActiveTab('plazas')}>
+                                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                                    <div className={`${posActual.incorporados === posActual.solicitados ? 'bg-emerald-500' : 'bg-indigo-600'} h-1.5 rounded-full`} style={{ width: `${Math.round((posActual.incorporados / posActual.solicitados) * 100)}%` }}></div>
                                 </div>
-                                <div>
-                                    <div className="text-[11px] font-medium text-slate-500">POS-001 (Operarios)</div>
-                                    <div className="text-sm font-semibold text-slate-800 mt-0.5">5 de 8 incorporados (62%)</div>
-                                    <div className="text-[11px] text-amber-700 font-medium">Turno: Mañana (06:00-14:00)</div>
-                                </div>
-                                <div>
-                                    <div className="text-[11px] font-medium text-slate-500">POS-002 (Carretilleros)</div>
-                                    <div className="text-sm font-semibold text-slate-800 mt-0.5">2 de 4 incorporados (50%)</div>
-                                    <div className="text-[11px] text-blue-700 font-medium">Turno: Tarde (14:00-22:00)</div>
-                                </div>
-                                <div>
-                                    <div className="text-[11px] font-medium text-slate-500">Multidifusión API</div>
-                                    <div className="text-sm font-semibold text-emerald-600 flex items-center gap-1 mt-0.5">
-                                        <CheckCircle2 className="w-3.5 h-3.5" /> 4 Activos / 1 Pausado
-                                    </div>
-                                    <div className="text-[11px] text-slate-500">63 candidaturas recibidas</div>
-                                </div>
-                            </div>
-
-                            {/* TABS HEADER */}
-                            <div className="flex border-b border-slate-200 gap-1 overflow-x-auto text-xs font-semibold pt-2">
-                                <button
-                                    onClick={() => setActiveTab('resumen')}
-                                    className={`pb-3 px-3.5 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-                                        activeTab === 'resumen'
-                                            ? 'border-indigo-600 text-indigo-600'
-                                            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                    }`}
-                                >
-                                    <Layers className="w-4 h-4" />
-                                    <span>Resumen General</span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('presupuesto')}
-                                    className={`pb-3 px-3.5 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-                                        activeTab === 'presupuesto'
-                                            ? 'border-indigo-600 text-indigo-600'
-                                            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                    }`}
-                                >
-                                    <FileSpreadsheet className="w-4 h-4" />
-                                    <span>Presupuesto Heredado</span>
-                                    <span className="px-1.5 py-0.2 bg-amber-50 text-amber-700 rounded text-[10px] border border-amber-200 font-mono">
-                                        PRE-2026
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('posiciones')}
-                                    className={`pb-3 px-3.5 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-                                        activeTab === 'posiciones'
-                                            ? 'border-indigo-600 text-indigo-600'
-                                            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                    }`}
-                                >
-                                    <Users className="w-4 h-4" />
-                                    <span>Posiciones ({posiciones.length})</span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('horarios')}
-                                    className={`pb-3 px-3.5 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-                                        activeTab === 'horarios'
-                                            ? 'border-indigo-600 text-indigo-600'
-                                            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                    }`}
-                                >
-                                    <Clock className="w-4 h-4" />
-                                    <span>Horarios & Turnos por Posición</span>
-                                    {horarioChangesUnsaved && (
-                                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('portales')}
-                                    className={`pb-3 px-3.5 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-                                        activeTab === 'portales'
-                                            ? 'border-indigo-600 text-indigo-600'
-                                            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                    }`}
-                                >
-                                    <Globe2 className="w-4 h-4" />
-                                    <span>Difusión en Portales & Contenido</span>
-                                    <span className="px-1.5 py-0.2 bg-indigo-50 text-indigo-700 rounded-full text-[10px] border border-indigo-100">
-                                        API
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('documentos')}
-                                    className={`pb-3 px-3.5 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-                                        activeTab === 'documentos'
-                                            ? 'border-indigo-600 text-indigo-600'
-                                            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                    }`}
-                                >
-                                    <FileText className="w-4 h-4" />
-                                    <span>Contratos CPD & Anexos</span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('auditoria')}
-                                    className={`pb-3 px-3.5 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-                                        activeTab === 'auditoria'
-                                            ? 'border-indigo-600 text-indigo-600'
-                                            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                    }`}
-                                >
-                                    <History className="w-4 h-4" />
-                                    <span>Trazabilidad & Webhooks</span>
-                                </button>
-                            </div>
+                            </KpiTile>
+                            <KpiTile label="Candidatos en proceso" value={enProcesoDe(embudo[peticion.id])} hint={enProcesoDe(embudo[peticion.id]) ? 'En entrevista o pendientes de respuesta' : 'Ninguno ahora mismo'} onClick={() => setActiveTab('plazas')} />
+                            <KpiTile label="Portales activos" tone={portales.filter(p => p.activo).length ? 'success' : 'neutral'} value={portales.filter(p => p.activo).length} hint={`${peticion.candidaturas} candidaturas recibidas`} onClick={() => setActiveTab('portales')} />
+                            {(() => {
+                                const dias = diasHasta(peticion.inicio);
+                                const terminada = ['Cerrada', 'Cancelada'].includes(peticion.estado);
+                                return (
+                                    <KpiTile
+                                        label={dias >= 0 ? 'Días hasta el inicio' : 'Servicio'}
+                                        tone={!terminada && dias >= 0 && dias <= 7 && posActual.incorporados < posActual.solicitados ? 'warning' : 'neutral'}
+                                        value={terminada ? peticion.estado : dias >= 0 ? dias : 'Empezado'}
+                                        hint={dias >= 0 ? `Empieza el ${fechaCorta(peticion.inicio)}` : `Desde el ${fechaCorta(peticion.inicio)} hasta el ${fechaCorta(peticion.fin)}`}
+                                    />
+                                );
+                            })()}
                         </div>
 
-                        {/* TAB: PRESUPUESTO HEREDADO (HERENCIA COMERCIAL Y TARIFAS) */}
-                        {activeTab === 'presupuesto' && (
-                            <div className="space-y-6 animate-fade-in">
-                                <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                    <div className="flex items-start gap-3.5">
-                                        <div className="p-2.5 bg-amber-600 text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
-                                            <Lock className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-mono font-bold text-xs bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded">
-                                                    {peticion.presupuestoOrigen}
-                                                </span>
-                                                <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Aprobado & Firmado
-                                                </span>
-                                            </div>
-                                            <h3 className="text-sm font-bold text-amber-950 mt-1">
-                                                Condiciones Económicas Heredadas y Blindadas
-                                            </h3>
-                                            <p className="text-xs text-amber-800 mt-0.5 max-w-2xl">
-                                                Las tarifas hora, coeficientes de recargo ETT, salarios de convenio y partidas de coste provienen del presupuesto comercial aceptado el <strong>{peticion.presupuestoFechaAprobacion}</strong>. No pueden modificarse desde la gestión operativa.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right shrink-0 bg-white/80 p-3.5 rounded-xl border border-amber-200">
-                                        <div className="text-[10px] uppercase font-bold text-slate-500">Importe Máximo Autorizado</div>
-                                        <div className="text-xl font-bold text-slate-900 mt-0.5">{peticion.presupuestoImporteMax}</div>
-                                        <div className="text-[11px] text-slate-500">Consumo actual estimado: 17.820,00 € (41%)</div>
-                                    </div>
-                                </div>
+                        <Tabs
+                            active={activeTab}
+                            onChange={setActiveTab}
+                            tabs={[
+                                { id: 'resumen', label: 'Resumen' },
+                                { id: 'horarios', label: 'Horario', alert: horarioChangesUnsaved },
+                                { id: 'plazas', label: 'Plazas y candidatos', count: posActual.solicitados },
+                                { id: 'portales', label: 'Difusión en portales' },
+                                { id: 'documentos', label: 'Contratos y altas' },
+                                { id: 'auditoria', label: 'Actividad' },
+                            ]}
+                        />
 
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
-                                            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Líneas Económicas Validadas en Presupuesto</h4>
-                                        </div>
-                                        <span className="text-xs text-slate-500 font-mono">Convenio: Bizkaia Logística 2026</span>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-xs text-slate-700">
-                                            <thead className="bg-slate-50/60 border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider">
-                                                <tr>
-                                                    <th className="py-3 px-4">Ref. Posición</th>
-                                                    <th className="py-3 px-4">Puesto / Categoría</th>
-                                                    <th className="py-3 px-4">Cant. Aprobada</th>
-                                                    <th className="py-3 px-4">Salario Bruto (Conv.)</th>
-                                                    <th className="py-3 px-4">Seguridad Social + PRL</th>
-                                                    <th className="py-3 px-4">Tarifa Facturación ETT</th>
-                                                    <th className="py-3 px-4 text-right">Margen Bruto</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100 bg-white">
-                                                <tr>
-                                                    <td className="py-3 px-4 font-mono font-bold text-indigo-600">POS-001</td>
-                                                    <td className="py-3 px-4">
-                                                        <div className="font-semibold text-slate-900">Operario/a de almacén y preparación</div>
-                                                        <div className="text-[11px] text-slate-400">Grupo 4 — Especialistas</div>
-                                                    </td>
-                                                    <td className="py-3 px-4 font-semibold text-slate-900">8 pax</td>
-                                                    <td className="py-3 px-4 font-mono">12,30 €/h</td>
-                                                    <td className="py-3 px-4 font-mono text-slate-500">3,94 €/h (32%)</td>
-                                                    <td className="py-3 px-4 font-mono font-bold text-emerald-700">19,45 €/h</td>
-                                                    <td className="py-3 px-4 text-right font-mono font-semibold text-indigo-600">+16,5% (3,21 €/h)</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-3 px-4 font-mono font-bold text-indigo-600">POS-002</td>
-                                                    <td className="py-3 px-4">
-                                                        <div className="font-semibold text-slate-900">Carretillero/a frontal y retráctil</div>
-                                                        <div className="text-[11px] text-slate-400">Grupo 3 — Oficiales de 2ª</div>
-                                                    </td>
-                                                    <td className="py-3 px-4 font-semibold text-slate-900">4 pax</td>
-                                                    <td className="py-3 px-4 font-mono">14,10 €/h</td>
-                                                    <td className="py-3 px-4 font-mono text-slate-500">4,51 €/h (32%)</td>
-                                                    <td className="py-3 px-4 font-mono font-bold text-emerald-700">22,80 €/h</td>
-                                                    <td className="py-3 px-4 text-right font-mono font-semibold text-indigo-600">+18,4% (4,19 €/h)</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TAB: POSICIONES SOLICITADAS (DETALLE Y ESTADOS DE COBERTURA) */}
-                        {activeTab === 'posiciones' && (
-                            <div className="space-y-6 animate-fade-in">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-                                    <div>
-                                        <h3 className="text-base font-bold text-slate-900">Posiciones de la Petición ({posiciones.length})</h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">Estado de cobertura, requisitos técnicos, EPIs y acceso rápido a cuadrantes específicos.</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => { setActiveTab('horarios'); }}
-                                            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
-                                        >
-                                            <Clock className="w-3.5 h-3.5" />
-                                            <span>Ir a Horarios por Posición</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* LEYENDA CONCEPTUAL */}
-                                <div className="bg-slate-100/90 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-700 flex items-center gap-2.5 shadow-2xs">
-                                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-                                    <span>
-                                        <strong className="text-slate-900 font-semibold">Leyenda:</strong> Posición = tipo de puesto · Plaza = necesidad individual · Candidato = persona · Asignación = persona vinculada a una plaza
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {posiciones.map(pos => {
-                                        const posHorario = horarios[pos.id];
-                                        const percent = Math.round((pos.incorporados / pos.solicitados) * 100);
-                                        return (
-                                            <div key={pos.id} className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col justify-between space-y-4">
-                                                <div>
-                                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                                        <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 font-mono font-bold rounded text-xs border border-indigo-100">
-                                                            {pos.id}
-                                                        </span>
-                                                        <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md">
-                                                            Venta: {pos.tarifaVentaHora}
-                                                        </span>
-                                                    </div>
-
-                                                    <h4 className="font-bold text-slate-900 text-base mt-3">{pos.puesto}</h4>
-                                                    <div className="text-xs text-slate-500 mt-0.5">{pos.categoria} • {pos.cctConvenio}</div>
-
-                                                    <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                                        <div className="flex items-center justify-between text-xs mb-1.5">
-                                                            <span className="font-bold text-slate-700">Progreso de Cobertura</span>
-                                                            <span className="font-mono font-bold text-indigo-600">{pos.incorporados} de {pos.solicitados} ({percent}%)</span>
-                                                        </div>
-                                                        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                                                            <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${percent}%` }}></div>
-                                                        </div>
-                                                        <div className="text-[11px] text-slate-500 mt-2 flex items-center justify-between">
-                                                            <span>En proceso de selección: <strong>{pos.enProceso} candidatos</strong></span>
-                                                            <span className="text-amber-700 font-medium">Faltan: {pos.solicitados - pos.incorporados}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* BLOQUE COMPACTO: PLAZAS Y PERSONAS */}
-                                                    {(() => {
-                                                        const posPlazas = plazas[pos.id] || [];
-                                                        const cubiertas = posPlazas.filter(p => p.estado === 'cubierta').length;
-                                                        const vacantes = posPlazas.filter(p => p.estado !== 'cubierta').length;
-                                                        const previewPlazas = posPlazas.slice(0, 3);
-
-                                                        return (
-                                                            <div className="mt-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
-                                                                <div className="flex items-center justify-between text-xs mb-2">
-                                                                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                                                                        <Users className="w-3.5 h-3.5 text-indigo-600" />
-                                                                        Plazas y personas
-                                                                    </span>
-                                                                    <span className="text-[11px] text-slate-500 font-medium">
-                                                                        <strong className="text-emerald-700">{cubiertas} cubiertas</strong> · <strong className="text-amber-700">{vacantes} vacantes</strong>
-                                                                    </span>
-                                                                </div>
-                                                                <div className="space-y-1.5">
-                                                                    {previewPlazas.map((plaza) => (
-                                                                        <div key={plaza.id} className="flex items-center justify-between p-1.5 bg-white rounded-lg border border-slate-200 text-xs">
-                                                                            <span className="font-mono text-[11px] text-slate-500 font-semibold px-1.5 py-0.5 bg-slate-100 rounded">
-                                                                                Plaza #{plaza.numero}
-                                                                            </span>
-                                                                            {plaza.estado === 'cubierta' && plaza.nombre ? (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => handleOpenCandidatoFichaById(plaza.candidatoId)}
-                                                                                    className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate max-w-[180px] sm:max-w-[220px] text-left text-xs flex items-center gap-1"
-                                                                                    title="Ver ficha personal"
-                                                                                >
-                                                                                    <span className="truncate">{plaza.nombre}</span>
-                                                                                    <ExternalLink className="w-3 h-3 shrink-0 text-indigo-500" />
-                                                                                </button>
-                                                                            ) : (
-                                                                                <span className="text-amber-600 font-medium text-xs flex items-center gap-1">
-                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                                                                                    Vacante
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                    {posPlazas.length > 3 && (
-                                                                        <div className="text-[10px] text-slate-400 text-right pt-0.5 font-medium">
-                                                                            + {posPlazas.length - 3} plazas adicionales
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })()}
-
-                                                    <div className="mt-3 space-y-1.5 text-xs text-slate-600">
-                                                        <div className="flex items-start gap-1.5">
-                                                            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                                                            <span><strong>EPIs Obligatorios:</strong> {pos.requiereEpi}</span>
-                                                        </div>
-                                                        <div className="flex items-start gap-1.5">
-                                                            <CheckSquare className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                                                            <span><strong>Acreditaciones / Carnet:</strong> {pos.carnetRequerido}</span>
-                                                        </div>
-                                                        <div className="flex items-start gap-1.5">
-                                                            <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                                            <span><strong>Turno asignado:</strong> {posHorario?.turnoNombre || 'Pendiente'} ({posHorario?.tipoJornada || '37,5 h'})</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setActivePlazaPosView(pos.id);
-                                                                showToast(`Detalle de plazas y personas seleccionado para ${pos.id}`);
-                                                            }}
-                                                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-xs"
-                                                        >
-                                                            <Users className="w-3.5 h-3.5" />
-                                                            <span>Ver plazas y personas</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setActivePlazaPosView(pos.id);
-                                                                const posPlazas = plazas[pos.id] || [];
-                                                                const vacante = posPlazas.find(p => p.estado !== 'cubierta');
-                                                                if (vacante) {
-                                                                    setAssignCandidateModal({ posId: pos.id, plaza: vacante });
-                                                                } else {
-                                                                    showToast(`Todas las plazas de ${pos.id} ya están cubiertas.`, 'error');
-                                                                }
-                                                            }}
-                                                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-                                                        >
-                                                            <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
-                                                            <span>Buscar candidatos</span>
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedPosId(pos.id);
-                                                                setActiveTab('horarios');
-                                                            }}
-                                                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-                                                        >
-                                                            <Clock className="w-3.5 h-3.5" />
-                                                            <span>Configurar Horario {pos.id}</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setActiveTab('portales')}
-                                                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-                                                        >
-                                                            <Globe2 className="w-3.5 h-3.5 text-slate-500" />
-                                                            <span>Ver en Portales</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TAB 1: RESUMEN GENERAL */}
+                        {/* TAB: RESUMEN (datos heredados del presupuesto y peticiones del mismo presupuesto) */}
                         {activeTab === 'resumen' && (
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {posiciones.map(pos => {
-                                        const posHorario = horarios[pos.id];
-                                        return (
-                                            <div key={pos.id} className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col justify-between">
-                                                <div>
-                                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                                        <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 font-mono font-bold rounded text-xs">
-                                                            {pos.id}
-                                                        </span>
-                                                        <span className="text-xs font-semibold text-slate-900 bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
-                                                            Tarifa: {pos.tarifaVentaHora}
-                                                        </span>
-                                                    </div>
-                                                    <h3 className="font-bold text-slate-900 text-base mt-3">
-                                                        {pos.puesto}
-                                                    </h3>
-                                                    <p className="text-xs text-slate-500 mt-1">
-                                                        {pos.categoria}
-                                                    </p>
-                                                    <p className="text-xs text-slate-600 mt-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                                                        {pos.descripcionCorta}
-                                                    </p>
+                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                                <Card className="p-5 space-y-4 xl:col-span-2">
+                                    <SectionTitle actions={<Badge tone="neutral"><Lock className="w-3 h-3 mr-1 inline" />Del presupuesto</Badge>}>Puesto</SectionTitle>
+                                    <div>
+                                        <div className="text-base font-medium text-slate-900">{peticion.puesto}</div>
+                                        <div className="text-xs text-slate-500 mt-0.5">{peticion.categoria} · {peticion.cctConvenio}</div>
+                                        <p className="text-xs text-slate-600 mt-2">{peticion.descripcionCorta}</p>
+                                    </div>
+                                    <dl className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                        <div><dt className="text-[11px] text-slate-500">Salario</dt><dd className="font-medium text-slate-900">{peticion.salarioBrutoConvenio}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Tarifa al cliente</dt><dd className="font-medium text-slate-900">{peticion.tarifaVentaHora}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Plazas de esta petición</dt><dd className="font-medium text-slate-900">{peticion.solicitados}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Turno</dt><dd className="font-medium text-slate-900">{currentSchedule.turnoNombre} · {totalHorasSemana.toLocaleString('es-ES')} h/semana</dd></div>
+                                    </dl>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-600">
+                                        <div className="flex items-start gap-1.5"><ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="text-slate-500">EPIs:</span> {peticion.requiereEpi}</span></div>
+                                        <div className="flex items-start gap-1.5"><CheckSquare className="w-4 h-4 text-indigo-600 shrink-0" /><span><span className="text-slate-500">Carnés y acreditaciones:</span> {peticion.carnetRequerido}</span></div>
+                                    </div>
+                                    <Notice tone="info" icon={Info}>
+                                        Salario, tarifa y conceptos extra facturables (horas extra, nocturnidad, fin de semana y festivos) vienen del presupuesto y no se cambian aquí. Para cambiarlos, haz una nueva versión del presupuesto.
+                                    </Notice>
+                                </Card>
 
-                                                    <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                                                        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                                                            <div className="text-slate-400 text-[10px] uppercase font-semibold">Incorporación</div>
-                                                            <div className="font-bold text-slate-900 mt-0.5">{pos.incorporados} de {pos.solicitados} cubiertos</div>
-                                                            <div className="text-[10px] text-indigo-600">{pos.enProceso} en entrevista</div>
+                                <Card className="p-5 space-y-3">
+                                    <SectionTitle>Cliente y servicio</SectionTitle>
+                                    <dl className="space-y-2.5 text-xs">
+                                        <div><dt className="text-[11px] text-slate-500">Empresa</dt><dd className="text-slate-900">{peticion.clienteNombre} · {peticion.cif}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Contacto</dt><dd className="text-slate-900">{peticion.contactoCliente}</dd><dd className="text-slate-500">{peticion.emailContacto} · {peticion.telefonoContacto}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Centro de trabajo</dt><dd className="text-slate-900">{peticion.centroTrabajo}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Fechas</dt><dd className="text-slate-900">{fechaCorta(peticion.inicio)} a {fechaCorta(peticion.fin)}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Responsable de la ETT</dt><dd className="text-slate-900">{peticion.responsable}</dd></div>
+                                    </dl>
+                                </Card>
+
+                                {/* REPARTO DEL PUESTO: cuántas personas del presupuesto cubre cada petición de este puesto */}
+                                {(() => {
+                                    const delPuesto = [peticion, ...hermanasDe(peticion, peticiones)]
+                                        .filter(p => p.estado !== 'Cancelada')
+                                        .sort((a, b) => a.inicio.localeCompare(b.inicio) || a.id.localeCompare(b.id));
+                                    const repartidas = delPuesto.reduce((s, p) => s + p.solicitados, 0);
+                                    const faltan = peticion.personasPuesto - repartidas;
+                                    const escala = Math.max(peticion.personasPuesto, repartidas);
+                                    const otrosPuestos = peticiones.filter(p => p.presupuesto === peticion.presupuesto && p.tipo !== peticion.tipo);
+                                    return (
+                                        <Card className="overflow-hidden xl:col-span-3">
+                                            <div className="p-4 space-y-3">
+                                                <SectionTitle actions={<Button size="sm" icon={Copy} onClick={abrirDuplicar}>Duplicar con otro horario</Button>}>
+                                                    Reparto del puesto
+                                                </SectionTitle>
+                                                <p className="text-xs text-slate-600 -mt-1">
+                                                    El presupuesto {peticion.presupuestoOrigen} pide <strong className="font-medium text-slate-900">{peticion.personasPuesto} {peticion.puesto.toLowerCase()}</strong>.
+                                                    {delPuesto.length > 1
+                                                        ? ` Están repartidos en ${delPuesto.length} peticiones, una por horario o fechas.`
+                                                        : ' Están todos en esta petición. Si hace falta otro horario o fechas, crea otra con «Duplicar con otro horario».'}
+                                                </p>
+                                                {/* Barra: cada tramo es una petición; la actual en color fuerte */}
+                                                <div className="flex h-7 w-full overflow-hidden rounded-lg bg-slate-100 text-[11px] font-medium">
+                                                    {delPuesto.map(p => (
+                                                        <div
+                                                            key={p.id}
+                                                            title={`${p.id}: ${p.solicitados} plazas`}
+                                                            style={{ width: `${(p.solicitados / escala) * 100}%` }}
+                                                            className={`flex items-center justify-center border-r border-white/70 last:border-0 truncate px-1 ${p.id === peticion.id ? 'bg-indigo-600 text-white' : 'bg-indigo-200 text-indigo-900'}`}
+                                                        >
+                                                            {p.solicitados} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}
                                                         </div>
-                                                        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                                                            <div className="text-slate-400 text-[10px] uppercase font-semibold">Turno Configurado</div>
-                                                            <div className="font-bold text-slate-900 mt-0.5">{posHorario ? posHorario.turnoNombre : 'Sin configurar'}</div>
-                                                            <div className="text-[10px] text-slate-500">Lunes a Viernes</div>
+                                                    ))}
+                                                    {faltan > 0 && (
+                                                        <div style={{ width: `${(faltan / escala) * 100}%` }} className="flex items-center justify-center text-slate-500 truncate px-1">
+                                                            {faltan} sin petición
                                                         </div>
-                                                    </div>
-
-                                                    <div className="mt-3 text-xs text-slate-500 space-y-1">
-                                                        <div><strong>EPIs Obligatorios:</strong> {pos.requiereEpi}</div>
-                                                        <div><strong>Requisitos / Carnet:</strong> {pos.carnetRequerido}</div>
-                                                    </div>
+                                                    )}
                                                 </div>
-
-                                                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedPosId(pos.id);
-                                                            setActiveTab('horarios');
-                                                        }}
-                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition"
-                                                    >
-                                                        <Clock className="w-3.5 h-3.5" />
-                                                        <span>Ver / Editar Turno Semanal</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setActiveTab('portales');
-                                                        }}
-                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition"
-                                                    >
-                                                        <Globe2 className="w-3.5 h-3.5 text-slate-500" />
-                                                        <span>Difusión API</span>
-                                                    </button>
-                                                </div>
+                                                <p className={`text-xs ${faltan === 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                    {faltan === 0 && `Repartidas las ${peticion.personasPuesto} personas del presupuesto.`}
+                                                    {faltan > 0 && `Faltan ${faltan} ${faltan === 1 ? 'persona' : 'personas'} por poner en alguna petición.`}
+                                                    {faltan < 0 && `Hay ${-faltan} ${faltan === -1 ? 'plaza' : 'plazas'} más que personas en el presupuesto: revísalo con el cliente.`}
+                                                </p>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+                                            <table className="w-full text-left text-xs border-t border-slate-200">
+                                                <tbody>
+                                                    {delPuesto.map(p => {
+                                                        const actual = p.id === peticion.id;
+                                                        return (
+                                                            <tr key={p.id} className={`border-b border-slate-100 last:border-0 ${actual ? 'bg-indigo-50/50' : 'hover:bg-slate-50 cursor-pointer'}`} onClick={() => !actual && abrirPeticion(p.id)}>
+                                                                <td className="py-2.5 px-4">
+                                                                    <div className="font-medium text-slate-900">{horarios[p.id]?.turnoNombre}{actual && <span className="ml-2 text-[11px] font-normal text-indigo-700">esta petición</span>}</div>
+                                                                    <div className="text-[11px] text-slate-500">{p.id}</div>
+                                                                </td>
+                                                                <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</td>
+                                                                <td className="py-2.5 px-4 text-slate-700 whitespace-nowrap">{p.solicitados} plazas · {cubiertasDe(plazas[p.id])} cubiertas</td>
+                                                                <td className="py-2.5 px-4 text-right"><Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge></td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                            {otrosPuestos.length > 0 && (
+                                                <div className="px-4 py-2.5 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                    <span>Otros puestos del mismo presupuesto:</span>
+                                                    {otrosPuestos.map(p => (
+                                                        <button key={p.id} type="button" onClick={() => abrirPeticion(p.id)} className="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                                            {p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()} ({p.id})
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </Card>
+                                    );
+                                })()}
                             </div>
                         )}
 
-                        {/* TAB 2: HORARIOS & TURNOS POR POSICIÓN (REQUISITO PRINCIPAL 1) */}
-                        {activeTab === 'horarios' && (
-                            <div className="space-y-6 animate-fade-in">
-                                {/* BANNER AVISO */}
-                                <div className="bg-indigo-50/80 border border-indigo-200 rounded-2xl p-4 flex items-start gap-3.5">
-                                    <div className="p-2 bg-indigo-600 text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
-                                        <Clock className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1 text-xs">
-                                        <h4 className="font-bold text-indigo-950 text-sm">
-                                            Configuración Independiente de Horario por Posición
-                                        </h4>
-                                        <p className="text-indigo-800 mt-0.5">
-                                            Cada posición solicitada tiene su propio cuadrante horario, turno y centro de trabajo asociado. Cambiar o guardar el horario de una posición <strong>no afecta</strong> a las demás posiciones de esta petición.
-                                        </p>
-                                    </div>
-                                </div>
+                        {/* TAB: PLAZAS Y CANDIDATOS */}
+                        {activeTab === 'plazas' && (() => {
+                            const lista = plazas[peticion.id] || [];
+                            const cuenta = (estados) => lista.filter(p => estados.includes(p.estado)).length;
+                            const libre = lista.find(p => ['vacante', 'baja'].includes(p.estado));
+                            const embudoPet = (embudo[peticion.id] || []).map(e => ({ ...e, c: candidatosPool.find(c => c.id === e.id) })).filter(e => e.c);
+                            const visibles = filtroEtapa ? embudoPet.filter(e => e.etapa === filtroEtapa) : embudoPet.filter(e => e.etapa !== 'descartado');
+                            const urgenteCpd = diasHasta(peticion.inicio) <= 2;
+                            return (
+                                <div className="space-y-4">
+                                    <Card className="overflow-hidden">
+                                        <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <SectionTitle>Plazas</SectionTitle>
+                                                <p className="text-xs text-slate-500 -mt-1">
+                                                    {cuenta(['cubierta', 'incorporada'])} cubiertas · {cuenta(['reservada'])} {cuenta(['reservada']) === 1 ? 'pendiente' : 'pendientes'} del cliente · {cuenta(['vacante', 'baja'])} por cubrir
+                                                </p>
+                                            </div>
+                                            <Button variant="primary" icon={UserPlus} disabled={!libre} onClick={() => libre && setAssignCandidateModal({ posId: peticion.id, plaza: libre })}>
+                                                Proponer candidato
+                                            </Button>
+                                        </div>
+                                        <div className="px-4 pt-3">
+                                            <Notice tone={portalesPropios[peticion.id]?.empresa ? 'info' : 'warning'} icon={Info}>
+                                                {portalesPropios[peticion.id]?.empresa
+                                                    ? <>El cliente confirma las personas propuestas en su portal. Al confirmar, se genera el CPD de cada persona y se le envía a firmar.</>
+                                                    : <>El portal de empresas está desactivado en esta petición: pulsa «Confirmar» cuando el cliente responda. Se puede activar en Difusión en portales.</>}
+                                            </Notice>
+                                        </div>
+                                        <div className="overflow-x-auto mt-3">
+                                            <table className="w-full text-left text-xs">
+                                                <thead>
+                                                    <tr className="border-y border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                        <th className="py-2 px-4 font-medium">Plaza</th>
+                                                        <th className="py-2 px-4 font-medium">Persona</th>
+                                                        <th className="py-2 px-4 font-medium">Estado</th>
+                                                        <th className="py-2 px-4 font-medium">Incorporación</th>
+                                                        <th className="py-2 px-4 font-medium">CPD</th>
+                                                        <th className="py-2 px-4" aria-label="Acciones"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {lista.map(plaza => {
+                                                        const est = ESTADOS_PLAZA[plaza.estado] || ESTADOS_PLAZA.vacante;
+                                                        const cpd = plaza.cpd && ESTADOS_CPD[plaza.cpd];
+                                                        return (
+                                                            <tr key={plaza.id} className="border-b border-slate-100 last:border-0">
+                                                                <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">Plaza {plaza.numero}</td>
+                                                                <td className="py-2.5 px-4">
+                                                                    {plaza.nombre ? (
+                                                                        <button type="button" onClick={() => handleOpenCandidatoFichaById(plaza.candidatoId)} className="inline-flex items-center gap-2 text-left hover:text-indigo-700">
+                                                                            <Avatar name={plaza.nombre} size="sm" />
+                                                                            <span className="font-medium text-slate-900">{plaza.nombre}</span>
+                                                                        </button>
+                                                                    ) : plaza.estado === 'baja' ? (
+                                                                        <span className="text-slate-500">Baja de {plaza.bajaDe}<span className="block text-[11px]">{plaza.motivoBaja}</span></span>
+                                                                    ) : (
+                                                                        <span className="text-slate-400">Sin asignar</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-2.5 px-4"><Badge tone={est.tono} dot>{est.texto}</Badge></td>
+                                                                <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{plaza.nombre ? plaza.fechaIncorporacion : '—'}</td>
+                                                                <td className="py-2.5 px-4">
+                                                                    {cpd ? (
+                                                                        <>
+                                                                            <Badge tone={cpd.tono}>{cpd.texto}</Badge>
+                                                                            {plaza.cpd === 'enviado' && urgenteCpd && <div className="text-[11px] text-rose-600 mt-0.5">Bloquea la incorporación</div>}
+                                                                        </>
+                                                                    ) : <span className="text-slate-400">—</span>}
+                                                                </td>
+                                                                <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                                                    {plaza.estado === 'vacante' && <Button size="sm" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Proponer</Button>}
+                                                                    {plaza.estado === 'baja' && <Button size="sm" variant="primary" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Buscar sustituto</Button>}
+                                                                    {plaza.estado === 'reservada' && (
+                                                                        <span className="inline-flex gap-1">
+                                                                            <Button size="sm" variant="ghost" onClick={() => retirarPropuesta(peticion.id, plaza)}>Retirar</Button>
+                                                                            <Button size="sm" variant="primary" title="En la demo simula que el cliente confirma en su portal" onClick={() => confirmarPlaza(peticion.id, plaza)}>Confirmar</Button>
+                                                                        </span>
+                                                                    )}
+                                                                    {['cubierta', 'incorporada'].includes(plaza.estado) && (
+                                                                        <span className="inline-flex gap-1">
+                                                                            {plaza.cpd === 'enviado' && <Button size="sm" variant="ghost" icon={Send} onClick={() => recordarCpd(plaza)}>Recordar CPD</Button>}
+                                                                            <Button size="sm" variant="ghost" onClick={() => setBajaPlaza({ plaza, motivo: MOTIVOS_BAJA[0], notas: '' })}>Dar de baja</Button>
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </Card>
 
-                                {/* SELECTOR DE POSICIÓN PRINCIPAL */}
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                                                Posición a Configurar en este Momento:
-                                            </label>
-                                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                                                {posiciones.map(pos => {
-                                                    const isSelected = pos.id === selectedPosId;
-                                                    const posH = horarios[pos.id];
+                                    <Card className="overflow-hidden">
+                                        <div className="p-4 border-b border-slate-200 space-y-3">
+                                            <div>
+                                                <SectionTitle>Candidatos de esta petición</SectionTitle>
+                                                <p className="text-xs text-slate-500 -mt-1">Llegan de los portales de empleo, del portal de candidatos de la ETT o de la base de datos. Pulsa una etapa para filtrar.</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {ETAPAS.map(et => {
+                                                    const n = embudoPet.filter(e => e.etapa === et.id).length;
+                                                    const activo = filtroEtapa === et.id;
                                                     return (
                                                         <button
-                                                            key={pos.id}
-                                                            onClick={() => {
-                                                                setSelectedPosId(pos.id);
-                                                                setHorarioChangesUnsaved(false);
-                                                            }}
-                                                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-semibold transition ${
-                                                                isSelected
-                                                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-600/30'
-                                                                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
-                                                            }`}
+                                                            key={et.id}
+                                                            type="button"
+                                                            onClick={() => setFiltroEtapa(activo ? '' : et.id)}
+                                                            className={`rounded-lg border px-3 py-1.5 text-left transition-colors ${activo ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
                                                         >
-                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
-                                                                isSelected ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
-                                                            }`}>
-                                                                {pos.id}
-                                                            </span>
-                                                            <span>{pos.puesto}</span>
-                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                                                                isSelected ? 'bg-indigo-500 text-indigo-100' : 'bg-slate-100 text-slate-500'
-                                                            }`}>
-                                                                {posH?.turnoNombre || 'Sin turno'}
-                                                            </span>
+                                                            <div className="text-[11px] text-slate-500">{et.texto}</div>
+                                                            <div className="text-sm font-semibold text-slate-900">{n}</div>
                                                         </button>
                                                     );
                                                 })}
                                             </div>
                                         </div>
+                                        {visibles.length === 0 ? (
+                                            <EmptyState
+                                                icon={Users}
+                                                title={filtroEtapa ? 'Nadie en esta etapa' : 'Aún no hay candidatos'}
+                                                text={filtroEtapa ? undefined : 'Activa el portal de candidatos o publica la oferta en portales de empleo para recibir inscripciones.'}
+                                                action={!filtroEtapa && <Button onClick={() => setActiveTab('portales')}>Ir a Difusión en portales</Button>}
+                                            />
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left text-xs">
+                                                    <thead>
+                                                        <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                            <th className="py-2 px-4 font-medium">Persona</th>
+                                                            <th className="py-2 px-4 font-medium">Origen</th>
+                                                            <th className="py-2 px-4 font-medium">Afinidad</th>
+                                                            <th className="py-2 px-4 font-medium">Requisitos</th>
+                                                            <th className="py-2 px-4 font-medium">Etapa</th>
+                                                            <th className="py-2 px-4" aria-label="Acciones"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {visibles.map(({ c, etapa }) => {
+                                                            const otra = plazaDe(c.id);
+                                                            return (
+                                                                <tr key={c.id} className="border-b border-slate-100 last:border-0">
+                                                                    <td className="py-2.5 px-4">
+                                                                        <button type="button" onClick={() => setCandidatoFichaModal(c)} className="inline-flex items-center gap-2 text-left hover:text-indigo-700">
+                                                                            <Avatar name={c.nombre} size="sm" />
+                                                                            <span>
+                                                                                <span className="font-medium text-slate-900 block">{c.nombre}</span>
+                                                                                <span className="text-[11px] text-slate-500">{c.puestoPrincipal} · {c.ubicacion}</span>
+                                                                            </span>
+                                                                        </button>
+                                                                    </td>
+                                                                    <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{c.origen}</td>
+                                                                    <td className="py-2.5 px-4 text-slate-700">{c.scoring} %</td>
+                                                                    <td className="py-2.5 px-4"><Requisitos lista={comprobarRequisitos(c, peticion, peticion.plantilla)} compacto /></td>
+                                                                    <td className="py-2.5 px-4">
+                                                                        <Select value={etapa} onChange={(e) => cambiarEtapa(peticion.id, c.id, e.target.value)} aria-label={`Etapa de ${c.nombre}`}>
+                                                                            {ETAPAS.map(et => <option key={et.id} value={et.id}>{et.texto}</option>)}
+                                                                        </Select>
+                                                                    </td>
+                                                                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                                                        {otra ? (
+                                                                            <span className="text-[11px] text-slate-500">En plaza {otra.plaza.numero}{otra.petId !== peticion.id ? ` de ${otra.petId}` : ''}</span>
+                                                                        ) : etapa !== 'descartado' && libre ? (
+                                                                            <Button size="sm" onClick={() => handleAssignCandidateToPlaza(peticion.id, libre.id, c)}>Proponer</Button>
+                                                                        ) : null}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </Card>
+                                </div>
+                            );
+                        })()}
 
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <button
-                                                onClick={() => {
-                                                    setCopyTargetPosId(selectedPosId === 'POS-001' ? 'POS-002' : 'POS-001');
-                                                    setIsCopyModalOpen(true);
-                                                }}
-                                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200"
-                                            >
-                                                <Copy className="w-3.5 h-3.5 text-slate-600" />
-                                                <span>Copiar Horario a otra Posición</span>
-                                            </button>
+                        {/* TAB 2: HORARIOS & TURNOS POR POSICIÓN (REQUISITO PRINCIPAL 1) */}
+                        {activeTab === 'horarios' && (
+                            <div className="space-y-6 animate-fade-in">
+                                {/* UN HORARIO POR PETICIÓN */}
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-slate-900">Horario de esta petición</h3>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Una petición tiene un solo horario. Si el mismo puesto necesita otro turno u otras fechas, crea otra petición con «Duplicar con otro horario».
+                                            </p>
                                         </div>
+                                        <Button icon={Copy} onClick={abrirDuplicar} className="shrink-0">Duplicar con otro horario</Button>
                                     </div>
 
                                     {/* RESUMEN DE LA POSICIÓN SELECCIONADA */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                            <div className="text-[10px] uppercase font-bold text-slate-400">Puesto & Vacantes</div>
-                                            <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{selectedPositionObj.puesto}</div>
-                                            <div className="text-[11px] text-slate-500 font-mono mt-0.5">{selectedPosId} — {selectedPositionObj.solicitados} vacantes</div>
+                                            <div className="text-[10px] font-semibold text-slate-400">Puesto y plazas</div>
+                                            <div className="font-semibold text-slate-900 text-sm mt-0.5 truncate">{selectedPositionObj.puesto}</div>
+                                            <div className="text-[11px] text-slate-500 font-mono mt-0.5">{selectedPositionObj.solicitados} {selectedPositionObj.solicitados === 1 ? 'plaza' : 'plazas'}</div>
                                         </div>
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                            <div className="text-[10px] uppercase font-bold text-slate-400">Turno & Jornada</div>
-                                            <div className="font-bold text-slate-900 text-sm mt-0.5">{currentSchedule.turnoNombre}</div>
+                                            <div className="text-[10px] font-semibold text-slate-400">Turno y jornada</div>
+                                            <div className="font-semibold text-slate-900 text-sm mt-0.5">{currentSchedule.turnoNombre}</div>
                                             <div className="text-[11px] text-slate-500 mt-0.5">{currentSchedule.tipoJornada}</div>
                                         </div>
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                            <div className="text-[10px] uppercase font-bold text-slate-400">Total Horas Semanales</div>
-                                            <div className="font-bold text-indigo-600 text-base mt-0.5">{totalHorasSemana} h / semana</div>
+                                            <div className="text-[10px] font-semibold text-slate-400">Horas por semana</div>
+                                            <div className="font-semibold text-indigo-600 text-base mt-0.5">{totalHorasSemana.toLocaleString('es-ES')} h por semana</div>
                                             <div className="text-[11px] text-emerald-600 font-medium">Cumple convenio laboral</div>
                                         </div>
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                            <div className="text-[10px] uppercase font-bold text-slate-400">Estado de Guardado</div>
-                                            <div className="flex items-center gap-1.5 font-bold text-sm mt-0.5">
+                                            <div className="text-[10px] font-semibold text-slate-400">Estado</div>
+                                            <div className="flex items-center gap-1.5 font-semibold text-sm mt-0.5">
                                                 {currentSchedule.guardado ? (
                                                     <span className="text-emerald-700 flex items-center gap-1">
-                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Horario Guardado
+                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Horario guardado
                                                     </span>
                                                 ) : (
                                                     <span className="text-amber-700 flex items-center gap-1">
@@ -1644,38 +1877,38 @@ export default function PeticionesView() {
                                     {/* PLANTILLAS RÁPIDAS */}
                                     <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
                                         <div>
-                                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                            <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
                                                 <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                                                Aplicar Plantilla Rápida de Turno:
+                                                Aplicar plantilla rápida de turno:
                                             </span>
                                             <span className="text-[11px] text-slate-500 ml-1">
-                                                (Se aplica <strong>solo</strong> a la posición {selectedPosId}: {selectedPositionObj.puesto})
+                                                (Solo cambia el horario de esta petición)
                                             </span>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2">
                                             <button
                                                 onClick={() => handleApplyTemplate('manana')}
-                                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold shadow-2xs transition"
+                                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition"
                                             >
-                                                Turno Mañana (06:00 - 14:00)
+                                                Turno de mañana (06:00-14:00)
                                             </button>
                                             <button
                                                 onClick={() => handleApplyTemplate('tarde')}
-                                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold shadow-2xs transition"
+                                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition"
                                             >
-                                                Turno Tarde (14:00 - 22:00)
+                                                Turno de tarde (14:00-22:00)
                                             </button>
                                             <button
                                                 onClick={() => handleApplyTemplate('noche')}
-                                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold shadow-2xs transition"
+                                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition"
                                             >
-                                                Turno Noche (22:00 - 06:00)
+                                                Turno de noche (22:00-06:00)
                                             </button>
                                             <button
                                                 onClick={() => handleApplyTemplate('partida')}
-                                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold shadow-2xs transition"
+                                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition"
                                             >
-                                                Jornada Partida
+                                                Jornada partida
                                             </button>
                                         </div>
                                     </div>
@@ -1683,8 +1916,8 @@ export default function PeticionesView() {
                                     {/* TABLA SEMANAL EDITABLE */}
                                     <div className="mt-5 border border-slate-200 rounded-xl overflow-hidden shadow-xs">
                                         <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
-                                            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                                Cuadrante Semanal — Posición {selectedPosId}
+                                            <span className="text-xs font-semibold text-slate-700">
+                                                Cuadrante semanal
                                             </span>
                                             <span className="text-xs text-slate-500">
                                                 Edita los campos directamente para personalizar días laborables o descansos
@@ -1692,14 +1925,14 @@ export default function PeticionesView() {
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left text-xs text-slate-700">
-                                                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
+                                                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[10px]">
                                                     <tr>
-                                                        <th className="py-3 px-4">Día de la Semana</th>
+                                                        <th className="py-3 px-4">Día de la semana</th>
                                                         <th className="py-3 px-4">Laborable</th>
-                                                        <th className="py-3 px-4">Hora Inicio</th>
-                                                        <th className="py-3 px-4">Hora Fin</th>
-                                                        <th className="py-3 px-4">Descanso (Minutos)</th>
-                                                        <th className="py-3 px-4">Horas Efectivas</th>
+                                                        <th className="py-3 px-4">Hora de inicio</th>
+                                                        <th className="py-3 px-4">Hora de fin</th>
+                                                        <th className="py-3 px-4">Descanso (minutos)</th>
+                                                        <th className="py-3 px-4">Horas efectivas</th>
                                                         <th className="py-3 px-4 text-right">Estado</th>
                                                     </tr>
                                                 </thead>
@@ -1718,7 +1951,7 @@ export default function PeticionesView() {
                                                                         className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
                                                                     />
                                                                     <span className="ml-2 text-xs font-medium">
-                                                                        {d.laborable ? 'Sí' : 'No (Descanso)'}
+                                                                        {d.laborable ? 'Sí' : 'No (descanso)'}
                                                                     </span>
                                                                 </label>
                                                             </td>
@@ -1729,7 +1962,7 @@ export default function PeticionesView() {
                                                                     value={d.inicio}
                                                                     onChange={(e) => handleDayFieldChange(idx, 'inicio', e.target.value)}
                                                                     className={`px-2.5 py-1.5 border rounded-lg text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                                                        d.laborable ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                                                        d.laborable ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                                                                     }`}
                                                                 />
                                                             </td>
@@ -1740,7 +1973,7 @@ export default function PeticionesView() {
                                                                     value={d.fin}
                                                                     onChange={(e) => handleDayFieldChange(idx, 'fin', e.target.value)}
                                                                     className={`px-2.5 py-1.5 border rounded-lg text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                                                        d.laborable ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                                                        d.laborable ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                                                                     }`}
                                                                 />
                                                             </td>
@@ -1755,14 +1988,14 @@ export default function PeticionesView() {
                                                                         value={d.descanso}
                                                                         onChange={(e) => handleDayFieldChange(idx, 'descanso', e.target.value)}
                                                                         className={`w-16 px-2 py-1.5 border rounded-lg text-xs text-center font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                                                            d.laborable ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                                                            d.laborable ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                                                                         }`}
                                                                     />
                                                                     <span className="text-slate-400 text-xs">min</span>
                                                                 </div>
                                                             </td>
                                                             <td className="py-3 px-4">
-                                                                <span className={`font-mono font-bold ${d.laborable ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                                                <span className={`font-mono font-semibold ${d.laborable ? 'text-indigo-600' : 'text-slate-400'}`}>
                                                                     {d.laborable ? `${d.horas} h` : '—'}
                                                                 </span>
                                                             </td>
@@ -1770,7 +2003,7 @@ export default function PeticionesView() {
                                                                 <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
                                                                     d.laborable ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                                                                 }`}>
-                                                                    {d.laborable ? 'Turno Activo' : 'No Computa'}
+                                                                    {d.laborable ? 'Laborable' : 'No computa'}
                                                                 </span>
                                                             </td>
                                                         </tr>
@@ -1784,23 +2017,23 @@ export default function PeticionesView() {
                                     <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
                                         <div className="text-xs text-slate-500 flex items-center gap-2">
                                             <Info className="w-4 h-4 text-indigo-500" />
-                                            <span>Los cambios se guardan exclusivamente en el perfil de la posición <strong>{selectedPosId}</strong>.</span>
+                                            <span>Los cambios solo afectan a esta petición (<strong>{selectedPosId}</strong>).</span>
                                         </div>
 
                                         <button
                                             onClick={handleSaveSchedule}
                                             disabled={savingHorario}
-                                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-semibold shadow-sm shadow-indigo-600/30 transition"
+                                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-semibold shadow-sm transition"
                                         >
                                             {savingHorario ? (
                                                 <>
                                                     <RefreshCw className="w-4 h-4 animate-spin" />
-                                                    <span>Guardando Horario {selectedPosId}...</span>
+                                                    <span>Guardando horario...</span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <Check className="w-4 h-4" />
-                                                    <span>Guardar Horario de esta Posición ({selectedPosId})</span>
+                                                    <span>Guardar horario</span>
                                                 </>
                                             )}
                                         </button>
@@ -1812,49 +2045,99 @@ export default function PeticionesView() {
                         {/* TAB 3: DIFUSIÓN EN PORTALES & PERSONALIZACIÓN (REQUISITO PRINCIPAL 2) */}
                         {activeTab === 'portales' && (
                             <div className="space-y-6 animate-fade-in">
+                                {/* PORTALES PROPIOS DE LA ETT: se activan en cada petición */}
+                                {(() => {
+                                    const pp = portalesPropios[peticion.id] || {};
+                                    const filas = [
+                                        {
+                                            id: 'empresa', icono: Building2, titulo: 'Portal de empresas', url: urlPortal('empresa', peticion.id),
+                                            texto: 'La empresa ve esta petición, confirma a las personas propuestas, firma los CPD y valida las presencias.',
+                                            bienvenida: 'bienvenidaEmpresa',
+                                            textoBienvenida: `Enviar bienvenida con el acceso a los contactos de la empresa (${peticion.emailContacto})`,
+                                            enviada: pp.bienvenidaEmpresaEnviada,
+                                        },
+                                        {
+                                            id: 'candidatos', icono: Users, titulo: 'Portal de candidatos', url: urlPortal('candidatos', peticion.id),
+                                            texto: 'Oferta pública de esta petición. Quien se inscribe entra como «Inscrito» en Plazas y candidatos.',
+                                            bienvenida: 'bienvenidaCandidatos',
+                                            textoBienvenida: 'Enviar bienvenida a cada persona que se inscriba o se proponga para una plaza, con acceso para subir documentos y firmar su contrato',
+                                        },
+                                    ];
+                                    return (
+                                        <Card className="p-4 space-y-3">
+                                            <SectionTitle actions={<span className="text-[11px] text-slate-500">{SUBDOMINIO_ETT}.tramitnow.com · se configura en Mi ETT</span>}>
+                                                Portales de la ETT
+                                            </SectionTitle>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                                {filas.map(f => (
+                                                    <div key={f.id} className={`rounded-lg border p-3 space-y-2 ${pp[f.id] ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-200'}`}>
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex items-start gap-2 min-w-0">
+                                                                <f.icono className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+                                                                <div className="min-w-0">
+                                                                    <div className="text-xs font-medium text-slate-900">{f.titulo}</div>
+                                                                    <div className="text-[11px] text-slate-500 truncate">{f.url}</div>
+                                                                </div>
+                                                            </div>
+                                                            <Interruptor checked={!!pp[f.id]} onChange={(v) => cambiarPortalPropio(f.id, v)} label={`Activar ${f.titulo.toLowerCase()}`} />
+                                                        </div>
+                                                        <p className="text-xs text-slate-600">{f.texto}</p>
+                                                        <label className="flex items-start gap-2 text-xs text-slate-700">
+                                                            <input type="checkbox" checked={!!pp[f.bienvenida]} onChange={(e) => setPortalesPropios(prev => ({ ...prev, [peticion.id]: { ...prev[peticion.id], [f.bienvenida]: e.target.checked } }))} className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                                            <span>{f.textoBienvenida}{f.enviada ? <span className="text-slate-500"> · enviada el {fechaCorta(f.enviada)}</span> : ''}</span>
+                                                        </label>
+                                                        <div className="text-[11px] text-slate-400">Más opciones del portal: pendientes de definir.</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </Card>
+                                    );
+                                })()}
+
                                 {/* BANNER DIFUSIÓN */}
-                                <div className="bg-slate-900 text-white rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+                                <div className="bg-white text-slate-900 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs border border-slate-200">
                                     <div className="space-y-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-bold rounded uppercase tracking-wider">
-                                                API Multidifusión ETT
+                                            <span className="px-2 py-0.5 bg-indigo-500 text-slate-900 text-[10px] font-semibold rounded">
+                                                API multidifusión ETT
                                             </span>
-                                            <span className="text-xs text-slate-300">Conectores REST v2.4</span>
+                                            <span className="text-xs text-slate-500">Conectores REST v2.4</span>
                                         </div>
-                                        <h3 className="text-base font-bold text-white">
-                                            Contenido de Publicación & Personalización por Canal
+                                        <h3 className="text-base font-semibold text-slate-900">
+                                            Contenido de publicación y personalización por canal
                                         </h3>
-                                        <p className="text-xs text-slate-300 max-w-2xl">
+                                        <p className="text-xs text-slate-500 max-w-2xl">
                                             Define un contenido maestro común o añade adaptaciones específicas para cada portal (título más corto para LinkedIn, requisitos detallados para InfoJobs, etc.).
                                         </p>
                                     </div>
 
                                     <div className="flex items-center gap-2.5 shrink-0">
+                                        {hermanasDe(peticion, peticiones).length > 0 && <Button icon={Copy} onClick={() => setCopiarDifusion(true)}>Copiar de una petición hermana</Button>}
                                         <button
                                             onClick={() => setCommonPreviewOpen(true)}
-                                            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-2"
+                                            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-semibold transition flex items-center gap-2"
                                         >
                                             <Eye className="w-3.5 h-3.5" />
-                                            <span>Vista Previa Maestra</span>
+                                            <span>Vista previa maestra</span>
                                         </button>
                                         <button
                                             onClick={() => startSyncProcess()}
-                                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-sm shadow-indigo-600/30"
+                                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-sm"
                                         >
                                             <Share2 className="w-3.5 h-3.5" />
-                                            <span>Sincronizar a Portales</span>
+                                            <span>Sincronizar con portales</span>
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* BLOQUE A: CONTENIDO COMÚN PARA TODOS LOS PORTALES */}
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-5">
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 space-y-5">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                                                <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                                                     <Layers className="w-4 h-4 text-indigo-600" />
-                                                    Contenido Común para Todos los Portales (Plantilla Base)
+                                                    Contenido común para todos los portales (plantilla base)
                                                 </h3>
                                                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
                                                     comunSavedStatus === 'Guardado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -1874,7 +2157,7 @@ export default function PeticionesView() {
                                                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
                                             >
                                                 <Eye className="w-3.5 h-3.5 text-slate-500" />
-                                                <span>Vista Previa Común</span>
+                                                <span>Vista previa común</span>
                                             </button>
                                             <button
                                                 type="button"
@@ -1890,7 +2173,7 @@ export default function PeticionesView() {
                                                 ) : (
                                                     <>
                                                         <Check className="w-3.5 h-3.5" />
-                                                        <span>Guardar Contenido Común</span>
+                                                        <span>Guardar contenido común</span>
                                                     </>
                                                 )}
                                             </button>
@@ -1899,8 +2182,8 @@ export default function PeticionesView() {
 
                                     <form onSubmit={handleSaveContenidoComun} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                                         <div className="md:col-span-2">
-                                            <label className="font-bold text-slate-700 block mb-1">
-                                                Título Principal de la Publicación <span className="text-red-500">*</span>
+                                            <label className="font-semibold text-slate-700 block mb-1">
+                                                Título principal de la publicación <span className="text-rose-500">*</span>
                                             </label>
                                             <input
                                                 type="text"
@@ -1909,14 +2192,14 @@ export default function PeticionesView() {
                                                     setContenidoComun({ ...contenidoComun, titulo: e.target.value });
                                                     setComunSavedStatus('Cambios sin guardar');
                                                 }}
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-semibold text-slate-900"
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-semibold text-slate-900"
                                                 placeholder="Ej: Operarios/as de Almacén..."
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="font-bold text-slate-700 block mb-1">
-                                                Categoría Profesional
+                                            <label className="font-semibold text-slate-700 block mb-1">
+                                                Categoría profesional
                                             </label>
                                             <input
                                                 type="text"
@@ -1925,13 +2208,13 @@ export default function PeticionesView() {
                                                     setContenidoComun({ ...contenidoComun, categoria: e.target.value });
                                                     setComunSavedStatus('Cambios sin guardar');
                                                 }}
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="font-bold text-slate-700 block mb-1">
-                                                Ubicación Visible
+                                            <label className="font-semibold text-slate-700 block mb-1">
+                                                Ubicación visible
                                             </label>
                                             <input
                                                 type="text"
@@ -1940,13 +2223,13 @@ export default function PeticionesView() {
                                                     setContenidoComun({ ...contenidoComun, ubicacion: e.target.value });
                                                     setComunSavedStatus('Cambios sin guardar');
                                                 }}
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                             />
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <label className="font-bold text-slate-700 block mb-1">
-                                                Descripción General de la Oferta <span className="text-red-500">*</span>
+                                            <label className="font-semibold text-slate-700 block mb-1">
+                                                Descripción general de la oferta <span className="text-rose-500">*</span>
                                             </label>
                                             <textarea
                                                 rows={2}
@@ -1955,13 +2238,13 @@ export default function PeticionesView() {
                                                     setContenidoComun({ ...contenidoComun, descripcion: e.target.value });
                                                     setComunSavedStatus('Cambios sin guardar');
                                                 }}
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="font-bold text-slate-700 block mb-1">
-                                                Funciones del Puesto
+                                            <label className="font-semibold text-slate-700 block mb-1">
+                                                Funciones del puesto
                                             </label>
                                             <textarea
                                                 rows={4}
@@ -1970,13 +2253,13 @@ export default function PeticionesView() {
                                                     setContenidoComun({ ...contenidoComun, funciones: e.target.value });
                                                     setComunSavedStatus('Cambios sin guardar');
                                                 }}
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="font-bold text-slate-700 block mb-1">
-                                                Requisitos Obligatorios <span className="text-red-500">*</span>
+                                            <label className="font-semibold text-slate-700 block mb-1">
+                                                Requisitos obligatorios <span className="text-rose-500">*</span>
                                             </label>
                                             <textarea
                                                 rows={4}
@@ -1985,13 +2268,13 @@ export default function PeticionesView() {
                                                     setContenidoComun({ ...contenidoComun, requisitos: e.target.value });
                                                     setComunSavedStatus('Cambios sin guardar');
                                                 }}
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="font-bold text-slate-700 block mb-1">
-                                                Condiciones & Salario Ofrecido
+                                            <label className="font-semibold text-slate-700 block mb-1">
+                                                Condiciones y salario ofrecido
                                             </label>
                                             <input
                                                 type="text"
@@ -2000,13 +2283,13 @@ export default function PeticionesView() {
                                                     setContenidoComun({ ...contenidoComun, condiciones: e.target.value });
                                                     setComunSavedStatus('Cambios sin guardar');
                                                 }}
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="font-bold text-slate-700 block mb-1">
-                                                Llamada a la Acción (CTA)
+                                            <label className="font-semibold text-slate-700 block mb-1">
+                                                Llamada a la acción (CTA)
                                             </label>
                                             <input
                                                 type="text"
@@ -2015,7 +2298,7 @@ export default function PeticionesView() {
                                                     setContenidoComun({ ...contenidoComun, cta: e.target.value });
                                                     setComunSavedStatus('Cambios sin guardar');
                                                 }}
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                             />
                                         </div>
                                     </form>
@@ -2025,9 +2308,9 @@ export default function PeticionesView() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                                            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                                                 <Globe2 className="w-4 h-4 text-indigo-600" />
-                                                Canales de Difusión & Personalizaciones Específicas
+                                                Canales de difusión y personalizaciones específicas
                                             </h3>
                                             <p className="text-xs text-slate-500 mt-0.5">
                                                 Activa o desactiva la publicación por API y personaliza el copy para cada portal si lo requiere.
@@ -2043,7 +2326,7 @@ export default function PeticionesView() {
                                             return (
                                                 <div
                                                     key={portal.id}
-                                                    className={`bg-white rounded-2xl border p-5 flex flex-col justify-between shadow-xs transition ${
+                                                    className={`bg-white rounded-xl border p-5 flex flex-col justify-between shadow-xs transition ${
                                                         portal.activo ? 'border-slate-200' : 'border-slate-200 bg-slate-50/70 opacity-80'
                                                     }`}
                                                 >
@@ -2051,11 +2334,11 @@ export default function PeticionesView() {
                                                         {/* Header card */}
                                                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                                             <div className="flex items-center gap-2.5">
-                                                                <div className={`w-8 h-8 rounded-lg ${portal.badgeColor} text-white font-bold flex items-center justify-center text-xs shadow-xs`}>
+                                                                <div className={`w-8 h-8 rounded-lg ${portal.badgeColor} text-white font-semibold flex items-center justify-center text-xs shadow-xs`}>
                                                                     {portal.logoText}
                                                                 </div>
                                                                 <div>
-                                                                    <h4 className="font-bold text-slate-900 text-xs">
+                                                                    <h4 className="font-semibold text-slate-900 text-xs">
                                                                         {portal.nombre}
                                                                     </h4>
                                                                     <div className="text-[10px] text-slate-400">
@@ -2072,7 +2355,7 @@ export default function PeticionesView() {
                                                                     onChange={() => handleTogglePortal(portal.id)}
                                                                     className="sr-only peer"
                                                                 />
-                                                                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                                                                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-200 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
                                                             </label>
                                                         </div>
 
@@ -2080,7 +2363,7 @@ export default function PeticionesView() {
                                                         <div className="mt-3 flex items-center justify-between">
                                                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
                                                                 isCustom
-                                                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                                                     : 'bg-slate-100 text-slate-600 border-slate-200'
                                                             }`}>
                                                                 {isCustom ? '✦ Personalización Propia' : '↳ Usa Contenido Común'}
@@ -2093,7 +2376,7 @@ export default function PeticionesView() {
 
                                                         {/* Snippet Preview */}
                                                         <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs space-y-1">
-                                                            <div className="font-bold text-slate-800 line-clamp-1">
+                                                            <div className="font-semibold text-slate-800 line-clamp-1">
                                                                 {displayContent.titulo}
                                                             </div>
                                                             <div className="text-slate-500 text-[11px] line-clamp-2">
@@ -2103,7 +2386,7 @@ export default function PeticionesView() {
 
                                                         <div className="mt-3 text-[11px] text-slate-500 flex items-center justify-between">
                                                             <span>Candidaturas recibidas:</span>
-                                                            <span className="font-bold text-slate-800">{portal.candidaturas} CVs</span>
+                                                            <span className="font-semibold text-slate-800">{portal.candidaturas} CVs</span>
                                                         </div>
                                                     </div>
 
@@ -2117,7 +2400,7 @@ export default function PeticionesView() {
                                                                     isCustom
                                                                 })}
                                                                 className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition"
-                                                                title="Vista Previa de este Portal"
+                                                                title="Vista previa de este portal"
                                                             >
                                                                 <Eye className="w-4 h-4" />
                                                             </button>
@@ -2125,9 +2408,9 @@ export default function PeticionesView() {
                                                             {isCustom && (
                                                                 <button
                                                                     onClick={() => setRestoreConfirmModal(portal)}
-                                                                    className="text-[11px] text-red-600 hover:text-red-700 hover:underline font-medium"
+                                                                    className="text-[11px] text-rose-600 hover:text-rose-700 hover:underline font-medium"
                                                                 >
-                                                                    Restaurar Común
+                                                                    Restaurar común
                                                                 </button>
                                                             )}
                                                         </div>
@@ -2137,7 +2420,7 @@ export default function PeticionesView() {
                                                             className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold transition flex items-center gap-1"
                                                         >
                                                             <Edit3 className="w-3.5 h-3.5" />
-                                                            <span>{isCustom ? 'Editar Copy' : 'Personalizar'}</span>
+                                                            <span>{isCustom ? 'Editar texto' : 'Personalizar'}</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -2149,320 +2432,464 @@ export default function PeticionesView() {
                         )}
 
                         {/* TAB 4: DOCUMENTOS Y CONTRATOS */}
-                        {activeTab === 'documentos' && (
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-                                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                                    <div>
-                                        <h3 className="font-bold text-slate-900 text-sm">Contratos de Puesta a Disposición (CPD) & Protocolos PRL</h3>
-                                        <p className="text-xs text-slate-500">Documentación vinculante generada con arreglo a la normativa laboral ETT.</p>
+                        {activeTab === 'documentos' && (() => {
+                            const previo = cpdPrevio[peticion.id] || { estado: 'sin_enviar' };
+                            const ocupadas = (plazas[peticion.id] || []).filter(p => ['cubierta', 'incorporada'].includes(p.estado));
+                            const empezado = diasHasta(peticion.inicio) <= 0;
+                            return (
+                            <div className="space-y-4">
+                                <Card className="p-4 space-y-3">
+                                    <SectionTitle actions={<Badge tone={ESTADOS_CPD_PREVIO[previo.estado].tono} dot>{ESTADOS_CPD_PREVIO[previo.estado].texto}</Badge>}>
+                                        CPD previo: condiciones para la empresa
+                                    </SectionTitle>
+                                    <p className="text-xs text-slate-600">
+                                        Antes de tener personas, la empresa recibe las condiciones de la puesta a disposición (causa, puesto, riesgos, horario, duración y precio) para revisarlas con tiempo.
+                                        Se envía a {peticion.emailContacto}{portalesPropios[peticion.id]?.empresa ? ' y queda en su portal' : ''}.
+                                        {previo.fecha && ` Último envío: ${fechaCorta(previo.fecha)}.`}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button icon={Eye} onClick={() => setVerCpdPrevio(true)}>Ver condiciones</Button>
+                                        <Button variant={previo.estado === 'sin_enviar' ? 'primary' : 'secondary'} icon={Send} onClick={enviarCpdPrevio}>
+                                            {previo.estado === 'sin_enviar' ? 'Enviar al cliente' : 'Reenviar'}
+                                        </Button>
                                     </div>
-                                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-xs font-medium">
-                                        Firma Digital Válida
-                                    </span>
-                                </div>
+                                </Card>
 
-                                <div className="space-y-2 text-xs">
-                                    <div className="p-3.5 rounded-xl border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition">
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="w-5 h-5 text-indigo-600" />
-                                            <div>
-                                                <div className="font-semibold text-slate-900">CPD_Marco_TransLogistica_2026.pdf</div>
-                                                <div className="text-slate-400 text-[11px]">Firmado electrónicamente por Carlos Mendiluce (Cliente) y Marta Gómez (ETT)</div>
-                                            </div>
+                                <Card className="overflow-hidden">
+                                    <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <SectionTitle>CPD, contrato y alta de cada persona</SectionTitle>
+                                            <p className="text-xs text-slate-500 -mt-1">Cada persona necesita su CPD firmado por la empresa antes de empezar. Si a 2 días del inicio no está firmado, se bloquea la incorporación.</p>
                                         </div>
-                                        <button className="text-indigo-600 font-semibold hover:underline">Descargar</button>
+                                        <div className="flex flex-wrap gap-2">
+                                            {peticion.estado === 'En curso' && <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/mision'; }}>Personal en misión</Button>}
+                                            <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/laboral'; }}>Ir a Contratos y altas</Button>
+                                        </div>
                                     </div>
+                                    {ocupadas.length === 0 ? (
+                                        <EmptyState icon={Users} title="Todavía no hay plazas cubiertas" text="Cuando el cliente confirme a alguien, aquí verás su CPD, su contrato y su alta." />
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                        <th className="py-2 px-4 font-medium">Persona</th>
+                                                        <th className="py-2 px-4 font-medium">Incorporación</th>
+                                                        <th className="py-2 px-4 font-medium">CPD con la empresa</th>
+                                                        <th className="py-2 px-4 font-medium">Contrato con la persona</th>
+                                                        <th className="py-2 px-4 font-medium">Alta en la Seguridad Social</th>
+                                                        <th className="py-2 px-4" aria-label="Acciones"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {ocupadas.map(plaza => {
+                                                        const firmado = plaza.cpd === 'firmado';
+                                                        return (
+                                                            <tr key={plaza.id} className="border-b border-slate-100 last:border-0">
+                                                                <td className="py-2.5 px-4"><span className="inline-flex items-center gap-2"><Avatar name={plaza.nombre} size="sm" /><span className="font-medium text-slate-900">{plaza.nombre}</span></span></td>
+                                                                <td className="py-2.5 px-4 text-slate-600">{plaza.fechaIncorporacion}</td>
+                                                                <td className="py-2.5 px-4">
+                                                                    <Badge tone={ESTADOS_CPD[plaza.cpd]?.tono || 'neutral'}>{ESTADOS_CPD[plaza.cpd]?.texto || '—'}</Badge>
+                                                                    {!firmado && diasHasta(peticion.inicio) <= 2 && <div className="text-[11px] text-rose-600 mt-0.5">Bloquea la incorporación</div>}
+                                                                </td>
+                                                                <td className="py-2.5 px-4">{firmado ? <Badge tone="success">Firmado</Badge> : <Badge tone="neutral">Espera al CPD</Badge>}</td>
+                                                                <td className="py-2.5 px-4">{plaza.estado === 'incorporada' || empezado ? <Badge tone="success">Comunicada</Badge> : firmado ? <Badge tone="info">Programada</Badge> : <Badge tone="neutral">Espera al CPD</Badge>}</td>
+                                                                <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                                                    {plaza.cpd === 'enviado' && <Button size="sm" variant="ghost" icon={Send} onClick={() => recordarCpd(plaza)}>Recordar</Button>}
+                                                                    {firmado && <Button size="sm" variant="ghost" onClick={() => showToast(`Descarga simulada: CPD_${peticion.id}_${plaza.numero}.pdf`)}>Descargar CPD</Button>}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </Card>
 
-                                    <div className="p-3.5 rounded-xl border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition">
-                                        <div className="flex items-center gap-3">
-                                            <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                                            <div>
-                                                <div className="font-semibold text-slate-900">Ficha_Informacion_Riesgos_PRL_ZAL_Bilbao.pdf</div>
-                                                <div className="text-slate-400 text-[11px]">Evaluación de riesgos puesto carretillero y mozo de almacén</div>
+                                <Card className="p-4 space-y-2 text-xs">
+                                    <SectionTitle>Documentos del servicio</SectionTitle>
+                                    {[
+                                        { nombre: `CPD_previo_${peticion.id}.pdf`, texto: 'Condiciones de la puesta a disposición para la empresa', icono: FileText },
+                                        { nombre: `Riesgos_PRL_${peticion.tipo}.pdf`, texto: `Información de riesgos del puesto: ${peticion.puesto.toLowerCase()}`, icono: ShieldCheck },
+                                    ].map(doc => (
+                                        <div key={doc.nombre} className="p-3 rounded-lg border border-slate-200 flex items-center justify-between gap-3 hover:bg-slate-50">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <doc.icono className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                <div className="min-w-0">
+                                                    <div className="font-medium text-slate-900 truncate">{doc.nombre}</div>
+                                                    <div className="text-slate-500 text-[11px]">{doc.texto}</div>
+                                                </div>
                                             </div>
+                                            <Button size="sm" variant="ghost" onClick={() => showToast(`Descarga simulada: ${doc.nombre}`)}>Descargar</Button>
                                         </div>
-                                        <button className="text-indigo-600 font-semibold hover:underline">Descargar</button>
-                                    </div>
-                                </div>
+                                    ))}
+                                </Card>
                             </div>
-                        )}
+                            );
+                        })()}
 
-                        {/* TAB 5: AUDITORÍA Y TRAZABILIDAD */}
+
+                        {/* TAB: ACTIVIDAD */}
                         {activeTab === 'auditoria' && (
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-                                <h3 className="font-bold text-slate-900 text-sm border-b border-slate-100 pb-3">Registro de Actividad y Webhooks de Portales</h3>
-                                <div className="space-y-3 text-xs">
-                                    <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-slate-800">Sincronización API InfoJobs completada</div>
-                                            <div className="text-slate-500 text-[11px]">Oferta ID IJ-893012 publicada con 8 vacantes. 14/02/2026 12:40:15</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                                        <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-slate-800">Actualización de horario guardada para POS-001</div>
-                                            <div className="text-slate-500 text-[11px]">Turno Mañana (06:00 - 14:00, 37.5 h/sem) por Marta Gómez. 14/02/2026 11:30:00</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-slate-800">Presupuesto PRE-2026-0048 aceptado y convertido en petición</div>
-                                            <div className="text-slate-500 text-[11px]">Aceptación confirmada por cliente. Importe 42.850,00 €. 12/02/2026 18:20:00</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <Card className="p-5">
+                                <SectionTitle>Actividad de la petición</SectionTitle>
+                                <ol className="mt-2 space-y-3 text-xs">
+                                    {[
+                                        posActual.incorporados > 0 && { color: 'bg-emerald-500', titulo: `${posActual.incorporados} ${posActual.incorporados === 1 ? 'plaza cubierta' : 'plazas cubiertas'}`, texto: `Última incorporación prevista el ${fechaCorta(peticion.inicio)}` },
+                                        peticion.portalesActivos > 0 && { color: 'bg-blue-500', titulo: `Publicada en ${peticion.portalesActivos} portales`, texto: `${peticion.candidaturas} candidaturas recibidas` },
+                                        { color: 'bg-indigo-500', titulo: `Horario guardado: ${currentSchedule.turnoNombre.toLowerCase()}`, texto: currentSchedule.ultimaModif },
+                                        { color: 'bg-slate-400', titulo: `Petición creada desde el presupuesto ${peticion.presupuestoOrigen}`, texto: `${fechaCorta(peticion.creada)} por ${peticion.responsable} · ${peticion.solicitados} de ${peticion.personasPuesto} personas del puesto` },
+                                    ].filter(Boolean).map((a, i) => (
+                                        <li key={i} className="flex items-start gap-3">
+                                            <span className={`w-2 h-2 rounded-full ${a.color} mt-1.5 shrink-0`}></span>
+                                            <div>
+                                                <div className="font-medium text-slate-800">{a.titulo}</div>
+                                                <div className="text-slate-500 text-[11px]">{a.texto}</div>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ol>
+                            </Card>
                         )}
                     </div>
                 )}
-            </main>
+            </div>
 
             {/* --- MODAL ASIGNAR CANDIDATO A PLAZA VACANTE --- */}
-            {assignCandidateModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white">
-                                    <UserPlus className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <div className="text-[10px] font-mono text-emerald-300 font-bold uppercase">
-                                        {assignCandidateModal.posId} · Asignar a Plaza #{assignCandidateModal.plaza.numero}
-                                    </div>
-                                    <h3 className="font-bold text-sm text-white">Búsqueda y Asignación de Candidatos Disponibles</h3>
-                                </div>
+            {/* PROPONER CANDIDATO PARA UNA PLAZA: comprueba requisitos y si ya está en otra plaza */}
+            {assignCandidateModal && (() => {
+                const plaza = assignCandidateModal.plaza;
+                const q = candidateSearchFilter.trim().toLowerCase();
+                const etapaDe = (id) => (embudo[peticion.id] || []).find(e => e.id === id)?.etapa;
+                const lista = candidatosPool
+                    .filter(c => verTodosCandidatos || c.matchPosicion.includes(peticion.tipo))
+                    .filter(c => !q || [c.nombre, c.puestoPrincipal, c.carnets, c.ubicacion].some(t => t.toLowerCase().includes(q)))
+                    .map(c => ({ c, req: comprobarRequisitos(c, peticion, peticion.plantilla), otra: plazaDe(c.id), etapa: etapaDe(c.id) }))
+                    .sort((a, b) => (a.otra ? 1 : 0) - (b.otra ? 1 : 0) || b.req.filter(r => r.ok).length - a.req.filter(r => r.ok).length || b.c.scoring - a.c.scoring);
+                return (
+                    <Modal
+                        title={plaza.estado === 'baja' ? `Buscar sustituto para la plaza ${plaza.numero}` : `Proponer candidato para la plaza ${plaza.numero}`}
+                        subtitle={`${peticion.puesto} · ${currentSchedule.turnoNombre.toLowerCase()} · ${peticion.clienteNombre}`}
+                        onClose={() => setAssignCandidateModal(null)}
+                        size="max-w-2xl"
+                        toolbar={
+                            <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center gap-3">
+                                <SearchInput className="flex-1 min-w-[200px]" value={candidateSearchFilter} onChange={setCandidateSearchFilter} placeholder="Buscar por nombre, carné o localidad..." />
+                                <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                                    <input type="checkbox" checked={verTodosCandidatos} onChange={(e) => setVerTodosCandidatos(e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                    Ver también los de otros puestos
+                                </label>
                             </div>
-                            <button onClick={() => setAssignCandidateModal(null)} className="text-slate-400 hover:text-white">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-5 border-b border-slate-200 bg-slate-50">
-                            <div className="relative">
-                                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar candidato por nombre, carnet, experiencia..."
-                                    value={candidateSearchFilter}
-                                    onChange={(e) => setCandidateSearchFilter(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="p-5 overflow-y-auto space-y-3 flex-1 text-xs">
-                            {candidatosPool
-                                .filter(c => {
-                                    const matchesSearch = !candidateSearchFilter ||
-                                        c.nombre.toLowerCase().includes(candidateSearchFilter.toLowerCase()) ||
-                                        c.puestoPrincipal.toLowerCase().includes(candidateSearchFilter.toLowerCase()) ||
-                                        c.carnets.toLowerCase().includes(candidateSearchFilter.toLowerCase());
-                                    return matchesSearch;
-                                })
-                                .map(candidato => {
-                                    const isRecommended = candidato.matchPosicion.includes(assignCandidateModal.posId);
-                                    return (
-                                        <div key={candidato.id} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-indigo-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                                            <div className="flex items-start gap-3">
-                                                <img src={candidato.foto} alt="" className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200 mt-0.5" />
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-slate-900 text-sm">{candidato.nombre}</span>
-                                                        <span className="font-mono text-[10px] text-slate-400 font-semibold">{candidato.id}</span>
-                                                        {isRecommended && (
-                                                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[9px] font-bold">
-                                                                Match Recomendado
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-slate-600 text-xs mt-0.5 font-medium">{candidato.puestoPrincipal}</div>
-                                                    <div className="text-[11px] text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                                                        <span>📍 {candidato.ubicacion}</span>
-                                                        <span>🪪 {candidato.carnets}</span>
-                                                        <span className="text-emerald-700 font-bold">Afinidad: {candidato.scoring}%</span>
-                                                    </div>
+                        }
+                        footer={<Button onClick={() => setAssignCandidateModal(null)}>Cancelar</Button>}
+                    >
+                        <div className="space-y-2 text-xs">
+                            {plaza.estado === 'baja' && <Notice tone="warning" icon={AlertTriangle}>Baja de {plaza.bajaDe}: {plaza.motivoBaja}. El sustituto mantiene las mismas condiciones del CPD.</Notice>}
+                            {lista.length === 0 && <EmptyState icon={Search} title="No hay candidatos con este filtro" />}
+                            {lista.map(({ c, req, otra, etapa }) => {
+                                const fallan = req.filter(r => !r.ok);
+                                return (
+                                    <div key={c.id} className={`p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${otra ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}>
+                                        <div className="flex items-start gap-3 min-w-0">
+                                            <Avatar name={c.nombre} />
+                                            <div className="min-w-0 space-y-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="font-medium text-slate-900 text-sm">{c.nombre}</span>
+                                                    {etapa && <Badge tone={ETAPAS.find(e => e.id === etapa)?.tono}>{ETAPAS.find(e => e.id === etapa)?.texto}</Badge>}
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                                                <button
-                                                    onClick={() => setCandidatoFichaModal(candidato)}
-                                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium"
-                                                >
-                                                    Ver Ficha
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAssignCandidateToPlaza(assignCandidateModal.posId, assignCandidateModal.plaza.id, candidato)}
-                                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1"
-                                                >
-                                                    <Check className="w-3.5 h-3.5" />
-                                                    <span>Asignar Plaza</span>
-                                                </button>
+                                                <div className="text-slate-500 flex flex-wrap items-center gap-x-3">
+                                                    <span>{c.puestoPrincipal}</span>
+                                                    <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{c.ubicacion}</span>
+                                                    <span>Afinidad {c.scoring} %</span>
+                                                    <span>{c.origen}</span>
+                                                </div>
+                                                <Requisitos lista={req} />
+                                                {otra && <div className="text-[11px] text-amber-700">Ya está en la plaza {otra.plaza.numero} de {otra.petId}.</div>}
+                                                {!otra && fallan.length > 0 && <div className="text-[11px] text-rose-600">Se puede proponer, pero bloquea el contrato hasta resolver: {fallan.map(r => r.texto.toLowerCase()).join(', ')}.</div>}
                                             </div>
                                         </div>
-                                    );
-                                })}
+                                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                            <Button size="sm" variant="ghost" onClick={() => setCandidatoFichaModal(c)}>Ver ficha</Button>
+                                            <Button size="sm" variant="primary" disabled={!!otra} onClick={() => handleAssignCandidateToPlaza(peticion.id, plaza.id, c)}>Proponer</Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
+                    </Modal>
+                );
+            })()}
 
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-                            <button
-                                onClick={() => setAssignCandidateModal(null)}
-                                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold"
-                            >
-                                Cancelar
-                            </button>
+            {/* DAR DE BAJA A UNA PERSONA DE UNA PLAZA: queda el motivo y la plaza pasa a buscar sustituto */}
+            {bajaPlaza && (
+                <Modal
+                    title={`¿Dar de baja a ${bajaPlaza.plaza.nombre}?`}
+                    subtitle={`Plaza ${bajaPlaza.plaza.numero} · ${peticion.id}`}
+                    onClose={() => setBajaPlaza(null)}
+                    size="max-w-md"
+                    footer={<>
+                        <Button onClick={() => setBajaPlaza(null)}>Cancelar</Button>
+                        <Button variant="danger" disabled={!bajaPlaza.motivo} onClick={confirmarBaja}>Dar de baja</Button>
+                    </>}
+                >
+                    <div className="space-y-4 text-xs">
+                        <p className="text-slate-600">La plaza queda como «Baja» con el motivo, para buscar un sustituto. La persona y el motivo quedan en el historial de la petición.</p>
+                        <div className="space-y-1">
+                            <span className="block text-[11px] font-medium text-slate-600">Motivo</span>
+                            <SelectConAlta
+                                value={bajaPlaza.motivo}
+                                onChange={(v) => setBajaPlaza(b => ({ ...b, motivo: v }))}
+                                options={motivosBaja}
+                                onAdd={(v) => { setMotivosBaja(m => [...m, v]); setBajaPlaza(b => ({ ...b, motivo: v })); }}
+                                nuevoPlaceholder="Nuevo motivo"
+                            />
                         </div>
+                        <Field label="Notas (opcional)">
+                            <TextInput value={bajaPlaza.notas} onChange={(e) => setBajaPlaza(b => ({ ...b, notas: e.target.value }))} placeholder="Por ejemplo: avisó el mismo día" />
+                        </Field>
+                        {bajaPlaza.plaza.estado === 'incorporada' && (
+                            <Notice tone="warning" icon={AlertTriangle}>Ya ha empezado: habrá que tramitar la baja en la Seguridad Social desde Contratos y altas.</Notice>
+                        )}
                     </div>
-                </div>
+                </Modal>
+            )}
+
+            {/* CPD PREVIO: condiciones de la puesta a disposición que recibe la empresa antes de tener personas */}
+            {verCpdPrevio && (
+                <Modal
+                    title="CPD previo: condiciones de la puesta a disposición"
+                    subtitle={`${peticion.id} · para ${peticion.clienteNombre}`}
+                    onClose={() => setVerCpdPrevio(false)}
+                    size="max-w-2xl"
+                    footer={<>
+                        <Button onClick={() => setVerCpdPrevio(false)}>Cerrar</Button>
+                        <Button variant="primary" icon={Send} onClick={() => { enviarCpdPrevio(); setVerCpdPrevio(false); }}>
+                            {cpdPrevio[peticion.id]?.estado === 'sin_enviar' ? 'Enviar al cliente' : 'Reenviar al cliente'}
+                        </Button>
+                    </>}
+                >
+                    <div className="space-y-4">
+                    <dl className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-x-4 gap-y-2.5 text-xs">
+                        <dt className="text-slate-500">Empresa de trabajo temporal</dt><dd className="text-slate-900">ETT Global Servicios Temporales, S.L.</dd>
+                        <dt className="text-slate-500">Empresa usuaria</dt><dd className="text-slate-900">{peticion.clienteNombre} · {peticion.cif}</dd>
+                        <dt className="text-slate-500">Causa de la contratación</dt><dd className="text-slate-900">Circunstancias de la producción (campaña). Presupuesto {peticion.presupuestoOrigen}.</dd>
+                        <dt className="text-slate-500">Puesto y cualificación</dt><dd className="text-slate-900">{peticion.puesto} · {peticion.categoria}. {peticion.carnetRequerido === 'Ninguno' ? 'Sin carné específico.' : `${peticion.carnetRequerido}.`}</dd>
+                        <dt className="text-slate-500">Riesgos del puesto</dt><dd className="text-slate-900">Según la evaluación de riesgos del cliente para este puesto. EPIs: {peticion.requiereEpi.toLowerCase()}.</dd>
+                        <dt className="text-slate-500">Centro de trabajo</dt><dd className="text-slate-900">{peticion.centroTrabajo}</dd>
+                        <dt className="text-slate-500">Horario</dt><dd className="text-slate-900">{currentSchedule.turnoNombre} · {totalHorasSemana.toLocaleString('es-ES')} h por semana</dd>
+                        <dt className="text-slate-500">Duración estimada</dt><dd className="text-slate-900">Del {fechaCorta(peticion.inicio)} al {fechaCorta(peticion.fin)} · {peticion.solicitados} {peticion.solicitados === 1 ? 'persona' : 'personas'}</dd>
+                        <dt className="text-slate-500">Precio</dt><dd className="text-slate-900">{peticion.tarifaVentaHora} la hora ordinaria, más los conceptos extra del presupuesto (horas extra, nocturnidad, fin de semana y festivos).</dd>
+                    </dl>
+                    <Notice tone="info" icon={Info}>
+                        Al confirmar a cada persona se genera su CPD con estas condiciones y sus datos, y se envía a firmar.
+                    </Notice>
+                    </div>
+                </Modal>
             )}
 
             {/* --- MODAL FICHA CANDIDATO / PERSONA ASIGNADA --- */}
             {candidatoFichaModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
-                        <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <img src={candidatoFichaModal.foto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-indigo-400" />
-                                <div>
-                                    <div className="text-[10px] font-mono text-indigo-300 font-bold uppercase">{candidatoFichaModal.id} · Ficha Personal</div>
-                                    <h3 className="font-bold text-sm text-white">{candidatoFichaModal.nombre}</h3>
-                                </div>
-                            </div>
-                            <button onClick={() => setCandidatoFichaModal(null)} className="text-slate-400 hover:text-white">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-4 text-xs text-slate-700">
-                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                                <div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400">DNI / NIE</span>
-                                    <div className="font-mono font-semibold text-slate-900">{candidatoFichaModal.dni}</div>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400">Teléfono</span>
-                                    <div className="font-semibold text-slate-900">{candidatoFichaModal.telefono}</div>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400">Email</span>
-                                    <div className="font-semibold text-slate-900 truncate">{candidatoFichaModal.email}</div>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400">Puntaje Matching</span>
-                                    <div className="font-bold text-emerald-600">{candidatoFichaModal.scoring}% afinidad</div>
-                                </div>
-                            </div>
-                            <div>
-                                <span className="text-[10px] uppercase font-bold text-slate-400">Puesto & Experiencia</span>
-                                <p className="mt-0.5 text-slate-800 font-medium">{candidatoFichaModal.experiencia}</p>
-                            </div>
-                            <div>
-                                <span className="text-[10px] uppercase font-bold text-slate-400">Acreditaciones & Carnets</span>
-                                <p className="mt-0.5 text-slate-800 font-medium">{candidatoFichaModal.carnets}</p>
-                            </div>
-                            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-900">
-                                <span className="text-[10px] uppercase font-bold text-indigo-700">Valoración Consultoría ETT</span>
-                                <p className="mt-0.5 text-xs">{candidatoFichaModal.valoracionETT}</p>
-                            </div>
-                        </div>
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <Modal
+                  title={candidatoFichaModal.nombre}
+                  subtitle={<>{candidatoFichaModal.id} · Ficha personal</>}
+                  onClose={() => setCandidatoFichaModal(null)}
+                  footer={<>
+                  <div className="flex flex-1 items-center justify-between gap-2">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[11px] font-semibold">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                 {candidatoFichaModal.estadoSeleccion}
                             </span>
                             <button
                                 onClick={() => setCandidatoFichaModal(null)}
-                                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold"
+                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-600 text-white rounded-xl text-xs font-semibold"
                             >
                                 Cerrar Ficha
                             </button>
+                  </div>
+                  </>}
+                >
+                        <div className="space-y-4 text-xs text-slate-700">
+                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                                <div>
+                                    <span className="text-[10px] font-semibold text-slate-400">DNI / NIE</span>
+                                    <div className="font-mono font-semibold text-slate-900">{candidatoFichaModal.dni}</div>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-semibold text-slate-400">Teléfono</span>
+                                    <div className="font-semibold text-slate-900">{candidatoFichaModal.telefono}</div>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-semibold text-slate-400">Email</span>
+                                    <div className="font-semibold text-slate-900 truncate">{candidatoFichaModal.email}</div>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-semibold text-slate-400">Puntaje Matching</span>
+                                    <div className="font-semibold text-emerald-600">{candidatoFichaModal.scoring}% afinidad</div>
+                                </div>
+                            </div>
+                            <div>
+                                <span className="text-[10px] font-semibold text-slate-400">Puesto y Experiencia</span>
+                                <p className="mt-0.5 text-slate-800 font-medium">{candidatoFichaModal.experiencia}</p>
+                            </div>
+                            <div>
+                                <span className="text-[10px] font-semibold text-slate-400">Acreditaciones y Carnets</span>
+                                <p className="mt-0.5 text-slate-800 font-medium">{candidatoFichaModal.carnets}</p>
+                            </div>
+                            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-900">
+                                <span className="text-[10px] font-semibold text-indigo-700">Valoración Consultoría ETT</span>
+                                <p className="mt-0.5 text-xs">{candidatoFichaModal.valoracionETT}</p>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                </Modal>
             )}
 
             {/* --- MODAL 1: COPIAR HORARIO A OTRA POSICIÓN --- */}
-            {isCopyModalOpen && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
-                        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <div className="flex items-center gap-2">
-                                <Copy className="w-4 h-4 text-indigo-600" />
-                                <h3 className="font-bold text-slate-900 text-sm">Copiar Horario a otra Posición</h3>
+            {/* DUPLICAR CON OTRO HORARIO: crea una petición hermana del mismo puesto */}
+            {duplicar && (() => {
+                const delPuesto = [peticion, ...hermanasDe(peticion, peticiones)].filter(p => p.estado !== 'Cancelada');
+                const repartidas = delPuesto.reduce((s, p) => s + p.solicitados, 0) + (Number(duplicar.solicitados) || 0);
+                return (
+                    <Modal
+                        title="Duplicar con otro horario"
+                        subtitle={`Nueva petición de ${peticion.puesto.toLowerCase()} · ${peticion.presupuestoOrigen}`}
+                        onClose={() => setDuplicar(null)}
+                        size="max-w-lg"
+                        footer={<>
+                            <Button onClick={() => setDuplicar(null)}>Cancelar</Button>
+                            <Button variant="primary" icon={Copy} disabled={!duplicar.inicio || !(Number(duplicar.solicitados) > 0)} onClick={confirmarDuplicar}>Crear petición</Button>
+                        </>}
+                    >
+                        <div className="space-y-4 text-xs">
+                            <p className="text-slate-600">Se crea otra petición del mismo puesto con las condiciones del presupuesto (salario, tarifa y conceptos extra). Tendrá su propio horario, sus plazas y su difusión.</p>
+                            <Field label="Turno">
+                                <Select value={duplicar.plantilla} onChange={(e) => setDuplicar(d => ({ ...d, plantilla: e.target.value }))} className="w-full">
+                                    {Object.entries(HORARIO_TEMPLATES).map(([id, t]) => <option key={id} value={id}>{t.nombre}{t.nombre === currentSchedule.turnoNombre ? ' (el de esta petición)' : ''}</option>)}
+                                </Select>
+                            </Field>
+                            <div className="grid grid-cols-3 gap-3">
+                                <Field label="Plazas"><TextInput type="number" min="1" value={duplicar.solicitados} onChange={(e) => setDuplicar(d => ({ ...d, solicitados: e.target.value }))} /></Field>
+                                <Field label="Inicio"><TextInput type="date" value={duplicar.inicio} onChange={(e) => setDuplicar(d => ({ ...d, inicio: e.target.value }))} /></Field>
+                                <Field label="Fin"><TextInput type="date" value={duplicar.fin} onChange={(e) => setDuplicar(d => ({ ...d, fin: e.target.value }))} /></Field>
                             </div>
-                            <button onClick={() => setIsCopyModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                                <X className="w-4 h-4" />
-                            </button>
+                            {repartidas !== peticion.personasPuesto ? (
+                                <Notice tone="warning" icon={AlertTriangle}>
+                                    El presupuesto tiene {peticion.personasPuesto} personas para este puesto y con esta petición habría {repartidas}. Se puede crear igualmente, pero conviene confirmarlo con el cliente.
+                                </Notice>
+                            ) : (
+                                <Notice tone="success" icon={CheckCircle2}>Con esta petición quedan repartidas las {peticion.personasPuesto} personas del puesto.</Notice>
+                            )}
                         </div>
-                        <div className="p-5 space-y-4 text-xs">
-                            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-                                <div className="text-[10px] uppercase font-bold text-indigo-800">Posición Origen (Copia desde):</div>
-                                <div className="font-bold text-slate-900 mt-0.5">{selectedPosId} — {selectedPositionObj.puesto}</div>
-                                <div className="text-[11px] text-indigo-600 mt-0.5">Turno: {currentSchedule.turnoNombre} ({totalHorasSemana} h/semana)</div>
-                            </div>
+                    </Modal>
+                );
+            })()}
 
-                            <div>
-                                <label className="font-bold text-slate-700 block mb-1">
-                                    Seleccionar Posición de Destino:
-                                </label>
-                                <select
-                                    value={copyTargetPosId}
-                                    onChange={(e) => setCopyTargetPosId(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                >
-                                    {posiciones.map(p => (
-                                        <option key={p.id} value={p.id} disabled={p.id === selectedPosId}>
-                                            {p.id} — {p.puesto} {p.id === selectedPosId ? '(Origen actual)' : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+            {/* NUEVA PETICIÓN: siempre desde un puesto de un presupuesto aceptado */}
+            {nuevaPeticion && (() => {
+                const presu = PRESUPUESTOS_ACEPTADOS.find(p => p.id === nuevaPeticion.presupuesto);
+                const puestoPresu = presu?.puestos.find(x => x.tipo === nuevaPeticion.tipo);
+                const yaRepartidas = puestoPresu ? peticiones.filter(p => p.presupuesto === presu.id && p.tipo === puestoPresu.tipo && p.estado !== 'Cancelada').reduce((s, p) => s + p.solicitados, 0) : 0;
+                const total = yaRepartidas + (Number(nuevaPeticion.solicitados) || 0);
+                return (
+                    <Modal
+                        title="Nueva petición"
+                        subtitle="Las peticiones salen de un puesto de un presupuesto aceptado"
+                        onClose={() => setNuevaPeticion(null)}
+                        size="max-w-lg"
+                        footer={<>
+                            <Button onClick={() => setNuevaPeticion(null)}>Cancelar</Button>
+                            <Button variant="primary" icon={Plus} disabled={!puestoPresu || !nuevaPeticion.inicio || !(Number(nuevaPeticion.solicitados) > 0)} onClick={confirmarNuevaPeticion}>Crear petición</Button>
+                        </>}
+                    >
+                        <div className="space-y-4 text-xs">
+                            <Field label="Presupuesto aceptado">
+                                <Select value={nuevaPeticion.presupuesto} onChange={(e) => setNuevaPeticion(n => ({ ...n, presupuesto: e.target.value, tipo: '' }))} className="w-full">
+                                    <option value="">Elige un presupuesto...</option>
+                                    {PRESUPUESTOS_ACEPTADOS.map(p => <option key={p.id} value={p.id}>{p.id} {p.version} · {CLIENTES[p.cliente].clienteNombre}</option>)}
+                                </Select>
+                            </Field>
+                            {presu && (
+                                <Field label="Puesto">
+                                    <div className="space-y-1.5">
+                                        {presu.puestos.map(x => {
+                                            const repartidas = peticiones.filter(p => p.presupuesto === presu.id && p.tipo === x.tipo && p.estado !== 'Cancelada').reduce((s, p) => s + p.solicitados, 0);
+                                            const elegido = nuevaPeticion.tipo === x.tipo;
+                                            return (
+                                                <button
+                                                    key={x.tipo}
+                                                    type="button"
+                                                    onClick={() => setNuevaPeticion(n => ({ ...n, tipo: x.tipo, solicitados: Math.max(1, x.personas - repartidas) }))}
+                                                    className={`w-full text-left rounded-lg border px-3 py-2 flex items-center justify-between gap-2 ${elegido ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                                                >
+                                                    <span className="font-medium text-slate-900">{PUESTOS[x.tipo].puesto}</span>
+                                                    <span className="text-slate-500">{x.personas} personas · {repartidas} ya en peticiones</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </Field>
+                            )}
+                            {puestoPresu && (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-[1.6fr_1fr_1.4fr] gap-3">
+                                        <Field label="Turno">
+                                            <Select value={nuevaPeticion.plantilla} onChange={(e) => setNuevaPeticion(n => ({ ...n, plantilla: e.target.value }))} className="w-full">
+                                                {Object.entries(HORARIO_TEMPLATES).map(([id, t]) => <option key={id} value={id}>{t.nombre}</option>)}
+                                            </Select>
+                                        </Field>
+                                        <Field label="Plazas"><TextInput type="number" min="1" value={nuevaPeticion.solicitados} onChange={(e) => setNuevaPeticion(n => ({ ...n, solicitados: e.target.value }))} /></Field>
+                                        <Field label="Inicio"><TextInput type="date" value={nuevaPeticion.inicio} onChange={(e) => setNuevaPeticion(n => ({ ...n, inicio: e.target.value }))} /></Field>
+                                    </div>
+                                    {total > puestoPresu.personas && (
+                                        <Notice tone="warning" icon={AlertTriangle}>
+                                            El presupuesto tiene {puestoPresu.personas} personas para este puesto y con esta petición habría {total}. Se puede crear igualmente.
+                                        </Notice>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </Modal>
+                );
+            })()}
 
-                            <div className="text-slate-500 text-[11px] bg-slate-50 p-3 rounded-xl border border-slate-200">
-                                <p>
-                                    Al confirmar, el cuadrante de <strong>{selectedPosId}</strong> reemplazará por completo el horario de <strong>{copyTargetPosId}</strong>. Esta acción se puede revertir o reconfigurar en cualquier momento.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+            {/* COPIAR LA DIFUSIÓN DE UNA PETICIÓN HERMANA */}
+            {copiarDifusion && (
+                <Modal
+                    title="Copiar la difusión de otra petición"
+                    subtitle="Se copia el contenido común de la publicación; después puedes ajustarlo"
+                    onClose={() => setCopiarDifusion(false)}
+                    size="max-w-md"
+                    footer={<Button onClick={() => setCopiarDifusion(false)}>Cancelar</Button>}
+                >
+                    <div className="space-y-1.5 text-xs">
+                        {hermanasDe(peticion, peticiones).map(h => (
                             <button
-                                onClick={() => setIsCopyModalOpen(false)}
-                                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold"
+                                key={h.id}
+                                type="button"
+                                onClick={() => {
+                                    setContenidoComun({ ...contenidoDe(h, horarios[h.id]), titulo: contenidoDe(peticion, currentSchedule).titulo });
+                                    setComunSavedStatus('Modificado');
+                                    setCopiarDifusion(false);
+                                    showToast(`Difusión copiada de ${h.id}. Revisa el turno y guarda.`);
+                                }}
+                                className="w-full text-left rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50"
                             >
-                                Cancelar
+                                <div className="font-medium text-slate-900">{h.puesto} · {(horarios[h.id]?.turnoNombre || '').toLowerCase()}</div>
+                                <div className="text-[11px] text-slate-500">{h.id} · {h.portalesActivos} portales activos</div>
                             </button>
-                            <button
-                                onClick={handleConfirmCopySchedule}
-                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5"
-                            >
-                                <Copy className="w-3.5 h-3.5" />
-                                <span>Copiar Horario</span>
-                            </button>
-                        </div>
+                        ))}
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* --- MODAL 2: EDITAR PERSONALIZACIÓN DE UN PORTAL (SIDE OVER / MODAL GRANDE) --- */}
             {editPortalModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 flex flex-col max-h-[90vh] overflow-hidden">
-                        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg ${editPortalModal.badgeColor} flex items-center justify-center font-bold text-xs`}>
-                                    {editPortalModal.logoText}
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-sm">Personalización para {editPortalModal.nombre}</h3>
-                                    <p className="text-[11px] text-slate-300">Ajusta el contenido exclusivo que se transmitirá a través de la API</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setEditPortalModal(null)} className="text-slate-400 hover:text-white">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
+                <Modal
+                  title={`Personalización para ${editPortalModal.nombre}`}
+                  subtitle={'Contenido exclusivo que se enviará a este portal.'}
+                  onClose={() => setEditPortalModal(null)}
+                  size="max-w-2xl"
+                >
 
                         <EditPortalForm
                             portal={editPortalModal}
@@ -2470,35 +2897,33 @@ export default function PeticionesView() {
                             onSave={handleSaveCustomPortal}
                             onCancel={() => setEditPortalModal(null)}
                         />
-                    </div>
-                </div>
+                </Modal>
             )}
 
             {/* --- MODAL 3: VISTA PREVIA PORTAL / VISTA PREVIA COMÚN --- */}
             {(previewPortalModal || commonPreviewOpen) && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <div>
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
-                                    {previewPortalModal ? `Simulación de Oferta: ${previewPortalModal.portal.nombre}` : 'Vista Previa: Contenido Maestro Común'}
-                                </span>
-                                <h3 className="font-bold text-slate-900 text-base">
-                                    {previewPortalModal ? (previewPortalModal.isCustom ? 'Personalización Específica Aplicada' : 'Heredado del Contenido Común') : 'Plantilla Global ETT'}
-                                </h3>
-                            </div>
-                            <button onClick={() => { setPreviewPortalModal(null); setCommonPreviewOpen(false); }} className="text-slate-400 hover:text-slate-600">
-                                <X className="w-5 h-5" />
+                <Modal
+                  title={previewPortalModal ? (previewPortalModal.isCustom ? 'Personalización específica' : 'Heredado del contenido común') : 'Plantilla común'}
+                  subtitle={previewPortalModal ? `Vista previa en ${previewPortalModal.portal.nombre}` : 'Vista previa del contenido común'}
+                  onClose={() => { setPreviewPortalModal(null); setCommonPreviewOpen(false); }}
+                  size="max-w-2xl"
+                  footer={<>
+                            <button
+                                onClick={() => { setPreviewPortalModal(null); setCommonPreviewOpen(false); }}
+                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-600 text-white rounded-xl text-xs font-semibold"
+                            >
+                                Cerrar Vista Previa
                             </button>
-                        </div>
+                  </>}
+                >
 
-                        <div className="p-6 overflow-y-auto space-y-4 text-xs text-slate-700">
+                        <div className="space-y-4 text-xs text-slate-700">
                             {(() => {
                                 const c = previewPortalModal ? previewPortalModal.content : contenidoComun;
                                 return (
                                     <div className="space-y-4">
                                         <div className="border-b border-slate-100 pb-3">
-                                            <h2 className="text-lg font-bold text-slate-900">{c.titulo}</h2>
+                                            <h2 className="text-lg font-semibold text-slate-900">{c.titulo}</h2>
                                             <div className="flex flex-wrap gap-2 text-[11px] text-slate-500 mt-1">
                                                 <span className="font-medium bg-slate-100 px-2 py-0.5 rounded">{c.categoria}</span>
                                                 <span className="font-medium bg-slate-100 px-2 py-0.5 rounded">{c.ubicacion}</span>
@@ -2507,27 +2932,27 @@ export default function PeticionesView() {
                                         </div>
 
                                         <div>
-                                            <h4 className="font-bold text-slate-900 uppercase text-[10px] tracking-wider text-slate-400">Descripción</h4>
+                                            <h4 className="font-semibold text-slate-900 text-[10px] text-slate-400">Descripción</h4>
                                             <p className="mt-1 leading-relaxed text-slate-700">{c.descripcion}</p>
                                         </div>
 
                                         <div>
-                                            <h4 className="font-bold text-slate-900 uppercase text-[10px] tracking-wider text-slate-400">Funciones Principales</h4>
+                                            <h4 className="font-semibold text-slate-900 text-[10px] text-slate-400">Funciones Principales</h4>
                                             <pre className="mt-1 font-sans whitespace-pre-wrap leading-relaxed text-slate-700">{c.funciones}</pre>
                                         </div>
 
                                         <div>
-                                            <h4 className="font-bold text-slate-900 uppercase text-[10px] tracking-wider text-slate-400">Requisitos</h4>
+                                            <h4 className="font-semibold text-slate-900 text-[10px] text-slate-400">Requisitos</h4>
                                             <pre className="mt-1 font-sans whitespace-pre-wrap leading-relaxed text-slate-700">{c.requisitos}</pre>
                                         </div>
 
                                         <div className="bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-100">
-                                            <div className="font-bold text-indigo-950">Condiciones & Salario</div>
+                                            <div className="font-semibold text-indigo-950">Condiciones y Salario</div>
                                             <p className="text-indigo-800 text-[11px] mt-0.5">{c.condiciones}</p>
                                         </div>
 
                                         <div className="text-center pt-2">
-                                            <div className="inline-block px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow-xs">
+                                            <div className="inline-block px-5 py-2 bg-indigo-600 text-white font-semibold rounded-xl text-xs shadow-xs">
                                                 {c.cta || 'Inscribirme en esta Oferta'}
                                             </div>
                                         </div>
@@ -2536,30 +2961,16 @@ export default function PeticionesView() {
                             })()}
                         </div>
 
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-                            <button
-                                onClick={() => { setPreviewPortalModal(null); setCommonPreviewOpen(false); }}
-                                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold"
-                            >
-                                Cerrar Vista Previa
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                </Modal>
             )}
 
             {/* --- MODAL 4: RESTAURAR CONTENIDO COMÚN CONFIRMATION --- */}
             {restoreConfirmModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 text-xs space-y-3">
-                        <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                            <AlertTriangle className="w-5 h-5" />
-                        </div>
-                        <h3 className="font-bold text-slate-900 text-sm">¿Restaurar Contenido Común?</h3>
-                        <p className="text-slate-500">
-                            Se eliminarán las adaptaciones personalizadas de <strong>{restoreConfirmModal.nombre}</strong> y volverá a sincronizarse con el contenido común maestro.
-                        </p>
-                        <div className="flex items-center justify-end gap-2 pt-2">
+                <Modal
+                  title={'¿Restaurar el contenido común?'}
+                  onClose={() => setRestoreConfirmModal(null)}
+                  size="max-w-sm"
+                  footer={<>
                             <button
                                 onClick={() => setRestoreConfirmModal(null)}
                                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold"
@@ -2568,36 +2979,40 @@ export default function PeticionesView() {
                             </button>
                             <button
                                 onClick={() => handleRestoreCommon(restoreConfirmModal)}
-                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold"
                             >
                                 Sí, Restaurar
                             </button>
-                        </div>
-                    </div>
-                </div>
+                  </>}
+                >
+                  <p className="text-xs text-slate-600">Se eliminarán las adaptaciones de <strong>{restoreConfirmModal.nombre}</strong> y volverá a usar el contenido común.</p>
+                </Modal>
             )}
 
             {/* --- MODAL 5: MULTI-PORTAL SYNC PROCESS ANIMATED MODAL --- */}
             {isSyncModalOpen && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
-                        <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Share2 className="w-4 h-4 text-indigo-400" />
-                                <h3 className="font-bold text-sm">Sincronización Multidifusión API</h3>
-                            </div>
-                            {syncStep === 4 && (
-                                <button onClick={() => setIsSyncModalOpen(false)} className="text-slate-400 hover:text-white">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
+                <Modal
+                  title={'Sincronización con portales'}
+                  onClose={() => syncStep === 4 && setIsSyncModalOpen(false)}
+                  footer={<>
+                            <button
+                                disabled={syncStep < 4}
+                                onClick={() => {
+                                    setIsSyncModalOpen(false);
+                                    showToast('Sincronización de difusión completada.');
+                                }}
+                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-semibold transition"
+                            >
+                                {syncStep < 4 ? 'Procesando Envíos...' : 'Aceptar y Finalizar'}
+                            </button>
+                  </>}
+                >
 
-                        <div className="p-6 space-y-5 text-xs">
+                        <div className="space-y-5 text-xs">
                             <div className="space-y-3">
                                 {/* Step 1 */}
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
                                         syncStep > 1 ? 'bg-emerald-500 text-white' : (syncStep === 1 ? 'bg-indigo-600 text-white animate-pulse' : 'bg-slate-200 text-slate-600')
                                     }`}>
                                         {syncStep > 1 ? <Check className="w-3.5 h-3.5" /> : '1'}
@@ -2609,7 +3024,7 @@ export default function PeticionesView() {
 
                                 {/* Step 2 */}
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
                                         syncStep > 2 ? 'bg-emerald-500 text-white' : (syncStep === 2 ? 'bg-indigo-600 text-white animate-pulse' : 'bg-slate-200 text-slate-600')
                                     }`}>
                                         {syncStep > 2 ? <Check className="w-3.5 h-3.5" /> : '2'}
@@ -2621,7 +3036,7 @@ export default function PeticionesView() {
 
                                 {/* Step 3 */}
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
                                         syncStep > 3 ? 'bg-emerald-500 text-white' : (syncStep === 3 ? 'bg-indigo-600 text-white animate-pulse' : 'bg-slate-200 text-slate-600')
                                     }`}>
                                         {syncStep > 3 ? <Check className="w-3.5 h-3.5" /> : '3'}
@@ -2633,7 +3048,7 @@ export default function PeticionesView() {
 
                                 {/* Step 4 */}
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
                                         syncStep === 4 ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'
                                     }`}>
                                         {syncStep === 4 ? <Check className="w-3.5 h-3.5" /> : '4'}
@@ -2646,9 +3061,9 @@ export default function PeticionesView() {
 
                             {syncStep === 4 && (
                                 <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 space-y-1 animate-fade-in">
-                                    <div className="font-bold flex items-center gap-1.5">
+                                    <div className="font-semibold flex items-center gap-1.5">
                                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                        ¡Difusión Sincronizada con Éxito!
+                                        ¡Difusión sincronizada con éxito!
                                     </div>
                                     <p className="text-[11px] text-emerald-700">
                                         Las ofertas están activas y recibiendo candidaturas en InfoJobs, LinkedIn, Indeed y el Portal de Empleo ETT.
@@ -2657,20 +3072,7 @@ export default function PeticionesView() {
                             )}
                         </div>
 
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-                            <button
-                                disabled={syncStep < 4}
-                                onClick={() => {
-                                    setIsSyncModalOpen(false);
-                                    showToast('Sincronización de difusión completada.');
-                                }}
-                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-semibold transition"
-                            >
-                                {syncStep < 4 ? 'Procesando Envíos...' : 'Aceptar y Finalizar'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                </Modal>
             )}
         </div>
     );
@@ -2710,9 +3112,9 @@ function EditPortalForm({ portal, commonContent, onSave, onCancel }) {
             <div className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
                 <div>
                     <div className="flex items-center justify-between mb-1">
-                        <label className="font-bold text-slate-700">Título de Publicación</label>
+                        <label className="font-semibold text-slate-700">Título de Publicación</label>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                            isFieldCustom('titulo') ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'
+                            isFieldCustom('titulo') ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'
                         }`}>
                             {isFieldCustom('titulo') ? 'Personalizado para este portal' : 'Heredado del contenido común'}
                         </span>
@@ -2721,15 +3123,15 @@ function EditPortalForm({ portal, commonContent, onSave, onCancel }) {
                         type="text"
                         value={formData.titulo}
                         onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                 </div>
 
                 <div>
                     <div className="flex items-center justify-between mb-1">
-                        <label className="font-bold text-slate-700">Descripción Específica</label>
+                        <label className="font-semibold text-slate-700">Descripción Específica</label>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                            isFieldCustom('descripcion') ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'
+                            isFieldCustom('descripcion') ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'
                         }`}>
                             {isFieldCustom('descripcion') ? 'Personalizado' : 'Heredado'}
                         </span>
@@ -2738,54 +3140,54 @@ function EditPortalForm({ portal, commonContent, onSave, onCancel }) {
                         rows={2}
                         value={formData.descripcion}
                         onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <div className="flex items-center justify-between mb-1">
-                            <label className="font-bold text-slate-700">Funciones</label>
+                            <label className="font-semibold text-slate-700">Funciones</label>
                             <span className="text-[10px] text-slate-400">{isFieldCustom('funciones') ? 'Personalizado' : 'Heredado'}</span>
                         </div>
                         <textarea
                             rows={4}
                             value={formData.funciones}
                             onChange={(e) => setFormData({ ...formData, funciones: e.target.value })}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
                         />
                     </div>
                     <div>
                         <div className="flex items-center justify-between mb-1">
-                            <label className="font-bold text-slate-700">Requisitos</label>
+                            <label className="font-semibold text-slate-700">Requisitos</label>
                             <span className="text-[10px] text-slate-400">{isFieldCustom('requisitos') ? 'Personalizado' : 'Heredado'}</span>
                         </div>
                         <textarea
                             rows={4}
                             value={formData.requisitos}
                             onChange={(e) => setFormData({ ...formData, requisitos: e.target.value })}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
                         />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label className="font-bold text-slate-700 block mb-1">Ubicación Visible</label>
+                        <label className="font-semibold text-slate-700 block mb-1">Ubicación visible</label>
                         <input
                             type="text"
                             value={formData.ubicacion}
                             onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         />
                     </div>
                     <div>
-                        <label className="font-bold text-slate-700 block mb-1">Llamada a la Acción (CTA)</label>
+                        <label className="font-semibold text-slate-700 block mb-1">Llamada a la acción (CTA)</label>
                         <input
                             type="text"
                             value={formData.cta}
                             onChange={(e) => setFormData({ ...formData, cta: e.target.value })}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         />
                     </div>
                 </div>
@@ -2803,7 +3205,7 @@ function EditPortalForm({ portal, commonContent, onSave, onCancel }) {
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold"
+                        className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold"
                     >
                         Cancelar
                     </button>
