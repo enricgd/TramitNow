@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-29
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 91ff429
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/portal.html, o desde el ERP: Mi ETT → Portales → «Ver
   el portal de candidatos». Para verlo como en el móvil, reduce la ventana.
 
