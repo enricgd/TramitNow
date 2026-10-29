@@ -52,6 +52,23 @@
         "dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "web-ejemplo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "apps/web",
+        "run",
+        "preview",
+        "--",
+        "--outDir",
+        "dist-ejemplo",
+        "--port",
+        "4174",
+        "--strictPort"
+      ],
+      "port": 4174
     }
   ]
 }

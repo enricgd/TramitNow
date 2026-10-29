@@ -6,6 +6,7 @@ gestionado como **Proyecto de UGOS**. Solo para demos: **nunca datos reales de p
 | Servicio | Dónde se ve |
 |---|---|
 | Demo web | `https://demo.henrik11.duckdns.org` (usuario y contraseña en el `.env`) |
+| Web de ejemplo | `https://ejemplo.henrik11.duckdns.org` (sin login, solo datos de ejemplo; ver "Web de ejemplo") |
 | API propia (`apps/api`) | `https://api.henrik11.duckdns.org/v1/...` y `/openapi.json` |
 | Supabase Auth y Storage | `https://api.henrik11.duckdns.org` (`/auth/v1`, `/storage/v1`; PostgREST no se publica) |
 | Supabase Studio | `http://192.168.2.8:8000` (solo red local; usuario `supabase`, contraseña `DASHBOARD_PASSWORD` del `.env`) |
@@ -88,10 +89,10 @@ sudo sh compose.sh start
 Tras cambiar `docker-compose.override.yml`, `caddy/` o la versión de Supabase en el repo:
 
 ```bash
-COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C infra/nas --exclude ./proyecto --exclude ./backups --exclude ./supabase --exclude ./caddy/site -czf - . | ssh Enric@192.168.2.8 tar -xzf - -C /volume1/docker/tramitnow
+COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C infra/nas --exclude ./proyecto --exclude ./backups --exclude ./supabase --exclude ./caddy/site --exclude ./caddy/site-ejemplo -czf - . | ssh Enric@192.168.2.8 tar -xzf - -C /volume1/docker/tramitnow
 ```
 
-(`caddy/site` se excluye porque ahí está la web desplegada; ver "Desplegar la web").
+(`caddy/site` y `caddy/site-ejemplo` se excluyen porque ahí están las webs desplegadas; ver "Desplegar la web").
 
 ```bash
 sudo sh setup.sh --regenerate
@@ -128,6 +129,27 @@ ssh-copy-id Enric@192.168.2.8
 ```
 
 La versión desplegada (`versión-commit`) aparece abajo en la barra lateral.
+
+## Web de ejemplo
+
+`https://ejemplo.henrik11.duckdns.org` es la web en modo demo, la misma que ve el diseñador con
+`npm run dev`: entra sin login y usa solo datos de ejemplo que viven en el navegador. No lleva la anon key
+ni las URL de Supabase o de la API, así que no puede leer ni escribir nada en la base de datos. Por eso
+está abierta, sin usuario ni contraseña, y con `X-Robots-Tag: noindex`. Sirve para que producto valide
+las pantallas. Lo que se cambie en ella se pierde al recargar.
+
+Por defecto se compila la rama `design` de GitHub, con `development` fusionada encima solo para compilar:
+
+```bash
+sh infra/nas/deploy-web-ejemplo.sh
+```
+
+```bash
+sh infra/nas/deploy-web-ejemplo.sh origin/development
+```
+
+El script se niega a publicar si la rama no se fusiona sola o si la compilación contiene claves o URL
+del NAS. Se copia a `caddy/site-ejemplo/`; Caddy la sirve al momento.
 
 ## API
 

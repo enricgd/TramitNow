@@ -11,6 +11,7 @@
     "premaquetas": "node scripts/ensure-deps.mjs",
     "maquetas": "vite -c vite.maquetas.config.ts",
     "build": "tsc --noEmit && vite build",
+    "build:ejemplo": "tsc --noEmit && vite build --mode ejemplo --outDir dist-ejemplo",
     "preview": "vite preview"
   },
   "dependencies": {

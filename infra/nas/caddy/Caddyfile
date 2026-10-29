@@ -35,6 +35,16 @@
 		file_server
 	}
 
+	# Web en modo demo: datos de ejemplo en el propio navegador, sin login, sin Supabase ni API
+	# (deploy-web-ejemplo.sh). Abierta a propósito: no contiene datos reales ni llega a la base de datos.
+	@ejemplo host ejemplo.{$DOMAIN}
+	handle @ejemplo {
+		header X-Robots-Tag "noindex, nofollow"
+		root * /srv/ejemplo
+		try_files {path} /index.html
+		file_server
+	}
+
 	handle {
 		abort
 	}
