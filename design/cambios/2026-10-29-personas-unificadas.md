@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-29
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 43c58fe
 - **Cómo verlo**: `npm --prefix apps/web run dev`.
   - Busca a Ainhoa Larrazabal Urkijo en Candidatos, en Contratos y altas y en el buscador de la cabecera: el mismo
     DNI (00000127N).
