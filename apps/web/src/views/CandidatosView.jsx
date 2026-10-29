@@ -11,6 +11,7 @@ import {
     Grid, List, SlidersHorizontal, ArrowLeft, BookmarkCheck, UploadCloud, ChevronLeft
 } from 'lucide-react';
 import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar, SearchInput, Select, Field, TextInput, Interruptor, Segmented, Tabs, Drawer, Modal, Confirmar } from '../ui';
+import { PROVINCIAS_CP, POBLACIONES_CP } from './codigosPostales';
 
 // ==========================================
 // DEMO INITIAL DATA & CONFIGURATION
@@ -832,23 +833,6 @@ const CADUCIDADES_DEMO = {
 };
 const TIPO_NORMALIZADO = { DNI: 'DNI/NIE', NSS: 'Seguridad Social' };
 
-// Código postal → provincia (los dos primeros dígitos). La población, de un listado de ejemplo; en real, del callejero.
-const PROVINCIAS_CP = {
-    '01': 'Araba/Álava', '02': 'Albacete', '03': 'Alicante', '04': 'Almería', '05': 'Ávila', '06': 'Badajoz', '07': 'Illes Balears',
-    '08': 'Barcelona', '09': 'Burgos', '10': 'Cáceres', '11': 'Cádiz', '12': 'Castellón', '13': 'Ciudad Real', '14': 'Córdoba',
-    '15': 'A Coruña', '16': 'Cuenca', '17': 'Girona', '18': 'Granada', '19': 'Guadalajara', '20': 'Gipuzkoa', '21': 'Huelva',
-    '22': 'Huesca', '23': 'Jaén', '24': 'León', '25': 'Lleida', '26': 'La Rioja', '27': 'Lugo', '28': 'Madrid', '29': 'Málaga',
-    '30': 'Murcia', '31': 'Navarra', '32': 'Ourense', '33': 'Asturias', '34': 'Palencia', '35': 'Las Palmas', '36': 'Pontevedra',
-    '37': 'Salamanca', '38': 'Santa Cruz de Tenerife', '39': 'Cantabria', '40': 'Segovia', '41': 'Sevilla', '42': 'Soria',
-    '43': 'Tarragona', '44': 'Teruel', '45': 'Toledo', '46': 'Valencia', '47': 'Valladolid', '48': 'Bizkaia', '49': 'Zamora',
-    '50': 'Zaragoza', '51': 'Ceuta', '52': 'Melilla',
-};
-const POBLACIONES_CP = {
-    '48001': 'Bilbao', '48002': 'Bilbao', '48004': 'Bilbao', '48970': 'Basauri', '48901': 'Barakaldo', '48960': 'Galdakao',
-    '48450': 'Etxebarri', '48940': 'Leioa', '48990': 'Getxo', '48200': 'Durango', '08001': 'Barcelona', '08004': 'Barcelona',
-    '08008': 'Barcelona', '08901': "L'Hospitalet de Llobregat", '08911': 'Badalona', '08940': 'Cornellà de Llobregat',
-    '08930': 'Sant Adrià de Besòs', '08950': 'Esplugues de Llobregat',
-};
 const cpDePoblacion = (ciudad = '') => Object.entries(POBLACIONES_CP).find(([, p]) => ciudad.startsWith(p))?.[0] || '';
 // Datos personales y experiencia de ejemplo de los candidatos de la base (el resto los tiene sin rellenar)
 const DATOS_EXTRA = {
