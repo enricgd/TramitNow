@@ -4,7 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import {
     Clock, Building2, MapPin, CalendarDays, ChevronLeft, ChevronRight, Send, CheckCircle2, AlertTriangle,
-    Wand2, Undo2, Info, X, FileCheck2, Receipt, Wallet, Lock, ArrowUpRight, PencilLine, CalendarRange
+    Wand2, Undo2, Info, X, FileCheck2, Receipt, Wallet, Lock, ArrowUpRight, PencilLine, CalendarRange, Printer, MonitorCheck
 } from 'lucide-react';
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar,
@@ -16,20 +16,55 @@ import {
 // ==========================================
 // horario: horas previstas de lunes a domingo, del horario de la petición.
 // diasEspeciales: días fuera del horario que se trabajaron (por ejemplo, la apertura del congreso).
+// Contactos del cliente (ficha de Empresas). validaHoras: tiene marcado el rol «Valida horas».
+const CONTACTOS = {
+    hosteleria: [
+        { nombre: 'Montse Ferrer', cargo: 'Jefa de sala', email: 'mferrer@premiumeventsbcn.cat', validaHoras: true },
+        { nombre: 'Sergi Pujol', cargo: 'Coordinador de Eventos', email: 'spujol@premiumeventsbcn.cat', validaHoras: false },
+    ],
+    translog: [
+        { nombre: 'Javier Ugarte Elorza', cargo: 'Jefe de Planta / Operaciones', email: 'j.ugarte@translog-norte.es', validaHoras: true },
+        { nombre: 'Marta Gómez Arana', cargo: 'Responsable de RRHH y Selección', email: 'marta.gomez@translog-norte.es', validaHoras: false },
+    ],
+};
+const HOSTELERIA = 'Hostelería & Eventos Premium BCN, S.L.';
+const TRANSLOG = 'Trans-Logística Ibérica Norte, S.L.';
+const PARTIDA = { horario: [8, 8, 8, 8, 6, 0, 0], tramos: ['08:30 a 17:30', '08:30 a 17:30', '08:30 a 17:30', '08:30 a 17:30', '08:30 a 14:30'] };
 const PETICIONES = {
     'PET-2026-0044': {
-        puesto: 'Camarero/a de sala', turno: 'Jornada partida', cliente: 'Hostelería & Eventos Premium BCN, S.L.',
-        centro: 'Recinto de congresos - Barcelona', responsable: 'Nuria Castells', contactoCliente: 'Montse Ferrer',
+        puesto: 'Camarero/a de sala', turno: 'Jornada partida', cliente: HOSTELERIA, clienteId: 'hosteleria',
+        centro: 'Recinto de congresos - Barcelona', responsable: 'Nuria Castells',
         inicio: '2026-10-10', fin: '2026-11-30', horario: [8, 8, 8, 8, 6, 0, 0], tramos: ['08:30 a 17:30', '08:30 a 17:30', '08:30 a 17:30', '08:30 a 17:30', '08:30 a 14:30'],
         nocturno: false, diasEspeciales: { '2026-10-10': 8, '2026-10-11': 8 },
     },
     'PET-2026-0031': {
-        puesto: 'Mozo/a de almacén', turno: 'Turno de mañana', cliente: 'Trans-Logística Ibérica Norte, S.L.',
-        centro: 'HUB central Basauri (Bizkaia) - Nave 2', responsable: 'Ane Uriarte', contactoCliente: 'Iñaki Garmendia',
+        puesto: 'Mozo/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, clienteId: 'translog',
+        centro: 'HUB central Basauri (Bizkaia) - Nave 2', responsable: 'Ane Uriarte',
         inicio: '2026-07-01', fin: '2026-09-30', horario: [7.5, 7.5, 7.5, 7.5, 7.5, 0, 0], tramos: Array(5).fill('06:00 a 14:00'),
         nocturno: false, diasEspeciales: {},
     },
+    // Empiezan en noviembre (siguen en Contratos y altas hasta su primer día)
+    'PET-2026-0048': {
+        puesto: 'Operario/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, clienteId: 'translog',
+        centro: 'HUB central Basauri (Bizkaia) - Nave 2', responsable: 'Ane Uriarte',
+        inicio: '2026-11-03', fin: '2027-01-29', horario: [7.5, 7.5, 7.5, 7.5, 7.5, 0, 0], tramos: Array(5).fill('06:00 a 14:00'),
+        nocturno: false, diasEspeciales: {},
+    },
+    'PET-2026-0045': {
+        puesto: 'Ayudante de cocina', turno: 'Jornada partida', cliente: HOSTELERIA, clienteId: 'hosteleria',
+        centro: 'Recinto de congresos - Barcelona', responsable: 'Nuria Castells',
+        inicio: '2026-11-05', fin: '2026-11-30', ...PARTIDA, nocturno: false, diasEspeciales: {},
+    },
+    'PET-2026-0050': {
+        puesto: 'Carretillero/a', turno: 'Turno de tarde', cliente: TRANSLOG, clienteId: 'translog',
+        centro: 'HUB central Basauri (Bizkaia) - Nave 2', responsable: 'Jon Ibarra',
+        inicio: '2026-11-10', fin: '2027-01-29', horario: [7.5, 7.5, 7.5, 7.5, 7.5, 0, 0], tramos: Array(5).fill('14:00 a 22:00'),
+        nocturno: false, diasEspeciales: {},
+    },
 };
+const contactosDe = (pet) => CONTACTOS[pet.clienteId] || [];
+const validadorDe = (pet) => contactosDe(pet).find(c => c.validaHoras) || contactosDe(pet)[0];
+const CLIENTES = [...new Set(Object.values(PETICIONES).map(p => p.cliente))];
 const persona = (petId, plaza, nombre, inicio, fin) => ({ id: `${petId}-${plaza}`, petId, plaza, nombre, inicio, fin });
 const PERSONAS = [
     persona('PET-2026-0044', 1, 'Garazi Uribe Arana', '2026-10-10', '2026-11-30'),
@@ -43,6 +78,13 @@ const PERSONAS = [
     persona('PET-2026-0044', 10, 'Óscar León Mena', '2026-10-10', '2026-11-30'),
     ...['Clara Esteve Ros', 'Bruno Lage Costa', 'Nerea Olabarria Gil', 'Adrián Vela Soto', 'Paula Rius Ferrer', 'Sergio Navas Peña']
         .map((n, i) => persona('PET-2026-0031', i + 1, n, '2026-07-01', '2026-09-30')),
+    // Las mismas personas que en Contratos y altas
+    ...['Jon Ander Etxebarria Bilbao', 'Ainhoa Larrazabal Urkijo', 'Mamadou Diallo', 'Laura Morales San Sebastián', 'Iker Agirrebeitia Mendia']
+        .map((n, i) => persona('PET-2026-0048', i + 1, n, '2026-11-03', '2027-01-29')),
+    ...['Noa Serra Pons', 'Hugo Martín Vera', 'Ane Goikoetxea Ruiz', 'Iván Molina Prat']
+        .map((n, i) => persona('PET-2026-0045', i + 1, n, '2026-11-05', '2026-11-30')),
+    ...['Unai García Zabaleta', 'Carlos Manuel Ortiz Reyes']
+        .map((n, i) => persona('PET-2026-0050', i + 1, n, '2026-11-10', '2027-01-29')),
 ];
 const FESTIVOS = { '2026-10-12': 'Fiesta Nacional de España', '2026-11-01': 'Todos los Santos', '2026-08-15': 'Asunción de la Virgen' };
 // Incidencias que se apuntan en un día. sinHoras: ese día no se cobran ni se pagan horas trabajadas.
@@ -62,6 +104,7 @@ const ESTADOS_PARTE = {
     reparos: { texto: 'Con reparos', tono: 'warning' },
     validado: { texto: 'Validado', tono: 'success' },
     cerrado: { texto: 'Cerrado', tono: 'neutral' },
+    programado: { texto: 'Próxima semana', tono: 'neutral' },
 };
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS_CORTOS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -122,9 +165,9 @@ const EXCEPCIONES = {
 // Bajas médicas registradas en Personal en misión: entran solas en el parte
 const BAJAS = [{ personaId: 'PET-2026-0044-4', desde: '2026-10-24', hasta: null, nota: 'Parte de baja recibido (desde Personal en misión)' }];
 const ESTADO_INICIAL = {
-    'PET-2026-0044|2026-10-05': { estado: 'validado', validacion: { quien: 'Montse Ferrer', como: 'Portal de empresas', fecha: '2026-10-13' } },
-    'PET-2026-0044|2026-10-12': { estado: 'reparos', reparos: 'El martes 13 Pablo Ruiz salió a las 17:30: no hizo la hora extra. El resto, correcto.', enviado: '2026-10-19' },
-    'PET-2026-0044|2026-10-19': { estado: 'enviado', enviado: '2026-10-26' },
+    'PET-2026-0044|2026-10-05': { estado: 'validado', enviado: '2026-10-12', enviadoA: ['Montse Ferrer'], validacion: { quien: 'Montse Ferrer', como: 'Portal de empresas', fecha: '2026-10-13', hora: '09:12' } },
+    'PET-2026-0044|2026-10-12': { estado: 'reparos', reparos: 'El martes 13 Pablo Ruiz salió a las 17:30: no hizo la hora extra. El resto, correcto.', reparosDe: 'Montse Ferrer', enviado: '2026-10-19', enviadoA: ['Montse Ferrer'] },
+    'PET-2026-0044|2026-10-19': { estado: 'enviado', enviado: '2026-10-26', enviadoA: ['Montse Ferrer'] },
 };
 
 const celdaInicial = (pet, p, fecha, rellenarHasta) => {
@@ -139,13 +182,18 @@ const generarPartes = () => {
     const hoy = hoyIso();
     const partes = {};
     Object.entries(PETICIONES).forEach(([petId, pet]) => {
-        for (let lunes = lunesDe(pet.inicio); lunes <= lunesDe(pet.fin) && lunes <= lunesDe(hoy); lunes = sumar(lunes, 7)) {
+        // Hasta la semana que viene: así se ve qué peticiones tendrán parte (estado «Próxima semana»)
+        for (let lunes = lunesDe(pet.inicio); lunes <= lunesDe(pet.fin) && lunes <= sumar(lunesDe(hoy), 7); lunes = sumar(lunes, 7)) {
             const k = clave(petId, lunes);
-            const base = ESTADO_INICIAL[k] || (petId === 'PET-2026-0031' ? { estado: 'cerrado', validacion: { quien: pet.contactoCliente, como: 'Email', fecha: sumar(lunes, 8) } } : { estado: 'borrador' });
+            const base = ESTADO_INICIAL[k]
+                || (lunes > lunesDe(hoy) ? { estado: 'programado' }
+                    : petId === 'PET-2026-0031' ? { estado: 'cerrado', enviado: sumar(lunes, 7), enviadoA: [validadorDe(pet).nombre], validacion: { quien: validadorDe(pet).nombre, como: 'Portal de empresas', fecha: sumar(lunes, 8), hora: '10:05' } }
+                        : { estado: 'borrador' });
+            const rellenarHasta = base.estado === 'borrador' ? hoy : base.estado === 'programado' ? lunes : '9999-12-31';
             const celdas = {};
             PERSONAS.filter(p => p.petId === petId).forEach(p => {
                 const fila = {};
-                diasDe(lunes).forEach(f => { const c = celdaInicial(pet, p, f, base.estado === 'borrador' ? hoy : '9999-12-31'); if (c) fila[f] = c; });
+                diasDe(lunes).forEach(f => { const c = celdaInicial(pet, p, f, rellenarHasta); if (c) fila[f] = c; });
                 if (Object.keys(fila).length) celdas[p.id] = fila;
             });
             partes[k] = { petId, lunes, celdas, historial: [], ...base };
@@ -158,6 +206,44 @@ const CIERRES_INICIALES = {
     'PET-2026-0031|2026-07': { facturacion: '2026-08-03', nomina: '2026-08-01' },
     'PET-2026-0031|2026-08': { facturacion: '2026-09-02', nomina: '2026-09-01' },
     'PET-2026-0031|2026-09': { facturacion: '2026-10-02', nomina: '2026-10-01' },
+};
+
+// Facturas emitidas con las horas de cada mes (las mismas que en Facturación). horas: las que se facturaron.
+// Agosto se facturó con 945 h, pero el parte validado tiene 937,5 (la ausencia del 10/08): sale como diferencia.
+const FACTURADO = {
+    'PET-2026-0031|2026-07': { numero: 'F2026-0087', horas: 1027.5 },
+    'PET-2026-0031|2026-08': { numero: 'F2026-0094', horas: 945 },
+    'PET-2026-0031|2026-09': { numero: 'F2026-0101', horas: 992 },
+};
+// Periodos del filtro: semanas cuyo lunes a domingo se cruza con [desde, hasta]
+const PERIODOS = [
+    { id: 'reciente', texto: 'Últimas 4 semanas y la próxima' },
+    { id: 'esta', texto: 'Esta semana' },
+    { id: 'pasada', texto: 'Semana pasada' },
+    { id: 'proxima', texto: 'Semana que viene' },
+    { id: 'este_mes', texto: 'Este mes' },
+    { id: 'mes_pasado', texto: 'Mes pasado' },
+    { id: 'tres_meses', texto: 'Últimos 3 meses' },
+    { id: 'todo', texto: 'Todo' },
+    { id: 'fechas', texto: 'Entre dos fechas…' },
+];
+const finDeMes = (mes) => sumar(`${sumar(`${mes}-28`, 4).slice(0, 7)}-01`, -1);
+const rangoDe = (periodo, desde, hasta) => {
+    const hoy = hoyIso();
+    const lunes = lunesDe(hoy);
+    const mes = mesDe(hoy);
+    const mesPasado = mesDe(sumar(`${mes}-01`, -1));
+    switch (periodo) {
+        case 'esta': return [lunes, sumar(lunes, 6)];
+        case 'pasada': return [sumar(lunes, -7), sumar(lunes, -1)];
+        case 'proxima': return [sumar(lunes, 7), sumar(lunes, 13)];
+        case 'este_mes': return [`${mes}-01`, finDeMes(mes)];
+        case 'mes_pasado': return [`${mesPasado}-01`, finDeMes(mesPasado)];
+        case 'tres_meses': return [sumar(hoy, -91), sumar(lunes, 13)];
+        case 'todo': return ['0000-01-01', '9999-12-31'];
+        case 'fechas': return [desde || '0000-01-01', hasta || '9999-12-31'];
+        default: return [sumar(lunes, -28), sumar(lunes, 13)];
+    }
 };
 
 const conceptosParte = (parte, filtroMes) => {
@@ -186,8 +272,13 @@ export default function HorasView() {
     const [partes, setPartes] = useState(generarPartes);
     const [cierres, setCierres] = useState(CIERRES_INICIALES);
     const [pestana, setPestana] = useState('partes');
-    const [filtroEstado, setFiltroEstado] = useState('pendientes');
+    const [filtroEstado, setFiltroEstado] = useState('todos');
     const [filtroPeticion, setFiltroPeticion] = useState('');
+    const [filtroCliente, setFiltroCliente] = useState('');
+    const [periodo, setPeriodo] = useState('reciente');
+    const [desde, setDesde] = useState('');
+    const [hasta, setHasta] = useState('');
+    const [envio, setEnvio] = useState(null); // { a: [nombres] }
     const [abierto, setAbierto] = useState(null); // clave del parte
     const [celda, setCelda] = useState(null); // { personaId, fecha, h, x, inc, nota }
     const [validar, setValidar] = useState(null); // { quien, como, justificante }
@@ -206,15 +297,18 @@ export default function HorasView() {
         if (texto) showToast(texto);
     };
 
+    const [rangoDesde, rangoHasta] = rangoDe(periodo, desde, hasta);
     const lista = useMemo(() => Object.entries(partes)
         .map(([k, p]) => ({ k, ...p }))
+        .filter(p => p.lunes <= rangoHasta && sumar(p.lunes, 6) >= rangoDesde)
         .filter(p => {
             if (filtroEstado === 'pendientes') return ['borrador', 'enviado', 'reparos'].includes(p.estado);
             if (filtroEstado === 'todos') return true;
             return p.estado === filtroEstado;
         })
+        .filter(p => !filtroCliente || PETICIONES[p.petId].cliente === filtroCliente)
         .filter(p => !filtroPeticion || p.petId === filtroPeticion)
-        .sort((a, b) => b.lunes.localeCompare(a.lunes) || a.petId.localeCompare(b.petId)), [partes, filtroEstado, filtroPeticion]);
+        .sort((a, b) => b.lunes.localeCompare(a.lunes) || a.petId.localeCompare(b.petId)), [partes, filtroEstado, filtroPeticion, filtroCliente, rangoDesde, rangoHasta]);
     const cuenta = (e) => Object.values(partes).filter(p => p.estado === e).length;
 
     // Meses con horas por petición, para el cierre
@@ -232,6 +326,18 @@ export default function HorasView() {
         const cierre = cierres[`${petId}|${m}`] || {};
         return { partes: del, k, validados, personas, cierre, completo: !!(cierre.facturacion && cierre.nomina), listo: validados === del.length };
     };
+    // Facturas en las que entraron las horas de un mes, y la diferencia con lo validado
+    const facturaDeMes = (petId, m) => {
+        const f = FACTURADO[`${petId}|${m}`];
+        if (!f) return null;
+        const validadas = Math.round(totalDe(resumenMes(petId, m).k) * 100) / 100;
+        return { ...f, mes: m, validadas, diferencia: Math.round((f.horas - validadas) * 100) / 100 };
+    };
+    const facturasDeParte = (p) => {
+        const pet = PETICIONES[p.petId];
+        return [...new Set(diasDe(p.lunes).filter(f => f >= pet.inicio && f <= pet.fin).map(mesDe))].map(m => facturaDeMes(p.petId, m)).filter(Boolean);
+    };
+
     // Meses ya terminados que aún no se han pasado a facturación y a nómina
     const mesesPorCerrar = Object.keys(PETICIONES).reduce((n, petId) => n + mesesConHoras.filter(m => { const r = resumenMes(petId, m); return r && !r.completo && m < mesDe(hoyIso()); }).length, 0);
 
@@ -280,12 +386,49 @@ export default function HorasView() {
             const celdas = Object.fromEntries(Object.entries(p.celdas).map(([id, fila]) => [id, Object.fromEntries(Object.entries(fila).map(([f, c]) => [f, c.h == null && f <= hoy ? { ...c, h: previsto(pet, f) } : c]))]));
             return { celdas };
         }, 'Días sin horas rellenados con el horario de la petición');
-        const enviar = () => actualizarParte(abierto, (p) => ({ estado: 'enviado', enviado: hoyIso(), reparos: null, reparosAnteriores: p.reparos || p.reparosAnteriores }),
-            `Parte enviado a ${pet.contactoCliente} para validarlo en el portal de empresas`);
+        const validador = validadorDe(pet);
+        const abrirEnvio = () => setEnvio({ a: contactosDe(pet).filter(c => c.validaHoras).map(c => c.nombre) });
+        const confirmarEnvio = () => {
+            actualizarParte(abierto, (p) => ({ estado: 'enviado', enviado: hoyIso(), enviadoA: envio.a, reparos: null, reparosAnteriores: p.reparos || p.reparosAnteriores }),
+                `Parte enviado a ${envio.a.join(' y ')} para validarlo en el portal de empresas`);
+            setEnvio(null);
+        };
         const confirmarValidacion = () => {
             actualizarParte(abierto, { estado: 'validado', validacion: { quien: validar.quien, como: validar.como, fecha: hoyIso(), justificante: validar.justificante, enNombre: true } },
-                `Parte validado en nombre del cliente (${validar.quien}, ${validar.como.toLowerCase()})`);
+                `Validación de ${validar.quien} registrada por la ETT (${validar.como.toLowerCase()})`);
             setValidar(null);
+        };
+        const ahora = () => new Date().toTimeString().slice(0, 5);
+        // En la demo, lo que haría el contacto del cliente en el portal de empresas
+        const simularPortal = (conReparos) => {
+            const quien = parte.enviadoA?.[0] || validador.nombre;
+            if (conReparos) {
+                actualizarParte(abierto, { estado: 'reparos', reparos: 'Revisad el viernes: hubo personas que salieron antes de las 14:30.', reparosDe: quien }, `${quien} ha puesto reparos en el portal de empresas`);
+            } else {
+                actualizarParte(abierto, { estado: 'validado', validacion: { quien, como: 'Portal de empresas', fecha: hoyIso(), hora: ahora() } }, `${quien} ha validado el parte en el portal de empresas`);
+            }
+        };
+        const facturas = facturasDeParte(parte);
+        // Parte en PDF para que el cliente lo firme en papel
+        const imprimirParte = () => {
+            const filas = personas.map(p => {
+                const fila = parte.celdas[p.id];
+                const kp = Object.entries(fila).reduce((acc, [f, c]) => sumarConceptos(acc, conceptosDe(pet, f, c)), { ...CERO });
+                const celdasHtml = dias.map(f => { const c = fila[f]; return `<td>${!c ? '—' : c.inc && incDe(c.inc).sinHoras ? incDe(c.inc).corto : c.h == null ? '' : fmtH(c.h + (c.x || 0))}</td>`; }).join('');
+                return `<tr><td style="text-align:left">${p.nombre}</td>${celdasHtml}<td><b>${fmtTotal(totalDe(kp))}</b></td></tr>`;
+            }).join('');
+            const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Parte de horas ${parte.petId} semana del ${ddmm(dias[0])}</title>
+<style>body{font-family:system-ui,sans-serif;font-size:12px;color:#0f172a;margin:32px}h1{font-size:16px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin:16px 0}td,th{border:1px solid #cbd5e1;padding:6px;text-align:center}th{background:#f1f5f9}.firma{display:flex;gap:24px;margin-top:32px}.firma div{flex:1;border:1px solid #cbd5e1;height:90px;padding:8px}</style></head><body>
+<h1>Parte de horas · ${pet.puesto} · semana del ${fechaES(dias[0])} al ${fechaES(dias[6])}</h1>
+<div>${pet.cliente} · ${pet.centro} · ${parte.petId}</div>
+<table><thead><tr><th style="text-align:left">Persona</th>${dias.map((f, i) => `<th>${DIAS_CORTOS[i]} ${ddmm(f).slice(0, 2)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${filas}</tbody></table>
+<div>Total de la semana: <b>${fmtTotal(totalDe(k))} h</b> (normales ${fmtTotal(k.normales + k.nocturnas)}, extra ${fmtTotal(k.extra)}, fin de semana ${fmtTotal(k.finde)}, festivas ${fmtTotal(k.festivas)}).</div>
+<div class="firma"><div>Conforme, por el cliente:<br>Nombre: ${validador?.nombre || ''}<br><br>Firma y fecha:</div><div>Por la ETT:<br>${pet.responsable}</div></div>
+<script>window.onload=()=>window.print()</script></body></html>`;
+            const w = window.open('', '_blank');
+            if (!w) { showToast('El navegador ha bloqueado la ventana del PDF'); return; }
+            w.document.write(html);
+            w.document.close();
         };
         const guardarCelda = () => {
             const { personaId, fecha, ...c } = celda;
@@ -315,36 +458,60 @@ export default function HorasView() {
                             <IconButton icon={ChevronLeft} title="Semana anterior" disabled={!anterior} onClick={() => setAbierto(anterior)} />
                             <IconButton icon={ChevronRight} title="Semana siguiente" disabled={!siguiente} onClick={() => setAbierto(siguiente)} />
                             {editable && <Button icon={Wand2} onClick={rellenar} disabled={!pendientesDias}>Rellenar con el horario</Button>}
-                            {editable && <Button variant="primary" icon={Send} onClick={enviar}>{parte.reparos ? 'Reenviar al cliente' : 'Enviar al cliente'}</Button>}
+                            {parte.estado !== 'programado' && <Button icon={Printer} onClick={imprimirParte} title="Para que el cliente lo firme en papel">Parte en PDF</Button>}
+                            {editable && <Button variant="primary" icon={Send} onClick={abrirEnvio}>{parte.reparos ? 'Reenviar al cliente' : 'Enviar al cliente'}</Button>}
                             {parte.estado === 'enviado' && <Button icon={Undo2} onClick={() => actualizarParte(abierto, { estado: 'borrador' }, 'Parte devuelto a borrador para corregirlo')}>Volver a borrador</Button>}
-                            {parte.estado === 'enviado' && <Button variant="primary" icon={FileCheck2} onClick={() => setValidar({ quien: pet.contactoCliente, como: 'Email', justificante: '' })}>Validar en nombre del cliente</Button>}
+                            {parte.estado === 'enviado' && <Button variant="primary" icon={FileCheck2} onClick={() => setValidar({ quien: validador.nombre, como: 'Email', justificante: '' })}>Validar en nombre del cliente</Button>}
                             {parte.estado === 'reparos' && <Button variant="primary" icon={PencilLine} onClick={() => actualizarParte(abierto, { estado: 'borrador' }, 'Parte abierto para corregir los reparos del cliente')}>Corregir</Button>}
                         </>}
                     />
 
                     {parte.reparos && (
                         <Notice tone="warning" icon={AlertTriangle}>
-                            <span className="block font-medium">Reparos de {pet.contactoCliente} (cliente)</span>
+                            <span className="block font-medium">Reparos de {parte.reparosDe || validador.nombre} (cliente)</span>
                             {parte.reparos}
                             {parte.estado === 'reparos' && <span className="block mt-1">Pulsa «Corregir», cambia los días que indica y vuelve a enviarlo.</span>}
                         </Notice>
                     )}
-                    {parte.estado === 'enviado' && (
-                        <Notice tone="info" icon={Send}>
-                            Enviado el {fechaES(parte.enviado)} a {pet.contactoCliente}, que lo valida en el portal de empresas. Si lo valida por email o en papel, usa «Validar en nombre del cliente» y adjunta el justificante.
+                    {parte.estado === 'programado' && (
+                        <Notice tone="neutral" icon={CalendarDays}>
+                            Es la semana que viene. El parte se rellena a partir del lunes {ddmm(dias[0])}{pet.inicio > dias[0] ? `; la petición empieza el ${fechaES(pet.inicio)}` : ''}. Lo validará {validador.nombre} ({validador.cargo}).
                         </Notice>
                     )}
-                    {parte.estado === 'validado' && parte.validacion && (
+                    {parte.estado === 'enviado' && (
+                        <Notice tone="info" icon={Send}>
+                            <span className="block">
+                                Enviado el {fechaES(parte.enviado)} a {(parte.enviadoA || [validador.nombre]).join(' y ')} ({pet.cliente}). Le llega un email con el enlace al parte en el <b>portal de empresas</b>, donde lo valida o pone reparos.
+                            </span>
+                            <span className="block mt-1">Si contesta por email o firma el parte en papel, usa «Validar en nombre del cliente» y sube esa prueba.</span>
+                            <span className="flex flex-wrap gap-2 mt-2">
+                                <Button size="sm" icon={MonitorCheck} title="En la demo hace lo que haría el cliente en el portal" onClick={() => simularPortal(false)}>Simular validación en el portal</Button>
+                                <Button size="sm" variant="ghost" title="En la demo hace lo que haría el cliente en el portal" onClick={() => simularPortal(true)}>Simular reparos</Button>
+                            </span>
+                        </Notice>
+                    )}
+                    {['validado', 'cerrado'].includes(parte.estado) && parte.validacion && (
                         <Notice tone="success" icon={CheckCircle2}>
-                            Validado por {parte.validacion.quien} el {fechaES(parte.validacion.fecha)} · {parte.validacion.como}{parte.validacion.enNombre ? ' (registrado por la ETT)' : ''}{parte.validacion.justificante ? ` · Justificante: ${parte.validacion.justificante}` : ''}.
-                            Entra en el cierre de {[...new Set(dias.filter(f => f >= pet.inicio && f <= pet.fin).map(mesDe))].map(nombreMes).join(' y ')}.
+                            {parte.validacion.enNombre
+                                ? <>Validado por {parte.validacion.quien} (cliente) el {fechaES(parte.validacion.fecha)}, por {parte.validacion.como.toLowerCase()}. Lo registró la ETT{parte.validacion.justificante ? <> con la prueba «{parte.validacion.justificante}»</> : ' sin prueba (por teléfono)'}.</>
+                                : <>Validado por {parte.validacion.quien} (cliente) en el portal de empresas el {fechaES(parte.validacion.fecha)}{parte.validacion.hora ? ` a las ${parte.validacion.hora}` : ''}.</>}
+                            {parte.estado === 'validado' && <> Entra en el cierre de {[...new Set(dias.filter(f => f >= pet.inicio && f <= pet.fin).map(mesDe))].map(nombreMes).join(' y ')}.</>}
                         </Notice>
                     )}
                     {parte.estado === 'cerrado' && (
                         <Notice tone="neutral" icon={Lock}>
                             Cerrado: las horas ya se pasaron a facturación y a nómina{mesesCerrados.length ? ` con ${mesesCerrados.map(nombreMes).join(' y ')}` : ''}. No se puede cambiar.
+                            {facturas.length > 0 && <> Facturado en {facturas.map(f => `${f.numero} (${MESES[Number(f.mes.slice(5)) - 1]})`).join(' y ')}.</>}
                         </Notice>
                     )}
+                    {facturas.filter(f => f.diferencia).map(f => (
+                        <Notice key={f.numero} tone="warning" icon={AlertTriangle}>
+                            <span className="flex flex-wrap items-center justify-between gap-2">
+                                <span>La factura {f.numero} de {nombreMes(f.mes)} lleva {fmtTotal(f.horas)} h, pero los partes validados de ese mes suman {fmtTotal(f.validadas)} h: {f.diferencia > 0 ? 'se facturaron' : 'faltan por facturar'} {fmtTotal(Math.abs(f.diferencia))} h.</span>
+                                <Button size="sm" icon={ArrowUpRight} onClick={() => { window.location.hash = '#/facturacion'; }}>Facturación</Button>
+                            </span>
+                        </Notice>
+                    ))}
                     {editable && pendientesDias > 0 && (
                         <Notice tone="info" icon={Info}>
                             Hay {pendientesDias} {pendientesDias === 1 ? 'día' : 'días'} sin horas hasta hoy. «Rellenar con el horario» pone las horas previstas y luego solo corriges las excepciones.
@@ -521,9 +688,13 @@ export default function HorasView() {
                         </>}
                     >
                         <div className="space-y-4 text-xs">
-                            <p className="text-slate-600">Úsalo cuando el cliente da el visto bueno fuera del portal. Queda registrado quién lo validó y cómo.</p>
+                            <p className="text-slate-600">Las horas las valida siempre el cliente. Úsalo cuando da su conformidad fuera del portal (por email o firmando el parte en papel): la ETT lo registra en su nombre.</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <Field label="Quién lo valida"><TextInput value={validar.quien} onChange={(e) => setValidar(v => ({ ...v, quien: e.target.value }))} /></Field>
+                                <Field label="Contacto del cliente que lo valida">
+                                    <Select value={validar.quien} onChange={(e) => setValidar(v => ({ ...v, quien: e.target.value }))} className="w-full">
+                                        {contactosDe(pet).map(c => <option key={c.nombre} value={c.nombre}>{c.nombre} · {c.cargo}{c.validaHoras ? ' (valida horas)' : ''}</option>)}
+                                    </Select>
+                                </Field>
                                 <Field label="Cómo">
                                     <Select value={validar.como} onChange={(e) => setValidar(v => ({ ...v, como: e.target.value }))} className="w-full">
                                         {['Email', 'Parte firmado en papel', 'Teléfono'].map(x => <option key={x} value={x}>{x}</option>)}
@@ -531,12 +702,44 @@ export default function HorasView() {
                                 </Field>
                             </div>
                             {validar.como !== 'Teléfono' ? (
-                                <Field label="Justificante" hint="El email o el parte firmado, en PDF o imagen">
+                                <Field label="Prueba de la conformidad" hint={validar.como === 'Email' ? 'El email en el que el cliente dice que las horas son correctas, guardado como PDF o .eml.' : 'El parte firmado por el cliente, escaneado o en foto. Puedes imprimirlo con «Parte en PDF».'}>
                                     <input type="file" accept=".pdf,.png,.jpg,.jpeg,.eml,.msg" onChange={(e) => setValidar(v => ({ ...v, justificante: e.target.files?.[0]?.name || '' }))} className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-700 hover:file:bg-slate-200" />
                                 </Field>
                             ) : (
-                                <Notice tone="warning" icon={AlertTriangle}>Por teléfono no queda justificante. Pide que lo confirme por email o en el portal.</Notice>
+                                <Notice tone="warning" icon={AlertTriangle}>Por teléfono no queda prueba. Pide que lo confirme por email o en el portal.</Notice>
                             )}
+                            <p className="text-[11px] text-slate-500">La prueba no es un documento para firmar: sirve para demostrar que el cliente aprobó estas horas si luego discute la factura.</p>
+                        </div>
+                    </Modal>
+                )}
+
+                {/* ENVIAR AL CLIENTE */}
+                {envio && (
+                    <Modal
+                        title="Enviar el parte al cliente"
+                        subtitle={`${parte.petId} · semana del ${ddmm(dias[0])} al ${fechaES(dias[6])}`}
+                        onClose={() => setEnvio(null)}
+                        size="max-w-md"
+                        footer={<>
+                            <Button onClick={() => setEnvio(null)}>Cancelar</Button>
+                            <Button variant="primary" icon={Send} disabled={!envio.a.length} onClick={confirmarEnvio}>Enviar</Button>
+                        </>}
+                    >
+                        <div className="space-y-3 text-xs">
+                            <p className="text-slate-600">Le llega un email con el enlace al parte en el portal de empresas ({pet.cliente}). Desde ahí lo valida o pone reparos, y queda registrado quién y cuándo.</p>
+                            <div className="space-y-1.5">
+                                <span className="block text-[11px] font-medium text-slate-600">A quién se envía</span>
+                                {contactosDe(pet).map(c => (
+                                    <label key={c.nombre} className="flex items-start gap-2 rounded-lg border border-slate-200 px-3 py-2">
+                                        <input type="checkbox" checked={envio.a.includes(c.nombre)} onChange={(e) => setEnvio(v => ({ a: e.target.checked ? [...v.a, c.nombre] : v.a.filter(n => n !== c.nombre) }))} className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                        <span>
+                                            <span className="block text-slate-900">{c.nombre} · {c.cargo}{c.validaHoras && <span className="ml-1.5 inline-block align-middle"><Badge tone="accent">Valida horas</Badge></span>}</span>
+                                            <span className="text-slate-500">{c.email}</span>
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="text-[11px] text-slate-500">Quién valida las horas se marca en la ficha del cliente (Empresas → Contactos → rol «Valida horas»).</p>
                         </div>
                     </Modal>
                 )}
@@ -549,8 +752,10 @@ export default function HorasView() {
     // ==========================================
     // ENTRADA: PARTES Y CIERRE DEL MES
     // ==========================================
-    const hayFiltros = filtroEstado !== 'pendientes' || filtroPeticion;
-    const limpiar = () => { setFiltroEstado('pendientes'); setFiltroPeticion(''); };
+    const hayFiltros = filtroEstado !== 'todos' || filtroPeticion || filtroCliente || periodo !== 'reciente';
+    const limpiar = () => { setFiltroEstado('todos'); setFiltroPeticion(''); setFiltroCliente(''); setPeriodo('reciente'); setDesde(''); setHasta(''); };
+    const totalLista = lista.reduce((acc, p) => sumarConceptos(acc, conceptosParte(p)), { ...CERO });
+    const etiquetaSemana = (lunes) => (lunes === lunesHoy ? 'Esta semana' : lunes === sumar(lunesHoy, -7) ? 'Semana pasada' : lunes === sumar(lunesHoy, 7) ? 'Semana que viene' : nombreMes(mesDe(lunes)).replace(/^./, s => s.toUpperCase()));
     const lunesHoy = lunesDe(hoyIso());
     const filasMes = Object.keys(PETICIONES).map(petId => ({ petId, r: resumenMes(petId, mes) })).filter(x => x.r);
     const det = detalleMes && resumenMes(detalleMes, mes);
@@ -565,9 +770,9 @@ export default function HorasView() {
                 />
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <KpiTile label="Partes en borrador" tone="accent" value={cuenta('borrador')} hint="Por completar y enviar" active={pestana === 'partes' && filtroEstado === 'borrador'} onClick={() => { setPestana('partes'); setFiltroEstado('borrador'); }} />
-                    <KpiTile label="Pendientes del cliente" tone="info" value={cuenta('enviado')} hint="Enviados para validar" active={pestana === 'partes' && filtroEstado === 'enviado'} onClick={() => { setPestana('partes'); setFiltroEstado('enviado'); }} />
-                    <KpiTile label="Con reparos" tone="warning" value={cuenta('reparos')} hint="El cliente pide cambios" active={pestana === 'partes' && filtroEstado === 'reparos'} onClick={() => { setPestana('partes'); setFiltroEstado('reparos'); }} />
+                    <KpiTile label="Partes en borrador" tone="accent" value={cuenta('borrador')} hint="Por completar y enviar" active={pestana === 'partes' && filtroEstado === 'borrador'} onClick={() => { setPestana('partes'); setFiltroEstado('borrador'); setPeriodo('todo'); }} />
+                    <KpiTile label="Pendientes del cliente" tone="info" value={cuenta('enviado')} hint="Enviados para validar" active={pestana === 'partes' && filtroEstado === 'enviado'} onClick={() => { setPestana('partes'); setFiltroEstado('enviado'); setPeriodo('todo'); }} />
+                    <KpiTile label="Con reparos" tone="warning" value={cuenta('reparos')} hint="El cliente pide cambios" active={pestana === 'partes' && filtroEstado === 'reparos'} onClick={() => { setPestana('partes'); setFiltroEstado('reparos'); setPeriodo('todo'); }} />
                     <KpiTile label="Meses por cerrar" value={mesesPorCerrar} hint="Sin pasar a facturación y nómina" active={pestana === 'mes'} onClick={() => setPestana('mes')} />
                 </div>
 
@@ -580,17 +785,38 @@ export default function HorasView() {
                 {pestana === 'partes' ? (
                     <Card className="overflow-hidden">
                         <div className="flex flex-wrap items-center gap-2 p-3 border-b border-slate-200">
-                            <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
-                                <option value="pendientes">Por hacer (borrador, pendientes y con reparos)</option>
-                                {Object.entries(ESTADOS_PARTE).map(([id, e]) => <option key={id} value={id}>{e.texto}</option>)}
-                                <option value="todos">Todos</option>
+                            <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Periodo">
+                                {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.texto}</option>)}
+                            </Select>
+                            {periodo === 'fechas' && <>
+                                <TextInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} aria-label="Desde" className="w-auto!" />
+                                <TextInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} aria-label="Hasta" className="w-auto!" />
+                            </>}
+                            <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
+                                <option value="">Todos los clientes</option>
+                                {CLIENTES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
                             <Select value={filtroPeticion} onChange={(e) => setFiltroPeticion(e.target.value)} aria-label="Petición">
                                 <option value="">Todas las peticiones</option>
-                                {Object.entries(PETICIONES).map(([id, p]) => <option key={id} value={id}>{id} · {p.puesto} · {p.cliente}</option>)}
+                                {Object.entries(PETICIONES).filter(([, p]) => !filtroCliente || p.cliente === filtroCliente).map(([id, p]) => <option key={id} value={id}>{id} · {p.puesto}</option>)}
+                            </Select>
+                            <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
+                                <option value="todos">Todos los estados</option>
+                                <option value="pendientes">Por hacer (borrador, pendientes y con reparos)</option>
+                                {Object.entries(ESTADOS_PARTE).map(([id, e]) => <option key={id} value={id}>{e.texto}</option>)}
                             </Select>
                             {hayFiltros && <Button size="sm" variant="ghost" icon={X} onClick={limpiar}>Limpiar</Button>}
                         </div>
+                        {lista.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+                                <span className="text-slate-900">{lista.length} {lista.length === 1 ? 'parte' : 'partes'} · {new Set(lista.map(p => p.petId)).size} {new Set(lista.map(p => p.petId)).size === 1 ? 'petición' : 'peticiones'}</span>
+                                <span>Normales {fmtTotal(totalLista.normales + totalLista.nocturnas)} h</span>
+                                <span>Extra {fmtTotal(totalLista.extra)} h</span>
+                                <span>Fin de semana {fmtTotal(totalLista.finde)} h</span>
+                                <span>Festivas {fmtTotal(totalLista.festivas)} h</span>
+                                <span className="font-medium text-slate-900">Total {fmtTotal(totalDe(totalLista))} h</span>
+                            </div>
+                        )}
                         {lista.length === 0 ? (
                             <EmptyState icon={Clock} title="No hay partes con estos filtros" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} />
                         ) : (
@@ -598,48 +824,65 @@ export default function HorasView() {
                                 <table className="w-full text-left text-xs">
                                     <thead>
                                         <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
-                                            <th className="py-2 px-3 font-medium">Semana</th>
                                             <th className="py-2 px-3 font-medium">Petición</th>
                                             <th className="py-2 px-3 font-medium text-right">Personas</th>
                                             <th className="py-2 px-3 font-medium text-right">Horas</th>
                                             <th className="py-2 px-3 font-medium text-right">Extra</th>
                                             <th className="py-2 px-3 font-medium text-right">Incidencias</th>
+                                            <th className="py-2 px-3 font-medium">Factura</th>
                                             <th className="py-2 px-3 font-medium">Estado</th>
                                             <th className="py-2 px-3" aria-label="Acciones"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {lista.map(p => {
+                                        {lista.map((p, i) => {
                                             const pet = PETICIONES[p.petId];
                                             const e = ESTADOS_PARTE[p.estado];
                                             const kp = conceptosParte(p);
                                             const faltan = diasSinHoras(p);
                                             const accion = { borrador: 'Completar', reparos: 'Corregir', enviado: 'Ver' }[p.estado] || 'Ver';
+                                            const facturas = facturasDeParte(p);
+                                            const nuevaSemana = i === 0 || lista[i - 1].lunes !== p.lunes;
+                                            const deLaSemana = lista.filter(x => x.lunes === p.lunes);
                                             return (
-                                                <tr key={p.k} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                                                    <td className="py-2.5 px-3 whitespace-nowrap">
-                                                        <button type="button" onClick={() => setAbierto(p.k)} className="text-left hover:text-indigo-700">
-                                                            <span className="block font-medium text-slate-900">Del {ddmm(p.lunes)} al {ddmm(sumar(p.lunes, 6))}</span>
-                                                            <span className="text-[11px] text-slate-500">{p.lunes === lunesHoy ? 'Esta semana' : p.lunes === sumar(lunesHoy, -7) ? 'Semana pasada' : nombreMes(mesDe(p.lunes)).replace(/^./, s => s.toUpperCase())}</span>
-                                                        </button>
-                                                    </td>
+                                                <React.Fragment key={p.k}>
+                                                {nuevaSemana && (
+                                                    <tr className="border-b border-slate-200 bg-slate-50/70">
+                                                        <td colSpan={8} className="py-1.5 px-3 text-[11px] text-slate-600">
+                                                            <span className="font-medium text-slate-900">Del {ddmm(p.lunes)} al {fechaES(sumar(p.lunes, 6))}</span> · {etiquetaSemana(p.lunes)} · {deLaSemana.length} {deLaSemana.length === 1 ? 'petición' : 'peticiones'} · {fmtTotal(deLaSemana.reduce((s, x) => s + totalDe(conceptosParte(x)), 0))} h
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                                                     <td className="py-2.5 px-3">
-                                                        <span className="block text-slate-800 whitespace-nowrap">{pet.puesto} · {pet.turno.toLowerCase()}</span>
-                                                        <span className="text-[11px] text-slate-500">{p.petId} · {pet.cliente}</span>
+                                                        <button type="button" onClick={() => setAbierto(p.k)} className="text-left group">
+                                                            <span className="block font-medium text-slate-900 whitespace-nowrap group-hover:text-indigo-700">{pet.puesto} · {pet.turno.toLowerCase()}</span>
+                                                            <span className="text-[11px] text-slate-500">{p.petId} · {pet.cliente}</span>
+                                                        </button>
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right text-slate-700">{Object.keys(p.celdas).length}</td>
                                                     <td className="py-2.5 px-3 text-right text-slate-900">{fmtTotal(totalDe(kp))}</td>
                                                     <td className="py-2.5 px-3 text-right text-slate-700">{kp.extra ? fmtTotal(kp.extra) : <span className="text-slate-300">0</span>}</td>
                                                     <td className="py-2.5 px-3 text-right text-slate-700">{incidenciasParte(p) || <span className="text-slate-300">0</span>}</td>
+                                                    <td className="py-2.5 px-3 whitespace-nowrap">
+                                                        {facturas.length === 0 ? <span className="text-slate-400">Sin facturar</span> : facturas.map(f => (
+                                                            <span key={f.numero} className="block" title={f.diferencia ? `Facturadas ${fmtTotal(f.horas)} h; validadas ${fmtTotal(f.validadas)} h en ${nombreMes(f.mes)}` : undefined}>
+                                                                <span className="text-slate-800">{f.numero}</span>
+                                                                {f.diferencia !== 0 && <span className="block text-[11px] text-amber-700">Diferencia en {MESES[Number(f.mes.slice(5)) - 1]}: {fmtTotal(Math.abs(f.diferencia))} h</span>}
+                                                            </span>
+                                                        ))}
+                                                    </td>
                                                     <td className="py-2.5 px-3">
                                                         <Badge tone={e.tono} dot>{e.texto}</Badge>
                                                         {p.estado === 'borrador' && faltan > 0 && <div className="text-[11px] text-amber-700 mt-0.5">{faltan} {faltan === 1 ? 'día' : 'días'} sin horas</div>}
-                                                        {p.estado === 'enviado' && <div className="text-[11px] text-slate-500 mt-0.5">Enviado el {ddmm(p.enviado)}</div>}
+                                                        {p.estado === 'enviado' && <div className="text-[11px] text-slate-500 mt-0.5">A {(p.enviadoA || []).join(' y ') || validadorDe(pet).nombre} el {ddmm(p.enviado)}</div>}
+                                                        {p.estado === 'programado' && pet.inicio > p.lunes && <div className="text-[11px] text-slate-500 mt-0.5">Empieza el {ddmm(pet.inicio)}</div>}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                                         <Button size="sm" variant={['borrador', 'reparos'].includes(p.estado) ? 'primary' : 'ghost'} onClick={() => setAbierto(p.k)}>{accion}</Button>
                                                     </td>
                                                 </tr>
+                                                </React.Fragment>
                                             );
                                         })}
                                     </tbody>
@@ -682,6 +925,18 @@ export default function HorasView() {
                                             <button key={k} type="button" onClick={() => setAbierto(k)} className="text-indigo-700 hover:underline">semana del {ddmm(p.lunes)} ({ESTADOS_PARTE[p.estado].texto.toLowerCase()})</button>
                                         ))}
                                     </div>
+                                    {(() => {
+                                        const f = facturaDeMes(petId, mes);
+                                        if (!f) return null;
+                                        return f.diferencia ? (
+                                            <Notice tone="warning" icon={AlertTriangle}>
+                                                <span className="flex flex-wrap items-center justify-between gap-2">
+                                                    <span>Facturado en {f.numero} con {fmtTotal(f.horas)} h, pero los partes validados suman {fmtTotal(f.validadas)} h: {f.diferencia > 0 ? 'se facturaron' : 'faltan por facturar'} {fmtTotal(Math.abs(f.diferencia))} h. Revisa la factura (rectificativa) o los partes.</span>
+                                                    <Button size="sm" icon={ArrowUpRight} onClick={() => { window.location.hash = '#/facturacion'; }}>Facturación</Button>
+                                                </span>
+                                            </Notice>
+                                        ) : <p className="text-xs text-emerald-700">Facturado en {f.numero}: {fmtTotal(f.horas)} h, igual que los partes validados.</p>;
+                                    })()}
                                     <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
                                         <Button size="sm" variant="ghost" onClick={() => setDetalleMes(petId)}>Ver por persona</Button>
                                         <span className="flex-1" />

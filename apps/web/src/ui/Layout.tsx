@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { TONOS, type Tone } from './Badge';
 
 // Contenedor de todas las pantallas: mismo ancho máximo y mismos márgenes.
@@ -25,6 +25,7 @@ export function PageHeader({
   status?: ReactNode;
   actions?: ReactNode;
 }) {
+  const volver = breadcrumbs && breadcrumbs.length > 1 && (breadcrumbs[0].href || breadcrumbs[0].onClick) ? breadcrumbs[0] : null;
   return (
     <div className="space-y-1.5">
       {breadcrumbs && breadcrumbs.length > 0 && (
@@ -46,6 +47,18 @@ export function PageHeader({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
+            {/* En una pantalla de detalle, volver a la pantalla de la primera miga */}
+            {volver && (
+              <a
+                href={volver.href ?? '#'}
+                onClick={volver.onClick && ((e) => { e.preventDefault(); volver.onClick?.(); })}
+                title={`Volver a ${volver.label}`}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Volver
+              </a>
+            )}
             <h1 className="text-lg font-semibold text-slate-900 tracking-tight">{title}</h1>
             {count !== undefined && (
               <span className="text-xs font-medium text-slate-500 bg-slate-100 rounded-md px-1.5 py-0.5">{count}</span>

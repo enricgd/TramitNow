@@ -26,7 +26,7 @@ const CLIENTES = {
         email: 'facturacion@translog-norte.es', fichaIncompleta: 'Falta el IBAN y la evaluación de riesgo.',
     },
     hosteleria: {
-        nombre: 'Hostelería & Eventos Premium BCN, S.L.', cif: 'B-99887766', direccion: 'C/ Ejemplo 12, 08004 Barcelona',
+        nombre: 'Hostelería & Eventos Premium BCN, S.L.', cif: 'B-99887766', direccion: 'Passeig de Gràcia 112, 4º, 08008 Barcelona',
         iva: 21, retencion: 0, pago: 'Transferencia a 30 días', diasPago: 30, diasFijos: [],
         email: 'facturacion@premiumeventsbcn.cat',
     },
@@ -46,7 +46,8 @@ const CONCEPTOS = [
 // Meses pasados a facturación desde Horas e incidencias. listo: todos los partes validados.
 const HORAS_INICIALES = [
     { petId: 'PET-2026-0031', mes: '2026-07', horas: { normales: 1027.5 }, listo: true },
-    { petId: 'PET-2026-0031', mes: '2026-08', horas: { normales: 937.5 }, listo: true },
+    // Agosto se facturó con 945 h; los partes validados suman 937,5 (Horas e incidencias avisa de la diferencia)
+    { petId: 'PET-2026-0031', mes: '2026-08', horas: { normales: 945 }, listo: true },
     { petId: 'PET-2026-0031', mes: '2026-09', horas: { normales: 990, extra: 2 }, listo: true },
     { petId: 'PET-2026-0044', mes: '2026-10', horas: { normales: 667.33, extra: 4, finde: 144, festivas: 72 }, listo: false, partesPendientes: 2 },
 ];

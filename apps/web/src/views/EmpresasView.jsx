@@ -56,7 +56,7 @@ contacts: [
     email: 'j.ugarte@translog-norte.es',
     phone: '+34 611 223 344',
     role: 'Jefe de Planta / Operaciones',
-    types: ['Operativo', 'Prevención / PRL'],
+    types: ['Operativo', 'Valida horas', 'Prevención / PRL'],
     isMain: false,
     isQuoteRecipient: false,
     notes: 'Gestiona la entrada a muelle y la entrega de EPIs a carretilleros.'
@@ -160,7 +160,8 @@ notes: 'Requieren camareros con idiomas y protocolo para hoteles 5* GL.',
 lastActivity: 'Hace 5 días — Centro "Palau de Congressos" añadido',
 createdAt: '2026-02-14',
 contacts: [
-  { id: 'cont-401', name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.cat', phone: '+34 688 990 011', role: 'Coordinador de Eventos', types: ['Comercial', 'Operativo'], isMain: true, isQuoteRecipient: true }
+  { id: 'cont-401', name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.cat', phone: '+34 688 990 011', role: 'Coordinador de Eventos', types: ['Comercial', 'Operativo'], isMain: true, isQuoteRecipient: true },
+  { id: 'cont-402', name: 'Montse Ferrer', email: 'mferrer@premiumeventsbcn.cat', phone: '+34 688 990 022', role: 'Jefa de sala', types: ['Operativo', 'Valida horas'], isMain: false, isQuoteRecipient: false }
 ],
 centers: [
   { id: 'cent-401', name: 'Palau de Congressos BCN', address: 'Av. Diagonal 661', postalCode: '08028', city: 'Barcelona', country: 'España', notes: 'Acceso puerta de proveedores c/ Martí i Franquès' }
@@ -2104,7 +2105,7 @@ setTimeout(() => {
       const [notes, setNotes] = useState(initialData?.notes || '');
       const [errors, setErrors] = useState({});
 
-      const ROLES_BASE = ['Comercial', 'Solicitante', 'Operativo', 'Facturación', 'RR. HH.', 'Prevención / PRL', 'Dirección'];
+      const ROLES_BASE = ['Comercial', 'Solicitante', 'Operativo', 'Valida horas', 'Facturación', 'RR. HH.', 'Prevención / PRL', 'Dirección'];
       // Roles propios que ya tenía el contacto (escritos con "Otro") se muestran como uno más
       const availableTypes = [...ROLES_BASE, ...types.filter(t => !ROLES_BASE.includes(t) && t !== 'Otro' && t !== 'Destinatario de Presupuestos'), 'Otro'];
       const [otroRol, setOtroRol] = useState('');
