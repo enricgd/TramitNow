@@ -62,7 +62,7 @@ const INITIAL_PETITIONS = [
                 plazas: [
                     { plazaNum: 1, status: 'Cubierta', candidateName: 'Unai García Zabaleta', candidateId: 'CAN-0131', assignedDate: '2026-10-20' },
                     { plazaNum: 2, status: 'Cubierta', candidateName: 'Carlos Manuel Ortiz Reyes', candidateId: 'CAN-0132', assignedDate: '2026-10-21' },
-                    { plazaNum: 3, status: 'Pendiente del cliente', candidateName: 'David Aranguren Sola', candidateId: null, assignedDate: '2026-10-24' },
+                    { plazaNum: 3, status: 'Pendiente del cliente', candidateName: 'David Aranguren Sola', candidateId: 'CAN-0202', assignedDate: '2026-10-20' },
                     { plazaNum: 4, status: 'Vacante', candidateName: null, candidateId: null }
                 ]
             }
@@ -122,13 +122,13 @@ const INITIAL_PETITIONS = [
 // Personas que ya trabajan, se incorporan o terminaron una misión (las mismas que en Contratos y altas,
 // Personal en misión y Horas e incidencias). Ficha resumida: el resto de datos se completa como en cualquier candidato.
 const LETRAS_DNI = 'TRWAGMYFPDXBNJZSQVHLCKE';
-const candidatoRecorrido = (n, nombreCompleto, { ciudad, provincia, km, centro, categoria, estado, mision, ultima, carnes = ['B'], turno, nie }) => {
+const candidatoRecorrido = (n, nombreCompleto, { ciudad, provincia, km, centro, categoria, estado, mision, ultima, carnes = ['B'], turno, nie, dniCaducado, candidaturas }) => {
     const [name, ...resto] = nombreCompleto.split(' ');
     const lastName = resto.join(' ');
     const dni = nie || `0000${String(n).padStart(4, '0')}${LETRAS_DNI[n % 23]}`;
     const usuario = `${name}.${resto[0] || ''}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     return {
-        id: `CAN-0${n}`, name, lastName, dni, dniExpiry: nie ? '2026-09-30' : '2030-06-30', dniStatus: 'OK',
+        id: `CAN-0${n}`, name, lastName, dni, dniExpiry: nie || dniCaducado ? '2026-09-30' : '2030-06-30', dniStatus: 'OK',
         phone: `+34 600 000 ${String(n).padStart(3, '0')}`, email: `${usuario}@email.example`,
         city: ciudad, province: provincia, distance: `${km} km de ${centro}`,
         nss: `${provincia === 'Barcelona' ? '08' : '48'}/0000${String(n).padStart(4, '0')}/00`, nssStatus: 'OK',
@@ -139,10 +139,11 @@ const candidatoRecorrido = (n, nombreCompleto, { ciudad, provincia, km, centro, 
         activeCandidatures: mision ? [`${mision.petitionId} (Plaza ${mision.plazaNum})`] : [],
         assignedMission: mision || null,
         documents: [
-            { name: `DNI_${name}.pdf`, type: 'DNI', status: nie ? 'Caducado' : 'Verificado', uploadDate: '2026-06-15' },
+            { name: `DNI_${name}.pdf`, type: 'DNI', status: nie || dniCaducado ? 'Caducado' : 'Verificado', uploadDate: '2026-06-15' },
             { name: `RGPD_${name}.pdf`, type: 'RGPD', status: 'Vigente', uploadDate: '2026-06-15' }
         ],
         communications: ultima ? [{ date: `${ultima.fecha} 10:00`, user: 'Ane Uriarte', channel: 'Llamada', result: ultima.resultado, note: ultima.nota }] : [],
+        ...(candidaturas ? { candidaturas, activeCandidatures: candidaturas.map(x => `${x.petId} (${x.estado}${x.plaza ? `, plaza ${x.plaza}` : ''})`) } : {}),
     };
 };
 const misionDe = (petitionId, client, positionTitle, plazaNum, startDate) => ({ petitionId, client, positionId: `POS-${petitionId.slice(-4)}`, positionTitle, plazaNum, startDate });
@@ -150,6 +151,28 @@ const TRANSLOG = 'Trans-Logística Ibérica Norte, S.L.';
 const HOSTELERIA = 'Hostelería & Eventos Premium BCN, S.L.';
 const BIZKAIA = (ciudad, km) => ({ ciudad, provincia: 'Bizkaia', km, centro: 'Basauri' });
 const BCN = (ciudad, km) => ({ ciudad, provincia: 'Barcelona', km, centro: 'Barcelona' });
+// Personas en selección en Peticiones (las mismas, con la misma etapa: inscrito = Nuevo; el resto, En selección)
+const enSeleccion = (n, nombre, lugar, categoria, petId, etapa, fecha, opciones = {}) => candidatoRecorrido(n, nombre, {
+    ...lugar, categoria, turno: opciones.turno || 'Mañana / Tarde', carnes: opciones.carnes, dniCaducado: opciones.dniCaducado,
+    estado: etapa === 'inscrito' ? 'Nuevo' : 'En entrevista',
+    candidaturas: [{ petId, plaza: opciones.plaza || null, estado: etapa === 'propuesto' ? 'Propuesta al cliente' : 'En selección', fecha }],
+});
+const CARRETILLA = ['B', 'Carnet Carretillero UNE 58451'];
+const MANIPULADOR = ['Manipulador de alimentos'];
+const CANDIDATOS_SELECCION = [
+    enSeleccion(201, 'Nerea Barandiarán Goikoetxea', BIZKAIA('Barakaldo', 14), 'Operario/a de almacén', 'PET-2026-0049', 'entrevista', '2026-10-24', { carnes: ['B', ...MANIPULADOR] }),
+    enSeleccion(202, 'David Aranguren Sola', BIZKAIA('Santurtzi', 20), 'Carretillero/a', 'PET-2026-0050', 'propuesto', '2026-10-20', { carnes: CARRETILLA, turno: 'Mañana / Tarde / Noche', plaza: 3 }),
+    enSeleccion(203, 'Yeray Fernández Ramos', BIZKAIA('Bilbao', 8), 'Operario/a de almacén', 'PET-2026-0049', 'preseleccionado', '2026-10-25', { turno: 'Mañana' }),
+    enSeleccion(204, 'Kepa Iturriaga Elorrieta', BIZKAIA('Portugalete', 18), 'Carretillero/a', 'PET-2026-0050', 'entrevista', '2026-10-23', { carnes: CARRETILLA, turno: 'Tarde / Noche', dniCaducado: true }),
+    enSeleccion(205, 'Sofía Valderrama Galdós', BIZKAIA('Galdakao', 4), 'Preparador/a de pedidos', 'PET-2026-0049', 'entrevista', '2026-10-22'),
+    enSeleccion(206, 'Ibai Zubizarreta Lasa', BIZKAIA('Basauri', 1), 'Operario/a de almacén', 'PET-2026-0049', 'preseleccionado', '2026-10-26', { turno: 'Tarde' }),
+    enSeleccion(207, 'Leire Ortuzar Bengoa', BIZKAIA('Etxebarri', 3), 'Operario/a de almacén', 'PET-2026-0049', 'inscrito', '2026-10-27', { turno: 'Mañana' }),
+    enSeleccion(208, 'Gorka Bilbao Arrieta', BIZKAIA('Arrigorriaga', 5), 'Carretillero/a', 'PET-2026-0050', 'preseleccionado', '2026-10-26', { carnes: CARRETILLA, turno: 'Tarde' }),
+    enSeleccion(301, 'Marina Soler Bosch', BCN('Barcelona', 3), 'Camarero/a', 'PET-2026-0047', 'inscrito', '2026-10-27', { carnes: MANIPULADOR, turno: 'Jornada partida / Noche' }),
+    enSeleccion(302, 'Jordi Vila Mas', BCN("L'Hospitalet de Llobregat", 6), 'Cocinero/a', 'PET-2026-0046', 'entrevista', '2026-10-21', { carnes: MANIPULADOR, turno: 'Jornada partida' }),
+    enSeleccion(303, 'Fatima Zahra El Idrissi', BCN('Badalona', 9), 'Ayudante de cocina', 'PET-2026-0046', 'inscrito', '2026-10-27', { carnes: MANIPULADOR, turno: 'Jornada partida / Mañana', dniCaducado: true }),
+    enSeleccion(304, 'Álex Romero Gil', BCN('Barcelona', 4), 'Camarero/a de barra', 'PET-2026-0047', 'inscrito', '2026-10-28', { turno: 'Noche' }),
+];
 const CANDIDATOS_RECORRIDO = [
     // PET-2026-0044: en misión desde el 10/10 (Personal en misión)
     ...[['Garazi Uribe Arana', 1, 'Barcelona', 3], ['Pablo Ruiz Cano', 2, "L'Hospitalet de Llobregat", 6], ['Youssef Amrani', 4, 'Badalona', 9],
@@ -187,6 +210,7 @@ const CANDIDATOS_RECORRIDO = [
             ...BCN(ciudad, km), categoria: 'Ayudante de cocina', estado: 'En incorporación', turno: 'Jornada partida',
             mision: misionDe('PET-2026-0045', HOSTELERIA, 'Ayudante de cocina', plaza, '2026-11-05'),
         })),
+    ...CANDIDATOS_SELECCION,
 ];
 
 const CANDIDATOS_BASE = [

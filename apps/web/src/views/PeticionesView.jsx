@@ -11,6 +11,7 @@ import {
     Shield, Cpu, BookOpen, Layers2, FolderKanban, List, SquareKanban, GripVertical
 } from 'lucide-react';
 import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal } from '../ui';
+import { contactoDemo } from './personasDemo';
 
 // --- DATOS DE EJEMPLO ---
 // Una petición = un puesto. Las peticiones siempre salen de un presupuesto aceptado. Un mismo puesto del presupuesto
@@ -338,7 +339,7 @@ const PLAZAS_BASE = {
             id: 'PLZ-001-01',
             numero: 1,
             estado: 'cubierta', // 'cubierta' | 'vacante' | 'en_proceso'
-            candidatoId: 'CND-1049',
+            candidatoId: 'CAN-0126',
             nombre: 'Jon Ander Etxebarria Bilbao',
             dni: '45892134K',
             telefono: '+34 654 112 890',
@@ -352,7 +353,7 @@ const PLAZAS_BASE = {
             id: 'PLZ-001-02',
             numero: 2,
             estado: 'cubierta',
-            candidatoId: 'CND-1082',
+            candidatoId: 'CAN-0127',
             nombre: 'Ainhoa Larrazabal Urkijo',
             dni: '78912340M',
             telefono: '+34 688 234 561',
@@ -366,7 +367,7 @@ const PLAZAS_BASE = {
             id: 'PLZ-001-03',
             numero: 3,
             estado: 'cubierta',
-            candidatoId: 'CND-1104',
+            candidatoId: 'CAN-0128',
             nombre: 'Mamadou Diallo',
             dni: 'X8923412P',
             telefono: '+34 611 902 443',
@@ -380,7 +381,7 @@ const PLAZAS_BASE = {
             id: 'PLZ-001-04',
             numero: 4,
             estado: 'cubierta',
-            candidatoId: 'CND-1120',
+            candidatoId: 'CAN-0129',
             nombre: 'Laura Morales San Sebastián',
             dni: '16098234L',
             telefono: '+34 670 445 119',
@@ -394,7 +395,7 @@ const PLAZAS_BASE = {
             id: 'PLZ-001-05',
             numero: 5,
             estado: 'cubierta',
-            candidatoId: 'CND-1155',
+            candidatoId: 'CAN-0130',
             nombre: 'Iker Agirrebeitia Mendia',
             dni: '30691288B',
             telefono: '+34 699 871 203',
@@ -452,7 +453,7 @@ const PLAZAS_BASE = {
             id: 'PLZ-002-01',
             numero: 1,
             estado: 'cubierta',
-            candidatoId: 'CND-0988',
+            candidatoId: 'CAN-0131',
             nombre: 'Unai García Zabaleta',
             dni: '44901238R',
             telefono: '+34 633 901 223',
@@ -466,7 +467,7 @@ const PLAZAS_BASE = {
             id: 'PLZ-002-02',
             numero: 2,
             estado: 'cubierta',
-            candidatoId: 'CND-1033',
+            candidatoId: 'CAN-0132',
             nombre: 'Carlos Manuel Ortiz Reyes',
             dni: 'Y1290384T',
             telefono: '+34 677 340 192',
@@ -518,7 +519,7 @@ const generarPlazas = (p) => Array.from({ length: p.solicitados }, (_, i) => {
     const nombre = NOMBRES_DEMO[((PRIMER_NOMBRE[p.id] ?? 0) + i) % NOMBRES_DEMO.length];
     return {
         estado: 'cubierta',
-        candidatoId: `CND-${p.id.slice(-4)}${i}`,
+        candidatoId: null, // se rellena con el código de Candidatos (conContacto)
         nombre,
         dni: '00000000T',
         telefono: '+34 600 000 000',
@@ -529,17 +530,23 @@ const generarPlazas = (p) => Array.from({ length: p.solicitados }, (_, i) => {
         foto: null
     };
 });
+// Las personas de las plazas son las de Candidatos: mismo código, DNI, teléfono y email (personasDemo.js)
+const conContacto = (plz) => {
+    const c = plz.nombre && contactoDemo(plz.nombre);
+    return c ? { ...plz, candidatoId: c.id, dni: c.dni, telefono: c.telefono, email: c.email } : plz;
+};
 const PLAZAS_INICIO = Object.fromEntries(INITIAL_PETICIONES.map(p => {
     const codigo = p.id.slice(-4);
-    if (p.id === 'PET-2026-0048') return [p.id, renumerarPlazas(PLAZAS_BASE['operario'].slice(0, 5), codigo)];
-    if (p.id === 'PET-2026-0049') return [p.id, renumerarPlazas(PLAZAS_BASE['operario'].slice(5), codigo)];
-    if (p.id === 'PET-2026-0050') return [p.id, renumerarPlazas(PLAZAS_BASE['carretillero'], codigo)];
-    return [p.id, renumerarPlazas(generarPlazas(p), codigo)];
+    const lista = p.id === 'PET-2026-0048' ? PLAZAS_BASE['operario'].slice(0, 5)
+        : p.id === 'PET-2026-0049' ? PLAZAS_BASE['operario'].slice(5)
+            : p.id === 'PET-2026-0050' ? PLAZAS_BASE['carretillero']
+                : generarPlazas(p);
+    return [p.id, renumerarPlazas(lista.map(conContacto), codigo)];
 }));
 
 const CANDIDATOS_BASE = [
     {
-        id: 'CND-1201',
+        id: 'CAN-0201',
         nombre: 'Nerea Barandiarán Goikoetxea',
         dni: '45903218V',
         telefono: '+34 644 192 830',
@@ -551,12 +558,12 @@ const CANDIDATOS_BASE = [
         scoring: 95,
         matchPosicion: ['operario'],
         ubicacion: 'Barakaldo (Bizkaia)',
-        valoracionETT: 'Candidata muy formal, experiencia comprobada en Grupo Eroski logística.',
+        valoracionETT: 'Candidata muy formal, experiencia comprobada en un operador logístico de alimentación.',
         estadoSeleccion: 'Disponible para asignación',
         foto: null
     },
     {
-        id: 'CND-1202',
+        id: 'CAN-0202',
         nombre: 'David Aranguren Sola',
         dni: '72890123C',
         telefono: '+34 605 882 104',
@@ -568,12 +575,12 @@ const CANDIDATOS_BASE = [
         scoring: 98,
         matchPosicion: ['carretillero'],
         ubicacion: 'Santurtzi (Bizkaia)',
-        valoracionETT: 'Alta destreza en retráctil, referencias positivas en DHL Bilbao.',
+        valoracionETT: 'Alta destreza en retráctil, buenas referencias de un operador logístico de Bilbao.',
         estadoSeleccion: 'Disponible para asignación',
         foto: null
     },
     {
-        id: 'CND-1203',
+        id: 'CAN-0203',
         nombre: 'Yeray Fernández Ramos',
         dni: '16102934D',
         telefono: '+34 682 301 928',
@@ -590,14 +597,14 @@ const CANDIDATOS_BASE = [
         foto: null
     },
     {
-        id: 'CND-1204',
+        id: 'CAN-0204',
         nombre: 'Kepa Iturriaga Elorrieta',
         dni: '30654891Q',
         telefono: '+34 618 450 912',
         email: 'kepa.iturriaga@email.com',
         puestoPrincipal: 'Conductor / Carretillero homologado',
         experiencia: '4 años en almacén logístico portuario ZAL',
-        disponibilidad: 'A partir del 25/02/2026',
+        disponibilidad: 'A partir del 02/11/2026',
         carnets: 'Carnet Carretillero UNE 58451 + C+E',
         scoring: 91,
         matchPosicion: ['carretillero'],
@@ -607,7 +614,7 @@ const CANDIDATOS_BASE = [
         foto: null
     },
     {
-        id: 'CND-1205',
+        id: 'CAN-0205',
         nombre: 'Sofía Valderrama Galdós',
         dni: '79012384H',
         telefono: '+34 690 128 347',
@@ -629,11 +636,11 @@ const CANDIDATOS_BASE = [
 // Perfil de cada candidato para comprobarlo contra la petición: turnos en los que puede trabajar, carnés,
 // si su documentación está en vigor y de dónde vino.
 const PERFIL_CANDIDATOS = {
-    'CND-1201': { turnos: ['manana', 'tarde'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' },
-    'CND-1202': { turnos: ['manana', 'tarde', 'noche'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' },
-    'CND-1203': { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' },
-    'CND-1204': { turnos: ['tarde', 'noche'], carnes: ['carretilla'], docOk: false, origen: 'Indeed' },
-    'CND-1205': { turnos: ['manana', 'tarde'], carnes: [], docOk: true, origen: 'Base de datos' },
+    'CAN-0201': { turnos: ['manana', 'tarde'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' },
+    'CAN-0202': { turnos: ['manana', 'tarde', 'noche'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' },
+    'CAN-0203': { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' },
+    'CAN-0204': { turnos: ['tarde', 'noche'], carnes: ['carretilla'], docOk: false, origen: 'Indeed' },
+    'CAN-0205': { turnos: ['manana', 'tarde'], carnes: [], docOk: true, origen: 'Base de datos' },
 };
 const persona = (id, nombre, puestoPrincipal, ubicacion, scoring, matchPosicion, perfil, experiencia) => ({
     id, nombre, dni: '00000000T', telefono: '+34 600 000 000', email: `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
@@ -643,14 +650,17 @@ const persona = (id, nombre, puestoPrincipal, ubicacion, scoring, matchPosicion,
 const NOMBRE_CARNE = { carretilla: 'Carné de carretillero', manipulador: 'Manipulador/a de alimentos' };
 const INITIAL_CANDIDATOS_POOL = [
     ...CANDIDATOS_BASE.map(c => ({ ...c, ...PERFIL_CANDIDATOS[c.id] })),
-    persona('CND-1206', 'Ibai Zubizarreta Lasa', 'Operario de almacén', 'Basauri (Bizkaia)', 88, ['operario'], { turnos: ['tarde'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, '2 años en almacén de recambios'),
-    persona('CND-1207', 'Leire Ortuzar Bengoa', 'Operaria de almacén', 'Etxebarri (Bizkaia)', 80, ['operario'], { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, 'Sin experiencia en logística; viene de comercio'),
-    persona('CND-1208', 'Gorka Bilbao Arrieta', 'Carretillero', 'Arrigorriaga (Bizkaia)', 86, ['carretillero'], { turnos: ['tarde'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' }, '4 años con carretilla retráctil'),
-    persona('CND-1301', 'Marina Soler Bosch', 'Camarera de sala y barra', 'Barcelona', 92, ['camarero', 'camarero_barra'], { turnos: ['partida', 'noche'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' }, '5 temporadas en banquetes y eventos'),
-    persona('CND-1302', 'Jordi Vila Mas', 'Cocinero', 'L\'Hospitalet de Llobregat', 90, ['cocinero', 'ayudante_cocina'], { turnos: ['partida'], carnes: ['manipulador'], docOk: true, origen: 'InfoJobs' }, 'Jefe de partida en restaurante de 120 cubiertos'),
-    persona('CND-1303', 'Fatima Zahra El Idrissi', 'Ayudante de cocina', 'Badalona', 84, ['ayudante_cocina'], { turnos: ['partida', 'manana'], carnes: ['manipulador'], docOk: false, origen: 'Portal de candidatos' }, '1 año en cocina de colectividades'),
-    persona('CND-1304', 'Álex Romero Gil', 'Camarero de barra', 'Barcelona', 81, ['camarero_barra'], { turnos: ['noche'], carnes: [], docOk: true, origen: 'Indeed' }, 'Coctelería en locales de ocio nocturno'),
-];
+    // En selección también en Candidatos (con sus datos de allí)
+    { ...persona('CAN-0104', 'Elena Sánchez Pascual', 'Reponedora / Moza de almacén', 'Galdakao (Bizkaia)', 90, ['operario'], { turnos: ['manana', 'tarde'], carnes: [], docOk: true, origen: 'Monster' }, '2 años en reposición y almacén'), dni: '02891277W', telefono: '+34 689 112 233', email: 'elena.sanchez.p@fastmail.com' },
+    { ...persona('CAN-0105', 'David Castillo Ruiz', 'Operario de almacén', 'Bilbao (Bizkaia)', 89, ['operario', 'carretillero'], { turnos: ['manana', 'tarde'], carnes: ['carretilla'], docOk: true, origen: 'Portal de candidatos' }, '3 años en almacén y carretilla frontal'), dni: '50449912K', telefono: '+34 654 321 987', email: 'david.castillo.log@outlook.com' },
+    persona('CAN-0206', 'Ibai Zubizarreta Lasa', 'Operario de almacén', 'Basauri (Bizkaia)', 88, ['operario'], { turnos: ['tarde'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, '2 años en almacén de recambios'),
+    persona('CAN-0207', 'Leire Ortuzar Bengoa', 'Operaria de almacén', 'Etxebarri (Bizkaia)', 80, ['operario'], { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, 'Sin experiencia en logística; viene de comercio'),
+    persona('CAN-0208', 'Gorka Bilbao Arrieta', 'Carretillero', 'Arrigorriaga (Bizkaia)', 86, ['carretillero'], { turnos: ['tarde'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' }, '4 años con carretilla retráctil'),
+    persona('CAN-0301', 'Marina Soler Bosch', 'Camarera de sala y barra', 'Barcelona', 92, ['camarero', 'camarero_barra'], { turnos: ['partida', 'noche'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' }, '5 temporadas en banquetes y eventos'),
+    persona('CAN-0302', 'Jordi Vila Mas', 'Cocinero', 'L\'Hospitalet de Llobregat', 90, ['cocinero', 'ayudante_cocina'], { turnos: ['partida'], carnes: ['manipulador'], docOk: true, origen: 'InfoJobs' }, 'Jefe de partida en restaurante de 120 cubiertos'),
+    persona('CAN-0303', 'Fatima Zahra El Idrissi', 'Ayudante de cocina', 'Badalona', 84, ['ayudante_cocina'], { turnos: ['partida', 'manana'], carnes: ['manipulador'], docOk: false, origen: 'Portal de candidatos' }, '1 año en cocina de colectividades'),
+    persona('CAN-0304', 'Álex Romero Gil', 'Camarero de barra', 'Barcelona', 81, ['camarero_barra'], { turnos: ['noche'], carnes: [], docOk: true, origen: 'Indeed' }, 'Coctelería en locales de ocio nocturno'),
+].map(c => ({ ...c, ...(contactoDemo(c.nombre) ? (({ dni, telefono, email }) => ({ dni, telefono, email }))(contactoDemo(c.nombre)) : {}) }));
 
 // Requisitos de la petición que se comprueban al proponer a alguien
 const REQUISITO_CARNE = { carretillero: 'carretilla', camarero: 'manipulador', camarero_barra: 'manipulador', ayudante_cocina: 'manipulador', cocinero: 'manipulador', envasado: 'manipulador' };
@@ -676,24 +686,26 @@ const ETAPAS_EN_PROCESO = ['preseleccionado', 'entrevista', 'propuesto'];
 const enProcesoDe = (lista) => (lista || []).filter(x => ETAPAS_EN_PROCESO.includes(x.etapa)).length;
 const INITIAL_EMBUDO = {
     'PET-2026-0049': [
-        { id: 'CND-1201', etapa: 'entrevista', fecha: '2026-10-24' },
-        { id: 'CND-1205', etapa: 'entrevista', fecha: '2026-10-22' },
-        { id: 'CND-1203', etapa: 'preseleccionado', fecha: '2026-10-25' },
-        { id: 'CND-1206', etapa: 'preseleccionado', fecha: '2026-10-26' },
-        { id: 'CND-1207', etapa: 'inscrito', fecha: '2026-10-27' },
+        { id: 'CAN-0201', etapa: 'entrevista', fecha: '2026-10-24' },
+        { id: 'CAN-0205', etapa: 'entrevista', fecha: '2026-10-22' },
+        { id: 'CAN-0203', etapa: 'preseleccionado', fecha: '2026-10-25' },
+        { id: 'CAN-0206', etapa: 'preseleccionado', fecha: '2026-10-26' },
+        { id: 'CAN-0207', etapa: 'inscrito', fecha: '2026-10-27' },
+        { id: 'CAN-0104', etapa: 'entrevista', fecha: '2026-10-23' },
     ],
     'PET-2026-0050': [
-        { id: 'CND-1202', etapa: 'propuesto', fecha: '2026-10-20' },
-        { id: 'CND-1204', etapa: 'entrevista', fecha: '2026-10-23' },
-        { id: 'CND-1208', etapa: 'preseleccionado', fecha: '2026-10-26' },
+        { id: 'CAN-0202', etapa: 'propuesto', fecha: '2026-10-20' },
+        { id: 'CAN-0204', etapa: 'entrevista', fecha: '2026-10-23' },
+        { id: 'CAN-0208', etapa: 'preseleccionado', fecha: '2026-10-26' },
+        { id: 'CAN-0105', etapa: 'entrevista', fecha: '2026-10-20' },
     ],
     'PET-2026-0046': [
-        { id: 'CND-1302', etapa: 'entrevista', fecha: '2026-10-21' },
-        { id: 'CND-1303', etapa: 'inscrito', fecha: '2026-10-27' },
+        { id: 'CAN-0302', etapa: 'entrevista', fecha: '2026-10-21' },
+        { id: 'CAN-0303', etapa: 'inscrito', fecha: '2026-10-27' },
     ],
     'PET-2026-0047': [
-        { id: 'CND-1301', etapa: 'inscrito', fecha: '2026-10-27' },
-        { id: 'CND-1304', etapa: 'inscrito', fecha: '2026-10-28' },
+        { id: 'CAN-0301', etapa: 'inscrito', fecha: '2026-10-27' },
+        { id: 'CAN-0304', etapa: 'inscrito', fecha: '2026-10-28' },
     ],
 };
 
@@ -749,7 +761,7 @@ INITIAL_PLAZAS['PET-2026-0048'][3].cpd = 'enviado';
 INITIAL_PLAZAS['PET-2026-0048'][4].cpd = 'enviado';
 INITIAL_PLAZAS['PET-2026-0050'][1].cpd = 'enviado';
 (() => {
-    const c = INITIAL_CANDIDATOS_POOL.find(x => x.id === 'CND-1202');
+    const c = INITIAL_CANDIDATOS_POOL.find(x => x.id === 'CAN-0202');
     Object.assign(INITIAL_PLAZAS['PET-2026-0050'][2], { estado: 'reservada', candidatoId: c.id, nombre: c.nombre, dni: c.dni, telefono: c.telefono, email: c.email, scoring: c.scoring, fechaIncorporacion: '10/11/2026', contratoTipo: 'Circunstancias de la producción', cpd: 'sin_generar' });
     const baja = INITIAL_PLAZAS['PET-2026-0044'][2];
     Object.assign(baja, { estado: 'baja', motivoBaja: 'No se presentó', bajaDe: baja.nombre, candidatoId: null, nombre: null, cpd: null });

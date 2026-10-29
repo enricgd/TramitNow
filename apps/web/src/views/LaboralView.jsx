@@ -9,6 +9,7 @@ import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput,
     Select, Segmented, Field, TextInput, Modal, Drawer
 } from '../ui';
+import { contactoDemo } from './personasDemo';
 
 // ==========================================
 // DATOS DE EJEMPLO (alineados con Peticiones)
@@ -71,15 +72,16 @@ const ESTADO_PASO = {
 const LETRA = { h: 'hecho', e: 'en_curso', p: 'pendiente', b: 'bloqueado' };
 
 // estados: una letra por paso (doc, cpd, contrato, prl, alta): h hecho, e en curso, p pendiente, b bloqueado
-const exp = (petId, plaza, nombre, estados, dni = '00000000T') => ({
-    id: `${petId}-${plaza}`, petId, plaza, nombre, dni,
-    telefono: '+34 600 000 000', email: `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
+// DNI, teléfono y email: los mismos que en Candidatos (personasDemo.js)
+const exp = (petId, plaza, nombre, estados) => ({
+    id: `${petId}-${plaza}`, petId, plaza, nombre,
+    dni: contactoDemo(nombre)?.dni || '00000000T', telefono: contactoDemo(nombre)?.telefono || '+34 600 000 000', email: contactoDemo(nombre)?.email || `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
     pasos: Object.fromEntries(PASOS.map((p, i) => [p.id, { estado: LETRA[estados[i]] }])),
 });
 const INITIAL_EXPEDIENTES = [
     exp('PET-2026-0048', 1, 'Jon Ander Etxebarria Bilbao', 'hhhhh'),
     exp('PET-2026-0048', 2, 'Ainhoa Larrazabal Urkijo', 'hhhhp'),
-    exp('PET-2026-0048', 3, 'Mamadou Diallo', 'bhppp', 'X0000000T'),
+    exp('PET-2026-0048', 3, 'Mamadou Diallo', 'bhppp'),
     exp('PET-2026-0048', 4, 'Laura Morales San Sebastián', 'hepep'),
     exp('PET-2026-0048', 5, 'Iker Agirrebeitia Mendia', 'hephp'),
     exp('PET-2026-0050', 1, 'Unai García Zabaleta', 'hhepp'),

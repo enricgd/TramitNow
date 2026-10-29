@@ -37,14 +37,14 @@ const INITIAL_BUSQUEDA: Resultado[] = [
   { id: 'p1', tipo: 'peticion', titulo: 'PET-2026-0049 · Operario/a de almacén · turno de tarde', detalle: 'Trans-Logística Ibérica Norte, S.L. · 0/3 cubiertas', estado: 'En selección', ruta: 'peticiones' },
   { id: 'p2', tipo: 'peticion', titulo: 'PET-2026-0047 · Camarero/a de barra · turno de noche', detalle: 'Hostelería & Eventos Premium BCN, S.L. · 0/3 cubiertas', estado: 'Nueva', ruta: 'peticiones' },
   { id: 'p3', tipo: 'peticion', titulo: 'PET-2026-0048 · Operario/a de almacén · turno de mañana', detalle: 'Trans-Logística Ibérica Norte, S.L. · 5/5 cubiertas', estado: 'Cubierta', ruta: 'peticiones' },
-  { id: 'c1', tipo: 'candidato', titulo: 'Mamadou Diallo', detalle: 'NIE X0000000T · Operario de almacén · PET-2026-0048', estado: 'Bloqueado', ruta: 'laboral' },
-  { id: 'c2', tipo: 'candidato', titulo: 'Unai García Zabaleta', detalle: 'DNI 00000001R · Carretillero · PET-2026-0050', estado: 'En incorporación', ruta: 'laboral' },
-  { id: 'c3', tipo: 'candidato', titulo: 'Ainhoa Larrazabal Urkijo', detalle: 'DNI 00000002W · Mozo de almacén · Getxo', estado: 'Disponible' },
-  { id: 'c4', tipo: 'candidato', titulo: 'Iker Agirrebeitia Mendia', detalle: 'DNI 00000003A · Operario de almacén · PET-2026-0048', estado: 'En incorporación', ruta: 'laboral' },
-  { id: 'e1', tipo: 'cliente', titulo: 'Trans-Logística Ibérica Norte, S.L.', detalle: 'CIF B-87654321 · 3 centros · 3 peticiones abiertas' },
-  { id: 'e2', tipo: 'cliente', titulo: 'Distribuciones Cantábrico, S.L.', detalle: 'CIF B00000001 · 1 centro · 1 petición abierta' },
-  { id: 'b1', tipo: 'presupuesto', titulo: 'PRE-2026-0042 v1 · Campaña logística otoño HUB central', detalle: 'Trans-Logística Ibérica Norte, S.L. · 58.200,00 €', estado: 'Aceptado' },
-  { id: 'b2', tipo: 'presupuesto', titulo: 'PRE-2026-0053 · Mozos turno noche', detalle: 'Distribuciones Cantábrico, S.L. · 18.200,00 €', estado: 'Enviado' },
+  { id: 'c1', tipo: 'candidato', titulo: 'Mamadou Diallo', detalle: 'NIE X0000000T · Operario/a de almacén · PET-2026-0048', estado: 'Bloqueado', ruta: 'laboral' },
+  { id: 'c2', tipo: 'candidato', titulo: 'Unai García Zabaleta', detalle: 'DNI 00000131Q · Carretillero/a · PET-2026-0050', estado: 'En incorporación', ruta: 'laboral' },
+  { id: 'c3', tipo: 'candidato', titulo: 'Ainhoa Larrazabal Urkijo', detalle: 'DNI 00000127N · Operario/a de almacén · PET-2026-0048', estado: 'En incorporación', ruta: 'laboral' },
+  { id: 'c4', tipo: 'candidato', titulo: 'Iker Agirrebeitia Mendia', detalle: 'DNI 00000130S · Operario/a de almacén · PET-2026-0048', estado: 'En incorporación', ruta: 'laboral' },
+  { id: 'e1', tipo: 'cliente', titulo: 'Trans-Logística Ibérica Norte, S.L.', detalle: 'CIF B-87654321 · Basauri (Bizkaia) · 2 peticiones en selección' },
+  { id: 'e2', tipo: 'cliente', titulo: 'Hostelería & Eventos Premium BCN, S.L.', detalle: 'CIF B-99887766 · Barcelona · 1 petición en curso y 3 por empezar' },
+  { id: 'b1', tipo: 'presupuesto', titulo: 'PRE-2026-0042 v1 · Campaña logística otoño HUB central', detalle: 'Trans-Logística Ibérica Norte, S.L. · 105.792,00 €', estado: 'Aceptado' },
+  { id: 'b2', tipo: 'presupuesto', titulo: 'PRE-2026-0045 v1 · Operarios/as soldadura y mecanizado metal 24/7', detalle: 'Manufacturas Metálicas del Henares, S.A. · 64.512,00 €', estado: 'Enviado' },
 ];
 
 const GRUPOS: { tipo: TipoResultado; titulo: string; icon: LucideIcon }[] = [

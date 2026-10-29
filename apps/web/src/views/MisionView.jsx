@@ -9,6 +9,7 @@ import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput,
     Select, Field, TextInput, Modal, Drawer
 } from '../ui';
+import { contactoDemo } from './personasDemo';
 
 // ==========================================
 // DATOS DE EJEMPLO (las mismas peticiones y personas que en Peticiones y Contratos y altas)
@@ -35,7 +36,7 @@ const TIPOS_INCIDENCIA = ['Baja médica (IT)', 'Accidente de trabajo', 'Ausencia
 const MESES_MAXIMOS = 6;
 
 const mision = (petId, n, nombre, inicio, fin, extra = {}) => ({
-    id: `${petId}-${n}`, petId, plaza: n, nombre, dni: '00000000T', telefono: '+34 600 000 000',
+    id: `${petId}-${n}`, petId, plaza: n, nombre, dni: contactoDemo(nombre)?.dni || '00000000T', telefono: contactoDemo(nombre)?.telefono || '+34 600 000 000',
     inicio, fin, estado: 'mision', cpdFirmado: inicio, contrato: 'Circunstancias de la producción',
     prorrogas: [], incidencias: [], cierre: null,
     historial: [{ fecha: inicio, texto: 'Inicio de la misión' }],
