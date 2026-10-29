@@ -35,7 +35,7 @@ const INITIAL_PETITIONS = [
                 mandatoryRequirements: ['DNI/NIE en vigor', 'Disponibilidad inmediata'],
                 plazasTotal: 3,
                 plazas: [
-                    { plazaNum: 1, status: 'En selección', candidateName: 'Elena Sánchez Pascual', candidateId: 'CAN-0104', assignedDate: null },
+                    { plazaNum: 1, status: 'Vacante', candidateName: null, candidateId: null },
                     { plazaNum: 2, status: 'Vacante', candidateName: null, candidateId: null },
                     { plazaNum: 3, status: 'Vacante', candidateName: null, candidateId: null }
                 ]
@@ -62,8 +62,8 @@ const INITIAL_PETITIONS = [
                 plazas: [
                     { plazaNum: 1, status: 'Cubierta', candidateName: 'Unai García Zabaleta', candidateId: 'CAN-0131', assignedDate: '2026-10-20' },
                     { plazaNum: 2, status: 'Cubierta', candidateName: 'Carlos Manuel Ortiz Reyes', candidateId: 'CAN-0132', assignedDate: '2026-10-21' },
-                    { plazaNum: 3, status: 'En selección', candidateName: 'David Aranguren Sola', candidateId: null, assignedDate: null },
-                    { plazaNum: 4, status: 'En selección', candidateName: 'David Castillo Ruiz', candidateId: 'CAN-0105', assignedDate: null }
+                    { plazaNum: 3, status: 'Pendiente del cliente', candidateName: 'David Aranguren Sola', candidateId: null, assignedDate: '2026-10-24' },
+                    { plazaNum: 4, status: 'Vacante', candidateName: null, candidateId: null }
                 ]
             }
         ]
@@ -340,7 +340,7 @@ const CANDIDATOS_BASE = [
         preferredShift: 'Turno Mañana o Tarde',
         skills: ['Reposición lineal', 'Inventarios', 'Etiquetado', 'Trato al cliente'],
         languages: ['Español (Nativo)'],
-        activeCandidatures: ['PET-2026-0049 (En selección, plaza 1)'],
+        activeCandidatures: ['PET-2026-0049 (En selección)'],
         assignedMission: null,
         documents: [
             { name: 'DNI_Elena_Sanchez.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2026-09-10' },
@@ -379,7 +379,7 @@ const CANDIDATOS_BASE = [
         preferredShift: 'Turno Mañana',
         skills: ['Picking radiofrecuencia', 'Preparación pedidos', 'Paletizado'],
         languages: ['Español (Nativo)'],
-        activeCandidatures: ['PET-2026-0050 (En selección, plaza 4)'],
+        activeCandidatures: ['PET-2026-0050 (En selección)'],
         assignedMission: null,
         documents: [
             { name: 'DNI_David_Castillo.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-11-20' },
@@ -387,7 +387,7 @@ const CANDIDATOS_BASE = [
             { name: 'RGPD_ETT_Global.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2025-11-20' }
         ],
         communications: [
-            { date: '2026-10-20 15:40', user: 'Ana Gómez', channel: 'Llamada', result: 'Validada disponibilidad', note: 'Disponible para plaza 4 de PET-2026-0050.' }
+            { date: '2026-10-20 15:40', user: 'Ana Gómez', channel: 'Llamada', result: 'Validada disponibilidad', note: 'Disponible para el turno de tarde de PET-2026-0050. Pendiente de entrevista.' }
         ]
     },
     {
@@ -822,7 +822,47 @@ const sincronizarEstados = (c) => {
     };
 };
 
-const INITIAL_CANDIDATES = CANDIDATOS_BASE.map(c => homogeneizar(completarCandidato(c)));
+// Puesto, turno, cliente y centro de cada petición (las mismas que en Peticiones). Una petición = un puesto.
+const PETICIONES_INFO = {
+    'PET-2026-0031': { puesto: 'Mozo/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2' },
+    'PET-2026-0044': { puesto: 'Camarero/a de sala', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona' },
+    'PET-2026-0045': { puesto: 'Ayudante de cocina', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona' },
+    'PET-2026-0046': { puesto: 'Cocinero/a de partida', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona' },
+    'PET-2026-0047': { puesto: 'Camarero/a de barra', turno: 'Turno de noche', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona' },
+    'PET-2026-0048': { puesto: 'Operario/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2' },
+    'PET-2026-0049': { puesto: 'Operario/a de almacén', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2' },
+    'PET-2026-0050': { puesto: 'Carretillero/a', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2' },
+};
+// Estados de una candidatura, en el orden del recorrido (los mismos pasos que la plaza en Peticiones)
+const ESTADOS_CANDIDATURA = {
+    'En selección': { tono: 'accent', texto: 'Pendiente de entrevista o de proponerla al cliente.', activa: true },
+    'Propuesta al cliente': { tono: 'warning', texto: 'Plaza reservada: el cliente tiene que confirmarla en Peticiones.', activa: true },
+    'Confirmada': { tono: 'info', texto: 'El cliente la ha confirmado. Expediente en Contratos y altas hasta el primer día.', activa: true },
+    'En misión': { tono: 'success', texto: 'Trabajando en el cliente.', activa: true },
+    'Finalizada': { tono: 'neutral', texto: 'Misión terminada.', activa: false },
+    'Baja': { tono: 'neutral', texto: 'Dejó la plaza antes de terminar.', activa: false },
+    'Descartada': { tono: 'danger', texto: 'No sigue en el proceso de selección.', activa: false },
+};
+// Candidaturas de ejemplo a partir de los datos de cada persona
+const candidaturasIniciales = (c) => {
+    const lista = [];
+    if (c.assignedMission) {
+        lista.push({ petId: c.assignedMission.petitionId, plaza: c.assignedMission.plazaNum, estado: c.status === 'En incorporación' ? 'Confirmada' : 'En misión', fecha: c.assignedMission.startDate });
+    }
+    (c.activeCandidatures || []).forEach(s => {
+        const petId = s.slice(0, 13);
+        if (!lista.some(x => x.petId === petId) && PETICIONES_INFO[petId]) lista.push({ petId, plaza: null, estado: 'En selección', fecha: c.lastContactDate });
+    });
+    (c.communications || []).forEach(m => {
+        const petId = (m.note.match(/PET-\d{4}-\d{4}/) || [])[0];
+        if (!petId || lista.some(x => x.petId === petId)) return;
+        if (m.result === 'Fin de misión') lista.push({ petId, plaza: null, estado: 'Finalizada', fecha: m.date.slice(0, 10), nota: m.note });
+        if (m.result === 'Baja voluntaria') lista.push({ petId, plaza: Number((m.note.match(/plaza (\d+)/) || [])[1]) || null, estado: 'Baja', fecha: m.date.slice(0, 10), nota: m.note });
+    });
+    return lista;
+};
+
+const INITIAL_CANDIDATES = CANDIDATOS_BASE.map(c => homogeneizar(completarCandidato(c))).map(c => ({ ...c, candidaturas: c.candidaturas || candidaturasIniciales(c) }));
 
 const ESTADO_CANDIDATO = {
     'Disponible': { tone: 'success', label: 'Disponible' },
@@ -890,11 +930,12 @@ export default function CandidatosView() {
         isOpen: false,
         candidate: null,
         candidatesBatch: [], // For bulk assignment
-        step: 1, // 1: Select Petition, 2: Select Position, 3: Select Plaza, 4: Validate & Compatibility, 5: Confirmation
+        step: 1, // 1: petición, 2: plaza y modalidad, 3: comprobaciones y confirmar
         selectedPetitionId: 'PET-2026-0049',
         selectedPositionId: 'POS-0049',
-        selectedPlazaNum: 2,
-        assignmentMode: 'plaza', // 'plaza' (direct assignment) | 'candidature' (iniciar candidatura/terna)
+        selectedPlazaNum: 1,
+        assignmentMode: 'seleccion', // 'seleccion' (entrevista antes de proponer) | 'propuesta' (proponer al cliente para una plaza)
+        busquedaPeticion: '',
         blockersFound: [],
         warningsFound: [],
         overrideReason: ''
@@ -1095,9 +1136,9 @@ export default function CandidatosView() {
     };
 
     // Start Assign Wizard for a single candidate
-    const startAssignWizard = (candidate) => {
-        // Comprobaciones con la primera petición en selección (PET-2026-0049)
-        const pet = petitions.find(p => p.id === 'PET-2026-0049');
+    const startAssignWizard = (candidate, petId = 'PET-2026-0049', step = 1) => {
+        // Una petición = un puesto: el puesto es el único de la petición
+        const pet = petitions.find(p => p.id === petId) || petitions[0];
         const pos = pet?.positions[0];
         
         const blockers = [];
@@ -1120,11 +1161,12 @@ export default function CandidatosView() {
             isOpen: true,
             candidate: candidate,
             candidatesBatch: [candidate],
-            step: 1,
-            selectedPetitionId: 'PET-2026-0049',
-            selectedPositionId: 'POS-0049',
-            selectedPlazaNum: 2, // Default to first vacant
-            assignmentMode: 'plaza',
+            step,
+            selectedPetitionId: pet.id,
+            selectedPositionId: pos?.id || '',
+            selectedPlazaNum: pos?.plazas.find(p => p.status === 'Vacante')?.plazaNum || null,
+            assignmentMode: step === 2 ? 'propuesta' : 'seleccion',
+            busquedaPeticion: '',
             blockersFound: blockers,
             warningsFound: warnings,
             overrideReason: ''
@@ -1174,80 +1216,68 @@ export default function CandidatosView() {
         return { blockers, warnings };
     };
 
-    // Apply assignment in Wizard
+    // Confirmar el asistente: candidatura en selección o propuesta al cliente (la plaza queda pendiente del cliente)
     const confirmAssignmentWizard = () => {
-        const { candidate, selectedPetitionId, selectedPositionId, selectedPlazaNum, assignmentMode } = wizardState;
+        const { candidate, selectedPetitionId, selectedPlazaNum, assignmentMode } = wizardState;
         if (!candidate) return;
-
         const pet = petitions.find(p => p.id === selectedPetitionId);
-        const pos = pet?.positions.find(p => p.id === selectedPositionId);
+        const pos = pet?.positions[0];
+        const propuesta = assignmentMode === 'propuesta';
+        const nombre = `${candidate.name} ${candidate.lastName}`;
+        const hoy = hoyIso();
 
-        // Update petition plaza
-        const updatedPetitions = petitions.map(p => {
-            if (p.id !== selectedPetitionId) return p;
-            return {
+        if (propuesta) {
+            setPetitions(prev => prev.map(p => (p.id !== selectedPetitionId ? p : {
                 ...p,
-                positions: p.positions.map(position => {
-                    if (position.id !== selectedPositionId) return position;
-                    return {
-                        ...position,
-                        plazas: position.plazas.map(plz => {
-                            if (plz.plazaNum === Number(selectedPlazaNum)) {
-                                return {
-                                    ...plz,
-                                    status: assignmentMode === 'plaza' ? 'Cubierta' : 'En selección',
-                                    candidateName: `${candidate.name} ${candidate.lastName}`,
-                                    candidateId: candidate.id,
-                                    assignedDate: new Date().toISOString().split('T')[0]
-                                };
-                            }
-                            return plz;
-                        })
-                    };
-                })
-            };
-        });
-        setPetitions(updatedPetitions);
+                positions: p.positions.map(position => ({
+                    ...position,
+                    plazas: position.plazas.map(plz => (plz.plazaNum === Number(selectedPlazaNum)
+                        ? { ...plz, status: 'Pendiente del cliente', candidateName: nombre, candidateId: candidate.id, assignedDate: hoy }
+                        : plz)),
+                })),
+            })));
+        }
 
-        // Update Candidate
-        const updatedCandidates = candidates.map(c => {
+        const estado = propuesta ? 'Propuesta al cliente' : 'En selección';
+        const aplicar = (c) => {
             if (c.id !== candidate.id) return c;
-            
-            const newStatus = assignmentMode === 'plaza' ? 'Asignado/En misión' : 'En entrevista';
-            const newCandidatureStr = `${selectedPetitionId} (${pos?.title || 'Posición'} · Plaza ${selectedPlazaNum})`;
-            
-            const newLog = {
+            const otras = (c.candidaturas || []).filter(x => x.petId !== selectedPetitionId);
+            const log = {
                 date: new Date().toISOString().replace('T', ' ').substring(0, 16),
                 user: 'Ana Gómez',
                 channel: 'ERP Sistema',
-                result: assignmentMode === 'plaza' ? 'Asignado a Plaza' : 'Candidatura iniciada',
-                note: `Asignado a ${selectedPetitionId} (${pet?.client}) · ${pos?.title} · Plaza ${selectedPlazaNum}. ${wizardState.overrideReason ? 'Observaciones: ' + wizardState.overrideReason : ''}`
+                result: propuesta ? 'Propuesta al cliente' : 'Candidatura iniciada',
+                note: `${selectedPetitionId} · ${pos?.title} · ${pet?.client}${propuesta ? ` · plaza ${selectedPlazaNum}` : ''}.${wizardState.overrideReason ? ` ${wizardState.overrideReason}` : ''}`,
             };
-
             return {
                 ...c,
-                status: newStatus,
-                activeCandidatures: [...(c.activeCandidatures.filter(x => !x.includes(selectedPetitionId))), newCandidatureStr],
-                assignedMission: assignmentMode === 'plaza' ? {
-                    petitionId: selectedPetitionId,
-                    client: pet?.client || 'Cliente',
-                    positionId: selectedPositionId,
-                    positionTitle: pos?.title || 'Posición',
-                    plazaNum: Number(selectedPlazaNum),
-                    startDate: pet?.startDate || '2026-03-01'
-                } : c.assignedMission,
-                communications: [newLog, ...c.communications]
+                status: ['Asignado/En misión', 'En incorporación'].includes(c.status) ? c.status : 'En entrevista',
+                candidaturas: [{ petId: selectedPetitionId, plaza: propuesta ? Number(selectedPlazaNum) : null, estado, fecha: hoy, nota: wizardState.overrideReason }, ...otras],
+                activeCandidatures: [`${selectedPetitionId} (${estado}${propuesta ? `, plaza ${selectedPlazaNum}` : ''})`, ...(c.activeCandidatures || []).filter(x => !x.includes(selectedPetitionId))],
+                communications: [log, ...c.communications],
             };
-        });
-
-        setCandidates(updatedCandidates);
+        };
+        setCandidates(prev => prev.map(aplicar));
+        setSelectedCandidateForDetail(prev => (prev ? aplicar(prev) : prev));
         setWizardState(prev => ({ ...prev, isOpen: false }));
-        
         showToast(
-            'Asignación completada con éxito',
-            `Candidato ${candidate.name} ${candidate.lastName} asignado a ${selectedPetitionId} · ${pos?.title} (Plaza ${selectedPlazaNum}).`,
+            propuesta ? 'Propuesta enviada al cliente' : 'Candidatura iniciada',
+            propuesta
+                ? `${nombre} propuesto/a para la plaza ${selectedPlazaNum} de ${selectedPetitionId}. El cliente la confirma en Peticiones.`
+                : `${nombre} en selección para ${selectedPetitionId} · ${pos?.title}.`,
             'success'
         );
+    };
+    // Cambia el estado de una candidatura desde la ficha (por ejemplo, descartarla)
+    const cambiarCandidatura = (candidatoId, petId, estado) => {
+        const aplicar = (c) => (c.id !== candidatoId ? c : {
+            ...c,
+            candidaturas: c.candidaturas.map(x => (x.petId === petId ? { ...x, estado, fecha: hoyIso() } : x)),
+            activeCandidatures: (c.activeCandidatures || []).filter(x => !x.includes(petId)),
+        });
+        setCandidates(prev => prev.map(aplicar));
+        setSelectedCandidateForDetail(prev => (prev ? aplicar(prev) : prev));
+        showToast('Candidatura actualizada', `${petId}: ${estado.toLowerCase()}.`, 'success');
     };
 
     // Contact Handler
@@ -2124,26 +2154,55 @@ export default function CandidatosView() {
                                 );
                             })()}
 
-                            {detailTab === 'candidaturas' && (
-                                <div className="space-y-4 text-xs">
-                                    <h4 className="font-semibold text-slate-900">Histórico de peticiones y plazas asignadas</h4>
-                                    {selectedCandidateForDetail.assignedMission ? (
-                                        <div className="bg-white border border-indigo-200 rounded-xl p-4 shadow-xs">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="font-semibold text-indigo-900 text-sm">{selectedCandidateForDetail.assignedMission.petitionId}</span>
-                                                <span className="bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded text-[10px]">Misión Activa</span>
+                            {detailTab === 'candidaturas' && (() => {
+                                const cand = selectedCandidateForDetail.candidaturas || [];
+                                const activas = cand.filter(x => ESTADOS_CANDIDATURA[x.estado]?.activa);
+                                const anteriores = cand.filter(x => !ESTADOS_CANDIDATURA[x.estado]?.activa);
+                                const tarjeta = (x) => {
+                                    const info = PETICIONES_INFO[x.petId] || { puesto: '—', turno: '', cliente: '', centro: '' };
+                                    const e = ESTADOS_CANDIDATURA[x.estado] || { tono: 'neutral', texto: '' };
+                                    const destino = x.estado === 'En misión' ? ['#/mision', 'Personal en misión'] : x.estado === 'Confirmada' ? ['#/laboral', 'Contratos y altas'] : ['#/peticiones', 'Ver en Peticiones'];
+                                    return (
+                                        <div key={x.petId} className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-2">
+                                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                                <div>
+                                                    <div className="text-[11px] text-slate-500">{x.petId}{x.plaza ? ` · Plaza ${x.plaza}` : ''}</div>
+                                                    <div className="text-sm font-medium text-slate-900">{info.puesto} · {info.turno.toLowerCase()}</div>
+                                                    <div className="text-slate-600">{info.cliente}</div>
+                                                    <div className="text-[11px] text-slate-500">{info.centro}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <Badge tone={e.tono} dot>{x.estado}</Badge>
+                                                    <div className="text-[11px] text-slate-500 mt-1">{x.estado === 'Confirmada' ? 'Empieza el ' : x.estado === 'En misión' ? 'Desde el ' : ''}{fechaES(x.fecha)}</div>
+                                                </div>
                                             </div>
-                                            <p className="text-slate-700 font-semibold">{selectedCandidateForDetail.assignedMission.client}</p>
-                                            <p className="text-slate-500 mt-1">Posición: {selectedCandidateForDetail.assignedMission.positionTitle} · Plaza {selectedCandidateForDetail.assignedMission.plazaNum}</p>
-                                            <p className="text-slate-400 text-[11px] mt-1">Inicio previsto: {selectedCandidateForDetail.assignedMission.startDate}</p>
+                                            <p className="text-slate-600">{e.texto}{x.nota ? ` ${x.nota}` : ''}</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button size="sm" variant="ghost" icon={ArrowUpRight} onClick={() => { window.location.hash = destino[0]; }}>{destino[1]}</Button>
+                                                {x.estado === 'En selección' && petitions.some(p => p.id === x.petId) && (
+                                                    <Button size="sm" icon={Send} onClick={() => startAssignWizard(selectedCandidateForDetail, x.petId, 2)}>Proponer al cliente</Button>
+                                                )}
+                                                {x.estado === 'En selección' && (
+                                                    <Button size="sm" variant="ghost" icon={X} onClick={() => cambiarCandidatura(selectedCandidateForDetail.id, x.petId, 'Descartada')}>Descartar</Button>
+                                                )}
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center text-slate-400">
-                                            No hay candidaturas activas ni contratos en curso en este momento.
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                    );
+                                };
+                                return (
+                                    <div className="space-y-4 text-xs">
+                                        <SectionTitle actions={<Button size="sm" icon={Briefcase} onClick={() => startAssignWizard(selectedCandidateForDetail)}>Asignar a una petición</Button>}>Candidaturas activas</SectionTitle>
+                                        {activas.length ? <div className="space-y-2">{activas.map(tarjeta)}</div> : (
+                                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-center text-slate-500">No está en ninguna petición ahora mismo.</div>
+                                        )}
+                                        {anteriores.length > 0 && <>
+                                            <SectionTitle>Anteriores</SectionTitle>
+                                            <div className="space-y-2">{anteriores.map(tarjeta)}</div>
+                                        </>}
+                                        <p className="text-[11px] text-slate-500">El orden es el de Peticiones: en selección → propuesta al cliente → confirmada (CPD y expediente) → en misión → finalizada.</p>
+                                    </div>
+                                );
+                            })()}
 
                             {detailTab === 'historial' && (
                                 <div className="space-y-4 text-xs">
@@ -2188,30 +2247,20 @@ export default function CandidatosView() {
             {wizardState.isOpen && (
                 <Modal
                   title={'Asignar a petición'}
-                  subtitle={<>Paso {wizardState.step} de 4 · {wizardState.candidate?.name} {wizardState.candidate?.lastName} ({wizardState.candidate?.id})</>}
+                  subtitle={<>Paso {wizardState.step} de 3 · {wizardState.candidate?.name} {wizardState.candidate?.lastName} ({wizardState.candidate?.id})</>}
                   onClose={() => setWizardState(prev => ({ ...prev, isOpen: false }))}
                   size="max-w-3xl"
                   toolbar={<>
                         <div className="px-6 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs font-semibold flex-shrink-0">
-                            <div className={`flex items-center gap-1.5 ${wizardState.step >= 1 ? 'text-indigo-600 font-semibold' : 'text-slate-400'}`}>
-                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${wizardState.step >= 1 ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'}`}>1</span>
-                                <span>Petición ETT</span>
-                            </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                            <div className={`flex items-center gap-1.5 ${wizardState.step >= 2 ? 'text-indigo-600 font-semibold' : 'text-slate-400'}`}>
-                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${wizardState.step >= 2 ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'}`}>2</span>
-                                <span>Posición y Turno</span>
-                            </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                            <div className={`flex items-center gap-1.5 ${wizardState.step >= 3 ? 'text-indigo-600 font-semibold' : 'text-slate-400'}`}>
-                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${wizardState.step >= 3 ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'}`}>3</span>
-                                <span>Selección Plaza</span>
-                            </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                            <div className={`flex items-center gap-1.5 ${wizardState.step >= 4 ? 'text-indigo-600 font-semibold' : 'text-slate-400'}`}>
-                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${wizardState.step >= 4 ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'}`}>4</span>
-                                <span>Validación y Confirmar</span>
-                            </div>
+                            {['Petición', 'Plaza y modalidad', 'Comprobar y confirmar'].map((paso, n) => (
+                                <React.Fragment key={paso}>
+                                    {n > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                                    <div className={`flex items-center gap-1.5 ${wizardState.step >= n + 1 ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${wizardState.step >= n + 1 ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'}`}>{n + 1}</span>
+                                        <span>{paso}</span>
+                                    </div>
+                                </React.Fragment>
+                            ))}
                         </div>
                   </>}
                   footer={<>
@@ -2232,8 +2281,9 @@ export default function CandidatosView() {
                                 </button>
                             )}
 
-                            {wizardState.step < 4 ? (
+                            {wizardState.step < 3 ? (
                                 <button 
+                                    disabled={wizardState.step === 2 && wizardState.assignmentMode === 'propuesta' && !wizardState.selectedPlazaNum}
                                     onClick={() => setWizardState(prev => ({ ...prev, step: prev.step + 1 }))}
                                     className="h-8 px-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium shadow-xs"
                                 >
@@ -2244,7 +2294,7 @@ export default function CandidatosView() {
                                     onClick={confirmAssignmentWizard}
                                     className="h-8 px-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium shadow-xs"
                                 >
-                                    <Check className="w-4 h-4" /> Confirmar Asignación
+                                    <Check className="w-4 h-4" /> {wizardState.assignmentMode === 'propuesta' ? 'Proponer al cliente' : 'Añadir a la selección'}
                                 </button>
                             )}
                   </div>
@@ -2253,218 +2303,111 @@ export default function CandidatosView() {
 
                         {/* Step Content Area */}
                         <div className="p-6 flex-1 overflow-y-auto">
-                            {/* PASO 1: SELECCIONAR PETICIÓN */}
+                            {/* PASO 1: PETICIÓN (una petición = un puesto) */}
                             {wizardState.step === 1 && (
                                 <div className="space-y-4">
                                     <div>
-                                        <h4 className="text-sm font-semibold text-slate-900">Selecciona la petición de cliente de destino</h4>
-                                        <p className="text-xs text-slate-500">Muestra las peticiones abiertas en ETT Global con plazas pendientes de cubrir.</p>
+                                        <h4 className="text-sm font-semibold text-slate-900">Elige la petición</h4>
+                                        <p className="text-xs text-slate-500">Peticiones con plazas por cubrir. Cada petición es un puesto con su turno.</p>
                                     </div>
+                                    <SearchInput value={wizardState.busquedaPeticion} onChange={(v) => setWizardState(prev => ({ ...prev, busquedaPeticion: v }))} placeholder="Buscar petición, puesto, cliente o centro..." />
+                                    <div className="space-y-2">
+                                        {petitions.filter(pet => {
+                                            const q = normalizarTexto(wizardState.busquedaPeticion || '');
+                                            const pos = pet.positions[0];
+                                            return !q || normalizarTexto(`${pet.id} ${pos.title} ${pos.turn} ${pet.client} ${pet.workplace}`).includes(q);
+                                        }).map(pet => {
+                                            const pos = pet.positions[0];
+                                            const libres = pos.plazas.filter(p => p.status === 'Vacante').length;
+                                            const elegida = wizardState.selectedPetitionId === pet.id;
+                                            const ya = (wizardState.candidate?.candidaturas || []).find(x => x.petId === pet.id);
+                                            return (
+                                                <button
+                                                    key={pet.id}
+                                                    type="button"
+                                                    onClick={() => setWizardState(prev => ({ ...prev, selectedPetitionId: pet.id, selectedPositionId: pos.id, selectedPlazaNum: pos.plazas.find(p => p.status === 'Vacante')?.plazaNum || null }))}
+                                                    className={`w-full text-left p-3.5 rounded-xl border transition ${elegida ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                                                >
+                                                    <span className="flex flex-wrap items-start justify-between gap-2">
+                                                        <span>
+                                                            <span className="block text-[11px] text-slate-500">{pet.id} · {pet.status}</span>
+                                                            <span className="block text-sm font-medium text-slate-900">{pos.title} · {pos.turn.split(' (')[0].toLowerCase()}</span>
+                                                            <span className="block text-xs text-slate-600">{pet.client}</span>
+                                                            <span className="flex items-center gap-1 text-[11px] text-slate-500"><MapPin className="w-3 h-3 text-slate-400" />{pet.workplace} · empieza el {fechaES(pet.startDate)}</span>
+                                                        </span>
+                                                        <span className="text-right">
+                                                            <Badge tone={libres ? 'success' : 'neutral'}>{libres} de {pos.plazasTotal} plazas libres</Badge>
+                                                            {ya && <span className="block mt-1 text-[11px] text-amber-700">Ya tiene una candidatura: {ya.estado.toLowerCase()}</span>}
+                                                        </span>
+                                                    </span>
+                                                    {pos.mandatoryRequirements?.length > 0 && (
+                                                        <span className="mt-2 flex flex-wrap gap-1">
+                                                            {pos.mandatoryRequirements.map(req => <span key={req} className="bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-medium px-2 py-0.5 rounded">{req}</span>)}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
-                                    <div className="space-y-3">
-                                        {petitions.map(pet => (
-                                            <div 
-                                                key={pet.id}
-                                                onClick={() => setWizardState(prev => ({ 
-                                                    ...prev, 
-                                                    selectedPetitionId: pet.id,
-                                                    selectedPositionId: pet.positions[0]?.id || ''
-                                                }))}
-                                                className={`p-4 rounded-xl border cursor-pointer transition ${wizardState.selectedPetitionId === pet.id ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20' : 'border-slate-200 hover:border-slate-200 bg-white'}`}
-                                            >
-                                                <div className="flex items-start justify-between">
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-mono font-semibold text-indigo-900 text-sm">{pet.id}</span>
-                                                            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-2 py-0.5 rounded">{pet.status}</span>
-                                                        </div>
-                                                        <h5 className="font-semibold text-slate-900 text-sm mt-1">{pet.client}</h5>
-                                                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                                                            <MapPin className="w-3 h-3 text-slate-400" /> {pet.workplace}
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-xs text-slate-500">Inicio:</span>
-                                                        <p className="font-semibold text-slate-800 text-xs">{pet.startDate}</p>
-                                                        <span className="text-[11px] text-indigo-600 font-semibold">{pet.positions.length} posiciones</span>
-                                                    </div>
-                                                </div>
+                            {/* PASO 2: PLAZA Y MODALIDAD */}
+                            {wizardState.step === 2 && (() => {
+                                const currentPet = petitions.find(p => p.id === wizardState.selectedPetitionId);
+                                const currentPos = currentPet?.positions[0];
+                                const propuesta = wizardState.assignmentMode === 'propuesta';
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+                                            <div>
+                                                <span className="text-slate-500">{currentPet?.id} · {currentPet?.client}</span>
+                                                <p className="font-semibold text-slate-900">{currentPos?.title} · {currentPos?.turn}</p>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* PASO 2: SELECCIONAR POSICIÓN */}
-                            {wizardState.step === 2 && (
-                                <div className="space-y-4">
-                                    {(() => {
-                                        const currentPet = petitions.find(p => p.id === wizardState.selectedPetitionId);
-                                        return (
-                                            <>
-                                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
-                                                    <div>
-                                                        <span className="text-slate-400">Petición seleccionada:</span>
-                                                        <p className="font-semibold text-slate-900">{currentPet?.id} · {currentPet?.client}</p>
-                                                    </div>
-                                                    <button 
-                                                        onClick={() => setWizardState(prev => ({ ...prev, step: 1 }))}
-                                                        className="text-indigo-600 font-semibold hover:underline"
+                                            <button onClick={() => setWizardState(prev => ({ ...prev, step: 1 }))} className="text-indigo-600 font-semibold hover:underline">Cambiar</button>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                            {[
+                                                { id: 'seleccion', titulo: 'Añadir a la selección', texto: 'Queda en selección para esta petición (entrevista, pruebas) sin ocupar plaza. Se propone al cliente más adelante.' },
+                                                { id: 'propuesta', titulo: 'Proponer al cliente', texto: 'Se reserva una plaza vacante y el cliente la confirma en Peticiones. Al confirmarla se genera el CPD y se abre el expediente en Contratos y altas.' },
+                                            ].map(m => (
+                                                <label key={m.id} className={`flex items-start gap-2 rounded-xl border p-3 cursor-pointer ${wizardState.assignmentMode === m.id ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white'}`}>
+                                                    <input type="radio" name="modalidad" checked={wizardState.assignmentMode === m.id} onChange={() => setWizardState(prev => ({ ...prev, assignmentMode: m.id }))} className="mt-0.5 text-indigo-600 focus:ring-indigo-500" />
+                                                    <span><span className="block font-semibold text-slate-900">{m.titulo}</span><span className="text-slate-600">{m.texto}</span></span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-slate-900">Plazas de la petición</h4>
+                                            <p className="text-xs text-slate-500">{propuesta ? 'Elige la plaza vacante que se reserva para esta persona.' : 'Para añadir a la selección no hace falta elegir plaza.'}</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {currentPos?.plazas.map(plz => {
+                                                const libre = plz.status === 'Vacante';
+                                                const elegida = propuesta && Number(wizardState.selectedPlazaNum) === plz.plazaNum;
+                                                return (
+                                                    <button
+                                                        key={plz.plazaNum}
+                                                        type="button"
+                                                        disabled={!libre || !propuesta}
+                                                        onClick={() => setWizardState(prev => ({ ...prev, selectedPlazaNum: plz.plazaNum }))}
+                                                        className={`text-left p-3 rounded-xl border text-xs transition ${!libre ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed' : elegida ? 'bg-indigo-50/70 border-indigo-600 ring-2 ring-indigo-500/20' : propuesta ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-white border-slate-200 cursor-default'}`}
                                                     >
-                                                        Cambiar
+                                                        <span className="flex items-center justify-between mb-1">
+                                                            <span className="font-semibold text-slate-900">Plaza {plz.plazaNum} de {currentPos.plazasTotal}</span>
+                                                            <Badge tone={libre ? 'success' : plz.status === 'Cubierta' ? 'info' : 'warning'}>{plz.status}</Badge>
+                                                        </span>
+                                                        <span className="block text-slate-600">{libre ? 'Libre' : `${plz.candidateName}${plz.status === 'Pendiente del cliente' ? ' · pendiente de que el cliente confirme' : ''}`}</span>
                                                     </button>
-                                                </div>
-
-                                                <div>
-                                                    <h4 className="text-sm font-semibold text-slate-900">Selecciona la posición de trabajo</h4>
-                                                    <p className="text-xs text-slate-500">Cada posición define requisitos obligatorios, salario/hora y turno.</p>
-                                                </div>
-
-                                                <div className="space-y-3">
-                                                    {currentPet?.positions.map(pos => {
-                                                        const vacantCount = pos.plazas.filter(p => p.status === 'Vacante').length;
-                                                        const isSelected = wizardState.selectedPositionId === pos.id;
-                                                        return (
-                                                            <div 
-                                                                key={pos.id}
-                                                                onClick={() => setWizardState(prev => ({ ...prev, selectedPositionId: pos.id }))}
-                                                                className={`p-4 rounded-xl border cursor-pointer transition ${isSelected ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20' : 'border-slate-200 hover:border-slate-200 bg-white'}`}
-                                                            >
-                                                                <div className="flex items-start justify-between">
-                                                                    <div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="font-mono text-xs font-semibold text-indigo-700">{pos.id}</span>
-                                                                            <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded">{pos.category}</span>
-                                                                        </div>
-                                                                        <h5 className="font-semibold text-slate-900 text-sm mt-1">{pos.title}</h5>
-                                                                        <p className="text-xs text-slate-600 mt-1 flex items-center gap-1 font-medium">
-                                                                            <Clock className="w-3.5 h-3.5 text-indigo-500" /> {pos.turn} · <strong className="text-emerald-700">{pos.rate}</strong>
-                                                                        </p>
-                                                                        
-                                                                        {/* Mandatory requirements chips */}
-                                                                        <div className="mt-2 flex flex-wrap gap-1">
-                                                                            {pos.mandatoryRequirements.map((req, idx) => (
-                                                                                <span key={idx} className="bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-medium px-2 py-0.5 rounded">
-                                                                                    * {req}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div className="text-right">
-                                                                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${vacantCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                                                                            {vacantCount} de {pos.plazasTotal} plazas libres
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </>
-                                        );
-                                    })()}
-                                </div>
-                            )}
-
-                            {/* PASO 3: SELECCIONAR PLAZA CONCRETA */}
-                            {wizardState.step === 3 && (
-                                <div className="space-y-4">
-                                    {(() => {
-                                        const currentPet = petitions.find(p => p.id === wizardState.selectedPetitionId);
-                                        const currentPos = currentPet?.positions.find(p => p.id === wizardState.selectedPositionId);
-                                        
-                                        return (
-                                            <>
-                                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs flex items-center justify-between">
-                                                    <div>
-                                                        <span className="text-slate-400">Petición y Posición:</span>
-                                                        <p className="font-semibold text-slate-900">{currentPet?.id} · {currentPos?.title}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-slate-400">Turno:</span>
-                                                        <p className="font-semibold text-slate-800">{currentPos?.turn}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <h4 className="text-sm font-semibold text-slate-900">Selecciona la plaza concreta</h4>
-                                                    <p className="text-xs text-slate-500">Puedes asignar directamente a una plaza vacante o iniciar candidatura en terna.</p>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {currentPos?.plazas.map(plz => {
-                                                        const isVacant = plz.status === 'Vacante';
-                                                        const isSelected = Number(wizardState.selectedPlazaNum) === plz.plazaNum;
-                                                        return (
-                                                            <div 
-                                                                key={plz.plazaNum}
-                                                                onClick={() => isVacant && setWizardState(prev => ({ ...prev, selectedPlazaNum: plz.plazaNum }))}
-                                                                className={`p-3.5 rounded-xl border transition ${!isVacant ? 'bg-slate-100 border-slate-200 opacity-80 cursor-not-allowed' : isSelected ? 'bg-indigo-50/70 border-indigo-600 ring-2 ring-indigo-500/20 cursor-pointer' : 'bg-white border-slate-200 hover:border-slate-200 cursor-pointer'}`}
-                                                            >
-                                                                <div className="flex items-center justify-between mb-2">
-                                                                    <span className="font-semibold text-slate-900 text-xs">
-                                                                        Plaza Nº {plz.plazaNum} de {currentPos.plazasTotal}
-                                                                    </span>
-                                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${plz.status === 'Vacante' ? 'bg-emerald-100 text-emerald-800' : plz.status === 'Cubierta' ? 'bg-indigo-100 text-indigo-800' : 'bg-indigo-100 text-indigo-800'}`}>
-                                                                        {plz.status}
-                                                                    </span>
-                                                                </div>
-
-                                                                {plz.status === 'Cubierta' ? (
-                                                                    <p className="text-xs text-slate-600">
-                                                                        Ocupada por: <strong className="text-slate-900">{plz.candidateName}</strong>
-                                                                    </p>
-                                                                ) : plz.status === 'En selección' ? (
-                                                                    <p className="text-xs text-indigo-800 font-medium">
-                                                                        Preseleccionado: {plz.candidateName}
-                                                                    </p>
-                                                                ) : (
-                                                                    <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
-                                                                        <Check className="w-3.5 h-3.5" /> Disponible para asignación inmediata
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-
-                                                {/* Assignment Mode choice */}
-                                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 space-y-2">
-                                                    <h5 className="font-semibold text-slate-900 text-xs">Modalidad de Asignación:</h5>
-                                                    <div className="flex items-center gap-4 text-xs">
-                                                        <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
-                                                            <input 
-                                                                type="radio" 
-                                                                name="assignMode" 
-                                                                value="plaza"
-                                                                checked={wizardState.assignmentMode === 'plaza'}
-                                                                onChange={() => setWizardState(prev => ({ ...prev, assignmentMode: 'plaza' }))}
-                                                                className="text-indigo-600 focus:ring-indigo-500"
-                                                            />
-                                                            <span>Asignar plaza directamente (Cubrir vacante)</span>
-                                                        </label>
-                                                        <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
-                                                            <input 
-                                                                type="radio" 
-                                                                name="assignMode" 
-                                                                value="candidature"
-                                                                checked={wizardState.assignmentMode === 'candidature'}
-                                                                onChange={() => setWizardState(prev => ({ ...prev, assignmentMode: 'candidature' }))}
-                                                                className="text-indigo-600 focus:ring-indigo-500"
-                                                            />
-                                                            <span>Iniciar candidatura (En terna / entrevista previa)</span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        );
-                                    })()}
-                                </div>
-                            )}
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* PASO 4: VALIDACIÓN, ALERTAS Y CONFIRMACIÓN */}
-                            {wizardState.step === 4 && (
+                            {wizardState.step === 3 && (
                                 <div className="space-y-4">
                                     {(() => {
                                         const currentPet = petitions.find(p => p.id === wizardState.selectedPetitionId);
@@ -2484,14 +2427,14 @@ export default function CandidatosView() {
                                                             Destino: <strong>{currentPet?.id} · {currentPet?.client}</strong>
                                                         </p>
                                                         <p className="text-slate-500">
-                                                            Posición: <strong>{currentPos?.title}</strong> · Plaza <strong>{wizardState.selectedPlazaNum}</strong>
+                                                            Puesto: <strong>{currentPos?.title}</strong> · {currentPos?.turn}{wizardState.assignmentMode === 'propuesta' && <> · Plaza <strong>{wizardState.selectedPlazaNum}</strong></>}
                                                         </p>
                                                     </div>
                                                     <div className="text-right">
                                                         <span className="bg-indigo-600 text-white font-semibold px-2 py-0.5 rounded text-[10px]">
-                                                            {wizardState.assignmentMode === 'plaza' ? 'Asignación Directa' : 'Candidatura'}
+                                                            {wizardState.assignmentMode === 'propuesta' ? 'Propuesta al cliente' : 'En selección'}
                                                         </span>
-                                                        <p className="text-slate-500 text-[11px] mt-2">Inicio: {currentPet?.startDate}</p>
+                                                        <p className="text-slate-500 text-[11px] mt-2">Empieza el {fechaES(currentPet?.startDate)}</p>
                                                     </div>
                                                 </div>
 
