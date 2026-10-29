@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-29
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, fa54f24
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/portal.html.
   - Inicio: «Tu primer día», lo pendiente y «Tu contacto».
   - Menú «Horas».
