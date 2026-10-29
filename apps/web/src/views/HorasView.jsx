@@ -755,6 +755,23 @@ export default function HorasView() {
     const hayFiltros = filtroEstado !== 'todos' || filtroPeticion || filtroCliente || periodo !== 'reciente';
     const limpiar = () => { setFiltroEstado('todos'); setFiltroPeticion(''); setFiltroCliente(''); setPeriodo('reciente'); setDesde(''); setHasta(''); };
     const totalLista = lista.reduce((acc, p) => sumarConceptos(acc, conceptosParte(p)), { ...CERO });
+    // Fecha → cliente → petición: partes del periodo sin filtrar por cliente, para los botones de cliente
+    const delPeriodo = Object.entries(partes)
+        .map(([k, p]) => ({ k, ...p }))
+        .filter(p => p.lunes <= rangoHasta && sumar(p.lunes, 6) >= rangoDesde)
+        .filter(p => filtroEstado === 'todos' || (filtroEstado === 'pendientes' ? ['borrador', 'enviado', 'reparos'].includes(p.estado) : p.estado === filtroEstado));
+    const resumenCliente = (cliente) => {
+        const ps = delPeriodo.filter(p => PETICIONES[p.petId].cliente === cliente);
+        return {
+            partes: ps,
+            peticiones: [...new Set(ps.map(p => p.petId))],
+            horas: ps.reduce((s, p) => s + totalDe(conceptosParte(p)), 0),
+            porHacer: ps.filter(p => ['borrador', 'enviado', 'reparos'].includes(p.estado)).length,
+        };
+    };
+    const clientesPeriodo = CLIENTES.map(c => ({ cliente: c, ...resumenCliente(c) })).filter(c => c.partes.length);
+    const semanasLista = [...new Set(lista.map(p => p.lunes))].sort();
+    const ESTADO_CORTO = { borrador: 'Borrador', enviado: 'Pendiente', reparos: 'Reparos', validado: 'Validado', cerrado: 'Cerrado', programado: 'Próxima' };
     const etiquetaSemana = (lunes) => (lunes === lunesHoy ? 'Esta semana' : lunes === sumar(lunesHoy, -7) ? 'Semana pasada' : lunes === sumar(lunesHoy, 7) ? 'Semana que viene' : nombreMes(mesDe(lunes)).replace(/^./, s => s.toUpperCase()));
     const lunesHoy = lunesDe(hoyIso());
     const filasMes = Object.keys(PETICIONES).map(petId => ({ petId, r: resumenMes(petId, mes) })).filter(x => x.r);
@@ -783,33 +800,61 @@ export default function HorasView() {
                 />
 
                 {pestana === 'partes' ? (
-                    <Card className="overflow-hidden">
-                        <div className="flex flex-wrap items-center gap-2 p-3 border-b border-slate-200">
-                            <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Periodo">
-                                {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.texto}</option>)}
-                            </Select>
-                            {periodo === 'fechas' && <>
-                                <TextInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} aria-label="Desde" className="w-auto!" />
-                                <TextInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} aria-label="Hasta" className="w-auto!" />
-                            </>}
-                            <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
-                                <option value="">Todos los clientes</option>
-                                {CLIENTES.map(c => <option key={c} value={c}>{c}</option>)}
-                            </Select>
-                            <Select value={filtroPeticion} onChange={(e) => setFiltroPeticion(e.target.value)} aria-label="Petición">
-                                <option value="">Todas las peticiones</option>
-                                {Object.entries(PETICIONES).filter(([, p]) => !filtroCliente || p.cliente === filtroCliente).map(([id, p]) => <option key={id} value={id}>{id} · {p.puesto}</option>)}
-                            </Select>
-                            <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
-                                <option value="todos">Todos los estados</option>
-                                <option value="pendientes">Por hacer (borrador, pendientes y con reparos)</option>
-                                {Object.entries(ESTADOS_PARTE).map(([id, e]) => <option key={id} value={id}>{e.texto}</option>)}
-                            </Select>
-                            {hayFiltros && <Button size="sm" variant="ghost" icon={X} onClick={limpiar}>Limpiar</Button>}
-                        </div>
+                    <div className="space-y-3">
+                        {/* 1. FECHA */}
+                        <Card className="p-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700"><CalendarDays className="w-4 h-4 text-slate-400" />Fechas</span>
+                                <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Periodo">
+                                    {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.texto}</option>)}
+                                </Select>
+                                {periodo === 'fechas' && <>
+                                    <TextInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} aria-label="Desde" className="w-auto!" />
+                                    <TextInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} aria-label="Hasta" className="w-auto!" />
+                                </>}
+                                <span className="text-xs text-slate-500">{rangoDesde > '0000-01-01' ? `Del ${fechaES(rangoDesde)}` : 'Desde el principio'}{rangoHasta < '9999-12-31' ? ` al ${fechaES(rangoHasta)}` : ''}</span>
+                                <span className="flex-1" />
+                                <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
+                                    <option value="todos">Todos los estados</option>
+                                    <option value="pendientes">Por hacer (borrador, pendientes y con reparos)</option>
+                                    {Object.entries(ESTADOS_PARTE).map(([id, e]) => <option key={id} value={id}>{e.texto}</option>)}
+                                </Select>
+                                {hayFiltros && <Button size="sm" variant="ghost" icon={X} onClick={limpiar}>Limpiar</Button>}
+                            </div>
+                        </Card>
+
+                        {/* 2. CLIENTE */}
+                        {clientesPeriodo.length === 0 ? (
+                            <Card><EmptyState icon={Clock} title="No hay partes en estas fechas" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} /></Card>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {[{ cliente: '', partes: delPeriodo, peticiones: [...new Set(delPeriodo.map(p => p.petId))], horas: delPeriodo.reduce((s, p) => s + totalDe(conceptosParte(p)), 0), porHacer: delPeriodo.filter(p => ['borrador', 'enviado', 'reparos'].includes(p.estado)).length }, ...clientesPeriodo].map(c => {
+                                    const activo = filtroCliente === c.cliente;
+                                    return (
+                                        <button
+                                            key={c.cliente || 'todos'}
+                                            type="button"
+                                            onClick={() => { setFiltroCliente(c.cliente); setFiltroPeticion(''); }}
+                                            className={`text-left rounded-xl border px-4 py-3 transition-colors ${activo ? 'border-indigo-500 bg-indigo-50/60 ring-1 ring-indigo-500' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                        >
+                                            <span className="flex items-start gap-2">
+                                                <Building2 className={`w-4 h-4 mt-0.5 shrink-0 ${activo ? 'text-indigo-600' : 'text-slate-400'}`} />
+                                                <span className="min-w-0">
+                                                    <span className="block text-sm font-medium text-slate-900 truncate">{c.cliente || 'Todos los clientes'}</span>
+                                                    <span className="block text-[11px] text-slate-500">{c.peticiones.length} {c.peticiones.length === 1 ? 'petición' : 'peticiones'} · {fmtTotal(c.horas)} h</span>
+                                                    {c.porHacer > 0 && <span className="block text-[11px] text-amber-700">{c.porHacer} {c.porHacer === 1 ? 'parte por hacer' : 'partes por hacer'}</span>}
+                                                </span>
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Totales de lo que se ve */}
                         {lista.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
-                                <span className="text-slate-900">{lista.length} {lista.length === 1 ? 'parte' : 'partes'} · {new Set(lista.map(p => p.petId)).size} {new Set(lista.map(p => p.petId)).size === 1 ? 'petición' : 'peticiones'}</span>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-slate-600">
+                                <span className="text-slate-900">{filtroPeticion || filtroCliente || 'Todos los clientes'}</span>
                                 <span>Normales {fmtTotal(totalLista.normales + totalLista.nocturnas)} h</span>
                                 <span>Extra {fmtTotal(totalLista.extra)} h</span>
                                 <span>Fin de semana {fmtTotal(totalLista.finde)} h</span>
@@ -817,79 +862,86 @@ export default function HorasView() {
                                 <span className="font-medium text-slate-900">Total {fmtTotal(totalDe(totalLista))} h</span>
                             </div>
                         )}
-                        {lista.length === 0 ? (
-                            <EmptyState icon={Clock} title="No hay partes con estos filtros" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} />
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs">
-                                    <thead>
-                                        <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
-                                            <th className="py-2 px-3 font-medium">Petición</th>
-                                            <th className="py-2 px-3 font-medium text-right">Personas</th>
-                                            <th className="py-2 px-3 font-medium text-right">Horas</th>
-                                            <th className="py-2 px-3 font-medium text-right">Extra</th>
-                                            <th className="py-2 px-3 font-medium text-right">Incidencias</th>
-                                            <th className="py-2 px-3 font-medium">Factura</th>
-                                            <th className="py-2 px-3 font-medium">Estado</th>
-                                            <th className="py-2 px-3" aria-label="Acciones"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {lista.map((p, i) => {
-                                            const pet = PETICIONES[p.petId];
-                                            const e = ESTADOS_PARTE[p.estado];
-                                            const kp = conceptosParte(p);
-                                            const faltan = diasSinHoras(p);
-                                            const accion = { borrador: 'Completar', reparos: 'Corregir', enviado: 'Ver' }[p.estado] || 'Ver';
-                                            const facturas = facturasDeParte(p);
-                                            const nuevaSemana = i === 0 || lista[i - 1].lunes !== p.lunes;
-                                            const deLaSemana = lista.filter(x => x.lunes === p.lunes);
-                                            return (
-                                                <React.Fragment key={p.k}>
-                                                {nuevaSemana && (
-                                                    <tr className="border-b border-slate-200 bg-slate-50/70">
-                                                        <td colSpan={8} className="py-1.5 px-3 text-[11px] text-slate-600">
-                                                            <span className="font-medium text-slate-900">Del {ddmm(p.lunes)} al {fechaES(sumar(p.lunes, 6))}</span> · {etiquetaSemana(p.lunes)} · {deLaSemana.length} {deLaSemana.length === 1 ? 'petición' : 'peticiones'} · {fmtTotal(deLaSemana.reduce((s, x) => s + totalDe(conceptosParte(x)), 0))} h
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                                <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                                                    <td className="py-2.5 px-3">
-                                                        <button type="button" onClick={() => setAbierto(p.k)} className="text-left group">
-                                                            <span className="block font-medium text-slate-900 whitespace-nowrap group-hover:text-indigo-700">{pet.puesto} · {pet.turno.toLowerCase()}</span>
-                                                            <span className="text-[11px] text-slate-500">{p.petId} · {pet.cliente}</span>
-                                                        </button>
-                                                    </td>
-                                                    <td className="py-2.5 px-3 text-right text-slate-700">{Object.keys(p.celdas).length}</td>
-                                                    <td className="py-2.5 px-3 text-right text-slate-900">{fmtTotal(totalDe(kp))}</td>
-                                                    <td className="py-2.5 px-3 text-right text-slate-700">{kp.extra ? fmtTotal(kp.extra) : <span className="text-slate-300">0</span>}</td>
-                                                    <td className="py-2.5 px-3 text-right text-slate-700">{incidenciasParte(p) || <span className="text-slate-300">0</span>}</td>
-                                                    <td className="py-2.5 px-3 whitespace-nowrap">
-                                                        {facturas.length === 0 ? <span className="text-slate-400">Sin facturar</span> : facturas.map(f => (
-                                                            <span key={f.numero} className="block" title={f.diferencia ? `Facturadas ${fmtTotal(f.horas)} h; validadas ${fmtTotal(f.validadas)} h en ${nombreMes(f.mes)}` : undefined}>
-                                                                <span className="text-slate-800">{f.numero}</span>
-                                                                {f.diferencia !== 0 && <span className="block text-[11px] text-amber-700">Diferencia en {MESES[Number(f.mes.slice(5)) - 1]}: {fmtTotal(Math.abs(f.diferencia))} h</span>}
-                                                            </span>
-                                                        ))}
-                                                    </td>
-                                                    <td className="py-2.5 px-3">
-                                                        <Badge tone={e.tono} dot>{e.texto}</Badge>
-                                                        {p.estado === 'borrador' && faltan > 0 && <div className="text-[11px] text-amber-700 mt-0.5">{faltan} {faltan === 1 ? 'día' : 'días'} sin horas</div>}
-                                                        {p.estado === 'enviado' && <div className="text-[11px] text-slate-500 mt-0.5">A {(p.enviadoA || []).join(' y ') || validadorDe(pet).nombre} el {ddmm(p.enviado)}</div>}
-                                                        {p.estado === 'programado' && pet.inicio > p.lunes && <div className="text-[11px] text-slate-500 mt-0.5">Empieza el {ddmm(pet.inicio)}</div>}
-                                                    </td>
-                                                    <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                                                        <Button size="sm" variant={['borrador', 'reparos'].includes(p.estado) ? 'primary' : 'ghost'} onClick={() => setAbierto(p.k)}>{accion}</Button>
-                                                    </td>
+
+                        {/* 3. PETICIÓN Y PUESTO: una tarjeta por cliente, una fila por petición y una columna por semana */}
+                        {CLIENTES.filter(c => lista.some(p => PETICIONES[p.petId].cliente === c)).map(cliente => {
+                            const delCliente = lista.filter(p => PETICIONES[p.petId].cliente === cliente);
+                            const peticiones = [...new Set(delCliente.map(p => p.petId))].sort();
+                            const horasCliente = delCliente.reduce((s, p) => s + totalDe(conceptosParte(p)), 0);
+                            return (
+                                <Card key={cliente} className="overflow-hidden">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-200">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
+                                            <span className="text-sm font-semibold text-slate-900">{cliente}</span>
+                                        </div>
+                                        <span className="text-xs text-slate-500">{peticiones.length} {peticiones.length === 1 ? 'petición' : 'peticiones'} · {fmtTotal(horasCliente)} h en estas fechas</span>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead>
+                                                <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                    <th className="py-2 px-3 font-medium min-w-[220px]">Petición y puesto</th>
+                                                    {semanasLista.map(l => (
+                                                        <th key={l} className={`py-2 px-2 font-medium text-center min-w-[92px] ${l === lunesHoy ? 'text-indigo-700' : ''}`}>
+                                                            <span className="block">{ddmm(l)} - {ddmm(sumar(l, 6))}</span>
+                                                            <span className="block font-normal">{l === lunesHoy ? 'Esta semana' : l === sumar(lunesHoy, -7) ? 'Pasada' : l === sumar(lunesHoy, 7) ? 'Próxima' : MESES[Number(l.slice(5, 7)) - 1]}</span>
+                                                        </th>
+                                                    ))}
+                                                    <th className="py-2 px-3 font-medium text-right">Total</th>
+                                                    <th className="py-2 px-3 font-medium">Factura</th>
                                                 </tr>
-                                                </React.Fragment>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </Card>
+                                            </thead>
+                                            <tbody>
+                                                {peticiones.map(petId => {
+                                                    const pet = PETICIONES[petId];
+                                                    const suyos = delCliente.filter(p => p.petId === petId);
+                                                    const facturas = [...new Map(suyos.flatMap(facturasDeParte).map(f => [f.numero, f])).values()];
+                                                    return (
+                                                        <tr key={petId} className="border-b border-slate-100 last:border-0">
+                                                            <td className="py-2.5 px-3">
+                                                                <button type="button" onClick={() => { setFiltroCliente(cliente); setFiltroPeticion(filtroPeticion === petId ? '' : petId); }} className="text-left group" title={filtroPeticion === petId ? 'Ver todas las peticiones del cliente' : 'Ver solo esta petición'}>
+                                                                    <span className="block text-slate-500 text-[11px] group-hover:text-indigo-700">{petId}{filtroPeticion === petId && ' · ver todas'}</span>
+                                                                    <span className="block font-medium text-slate-900 whitespace-nowrap">{pet.puesto}</span>
+                                                                    <span className="text-[11px] text-slate-500">{pet.turno} · {pet.centro}</span>
+                                                                </button>
+                                                            </td>
+                                                            {semanasLista.map(l => {
+                                                                const p = suyos.find(x => x.lunes === l);
+                                                                if (!p) return <td key={l} className="py-2 px-2 text-center text-slate-300">—</td>;
+                                                                const e = ESTADOS_PARTE[p.estado];
+                                                                const h = totalDe(conceptosParte(p));
+                                                                const faltan = diasSinHoras(p);
+                                                                return (
+                                                                    <td key={l} className="py-1.5 px-1.5 text-center">
+                                                                        <button type="button" onClick={() => setAbierto(p.k)} title={`${e.texto} · ${Object.keys(p.celdas).length} personas${faltan ? ` · ${faltan} días sin horas` : ''}`} className="w-full rounded-lg border border-slate-200 px-1.5 py-1.5 hover:border-indigo-300 hover:bg-indigo-50">
+                                                                            <Badge tone={e.tono} dot>{ESTADO_CORTO[p.estado]}</Badge>
+                                                                            <span className="block mt-1 text-slate-900">{p.estado === 'programado' ? (pet.inicio > l ? `Desde ${ddmm(pet.inicio)}` : '—') : `${fmtTotal(h)} h`}</span>
+                                                                            {faltan > 0 && p.estado === 'borrador' && <span className="block text-[10px] text-amber-700">{faltan} sin horas</span>}
+                                                                        </button>
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                            <td className="py-2.5 px-3 text-right font-medium text-slate-900 whitespace-nowrap">{fmtTotal(suyos.reduce((s, p) => s + totalDe(conceptosParte(p)), 0))} h</td>
+                                                            <td className="py-2.5 px-3 whitespace-nowrap">
+                                                                {facturas.length === 0 ? <span className="text-slate-400">Sin facturar</span> : facturas.map(f => (
+                                                                    <span key={f.numero} className="block" title={f.diferencia ? `Facturadas ${fmtTotal(f.horas)} h; validadas ${fmtTotal(f.validadas)} h en ${nombreMes(f.mes)}` : undefined}>
+                                                                        <span className="text-slate-800">{f.numero}</span> <span className="text-slate-500">({MESES[Number(f.mes.slice(5)) - 1]})</span>
+                                                                        {f.diferencia !== 0 && <span className="block text-[11px] text-amber-700">Diferencia: {fmtTotal(Math.abs(f.diferencia))} h</span>}
+                                                                    </span>
+                                                                ))}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Card>
+                            );
+                        })}
+                        {lista.length > 0 && <p className="text-[11px] text-slate-500 px-1">Pulsa una semana para abrir su parte. Pulsa la petición para ver solo esa.</p>}
+                    </div>
                 ) : (
                     <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-2">
