@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar,
-    Select, Field, TextInput, Modal, Drawer, Tabs
+    SearchInput, Select, Field, TextInput, Modal, Drawer, Tabs
 } from '../ui';
 
 // ==========================================
@@ -275,6 +275,8 @@ export default function HorasView() {
     const [filtroEstado, setFiltroEstado] = useState('todos');
     const [filtroPeticion, setFiltroPeticion] = useState('');
     const [filtroCliente, setFiltroCliente] = useState('');
+    const [busqueda, setBusqueda] = useState('');
+    const [filtroCierre, setFiltroCierre] = useState('todos');
     const [periodo, setPeriodo] = useState('reciente');
     const [desde, setDesde] = useState('');
     const [hasta, setHasta] = useState('');
@@ -299,6 +301,13 @@ export default function HorasView() {
     };
 
     const [rangoDesde, rangoHasta] = rangoDe(periodo, desde, hasta);
+    const normalizar = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const coincide = (petId) => {
+        const q = normalizar(busqueda.trim());
+        if (!q) return true;
+        const p = PETICIONES[petId];
+        return [petId, p.puesto, p.turno, p.cliente, p.centro].some(x => normalizar(x).includes(q));
+    };
     const lista = useMemo(() => Object.entries(partes)
         .map(([k, p]) => ({ k, ...p }))
         .filter(p => p.lunes <= rangoHasta && sumar(p.lunes, 6) >= rangoDesde)
@@ -309,7 +318,8 @@ export default function HorasView() {
         })
         .filter(p => !filtroCliente || PETICIONES[p.petId].cliente === filtroCliente)
         .filter(p => !filtroPeticion || p.petId === filtroPeticion)
-        .sort((a, b) => b.lunes.localeCompare(a.lunes) || a.petId.localeCompare(b.petId)), [partes, filtroEstado, filtroPeticion, filtroCliente, rangoDesde, rangoHasta]);
+        .filter(p => coincide(p.petId))
+        .sort((a, b) => b.lunes.localeCompare(a.lunes) || a.petId.localeCompare(b.petId)), [partes, filtroEstado, filtroPeticion, filtroCliente, rangoDesde, rangoHasta, busqueda]);
     const cuenta = (e) => Object.values(partes).filter(p => p.estado === e).length;
 
     // Meses con horas por petición, para el cierre
@@ -753,8 +763,8 @@ export default function HorasView() {
     // ==========================================
     // ENTRADA: PARTES Y CIERRE DEL MES
     // ==========================================
-    const hayFiltros = filtroEstado !== 'todos' || filtroPeticion || filtroCliente || periodo !== 'reciente';
-    const limpiar = () => { setFiltroEstado('todos'); setFiltroPeticion(''); setFiltroCliente(''); setPeriodo('reciente'); setDesde(''); setHasta(''); };
+    const hayFiltros = filtroEstado !== 'todos' || filtroPeticion || filtroCliente || periodo !== 'reciente' || busqueda;
+    const limpiar = () => { setFiltroEstado('todos'); setFiltroPeticion(''); setFiltroCliente(''); setPeriodo('reciente'); setDesde(''); setHasta(''); setBusqueda(''); };
     const totalLista = lista.reduce((acc, p) => sumarConceptos(acc, conceptosParte(p)), { ...CERO });
     // Fecha → cliente → petición: partes del periodo sin filtrar por cliente, para los botones de cliente
     const delPeriodo = Object.entries(partes)
@@ -775,7 +785,44 @@ export default function HorasView() {
     const ESTADO_CORTO = { borrador: 'Borrador', enviado: 'Pendiente', reparos: 'Reparos', validado: 'Validado', cerrado: 'Cerrado', programado: 'Próxima' };
     const etiquetaSemana = (lunes) => (lunes === lunesHoy ? 'Esta semana' : lunes === sumar(lunesHoy, -7) ? 'Semana pasada' : lunes === sumar(lunesHoy, 7) ? 'Semana que viene' : nombreMes(mesDe(lunes)).replace(/^./, s => s.toUpperCase()));
     const lunesHoy = lunesDe(hoyIso());
-    const filasMes = Object.keys(PETICIONES).map(petId => ({ petId, r: resumenMes(petId, mes) })).filter(x => x.r);
+    const filasMesTodas = Object.keys(PETICIONES).map(petId => ({ petId, r: resumenMes(petId, mes) })).filter(x => x.r);
+    const estadoCierre = (r) => (r.completo ? 'cerrado' : !r.listo ? 'faltan' : mes < mesDe(hoyIso()) ? 'listo' : 'abierto');
+    const filasMes = filasMesTodas
+        .filter(x => !filtroCliente || PETICIONES[x.petId].cliente === filtroCliente)
+        .filter(x => !filtroPeticion || x.petId === filtroPeticion)
+        .filter(x => coincide(x.petId))
+        .filter(x => filtroCierre === 'todos' || estadoCierre(x.r) === filtroCierre);
+    const hayFiltrosCierre = filtroCliente || filtroPeticion || busqueda || filtroCierre !== 'todos';
+    const limpiarCierre = () => { setFiltroCliente(''); setFiltroPeticion(''); setBusqueda(''); setFiltroCierre('todos'); };
+
+    // Campos de filtro comunes a las dos pestañas: buscador, cliente y petición (la petición, cuando hay cliente)
+    const etiqueta = (texto, icono) => <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600">{icono}{texto}</span>;
+    const campoBuscar = (
+        <label className="flex flex-col gap-1 min-w-[200px] flex-1 sm:flex-none sm:w-64">
+            {etiqueta('Buscar')}
+            <SearchInput value={busqueda} onChange={(v) => { setBusqueda(v); setFiltroPeticion(''); }} placeholder="Petición, puesto, cliente o centro..." />
+        </label>
+    );
+    const campoCliente = (contar) => (
+        <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
+            {etiqueta('Cliente', <Building2 className="w-3.5 h-3.5 text-slate-400" />)}
+            <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
+                <option value="">Todos los clientes</option>
+                {CLIENTES.slice().sort((a, b) => a.localeCompare(b)).map(c => <option key={c} value={c}>{c}{contar(c)}</option>)}
+            </Select>
+        </label>
+    );
+    const campoPeticion = (disponibles) => filtroCliente && (
+        <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
+            {etiqueta('Petición')}
+            <Select value={filtroPeticion} onChange={(e) => setFiltroPeticion(e.target.value)} aria-label="Petición">
+                <option value="">Todas las peticiones del cliente</option>
+                {Object.entries(PETICIONES).filter(([, p]) => p.cliente === filtroCliente).map(([id, p]) => (
+                    <option key={id} value={id}>{id} · {p.puesto} · {p.turno.toLowerCase()}{disponibles.includes(id) ? '' : ' · sin datos en estas fechas'}</option>
+                ))}
+            </Select>
+        </label>
+    );
     const det = detalleMes && resumenMes(detalleMes, mes);
 
     return (
@@ -805,16 +852,9 @@ export default function HorasView() {
                         {/* FILTROS: cliente, fechas y estado, combinables */}
                         <Card className="p-3">
                             <div className="flex flex-wrap items-end gap-3">
-                                <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
-                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600"><Building2 className="w-3.5 h-3.5 text-slate-400" />Cliente</span>
-                                    <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
-                                        <option value="">Todos los clientes ({clientesPeriodo.length})</option>
-                                        {CLIENTES.slice().sort((a, b) => a.localeCompare(b)).map(c => {
-                                            const r = clientesPeriodo.find(x => x.cliente === c);
-                                            return <option key={c} value={c}>{c}{r ? ` · ${r.peticiones.length} ${r.peticiones.length === 1 ? 'petición' : 'peticiones'}` : ' · sin partes en estas fechas'}</option>;
-                                        })}
-                                    </Select>
-                                </label>
+                                {campoBuscar}
+                                {campoCliente((c) => { const r = clientesPeriodo.find(x => x.cliente === c); return r ? ` · ${r.peticiones.length} ${r.peticiones.length === 1 ? 'petición' : 'peticiones'}` : ' · sin partes en estas fechas'; })}
+                                {campoPeticion([...new Set(delPeriodo.map(p => p.petId))])}
                                 <label className="flex flex-col gap-1">
                                     <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600"><CalendarDays className="w-3.5 h-3.5 text-slate-400" />Fechas</span>
                                     <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Periodo">
@@ -947,15 +987,42 @@ export default function HorasView() {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Select value={mes} onChange={(e) => setMes(e.target.value)} aria-label="Mes">
-                                {mesesConHoras.map(m => <option key={m} value={m}>{nombreMes(m).replace(/^./, s => s.toUpperCase())}</option>)}
-                            </Select>
-                            <span className="text-xs text-slate-500">Mes natural. Se puede cerrar cuando el cliente ha validado todos los partes que tienen días de ese mes.</span>
-                        </div>
+                        <Card className="p-3">
+                            <div className="flex flex-wrap items-end gap-3">
+                                {campoBuscar}
+                                {campoCliente((c) => { const n = filasMesTodas.filter(x => PETICIONES[x.petId].cliente === c).length; return n ? ` · ${n} ${n === 1 ? 'petición' : 'peticiones'}` : ' · sin horas este mes'; })}
+                                {campoPeticion(filasMesTodas.map(x => x.petId))}
+                                <label className="flex flex-col gap-1">
+                                    {etiqueta('Mes', <CalendarRange className="w-3.5 h-3.5 text-slate-400" />)}
+                                    <Select value={mes} onChange={(e) => setMes(e.target.value)} aria-label="Mes">
+                                        {mesesConHoras.map(m => <option key={m} value={m}>{nombreMes(m).replace(/^./, s => s.toUpperCase())}</option>)}
+                                    </Select>
+                                </label>
+                                <label className="flex flex-col gap-1">
+                                    {etiqueta('Estado del cierre')}
+                                    <Select value={filtroCierre} onChange={(e) => setFiltroCierre(e.target.value)} aria-label="Estado del cierre">
+                                        <option value="todos">Todos</option>
+                                        <option value="faltan">Faltan partes por validar</option>
+                                        <option value="listo">Listos para cerrar</option>
+                                        <option value="abierto">Al día, mes en curso</option>
+                                        <option value="cerrado">Cerrados</option>
+                                    </Select>
+                                </label>
+                                {hayFiltrosCierre && <Button size="sm" variant="ghost" icon={X} onClick={limpiarCierre}>Limpiar</Button>}
+                            </div>
+                            <p className="mt-2 text-[11px] text-slate-500">Mes natural. Se puede cerrar cuando el cliente ha validado todos los partes que tienen días de ese mes.</p>
+                        </Card>
                         {filasMes.length === 0 ? (
-                            <Card><EmptyState icon={CalendarRange} title={`No hay horas en ${nombreMes(mes)}`} /></Card>
-                        ) : filasMes.map(({ petId, r }) => {
+                            <Card><EmptyState icon={CalendarRange} title={filasMesTodas.length ? 'No hay peticiones con estos filtros' : `No hay horas en ${nombreMes(mes)}`} action={hayFiltrosCierre && <Button onClick={limpiarCierre}>Limpiar filtros</Button>} /></Card>
+                        ) : CLIENTES.filter(c => filasMes.some(x => PETICIONES[x.petId].cliente === c)).map(cliente => {
+                            const delCliente = filasMes.filter(x => PETICIONES[x.petId].cliente === cliente);
+                            return (
+                            <div key={cliente} className="space-y-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1">
+                                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Building2 className="w-4 h-4 text-slate-400" />{cliente}</span>
+                                    <span className="text-xs text-slate-500">{delCliente.length} {delCliente.length === 1 ? 'petición' : 'peticiones'} · {fmtTotal(delCliente.reduce((s, x) => s + totalDe(x.r.k), 0))} h en {nombreMes(mes)}</span>
+                                </div>
+                                {delCliente.map(({ petId, r }) => {
                             const pet = PETICIONES[petId];
                             const enCurso = mes >= mesDe(hoyIso());
                             return (
@@ -963,7 +1030,7 @@ export default function HorasView() {
                                     <div className="flex flex-wrap items-start justify-between gap-2">
                                         <div>
                                             <div className="text-sm font-medium text-slate-900">{pet.puesto} · {pet.turno.toLowerCase()}</div>
-                                            <div className="text-[11px] text-slate-500">{petId} · {pet.cliente}</div>
+                                            <div className="text-[11px] text-slate-500">{petId} · {pet.centro}</div>
                                         </div>
                                         <Badge tone={r.completo ? 'neutral' : r.listo && !enCurso ? 'success' : 'warning'} dot>
                                             {r.completo ? 'Cerrado' : r.listo ? (enCurso ? 'Al día, el mes sigue abierto' : 'Listo para cerrar') : `Faltan ${r.partes.length - r.validados} partes por validar`}
@@ -1003,6 +1070,9 @@ export default function HorasView() {
                                             : <Button size="sm" icon={Wallet} disabled={!r.listo} title={r.listo ? undefined : 'Antes, el cliente tiene que validar todos los partes'} onClick={() => pasarMes(petId, mes, 'nomina')}>Pasar a nómina</Button>}
                                     </div>
                                 </Card>
+                            );
+                        })}
+                            </div>
                             );
                         })}
                         <Notice tone="neutral" icon={Info}>Aquí solo hay horas. Las tarifas al cliente y el margen están en Presupuestos; los importes se calculan en facturación y en nómina.</Notice>
