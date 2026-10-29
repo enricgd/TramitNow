@@ -4,7 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import {
     Clock, Building2, MapPin, CalendarDays, ChevronLeft, ChevronRight, Send, CheckCircle2, AlertTriangle,
-    Wand2, Undo2, Info, X, FileCheck2, Receipt, Wallet, Lock, ArrowUpRight, PencilLine, CalendarRange, Printer, MonitorCheck
+    Wand2, Undo2, Info, X, ChevronDown, FileCheck2, Receipt, Wallet, Lock, ArrowUpRight, PencilLine, CalendarRange, Printer, MonitorCheck
 } from 'lucide-react';
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar,
@@ -279,6 +279,7 @@ export default function HorasView() {
     const [desde, setDesde] = useState('');
     const [hasta, setHasta] = useState('');
     const [envio, setEnvio] = useState(null); // { a: [nombres] }
+    const [plegados, setPlegados] = useState([]); // clientes con el bloque plegado
     const [abierto, setAbierto] = useState(null); // clave del parte
     const [celda, setCelda] = useState(null); // { personaId, fecha, h, x, inc, nota }
     const [validar, setValidar] = useState(null); // { quien, como, justificante }
@@ -801,54 +802,47 @@ export default function HorasView() {
 
                 {pestana === 'partes' ? (
                     <div className="space-y-3">
-                        {/* 1. FECHA */}
+                        {/* FILTROS: cliente, fechas y estado, combinables */}
                         <Card className="p-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700"><CalendarDays className="w-4 h-4 text-slate-400" />Fechas</span>
-                                <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Periodo">
-                                    {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.texto}</option>)}
-                                </Select>
+                            <div className="flex flex-wrap items-end gap-3">
+                                <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600"><Building2 className="w-3.5 h-3.5 text-slate-400" />Cliente</span>
+                                    <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
+                                        <option value="">Todos los clientes ({clientesPeriodo.length})</option>
+                                        {CLIENTES.slice().sort((a, b) => a.localeCompare(b)).map(c => {
+                                            const r = clientesPeriodo.find(x => x.cliente === c);
+                                            return <option key={c} value={c}>{c}{r ? ` · ${r.peticiones.length} ${r.peticiones.length === 1 ? 'petición' : 'peticiones'}` : ' · sin partes en estas fechas'}</option>;
+                                        })}
+                                    </Select>
+                                </label>
+                                <label className="flex flex-col gap-1">
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600"><CalendarDays className="w-3.5 h-3.5 text-slate-400" />Fechas</span>
+                                    <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Periodo">
+                                        {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.texto}</option>)}
+                                    </Select>
+                                </label>
                                 {periodo === 'fechas' && <>
-                                    <TextInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} aria-label="Desde" className="w-auto!" />
-                                    <TextInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} aria-label="Hasta" className="w-auto!" />
+                                    <label className="flex flex-col gap-1"><span className="text-[11px] font-medium text-slate-600">Desde</span><TextInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="w-auto!" /></label>
+                                    <label className="flex flex-col gap-1"><span className="text-[11px] font-medium text-slate-600">Hasta</span><TextInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="w-auto!" /></label>
                                 </>}
-                                <span className="text-xs text-slate-500">{rangoDesde > '0000-01-01' ? `Del ${fechaES(rangoDesde)}` : 'Desde el principio'}{rangoHasta < '9999-12-31' ? ` al ${fechaES(rangoHasta)}` : ''}</span>
-                                <span className="flex-1" />
-                                <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
-                                    <option value="todos">Todos los estados</option>
-                                    <option value="pendientes">Por hacer (borrador, pendientes y con reparos)</option>
-                                    {Object.entries(ESTADOS_PARTE).map(([id, e]) => <option key={id} value={id}>{e.texto}</option>)}
-                                </Select>
+                                <label className="flex flex-col gap-1">
+                                    <span className="text-[11px] font-medium text-slate-600">Estado</span>
+                                    <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
+                                        <option value="todos">Todos los estados</option>
+                                        <option value="pendientes">Por hacer (borrador, pendientes y con reparos)</option>
+                                        {Object.entries(ESTADOS_PARTE).map(([id, e]) => <option key={id} value={id}>{e.texto}</option>)}
+                                    </Select>
+                                </label>
                                 {hayFiltros && <Button size="sm" variant="ghost" icon={X} onClick={limpiar}>Limpiar</Button>}
                             </div>
+                            <p className="mt-2 text-[11px] text-slate-500">
+                                {rangoDesde > '0000-01-01' ? `Del ${fechaES(rangoDesde)}` : 'Desde el principio'}{rangoHasta < '9999-12-31' ? ` al ${fechaES(rangoHasta)}` : ''}
+                                {filtroPeticion && <> · Solo {filtroPeticion} <button type="button" onClick={() => setFiltroPeticion('')} className="text-indigo-700 hover:underline">ver todas las peticiones</button></>}
+                            </p>
                         </Card>
 
-                        {/* 2. CLIENTE */}
-                        {clientesPeriodo.length === 0 ? (
-                            <Card><EmptyState icon={Clock} title="No hay partes en estas fechas" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} /></Card>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {[{ cliente: '', partes: delPeriodo, peticiones: [...new Set(delPeriodo.map(p => p.petId))], horas: delPeriodo.reduce((s, p) => s + totalDe(conceptosParte(p)), 0), porHacer: delPeriodo.filter(p => ['borrador', 'enviado', 'reparos'].includes(p.estado)).length }, ...clientesPeriodo].map(c => {
-                                    const activo = filtroCliente === c.cliente;
-                                    return (
-                                        <button
-                                            key={c.cliente || 'todos'}
-                                            type="button"
-                                            onClick={() => { setFiltroCliente(c.cliente); setFiltroPeticion(''); }}
-                                            className={`text-left rounded-xl border px-4 py-3 transition-colors ${activo ? 'border-indigo-500 bg-indigo-50/60 ring-1 ring-indigo-500' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                                        >
-                                            <span className="flex items-start gap-2">
-                                                <Building2 className={`w-4 h-4 mt-0.5 shrink-0 ${activo ? 'text-indigo-600' : 'text-slate-400'}`} />
-                                                <span className="min-w-0">
-                                                    <span className="block text-sm font-medium text-slate-900 truncate">{c.cliente || 'Todos los clientes'}</span>
-                                                    <span className="block text-[11px] text-slate-500">{c.peticiones.length} {c.peticiones.length === 1 ? 'petición' : 'peticiones'} · {fmtTotal(c.horas)} h</span>
-                                                    {c.porHacer > 0 && <span className="block text-[11px] text-amber-700">{c.porHacer} {c.porHacer === 1 ? 'parte por hacer' : 'partes por hacer'}</span>}
-                                                </span>
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                        {lista.length === 0 && (
+                            <Card><EmptyState icon={Clock} title="No hay partes con estos filtros" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} /></Card>
                         )}
 
                         {/* Totales de lo que se ve */}
@@ -870,14 +864,23 @@ export default function HorasView() {
                             const horasCliente = delCliente.reduce((s, p) => s + totalDe(conceptosParte(p)), 0);
                             return (
                                 <Card key={cliente} className="overflow-hidden">
-                                    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-200">
-                                        <div className="flex items-center gap-2 min-w-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlegados(prev => (prev.includes(cliente) ? prev.filter(c => c !== cliente) : [...prev, cliente]))}
+                                        aria-expanded={!plegados.includes(cliente)}
+                                        className={`w-full flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-left hover:bg-slate-50 ${plegados.includes(cliente) ? '' : 'border-b border-slate-200'}`}
+                                    >
+                                        <span className="flex items-center gap-2 min-w-0">
+                                            <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${plegados.includes(cliente) ? '-rotate-90' : ''}`} />
                                             <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
                                             <span className="text-sm font-semibold text-slate-900">{cliente}</span>
-                                        </div>
-                                        <span className="text-xs text-slate-500">{peticiones.length} {peticiones.length === 1 ? 'petición' : 'peticiones'} · {fmtTotal(horasCliente)} h en estas fechas</span>
-                                    </div>
-                                    <div className="overflow-x-auto">
+                                        </span>
+                                        <span className="text-xs text-slate-500">
+                                            {peticiones.length} {peticiones.length === 1 ? 'petición' : 'peticiones'} · {fmtTotal(horasCliente)} h en estas fechas
+                                            {(() => { const n = delCliente.filter(p => ['borrador', 'enviado', 'reparos'].includes(p.estado)).length; return n ? <span className="text-amber-700"> · {n} por hacer</span> : null; })()}
+                                        </span>
+                                    </button>
+                                    {!plegados.includes(cliente) && <div className="overflow-x-auto">
                                         <table className="w-full text-left text-xs">
                                             <thead>
                                                 <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
@@ -936,7 +939,7 @@ export default function HorasView() {
                                                 })}
                                             </tbody>
                                         </table>
-                                    </div>
+                                    </div>}
                                 </Card>
                             );
                         })}
