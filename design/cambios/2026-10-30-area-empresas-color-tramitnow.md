@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-30
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, b329894
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/empresas.html
 
 ## Resumen
