@@ -2,7 +2,6 @@
 // - Trabajadores: DNI o NIE y código por SMS, sin contraseña.
 // - Empresas: correo y contraseña. La cuenta la crea la ETT (Empresas → Contactos) y llega una invitación.
 // Misma estructura que el acceso del ERP (src/Login.tsx), con el logo y el nombre de la ETT.
-// El color sale del tema: índigo en trabajadores y azul petróleo en empresas (tema-empresa en empresas.html).
 import React, { useState } from 'react';
 import { ArrowLeft, Lock, Smartphone, Mail } from 'lucide-react';
 

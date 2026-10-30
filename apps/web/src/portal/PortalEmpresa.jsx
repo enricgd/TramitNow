@@ -1,6 +1,6 @@
 // Área de empresas: lo que ve el contacto de una empresa cliente. Se entra desde Acceso.jsx (empresas.jsx).
 // Mismo aire que el portal del trabajador, pero pensada para el ordenador: menú horizontal arriba, tablas ligeras
-// y el acento en azul petróleo (tema-empresa). Cada usuario ve solo las secciones de sus permisos, que da la ETT
+// y el índigo de TramitNow. Cada usuario ve solo las secciones de sus permisos, que da la ETT
 // desde el ERP (Empresas → Contactos). No hay «candidatos propuestos»: la selección la hace la ETT.
 import React, { useState } from 'react';
 import {

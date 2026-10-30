@@ -999,7 +999,7 @@ export default function FichaEttView() {
                                         Si cambias el subdominio, los enlaces que ya tienen las empresas y los candidatos dejarán de funcionar.
                                     </Notice>
                                 )}
-                                <p className="text-[11px] text-slate-500">Los portales usan el logo y el nombre de la ETT. Para distinguirlos, el del trabajador va en índigo y el de empresas en azul petróleo.</p>
+                                <p className="text-[11px] text-slate-500">Los portales usan el logo y el nombre de la ETT, con los colores de TramitNow.</p>
                             </Card>
 
                             <Card className="p-5 space-y-4">

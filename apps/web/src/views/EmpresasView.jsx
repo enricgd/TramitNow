@@ -1140,7 +1140,7 @@ return companies.filter(c => {
                       {contact.portal?.activo ? (
                         <>
                           <div className="flex flex-wrap gap-1">
-                            {contact.portal.permisos.map(id => <span key={id} className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200">{PERMISOS_PORTAL.find(p => p.id === id)?.texto}</span>)}
+                            {contact.portal.permisos.map(id => <span key={id} className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">{PERMISOS_PORTAL.find(p => p.id === id)?.texto}</span>)}
                             {contact.portal.permisos.length === 0 && <span className="text-amber-700">Sin permisos: solo ve el inicio</span>}
                           </div>
                           <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">

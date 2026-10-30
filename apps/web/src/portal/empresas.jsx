@@ -1,6 +1,5 @@
 // Área de empresas. Es otra página, aparte del ERP y del portal del trabajador: no comparte menú ni sesión.
 // En real irá en la dirección de cada ETT (Mi ETT → Portales): {subdominio}.tramitnow.com/empresas
-// El body lleva la clase tema-empresa (empresas.html): el acento índigo pasa a azul petróleo.
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import Acceso from './Acceso';
