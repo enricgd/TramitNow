@@ -1,10 +1,10 @@
-// Portal de candidatos: lo que ve la persona desde el móvil o el ordenador.
+// Portal del trabajador: lo que ve la persona desde el móvil o el ordenador. Se entra desde Acceso.jsx (trabajadores.jsx).
 // Parte del esquema del diseñador (Contratos activos y pasados, Nóminas, Ofertas y Perfil) y añade Inicio con lo pendiente.
 // Look & feel de TramitNow, con más aire y tarjetas en vez de tablas. Logo y nombre de la ETT; «Funciona con TramitNow» al pie.
 import React, { useState } from 'react';
 import {
     Home, FileSignature, Wallet, Search, UserRound, CheckCircle2, AlertTriangle, Download, Calendar, MapPin, Clock,
-    Building2, X, ShieldCheck, Upload, Info, ArrowRight, Briefcase, GraduationCap, CreditCard, Send, ChevronRight, ArrowLeft, Pencil,
+    Building2, X, ShieldCheck, Upload, Info, ArrowRight, Briefcase, GraduationCap, CreditCard, Send, ChevronRight, ArrowLeft, Pencil, LogOut,
     Phone, Mail, HardHat, CalendarX, ChevronDown, Receipt, Navigation
 } from 'lucide-react';
 import { Button, Badge, Card, SectionTitle, Notice, Field, TextInput, Select, Modal, SearchInput } from '../ui';
@@ -154,7 +154,7 @@ const MENU = [
     { id: 'perfil', texto: 'Perfil', icono: UserRound },
 ];
 
-export default function PortalCandidato() {
+export default function PortalCandidato({ onSalir }) {
     const [seccion, setSeccion] = useState('inicio');
     const [verContratos, setVerContratos] = useState('activos');
     const [persona, setPersona] = useState(PERSONA_INICIAL);
@@ -655,10 +655,9 @@ export default function PortalCandidato() {
             {/* Barra de la demo (no sale en real) */}
             <div className="bg-slate-900 text-slate-200 text-xs">
                 <div className="max-w-5xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-2">
-                    <span>Demo · Portal de candidatos de {ETT.nombre} · en real: {ETT.subdominio}.tramitnow…</span>
+                    <span>Demo · Portal del trabajador de {ETT.nombre} · en real: {ETT.subdominio}.tramitnow.com/trabajadores</span>
                     <span className="flex items-center gap-3">
-                        <span className="rounded-md bg-white/10 px-2 py-0.5">Viendo como candidato</span>
-                        <span className="text-slate-400" title="Cuando estén las opciones">Empresa: próximamente</span>
+                        <a href="/empresas.html" className="text-slate-300 hover:text-white">Ver el Área de empresas</a>
                         <a href="/" className="inline-flex items-center gap-1 text-indigo-300 hover:text-white"><ArrowLeft className="w-3.5 h-3.5" />Volver al ERP</a>
                     </span>
                 </div>
@@ -666,8 +665,8 @@ export default function PortalCandidato() {
 
             {/* Cabecera: logo de la ETT y la persona */}
             <header className="bg-white border-b border-slate-200">
-                <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+                    <div className="flex items-center gap-3 mr-auto">
                         <span className="w-11 h-11 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold">{ETT.siglas}</span>
                         <span className="text-base font-semibold text-slate-900">{ETT.nombre}</span>
                     </div>
@@ -678,6 +677,7 @@ export default function PortalCandidato() {
                         </span>
                         <span className="w-10 h-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-sm font-medium">{persona.nombre[0]}{persona.apellidos[0]}</span>
                     </button>
+                    {onSalir && <button type="button" onClick={onSalir} title="Salir" aria-label="Salir" className="ml-1 p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800"><LogOut className="w-5 h-5" /></button>}
                 </div>
             </header>
 

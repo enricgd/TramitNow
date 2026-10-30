@@ -96,7 +96,7 @@ const initialTemplates = [
 const initialPortales = {
     subdominio: 'ettglobal',
     bienvenida: {
-        empresa: { activo: true, asunto: 'Bienvenida al portal de empresas de {ett}', texto: 'Hola, {nombre}:\n\nYa puedes seguir las peticiones de {empresa} en nuestro portal: confirmar a las personas propuestas, firmar los CPD y validar las presencias.\n\nEntra aquí: {enlace}' },
+        empresa: { activo: true, asunto: 'Tu acceso al Área de empresas de {ett}', texto: 'Hola, {nombre}:\n\nTe hemos dado acceso al Área de empresas de {ett} para {empresa}. Desde allí puedes pedir personal, validar los partes de horas, firmar los CPD y descargar las facturas, según tus permisos.\n\nElige tu contraseña aquí: {enlace}' },
         candidato: { activo: true, asunto: 'Bienvenida a {ett}', texto: 'Hola, {nombre}:\n\nGracias por inscribirte. Desde tu área personal puedes subir tus documentos, seguir tus candidaturas y firmar tu contrato.\n\nEntra aquí: {enlace}' },
     },
 };
@@ -967,10 +967,10 @@ export default function FichaEttView() {
                     {activeTab === 'portales' && (
                         <div className="space-y-4 fade-in">
                             <Card className="p-5 space-y-4">
-                                <SectionTitle actions={<span className="flex items-center gap-2"><Button size="sm" icon={ExternalLink} onClick={() => window.open('/portal.html', '_blank')}>Ver el portal de candidatos</Button><Badge tone="success" dot>Activo</Badge></span>}>Dirección de los portales</SectionTitle>
+                                <SectionTitle actions={<Badge tone="success" dot>Activos</Badge>}>Dirección de los portales</SectionTitle>
                                 <p className="text-xs text-slate-600 -mt-1">
-                                    La ETT tiene su propio subdominio de TramitNOW con dos portales: uno para las empresas cliente y otro para los candidatos.
-                                    Cada petición decide si se ve en ellos.
+                                    La ETT tiene su propio subdominio de TramitNOW con dos portales, cada uno con su dirección y su acceso: uno para las
+                                    empresas cliente y otro para las personas que trabajan o han trabajado con la ETT.
                                 </p>
                                 <div className="max-w-md">
                                     <Field label="Subdominio" hint="Solo minúsculas, números y guiones.">
@@ -982,13 +982,15 @@ export default function FichaEttView() {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                                     {[
-                                        { titulo: 'Portal de empresas', ruta: 'empresas', icono: Building2, texto: 'Las empresas ven sus peticiones, confirman a las personas propuestas, firman los CPD y validan presencias.' },
-                                        { titulo: 'Portal de candidatos', ruta: 'candidatos', icono: Users, texto: 'Ofertas públicas de las peticiones, inscripción, subida de documentos y firma del contrato.' },
+                                        { titulo: 'Área de empresas', boton: 'Ver el Área de empresas', ruta: 'empresas', demo: '/empresas.html', icono: Building2, acceso: 'Correo y contraseña. El acceso y los permisos de cada contacto se dan en Empresas → Contactos.', texto: 'Pedir personal, ver al personal en misión, validar las horas, firmar los CPD y descargar presupuestos y facturas.' },
+                                        { titulo: 'Portal del trabajador', boton: 'Ver el portal del trabajador', ruta: 'trabajadores', demo: '/trabajadores.html', icono: Users, acceso: 'DNI o NIE y código por SMS, sin contraseña.', texto: 'Contratos, nóminas, horas, avisos de ausencia, prevención, ofertas y sus datos y documentos.' },
                                     ].map(p => (
                                         <div key={p.ruta} className="rounded-lg border border-slate-200 p-3 space-y-1">
                                             <div className="flex items-center gap-2 font-medium text-slate-900"><p.icono className="w-4 h-4 text-indigo-600" />{p.titulo}</div>
                                             <div className="text-indigo-600">https://{portales.subdominio || 'tu-ett'}.tramitnow.com/{p.ruta}</div>
                                             <p className="text-slate-500">{p.texto}</p>
+                                            <p className="text-slate-500"><span className="font-medium text-slate-700">Acceso:</span> {p.acceso}</p>
+                                            <Button size="sm" icon={ExternalLink} onClick={() => window.open(p.demo, '_blank')}>{p.boton}</Button>
                                         </div>
                                     ))}
                                 </div>
@@ -997,7 +999,7 @@ export default function FichaEttView() {
                                         Si cambias el subdominio, los enlaces que ya tienen las empresas y los candidatos dejarán de funcionar.
                                     </Notice>
                                 )}
-                                <p className="text-[11px] text-slate-500">Los portales usan el logo y los colores de la ETT. Las opciones de cada portal están pendientes de definir.</p>
+                                <p className="text-[11px] text-slate-500">Los portales usan el logo y el nombre de la ETT. Para distinguirlos, el del trabajador va en índigo y el de empresas en azul petróleo.</p>
                             </Card>
 
                             <Card className="p-5 space-y-4">
@@ -1008,7 +1010,7 @@ export default function FichaEttView() {
                                 </p>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {[
-                                        { id: 'empresa', titulo: 'Para empresas', cuando: 'La primera vez que una petición de la empresa se activa en el portal de empresas.' },
+                                        { id: 'empresa', titulo: 'Para empresas', cuando: 'Cuando se da acceso a un contacto del cliente (Empresas → Contactos).' },
                                         { id: 'candidato', titulo: 'Para candidatos', cuando: 'Cuando alguien se inscribe en una oferta o se le propone para una plaza.' },
                                     ].map(b => {
                                         const datos = portales.bienvenida[b.id];

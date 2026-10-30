@@ -26,3 +26,19 @@
   50% { opacity: 0.6; }
 }
 .animate-pulse-subtle { animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+/* Área de empresas: el acento índigo de TramitNow pasa a azul petróleo, para distinguirla del portal del
+   trabajador. Se activa con la clase tema-empresa en el body de empresas.html. */
+.tema-empresa {
+  --color-indigo-50: #effafb;
+  --color-indigo-100: #d6f0f3;
+  --color-indigo-200: #b0e1e8;
+  --color-indigo-300: #7acad6;
+  --color-indigo-400: #3ea9bc;
+  --color-indigo-500: #1f8ca2;
+  --color-indigo-600: #157188;
+  --color-indigo-700: #135c70;
+  --color-indigo-800: #144c5c;
+  --color-indigo-900: #15404e;
+  --color-indigo-950: #082a35;
+}

@@ -27,12 +27,13 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(`${pkg.version}-${commit}`),
   },
-  // Dos páginas: el ERP (index.html) y el portal de candidatos y empresas (portal.html), que va aparte.
+  // Tres páginas: el ERP (index.html) y los dos portales, que van aparte: trabajadores y empresas.
   build: {
     rollupOptions: {
       input: {
         erp: fileURLToPath(new URL('./index.html', import.meta.url)),
-        portal: fileURLToPath(new URL('./portal.html', import.meta.url)),
+        trabajadores: fileURLToPath(new URL('./trabajadores.html', import.meta.url)),
+        empresas: fileURLToPath(new URL('./empresas.html', import.meta.url)),
       },
     },
   },

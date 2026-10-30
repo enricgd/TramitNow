@@ -8,7 +8,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
       Building, Briefcase, FileCheck, Layers, ArrowLeft, RefreshCw, BookmarkCheck,
       Upload, Download, ZoomIn, ZoomOut, CirclePause, CirclePlay, CloudUpload, FileImage,
     } from 'lucide-react';
-import { Page, PageHeader, Card, EmptyState, Notice, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Tabs, Modal, Drawer, Confirmar } from '../ui';
+import { Page, PageHeader, Card, EmptyState, Notice, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Tabs, Modal, Drawer, Confirmar, Interruptor } from '../ui';
+import { PERMISOS_PORTAL, permisosPorRoles } from '../portal/permisosEmpresa';
 
     // DATOS DEMO INICIALES
     const INITIAL_COMPANIES = [
@@ -48,7 +49,8 @@ contacts: [
     types: ['RR. HH.', 'Solicitante', 'Destinatario de Presupuestos'],
     isMain: true,
     isQuoteRecipient: true,
-    notes: 'Contacto principal para firma de presupuestos y gestión de altas de personal.'
+    notes: 'Contacto principal para firma de presupuestos y gestión de altas de personal.',
+    portal: { activo: true, desde: '2026-03-20', ultimoAcceso: 'Ayer 17:40', permisos: ['pedir', 'personal', 'facturas', 'documentos'] }
   },
   {
     id: 'cont-2',
@@ -59,7 +61,8 @@ contacts: [
     types: ['Operativo', 'Valida horas', 'Prevención / PRL'],
     isMain: false,
     isQuoteRecipient: false,
-    notes: 'Gestiona la entrada a muelle y la entrega de EPIs a carretilleros.'
+    notes: 'Gestiona la entrada a muelle y la entrega de EPIs a carretilleros.',
+    portal: { activo: true, desde: '2026-06-25', ultimoAcceso: 'Hoy 08:15', permisos: ['personal', 'horas', 'documentos'] }
   }
 ],
 centers: [], // VACÍO INTENCIONAL PARA DEMO DE PENDIENTE
@@ -160,8 +163,8 @@ notes: 'Requieren camareros con idiomas y protocolo para hoteles 5* GL.',
 lastActivity: 'Hace 5 días — Centro "Palau de Congressos" añadido',
 createdAt: '2026-02-14',
 contacts: [
-  { id: 'cont-401', name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.cat', phone: '+34 688 990 011', role: 'Coordinador de Eventos', types: ['Comercial', 'Operativo'], isMain: true, isQuoteRecipient: true },
-  { id: 'cont-402', name: 'Montse Ferrer', email: 'mferrer@premiumeventsbcn.cat', phone: '+34 688 990 022', role: 'Jefa de sala', types: ['Operativo', 'Valida horas'], isMain: false, isQuoteRecipient: false }
+  { id: 'cont-401', name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.cat', phone: '+34 688 990 011', role: 'Coordinador de Eventos', types: ['Comercial', 'Operativo'], isMain: true, isQuoteRecipient: true, portal: { activo: true, desde: '2026-09-28', ultimoAcceso: 'Hace 3 días', permisos: ['pedir', 'personal', 'facturas', 'documentos'] } },
+  { id: 'cont-402', name: 'Montse Ferrer', email: 'mferrer@premiumeventsbcn.cat', phone: '+34 688 990 022', role: 'Jefa de sala', types: ['Operativo', 'Valida horas'], isMain: false, isQuoteRecipient: false, portal: { activo: true, desde: '2026-10-08', ultimoAcceso: 'Hoy 09:02', permisos: ['personal', 'horas'] } }
 ],
 centers: [
   { id: 'cent-401', name: 'Palau de Congressos BCN', address: 'Av. Diagonal 661', postalCode: '08028', city: 'Barcelona', country: 'España', notes: 'Acceso puerta de proveedores c/ Martí i Franquès' }
@@ -276,6 +279,20 @@ return companies.find(c => c.id === selectedCompanyId) || companies[0];
         });
         showToast(`${item.name} eliminado`);
         setABorrar(null);
+      };
+
+      // Acceso al Área de empresas: lo da la ETT; el contacto recibe una invitación por correo
+      const [accesoPortal, setAccesoPortal] = useState(null); // { contacto, permisos, nuevo }
+      const guardarAccesoPortal = () => {
+        const { contacto, permisos, nuevo } = accesoPortal;
+        const hoy = new Date().toISOString().slice(0, 10);
+        actualizarEmpresa(c => ({ ...c, contacts: c.contacts.map(x => (x.id === contacto.id ? { ...x, portal: { ...(x.portal || {}), activo: true, permisos, desde: x.portal?.activo ? x.portal.desde : hoy, ...(nuevo ? { invitado: hoy, ultimoAcceso: null } : {}) } } : x)) }));
+        showToast(nuevo ? `Invitación al Área de empresas enviada a ${contacto.email}` : `Permisos de ${contacto.name} actualizados`);
+        setAccesoPortal(null);
+      };
+      const quitarAccesoPortal = (contacto) => {
+        actualizarEmpresa(c => ({ ...c, contacts: c.contacts.map(x => (x.id === contacto.id ? { ...x, portal: { ...x.portal, activo: false } } : x)) }));
+        showToast(`${contacto.name} ya no puede entrar en el Área de empresas`);
       };
 
       const actualizarFacturacion = (campo, valor) => actualizarEmpresa(c => ({ ...c, billing: { ...c.billing, [campo]: valor } }));
@@ -1107,9 +1124,69 @@ return companies.filter(c => {
                         </div>
                       )}
                     </div>
+
+                    {/* Acceso al Área de empresas */}
+                    <div className="pt-2 border-t border-slate-100 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-slate-700 flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-slate-400" />Acceso al Área de empresas</span>
+                        <Interruptor
+                          label={contact.portal?.activo ? 'Quitar el acceso' : 'Dar acceso'}
+                          checked={!!contact.portal?.activo}
+                          onChange={(v) => (v
+                            ? (contact.email ? setAccesoPortal({ contacto: contact, permisos: contact.portal?.permisos || permisosPorRoles(contact.types), nuevo: true }) : showToast('Añade un email al contacto para poder invitarlo', 'error'))
+                            : quitarAccesoPortal(contact))}
+                        />
+                      </div>
+                      {contact.portal?.activo ? (
+                        <>
+                          <div className="flex flex-wrap gap-1">
+                            {contact.portal.permisos.map(id => <span key={id} className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200">{PERMISOS_PORTAL.find(p => p.id === id)?.texto}</span>)}
+                            {contact.portal.permisos.length === 0 && <span className="text-amber-700">Sin permisos: solo ve el inicio</span>}
+                          </div>
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                            <span>{contact.portal.ultimoAcceso ? `Último acceso: ${contact.portal.ultimoAcceso}` : `Invitado el ${contact.portal.invitado?.split('-').reverse().join('/')} · aún no ha entrado`}</span>
+                            <button type="button" className="text-indigo-700 hover:underline" onClick={() => setAccesoPortal({ contacto: contact, permisos: contact.portal.permisos, nuevo: false })}>Cambiar permisos</button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-[11px] text-slate-500">{contact.email ? 'Sin acceso. Al activarlo le llega una invitación por correo.' : 'Necesita un email para poder entrar.'}</div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
+
+              {accesoPortal && (
+                <Modal
+                  title={accesoPortal.nuevo ? 'Dar acceso al Área de empresas' : 'Permisos en el Área de empresas'}
+                  subtitle={`${accesoPortal.contacto.name} · ${accesoPortal.contacto.role || currentCompany.name}`}
+                  onClose={() => setAccesoPortal(null)}
+                  size="max-w-lg"
+                  footer={<>
+                    <Button onClick={() => setAccesoPortal(null)}>Cancelar</Button>
+                    <Button variant="primary" icon={accesoPortal.nuevo ? Mail : Check} onClick={guardarAccesoPortal}>{accesoPortal.nuevo ? 'Enviar invitación' : 'Guardar'}</Button>
+                  </>}
+                >
+                  <div className="space-y-3 text-sm">
+                    <p className="text-slate-600">Qué puede hacer en el Área de empresas. Todos ven el inicio y su cuenta. {accesoPortal.nuevo && 'Proponemos los permisos según sus roles en la ficha.'}</p>
+                    <div className="space-y-1.5">
+                      {PERMISOS_PORTAL.map(p => {
+                        const activo = accesoPortal.permisos.includes(p.id);
+                        return (
+                          <label key={p.id} className={`flex items-start gap-3 rounded-lg border px-3 py-2 cursor-pointer ${activo ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-200'}`}>
+                            <input type="checkbox" checked={activo} onChange={() => setAccesoPortal(a => ({ ...a, permisos: activo ? a.permisos.filter(x => x !== p.id) : [...a.permisos, p.id] }))} className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                            <span><span className="block font-medium text-slate-800">{p.texto}</span><span className="block text-xs text-slate-500">{p.detalle}</span></span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {accesoPortal.permisos.includes('horas') && !accesoPortal.contacto.types.includes('Valida horas') && (
+                      <Notice tone="warning" icon={AlertTriangle}>No tiene el rol «Valida horas» en la ficha: en Horas e incidencias no saldrá como contacto que valida.</Notice>
+                    )}
+                    {accesoPortal.nuevo && <Notice tone="info" icon={Mail}>Le enviaremos una invitación a <strong>{accesoPortal.contacto.email}</strong> para que elija su contraseña. El texto del correo está en Mi ETT → Portales.</Notice>}
+                  </div>
+                </Modal>
+              )}
             </div>
           )}
 
