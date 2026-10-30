@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-10-30
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, dc5841f
 - **Cómo verlo**: `npm --prefix apps/web run dev`.
   - Portal del trabajador: http://localhost:5173/trabajadores.html (antes `portal.html`).
   - Área de empresas: http://localhost:5173/empresas.html.
