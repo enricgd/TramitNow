@@ -1,0 +1,42 @@
+/* Animaciones de la web corporativa. Todas se desactivan si la persona pide reducir el movimiento. */
+
+/* Iconos de línea que se dibujan solos al aparecer (estilo harbour.space) */
+.dibuja :is(path, line, circle, rect, polyline, polygon, ellipse) {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+}
+.dibuja.visible :is(path, line, circle, rect, polyline, polygon, ellipse) {
+  animation: trazo 1.6s ease-out var(--retraso, 0ms) forwards;
+}
+@keyframes trazo {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Titular de la portada, palabra a palabra */
+.palabra {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.45em);
+  animation: subePalabra 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes subePalabra {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Franja en movimiento */
+.marquesina {
+  animation: marquesina 40s linear infinite;
+}
+.marquesina:hover {
+  animation-play-state: paused;
+}
+@keyframes marquesina {
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dibuja :is(path, line, circle, rect, polyline, polygon, ellipse) { stroke-dasharray: none; stroke-dashoffset: 0; }
+  .dibuja.visible :is(path, line, circle, rect, polyline, polygon, ellipse) { animation: none; }
+  .palabra { opacity: 1; transform: none; animation: none; }
+  .marquesina { animation: none; flex-wrap: wrap; justify-content: center; width: auto; }
+}

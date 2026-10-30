@@ -9,7 +9,7 @@ export const TEXTOS = {
         demo: 'Pide una demo',
         hero: {
             etiqueta: 'ERP para empresas de trabajo temporal',
-            titulo: 'El ERP de tu ETT, en la nube.',
+            titulo: 'El ERP de tu ETT, en la nube',
             texto: 'Peticiones, selección, contratos, horas y facturación en un solo lugar, para toda tu red de sucursales.',
             secundario: 'Ver cómo funciona',
             notas: ['Datos en servidores de la UE', 'Migración y formación incluidas'],
@@ -30,7 +30,9 @@ export const TEXTOS = {
         },
         modulos: {
             etiqueta: 'Producto',
-            titulo: 'Todo lo que hace tu ETT, en un mismo sitio',
+            titulo: 'Selecciona. Contrata. Factura.',
+            subtitulo: 'Todo lo que hace tu ETT, en un mismo sitio.',
+            mas: 'Y además, portales para tus clientes y tu personal',
             lista: [
                 ['Empresas', 'Clientes, contactos, centros de trabajo y datos de facturación.'],
                 ['Presupuestos', 'Tarifas por puesto con coste, margen y versiones.'],
@@ -81,6 +83,7 @@ export const TEXTOS = {
                 ['Soporte cercano', 'Un equipo que conoce el sector y te responde en castellano y catalán.'],
             ],
         },
+        barra: { texto: '¿Te enseñamos TramitNow en 30 minutos?', boton: 'Pide una demo' },
         precio: { titulo: 'Un precio a la medida de tu ETT', texto: 'Depende del número de sucursales y de usuarios. Cuéntanos cómo trabajas y te enviamos un presupuesto sin compromiso.', boton: 'Pedir presupuesto' },
         faq: {
             titulo: 'Preguntas frecuentes',
@@ -108,7 +111,7 @@ export const TEXTOS = {
         demo: 'Demana una demo',
         hero: {
             etiqueta: 'ERP per a empreses de treball temporal',
-            titulo: "L'ERP de la teva ETT, al núvol.",
+            titulo: "L'ERP de la teva ETT, al núvol",
             texto: 'Peticions, selecció, contractes, hores i facturació en un sol lloc, per a tota la teva xarxa de sucursals.',
             secundario: 'Veure com funciona',
             notas: ['Dades en servidors de la UE', 'Migració i formació incloses'],
@@ -129,7 +132,9 @@ export const TEXTOS = {
         },
         modulos: {
             etiqueta: 'Producte',
-            titulo: 'Tot el que fa la teva ETT, en un mateix lloc',
+            titulo: 'Selecciona. Contracta. Factura.',
+            subtitulo: 'Tot el que fa la teva ETT, en un mateix lloc.',
+            mas: 'I a més, portals per als teus clients i el teu personal',
             lista: [
                 ['Empreses', 'Clients, contactes, centres de treball i dades de facturació.'],
                 ['Pressupostos', 'Tarifes per lloc amb cost, marge i versions.'],
@@ -180,6 +185,7 @@ export const TEXTOS = {
                 ['Suport proper', 'Un equip que coneix el sector i et respon en català i castellà.'],
             ],
         },
+        barra: { texto: "T'ensenyem TramitNow en 30 minuts?", boton: 'Demana una demo' },
         precio: { titulo: 'Un preu a la mida de la teva ETT', texto: "Depèn del nombre de sucursals i d'usuaris. Explica'ns com treballes i t'enviem un pressupost sense compromís.", boton: 'Demanar pressupost' },
         faq: {
             titulo: 'Preguntes freqüents',
