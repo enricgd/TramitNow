@@ -983,7 +983,7 @@ export default function FichaEttView() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                                     {[
                                         { titulo: 'Área de empresas', boton: 'Ver el Área de empresas', ruta: 'empresas', demo: '/empresas.html', icono: Building2, acceso: 'Correo y contraseña. El acceso y los permisos de cada contacto se dan en Empresas → Contactos.', texto: 'Pedir personal, ver al personal en misión, validar las horas, firmar los CPD y descargar presupuestos y facturas.' },
-                                        { titulo: 'Portal del trabajador', boton: 'Ver el portal del trabajador', ruta: 'trabajadores', demo: '/trabajadores.html', icono: Users, acceso: 'DNI o NIE y código por SMS, sin contraseña.', texto: 'Contratos, nóminas, horas, avisos de ausencia, prevención, ofertas y sus datos y documentos.' },
+                                        { titulo: 'Portal del trabajador', boton: 'Ver el portal del trabajador', ruta: 'trabajadores', demo: '/trabajadores.html', icono: Users, acceso: 'DNI o NIE y código por SMS, sin contraseña.', texto: 'Para quien trabaja o ha trabajado con la ETT: contratos, nóminas, horas, avisos de ausencia, prevención y sus datos y documentos.' },
                                     ].map(p => (
                                         <div key={p.ruta} className="rounded-lg border border-slate-200 p-3 space-y-1">
                                             <div className="flex items-center gap-2 font-medium text-slate-900"><p.icono className="w-4 h-4 text-indigo-600" />{p.titulo}</div>

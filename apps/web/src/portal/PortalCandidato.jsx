@@ -1,13 +1,14 @@
 // Portal del trabajador: lo que ve la persona desde el móvil o el ordenador. Se entra desde Acceso.jsx (trabajadores.jsx).
-// Parte del esquema del diseñador (Contratos activos y pasados, Nóminas, Ofertas y Perfil) y añade Inicio con lo pendiente.
+// Parte del esquema del diseñador (Contratos activos y pasados, Nóminas y Perfil) y añade Inicio con lo pendiente.
+// De momento es solo para quien trabaja o ha trabajado con la ETT: sin ofertas ni candidaturas.
 // Look & feel de TramitNow, con más aire y tarjetas en vez de tablas. Logo y nombre de la ETT; «Funciona con TramitNow» al pie.
 import React, { useState } from 'react';
 import {
-    Home, FileSignature, Wallet, Search, UserRound, CheckCircle2, AlertTriangle, Download, Calendar, MapPin, Clock,
+    Home, FileSignature, Wallet, UserRound, CheckCircle2, AlertTriangle, Download, Calendar, MapPin, Clock,
     Building2, X, ShieldCheck, Upload, Info, ArrowRight, Briefcase, GraduationCap, CreditCard, Send, ChevronRight, ArrowLeft, Pencil, LogOut,
     Phone, Mail, HardHat, CalendarX, ChevronDown, Receipt, Navigation
 } from 'lucide-react';
-import { Button, Badge, Card, SectionTitle, Notice, Field, TextInput, Select, Modal, SearchInput } from '../ui';
+import { Button, Badge, Card, SectionTitle, Notice, Field, TextInput, Select, Modal } from '../ui';
 import { contactoDemo } from '../views/personasDemo';
 import { datosDeCp } from '../views/codigosPostales';
 
@@ -44,24 +45,11 @@ const OTROS_DOCUMENTOS = [
     { id: 'd-ret', nombre: 'Certificado de retenciones 2025', detalle: 'Para la declaración de la renta' },
     { id: 'd-prl', nombre: 'Certificado de formación PRL', detalle: 'Mozo/a de almacén · 27/06/2025' },
 ];
-// Ofertas: las peticiones con plazas por cubrir. No se publica el nombre del cliente, solo el sector.
-const OFERTAS = [
-    { id: 'PET-2026-0050', puesto: 'Carretillero/a', sector: 'Logística', poblacion: 'Basauri', provincia: 'Bizkaia', inicio: '2026-11-10', fin: '2027-01-29', turno: 'Tarde', requisitos: ['Carné de carretillero', 'DNI o NIE en vigor'] },
-    { id: 'PET-2026-0049', puesto: 'Operario/a de almacén', sector: 'Logística', poblacion: 'Basauri', provincia: 'Bizkaia', inicio: '2026-11-03', fin: '2027-01-29', turno: 'Tarde', requisitos: ['DNI o NIE en vigor', 'Incorporación inmediata'] },
-    { id: 'PET-2026-0046', puesto: 'Cocinero/a de partida', sector: 'Hostelería y eventos', poblacion: 'Barcelona', provincia: 'Barcelona', inicio: '2026-11-05', fin: '2026-11-30', turno: 'Jornada partida', requisitos: ['Carné de manipulador de alimentos', '2 años en banquetes'] },
-    { id: 'PET-2026-0047', puesto: 'Camarero/a de barra', sector: 'Hostelería y eventos', poblacion: 'Barcelona', provincia: 'Barcelona', inicio: '2026-11-12', fin: '2026-11-30', turno: 'Noche', requisitos: ['Carné de manipulador de alimentos'] },
-];
-const CANDIDATURAS_INICIALES = [{ oferta: 'PET-2026-0050', estado: 'Confirmada', fecha: '2026-10-20' }];
 const DOCUMENTOS_INICIALES = [
     { id: 'doc-dni', tipo: 'DNI', caduca: '2030-06-30', estado: 'Validado' },
     { id: 'doc-rgpd', tipo: 'Consentimiento de protección de datos (RGPD)', caduca: '2029-06-15', estado: 'Validado' },
     { id: 'doc-carne', tipo: 'Carné de carretillero', caduca: '2026-11-20', estado: 'Validado' },
 ];
-const ESTADO_CANDIDATURA = {
-    'En selección': { tono: 'accent', texto: 'Estamos revisando tu candidatura.' },
-    'Propuesta al cliente': { tono: 'warning', texto: 'Te hemos propuesto a la empresa. Te avisaremos cuando conteste.' },
-    'Confirmada': { tono: 'success', texto: 'La empresa te ha confirmado. Revisa lo que tienes pendiente para empezar.' },
-};
 const TURNOS = [{ id: 'manana', texto: 'Mañana' }, { id: 'tarde', texto: 'Tarde' }, { id: 'noche', texto: 'Noche' }, { id: 'partida', texto: 'Jornada partida' }, { id: 'finde', texto: 'Fines de semana' }];
 
 // Su contacto en la ETT (la responsable de PET-2026-0050) y el primer día (el encargado es el contacto del cliente)
@@ -150,7 +138,6 @@ const MENU = [
     { id: 'contratos', texto: 'Contratos', icono: FileSignature, hijos: [{ id: 'activos', texto: 'Activos' }, { id: 'pasados', texto: 'Pasados' }] },
     { id: 'horas', texto: 'Horas', icono: Clock },
     { id: 'nominas', texto: 'Nóminas', icono: Wallet },
-    { id: 'ofertas', texto: 'Ofertas', icono: Search },
     { id: 'perfil', texto: 'Perfil', icono: UserRound },
 ];
 
@@ -159,15 +146,12 @@ export default function PortalCandidato({ onSalir }) {
     const [verContratos, setVerContratos] = useState('activos');
     const [persona, setPersona] = useState(PERSONA_INICIAL);
     const [contratos, setContratos] = useState(CONTRATOS_INICIALES);
-    const [candidaturas, setCandidaturas] = useState(CANDIDATURAS_INICIALES);
     const [documentos, setDocumentos] = useState(DOCUMENTOS_INICIALES);
     const [pendientesValidar, setPendientesValidar] = useState([]); // datos cambiados que revisa la ETT
     const [firma, setFirma] = useState(null); // { contrato, paso, leido, codigo }
     const [edicion, setEdicion] = useState(null); // copia de persona mientras se edita
     const [renovar, setRenovar] = useState(null); // documento
-    const [busqueda, setBusqueda] = useState('');
     const [anio, setAnio] = useState('');
-    const [provincia, setProvincia] = useState('Bizkaia');
     const [toast, setToast] = useState(null);
     const [mesHoras, setMesHoras] = useState('2025-09');
     const [semanaAbierta, setSemanaAbierta] = useState(null);
@@ -209,10 +193,6 @@ export default function PortalCandidato({ onSalir }) {
         if (cambiosSensibles.length) setPendientesValidar(prev => [...new Set([...prev, ...cambiosSensibles])]);
         setEdicion(null);
         aviso(cambiosSensibles.length ? 'Datos guardados. La ETT revisará la cuenta bancaria antes de usarla.' : 'Datos guardados');
-    };
-    const meInteresa = (o) => {
-        setCandidaturas(prev => [{ oferta: o.id, estado: 'En selección', fecha: hoyIso() }, ...prev]);
-        aviso(`Te has inscrito en ${o.puesto}. Te llamaremos si encajas.`);
     };
     const abrirAusencia = () => setAusencia({ tipo: 'falta', desde: proxima?.alta && proxima.alta > hoyIso() ? proxima.alta : hoyIso(), hasta: '', hora: '', motivo: '', adjunto: false });
     const enviarAusencia = () => {
@@ -305,18 +285,6 @@ export default function PortalCandidato({ onSalir }) {
                         </div>
                     </Card>
                 ))}
-            </div>
-            <div className="space-y-2">
-                <div className="flex items-center justify-between"><h2 className="text-base font-semibold text-slate-900">Mis candidaturas</h2><button type="button" onClick={() => ir('ofertas')} className="text-sm text-indigo-700 hover:underline">Ver ofertas</button></div>
-                {candidaturas.map(c => {
-                    const o = OFERTAS.find(x => x.id === c.oferta);
-                    return (
-                        <Card key={c.oferta} className="p-4 text-sm flex flex-wrap items-center justify-between gap-2">
-                            <div><div className="font-medium text-slate-900">{o.puesto}</div><div className="text-slate-500">{o.sector} · {o.poblacion}</div></div>
-                            <Badge tone={ESTADO_CANDIDATURA[c.estado].tono} dot>{c.estado}</Badge>
-                        </Card>
-                    );
-                })}
             </div>
             {tarjetaContacto()}
         </div>
@@ -500,46 +468,6 @@ export default function PortalCandidato({ onSalir }) {
         );
     };
 
-    const Ofertas = () => {
-        const q = busqueda.trim().toLowerCase();
-        const lista = OFERTAS.filter(o => (!provincia || o.provincia === provincia) && (!q || `${o.puesto} ${o.sector} ${o.poblacion}`.toLowerCase().includes(q)));
-        return (
-            <div className="space-y-5">
-                <h1 className="text-2xl font-semibold text-slate-900">Ofertas</h1>
-                <div className="flex flex-wrap gap-2">
-                    <SearchInput className="flex-1 min-w-[200px]" value={busqueda} onChange={setBusqueda} placeholder="Puesto, sector o población..." />
-                    <Select value={provincia} onChange={(e) => setProvincia(e.target.value)} aria-label="Provincia">
-                        <option value="">Todas las provincias</option>
-                        {[...new Set(OFERTAS.map(o => o.provincia))].map(p => <option key={p} value={p}>{p}{p === persona.provincia ? ' (cerca de ti)' : ''}</option>)}
-                    </Select>
-                </div>
-                {lista.length === 0 && <Card className="p-6 text-sm text-slate-500 text-center">No hay ofertas con estos filtros.</Card>}
-                {lista.map(o => {
-                    const mia = candidaturas.find(c => c.oferta === o.id);
-                    return (
-                        <Card key={o.id} className="p-5 space-y-3">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div>
-                                    <div className="text-lg font-semibold text-slate-900">{o.puesto}</div>
-                                    <div className="text-sm text-slate-600">{o.sector} · <MapPin className="w-4 h-4 inline -mt-0.5 text-slate-400" /> {o.poblacion} ({o.provincia})</div>
-                                </div>
-                                {mia && <Badge tone={ESTADO_CANDIDATURA[mia.estado].tono} dot>{mia.estado}</Badge>}
-                            </div>
-                            <dl className="grid grid-cols-3 gap-3 text-sm">
-                                <div><dt className="text-xs text-slate-500">Empieza</dt><dd className="text-slate-900">{fechaES(o.inicio)}</dd></div>
-                                <div><dt className="text-xs text-slate-500">Fin previsto</dt><dd className="text-slate-900">{fechaES(o.fin)}</dd></div>
-                                <div><dt className="text-xs text-slate-500">Turno</dt><dd className="text-slate-900">{o.turno}</dd></div>
-                            </dl>
-                            <div className="flex flex-wrap gap-1.5">{o.requisitos.map(r => <span key={r} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{r}</span>)}</div>
-                            {mia ? <p className="text-sm text-slate-600">{ESTADO_CANDIDATURA[mia.estado].texto}</p> : <Button variant="primary" onClick={() => meInteresa(o)}>Me interesa</Button>}
-                        </Card>
-                    );
-                })}
-                <p className="text-xs text-slate-500">Por confidencialidad, no mostramos el nombre de la empresa hasta que te confirmemos.</p>
-            </div>
-        );
-    };
-
     const Perfil = () => {
         const d = edicion || persona;
         const campo = (k, v) => setEdicion(e => ({ ...e, [k]: v }));
@@ -648,7 +576,7 @@ export default function PortalCandidato({ onSalir }) {
     };
 
     // Se llaman como funciones (no como componentes) para no perder el foco de los campos al escribir
-    const CONTENIDO = { inicio: Inicio, contratos: Contratos, horas: Horas, nominas: Nominas, ofertas: Ofertas, perfil: Perfil };
+    const CONTENIDO = { inicio: Inicio, contratos: Contratos, horas: Horas, nominas: Nominas, perfil: Perfil };
 
     return (
         <div className="min-h-screen flex flex-col bg-slate-50">
@@ -703,7 +631,7 @@ export default function PortalCandidato({ onSalir }) {
             </div>
 
             {/* Menú inferior (móvil) */}
-            <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 grid grid-cols-6 z-40">
+            <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 grid grid-cols-5 z-40">
                 {MENU.map(m => (
                     <button key={m.id} type="button" onClick={() => ir(m.id, m.hijos ? 'activos' : undefined)} className={`flex flex-col items-center gap-0.5 py-2 text-[11px] ${seccion === m.id ? 'text-indigo-700' : 'text-slate-500'}`}>
                         <m.icono className="w-5 h-5" />{m.texto}

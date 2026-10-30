@@ -70,7 +70,7 @@ export default function Acceso({ tipo, onEntrar, telefono = '', usuariosDemo = [
     };
 
     const titulos = {
-        dni: ['Entra con tu DNI', 'Escribe el DNI o NIE que diste a la ETT. Te enviaremos un código para entrar, sin contraseñas.'],
+        dni: ['Entra con tu DNI', 'Para quien trabaja o ha trabajado con nosotros. Escribe el DNI o NIE que diste a la ETT y te enviaremos un código para entrar, sin contraseñas.'],
         codigo: ['Escribe el código', porEmail ? 'Te lo hemos enviado a tu correo. Caduca en 10 minutos.' : `Te lo hemos enviado por SMS al móvil acabado en ${telefono.replace(/\D/g, '').slice(-3)}. Caduca en 10 minutos.`],
         login: ['Iniciar sesión', 'Entra con el correo y la contraseña de tu empresa.'],
         olvido: ['Recordar contraseña', 'Escribe tu correo y te enviaremos un enlace para crear una contraseña nueva.'],
