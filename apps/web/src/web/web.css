@@ -40,3 +40,52 @@
   .palabra { opacity: 1; transform: none; animation: none; }
   .marquesina { animation: none; flex-wrap: wrap; justify-content: center; width: auto; }
 }
+
+/* Foco de luz que sigue al ratón en las tarjetas */
+.tarjeta-viva::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  background: radial-gradient(420px circle at var(--x, 50%) var(--y, 50%), rgba(65, 151, 203, 0.14), transparent 60%);
+}
+.tarjeta-viva:hover::after { opacity: 1; }
+
+/* Manchas de color que flotan en la portada */
+.mancha { animation: flota 18s ease-in-out infinite alternate; }
+.mancha-2 { animation-duration: 23s; animation-delay: -6s; }
+.mancha-3 { animation-duration: 27s; animation-delay: -12s; }
+@keyframes flota {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6%, 8%) scale(1.12); }
+  100% { transform: translate(-6%, 4%) scale(0.95); }
+}
+
+/* Avisos que flotan alrededor de la maqueta */
+.bambolea { animation: bambolea 6s ease-in-out infinite; }
+@keyframes bambolea {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Líneas que fluyen en el dibujo de seguridad */
+.fluye { stroke-dasharray: 6 8; animation: fluye 1.6s linear infinite; }
+@keyframes fluye { to { stroke-dashoffset: -28; } }
+.late { animation: late 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes late {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.35); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mancha, .bambolea, .fluye, .late { animation: none; }
+  .tarjeta-viva::after { display: none; }
+}
+
+/* Barra que se llena en el perfil activo del equipo */
+.llena { width: 0; animation: llena linear forwards; }
+@keyframes llena { to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .llena { display: none; } }

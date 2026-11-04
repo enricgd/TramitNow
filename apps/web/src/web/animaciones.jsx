@@ -55,3 +55,82 @@ export function TitularPorPalabras({ texto, final, className = '' }) {
         </h1>
     );
 }
+
+// Cuenta desde 0 hasta el número cuando aparece en pantalla
+export function Contador({ hasta, sufijo = '', duracion = 1400 }) {
+    const [ref, visible] = useVisible(0.5);
+    const [valor, setValor] = useState(0);
+    useEffect(() => {
+        if (!visible) return undefined;
+        if (movimientoReducido()) { setValor(hasta); return undefined; }
+        let inicio = null;
+        let id;
+        const paso = (t) => {
+            if (inicio === null) inicio = t;
+            const p = Math.min((t - inicio) / duracion, 1);
+            setValor(Math.round(hasta * (1 - Math.pow(1 - p, 3))));
+            if (p < 1) id = requestAnimationFrame(paso);
+        };
+        id = requestAnimationFrame(paso);
+        return () => cancelAnimationFrame(id);
+    }, [visible, hasta, duracion]);
+    return <span ref={ref}>{valor}{sufijo}</span>;
+}
+
+// Avance (0 a 1) de un elemento al cruzar la pantalla: 0 cuando entra por abajo, 1 cuando llega a la mitad
+export function useProgresoScroll() {
+    const ref = useRef(null);
+    const [progreso, setProgreso] = useState(movimientoReducido() ? 1 : 0);
+    useEffect(() => {
+        if (movimientoReducido()) return undefined;
+        let pendiente = false;
+        const medir = () => {
+            pendiente = false;
+            const el = ref.current;
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            const alto = window.innerHeight;
+            const p = (alto - r.top) / (alto * 0.5 + r.height * 0.6);
+            setProgreso(Math.max(0, Math.min(1, p)));
+        };
+        const alMover = () => { if (!pendiente) { pendiente = true; requestAnimationFrame(medir); } };
+        medir();
+        window.addEventListener('scroll', alMover, { passive: true });
+        window.addEventListener('resize', alMover);
+        return () => { window.removeEventListener('scroll', alMover); window.removeEventListener('resize', alMover); };
+    }, []);
+    return [ref, progreso];
+}
+
+// Texto que se ilumina palabra a palabra al hacer scroll
+export function TextoQueSeIlumina({ texto, className = '' }) {
+    const [ref, progreso] = useProgresoScroll();
+    const palabras = texto.split(' ');
+    const encendidas = Math.round(progreso * palabras.length);
+    return (
+        <p ref={ref} className={className}>
+            {palabras.map((p, i) => <span key={i} className={`transition-colors duration-300 ${i < encendidas ? 'text-[#003A70]' : 'text-slate-200'}`}>{p}{i < palabras.length - 1 ? ' ' : ''}</span>)}
+        </p>
+    );
+}
+
+// Tarjeta que se inclina un poco y lleva un foco de luz que sigue al ratón
+export function TarjetaViva({ children, className = '' }) {
+    const ref = useRef(null);
+    const mover = (e) => {
+        const el = ref.current;
+        if (!el || movimientoReducido()) return;
+        const r = el.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width;
+        const y = (e.clientY - r.top) / r.height;
+        el.style.setProperty('--x', `${x * 100}%`);
+        el.style.setProperty('--y', `${y * 100}%`);
+        el.style.transform = `perspective(900px) rotateX(${(0.5 - y) * 4}deg) rotateY(${(x - 0.5) * 5}deg)`;
+    };
+    const salir = () => { if (ref.current) ref.current.style.transform = ''; };
+    return (
+        <div ref={ref} onMouseMove={mover} onMouseLeave={salir} className={`tarjeta-viva relative transition-transform duration-200 ease-out ${className}`}>
+            {children}
+        </div>
+    );
+}

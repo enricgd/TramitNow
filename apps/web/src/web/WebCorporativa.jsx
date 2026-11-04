@@ -7,10 +7,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     ArrowRight, Check, CheckCircle2, ChevronDown, Building2, Calculator, ClipboardList, Users, FileSignature, BriefcaseBusiness,
     Clock, Receipt, Settings2, Network, Globe, RefreshCw, DatabaseBackup, ShieldCheck, History, Server, Lock, FileLock2, KeyRound,
-    MoveRight, GraduationCap, Headphones, Smartphone, Monitor, Mail, Phone, MapPin, Menu, X,
+    MoveRight, GraduationCap, Headphones, Smartphone, Monitor, Mail, Phone, MapPin, Menu, X, LayoutDashboard, Handshake, UserSearch,
 } from 'lucide-react';
 import { TEXTOS, CONTACTO } from './textos';
-import { Aparece, IconoDibujado, TitularPorPalabras, movimientoReducido } from './animaciones';
+import { Aparece, IconoDibujado, TitularPorPalabras, Contador, TextoQueSeIlumina, TarjetaViva, useProgresoScroll, useVisible, movimientoReducido } from './animaciones';
 
 const ICONOS_MODULOS = [Building2, Calculator, ClipboardList, Users, FileSignature, BriefcaseBusiness, Clock, Receipt, Settings2];
 const ICONOS_VENTAJAS = [Network, Globe, RefreshCw, DatabaseBackup, KeyRound, History];
@@ -28,8 +28,67 @@ const MAQUETAS = [
     { titulo: 'Parte semanal · Camarero/a de sala', estado: ['Validado por el cliente', 'ok'], cabecera: ['Persona', 'L M X J V', 'Total'], filas: [['Garazi Uribe Arana', '8 8 8 8 6+2', '40 h'], ['Daniel Sousa Prieto', '8 8 7,33 8 6', '37,33 h'], ['Irene Campos Gil', '8 8 8 Aus. 6', '30 h']], pie: 'Validado por Montse Ferrer el 13/10 a las 09:12' },
     { titulo: 'F2026-0101 · Septiembre de 2026', estado: ['Pendiente de cobro', 'aviso'], cabecera: ['Concepto', 'Horas', 'Importe'], filas: [['Base imponible', '992 h', '16.781,70 €'], ['IVA 21 %', '', '3.524,16 €']], pie: 'Total: 20.305,86 €' },
 ];
+// Lo que ve cada perfil del equipo (datos de ejemplo de la demo)
+const ICONOS_ROLES = [LayoutDashboard, Handshake, UserSearch, FileSignature, Receipt];
+const ICONOS_AVISOS = [CheckCircle2, FileSignature, Receipt, ClipboardList];
+const DURACION_ROL = 6000;
+const MAQUETAS_ROLES = [
+    { titulo: 'Red de sucursales · hoy', estado: ['2 avisos', 'aviso'], cabecera: ['Indicador', 'Norte', 'Barcelona'], filas: [['En misión hoy', '5', '8'], ['Peticiones abiertas', '2', '2'], ['Partes por validar', '0', '1'], ['Por cobrar', '40.247 €', '—']], pie: 'Garantía financiera: vence en 40 días' },
+    { titulo: 'Presupuestos en curso', estado: ['Comercial', 'azul'], cabecera: ['Presupuesto', 'Estado', 'Importe'], filas: [['PRE-2026-0042 · Trans-Logística', 'Aceptado', '105.792 €'], ['PRE-2026-0045 · Manufacturas', 'Enviado', '64.512 €'], ['PRE-2026-0048 · Trans-Logística', 'Borrador', '—']] },
+    MAQUETAS[2],
+    MAQUETAS[3],
+    MAQUETAS[5],
+];
 const TONO = { ok: 'bg-emerald-50 text-emerald-700', azul: 'bg-sky-50 text-sky-700', aviso: 'bg-amber-50 text-amber-700' };
-const BIEN = ['Hecho', 'Confirmada', 'Al día'];
+const BIEN = ['Hecho', 'Confirmada', 'Al día', 'Aceptado'];
+
+function LineaEmpezar({ pasos }) {
+    const [ref, progreso] = useProgresoScroll();
+    return (
+        <div ref={ref} className="relative mt-14">
+            <div className="absolute left-5 lg:left-0 top-0 lg:top-5 bottom-0 lg:bottom-auto w-0.5 lg:w-full lg:h-0.5 bg-slate-200 rounded-full" />
+            <div className="hidden lg:block absolute left-0 top-5 h-0.5 bg-[linear-gradient(90deg,#1769aa,#4197CB)] rounded-full" style={{ width: `${progreso * 100}%` }} />
+            <div className="lg:hidden absolute left-5 top-0 w-0.5 bg-[linear-gradient(180deg,#1769aa,#4197CB)] rounded-full" style={{ height: `${progreso * 100}%` }} />
+            <ol className="relative grid grid-cols-1 lg:grid-cols-4 gap-10 lg:gap-8">
+                {pasos.map(([titulo, texto], i) => {
+                    const activo = progreso >= (i + 0.5) / pasos.length;
+                    return (
+                        <li key={titulo} className="flex lg:block gap-5">
+                            <span className={`relative z-10 w-10 h-10 shrink-0 rounded-full flex items-center justify-center font-bold transition-all duration-500 ${activo ? 'bg-[#1769aa] text-white shadow-[0_0_0_6px_rgba(65,151,203,0.18)]' : 'bg-white text-slate-400 ring-2 ring-slate-200'}`}>{i + 1}</span>
+                            <div className={`lg:mt-6 transition-opacity duration-500 ${activo ? 'opacity-100' : 'opacity-50'}`}>
+                                <div className="font-bold text-[#003A70] text-lg">{titulo}</div>
+                                <p className="text-slate-500 mt-1">{texto}</p>
+                            </div>
+                        </li>
+                    );
+                })}
+            </ol>
+        </div>
+    );
+}
+
+// Dibujo de «cada ETT, separada»: TramitNow en el centro y cada ETT con su candado
+function EttsSeparadas({ nombres }) {
+    const nodos = [[60, 52], [300, 52], [180, 196]];
+    return (
+        <div className="rounded-3xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff,#f1f7fc)] p-4">
+            <svg viewBox="0 0 360 240" className="w-full h-auto" role="img" aria-label={nombres.join(', ')}>
+                {nodos.map(([x, y], i) => <line key={i} x1="180" y1="120" x2={x} y2={y} stroke="#4197CB" strokeWidth="2" className="fluye" strokeLinecap="round" />)}
+                <circle cx="180" cy="120" r="34" fill="#4197CB" className="late" />
+                <circle cx="180" cy="120" r="30" fill="#003A70" />
+                <text x="180" y="124" textAnchor="middle" fontSize="11" fontWeight="700" fill="#ffffff">TramitNow</text>
+                {nodos.map(([x, y], i) => (
+                    <g key={i}>
+                        <rect x={x - 52} y={y - 20} width="104" height="40" rx="12" fill="#ffffff" stroke={i === 0 ? '#1769aa' : '#cbd5e1'} strokeWidth={i === 0 ? 2 : 1} />
+                        <rect x={x - 40} y={y - 7} width="10" height="9" rx="2" fill={i === 0 ? '#1769aa' : '#94a3b8'} />
+                        <path d={`M${x - 38} ${y - 7} v-3 a3 3 0 0 1 6 0 v3`} fill="none" stroke={i === 0 ? '#1769aa' : '#94a3b8'} strokeWidth="1.6" />
+                        <text x={x - 24} y={y + 4} fontSize="11" fontWeight="600" fill={i === 0 ? '#003A70' : '#64748b'}>{nombres[i]}</text>
+                    </g>
+                ))}
+            </svg>
+        </div>
+    );
+}
 
 const leerIdioma = () => { try { return localStorage.getItem('tramitnow-idioma') === 'ca' ? 'ca' : 'es'; } catch { return 'es'; } };
 const FORM_VACIO = { nombre: '', ett: '', email: '', telefono: '', sucursales: '0', mensaje: '', privacidad: false };
@@ -43,11 +102,16 @@ export default function WebCorporativa() {
     const [barra, setBarra] = useState(false); // barra inferior de «Pide una demo»
     const [form, setForm] = useState(FORM_VACIO);
     const [enviado, setEnviado] = useState(false);
+    const [rol, setRol] = useState(0);
+    const [rolAuto, setRolAuto] = useState(true); // los perfiles pasan solos hasta que se pulsa uno
     const t = TEXTOS[idioma];
+    const progresoRef = useRef(null);
+    const [equipoRef, equipoVisible] = useVisible(0.3);
 
     const heroRef = useRef(null);
     const maquetaRef = useRef(null);
     const demoRef = useRef(null);
+    const pieRef = useRef(null);
     const pasosRef = useRef([]);
 
     useEffect(() => { document.documentElement.lang = idioma; }, [idioma]);
@@ -63,6 +127,10 @@ export default function WebCorporativa() {
                 pendiente = false;
                 const y = window.scrollY;
                 setCompacta(y > 24);
+                if (progresoRef.current) {
+                    const total = document.documentElement.scrollHeight - window.innerHeight;
+                    progresoRef.current.style.transform = `scaleX(${total > 0 ? y / total : 0})`;
+                }
                 if (maquetaRef.current && !reducido) {
                     const p = Math.min(y / 420, 1);
                     maquetaRef.current.style.transform = `perspective(1600px) rotateX(${(1 - p) * 16}deg) translateY(${(1 - p) * 24}px) scale(${0.93 + 0.07 * p})`;
@@ -77,13 +145,12 @@ export default function WebCorporativa() {
     // Barra inferior: aparece al dejar atrás la portada y se esconde en el formulario
     useEffect(() => {
         if (!('IntersectionObserver' in window)) return undefined;
-        const vistos = { hero: true, demo: false };
+        const vistos = new Map();
         const io = new IntersectionObserver((entradas) => {
-            entradas.forEach(e => { vistos[e.target === heroRef.current ? 'hero' : 'demo'] = e.isIntersecting; });
-            setBarra(!vistos.hero && !vistos.demo);
+            entradas.forEach(e => vistos.set(e.target, e.isIntersecting));
+            setBarra(![...vistos.values()].some(Boolean));
         });
-        if (heroRef.current) io.observe(heroRef.current);
-        if (demoRef.current) io.observe(demoRef.current);
+        [heroRef, demoRef, pieRef].forEach(r => { if (r.current) { vistos.set(r.current, r === heroRef); io.observe(r.current); } });
         return () => io.disconnect();
     }, []);
 
@@ -96,6 +163,13 @@ export default function WebCorporativa() {
         pasosRef.current.forEach(el => el && io.observe(el));
         return () => io.disconnect();
     }, []);
+
+    // Perfiles del equipo: pasan solos cada pocos segundos
+    useEffect(() => {
+        if (!rolAuto || !equipoVisible || movimientoReducido()) return undefined;
+        const id = setTimeout(() => setRol(r => (r + 1) % MAQUETAS_ROLES.length), DURACION_ROL);
+        return () => clearTimeout(id);
+    }, [rol, rolAuto, equipoVisible]);
 
     const cambiarIdioma = (i) => {
         setIdioma(i);
@@ -119,7 +193,7 @@ export default function WebCorporativa() {
             <div className="px-4 py-2">
                 <div className="grid grid-cols-[1.6fr_1fr_1fr] gap-2 py-1.5 text-[11px] font-medium text-slate-400">{m.cabecera.map((c, i) => <span key={i} className={i === 2 ? 'text-right' : ''}>{c}</span>)}</div>
                 {m.filas.map((f, i) => (
-                    <div key={i} className="grid grid-cols-[1.6fr_1fr_1fr] gap-2 py-2 border-t border-slate-100 text-[13px]">
+                    <div key={i} className="grid grid-cols-[1.6fr_1fr_1fr] gap-2 py-2 border-t border-slate-100 text-[13px] animate-fade-in" style={{ animationDelay: `${120 + i * 110}ms`, animationFillMode: 'both' }}>
                         <span className="text-slate-800 truncate">{f[0]}</span>
                         <span className={BIEN.includes(f[1]) ? 'text-emerald-700' : 'text-slate-600'}>{BIEN.includes(f[1]) && <Check className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />}{f[1]}</span>
                         <span className={`text-right ${BIEN.includes(f[2]) ? 'text-emerald-700' : ['Por cubrir', 'Falta el carné'].includes(f[2]) ? 'text-amber-700' : 'text-slate-800'}`}>{f[2]}</span>
@@ -209,6 +283,8 @@ export default function WebCorporativa() {
 
     return (
         <div className="min-h-screen bg-white text-slate-700">
+            {/* Progreso de lectura */}
+            <div ref={progresoRef} className="fixed top-0 inset-x-0 h-[3px] z-50 origin-left bg-[linear-gradient(90deg,#003A70,#1769aa,#4197CB)]" style={{ transform: 'scaleX(0)' }} />
             {/* Barra de la demo */}
             <div className="bg-slate-900 text-slate-300 text-xs">
                 <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-2">
@@ -246,6 +322,9 @@ export default function WebCorporativa() {
 
             {/* PORTADA: clara, titular centrado y la maqueta del ERP debajo */}
             <section id="inicio" ref={heroRef} className="relative overflow-hidden bg-[radial-gradient(70%_55%_at_50%_0%,#d7ebf8_0%,rgba(255,255,255,0)_70%),radial-gradient(35%_40%_at_95%_35%,#e3eefb_0%,rgba(255,255,255,0)_70%),radial-gradient(35%_40%_at_5%_45%,#e6f3f8_0%,rgba(255,255,255,0)_70%)]">
+                <span className="mancha absolute -top-32 left-[8%] w-[420px] h-[420px] rounded-full bg-[#4197CB]/20 blur-3xl" />
+                <span className="mancha mancha-2 absolute top-40 right-[2%] w-[380px] h-[380px] rounded-full bg-[#1769aa]/15 blur-3xl" />
+                <span className="mancha mancha-3 absolute top-[55%] left-[30%] w-[520px] h-[320px] rounded-full bg-sky-200/40 blur-3xl" />
                 <div className="relative max-w-6xl mx-auto px-4 pt-36 md:pt-44 pb-24 md:pb-32 text-center">
                     <Aparece><div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/70 px-3.5 py-1.5 text-xs font-semibold text-[#1769aa]"><span className="w-1.5 h-1.5 rounded-full bg-[#4197CB]" />{t.hero.etiqueta}</div></Aparece>
                     <TitularPorPalabras key={idioma} texto={t.hero.titulo} final={<span className="text-[#4197CB]">.</span>} className="text-[44px] sm:text-6xl md:text-7xl leading-[1.02] font-bold tracking-[-0.045em] text-[#003A70] mt-6 max-w-4xl mx-auto" />
@@ -257,7 +336,24 @@ export default function WebCorporativa() {
                         </div>
                         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-6 text-sm text-slate-500">{t.hero.notas.map(n => <span key={n} className="inline-flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#4197CB]" />{n}</span>)}</div>
                     </Aparece>
-                    <div ref={maquetaRef} className="mt-16 md:mt-20 max-w-5xl mx-auto pr-3 sm:pr-8 origin-top will-change-transform">{pantallas()}</div>
+                    <div className="relative mt-16 md:mt-20 max-w-5xl mx-auto">
+                        <div ref={maquetaRef} className="pr-3 sm:pr-8 origin-top will-change-transform">{pantallas()}</div>
+                        {/* Avisos que van llegando, como en la aplicación */}
+                        {t.avisos.map((texto, i) => {
+                            const Icono = ICONOS_AVISOS[i];
+                            const sitio = ['-left-10 top-24', '-left-16 bottom-28', '-right-14 top-10', '-right-20 top-1/2'][i];
+                            return (
+                                <div key={texto} className={`hidden lg:block absolute ${sitio} z-10`}>
+                                    <Aparece retraso={1100 + i * 450}>
+                                        <div className="bambolea flex items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur border border-slate-200 shadow-[0_16px_40px_rgba(0,58,112,0.16)] pl-2.5 pr-4 py-2.5 text-left" style={{ animationDelay: `${i * -1.4}s` }}>
+                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center ${i === 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-sky-50 text-[#1769aa]'}`}><Icono className="w-4 h-4" /></span>
+                                            <span><span className="block text-[13px] font-semibold text-slate-800 whitespace-nowrap">{texto}</span><span className="block text-[11px] text-slate-400">{idioma === 'ca' ? 'ara mateix' : 'ahora mismo'}</span></span>
+                                        </div>
+                                    </Aparece>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </section>
 
@@ -271,8 +367,25 @@ export default function WebCorporativa() {
                 </div>
             </section>
 
+            {/* CIFRAS DEL PRODUCTO (hechos, no datos inventados) */}
+            <section className="max-w-6xl mx-auto px-4 pt-20 md:pt-28">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
+                    {t.cifras.map(([n, suf, texto], i) => (
+                        <Aparece key={texto} retraso={i * 100} className="text-center lg:text-left lg:border-l lg:border-slate-200 lg:pl-6">
+                            <div className="text-5xl md:text-6xl font-bold tracking-[-0.04em] text-transparent bg-clip-text bg-[linear-gradient(135deg,#003A70,#4197CB)]"><Contador hasta={n} sufijo={suf} /></div>
+                            <div className="text-slate-500 mt-2">{texto}</div>
+                        </Aparece>
+                    ))}
+                </div>
+            </section>
+
+            {/* MANIFIESTO: se ilumina al hacer scroll */}
+            <section className="max-w-5xl mx-auto px-4 py-24 md:py-32">
+                <TextoQueSeIlumina texto={t.manifiesto} className="text-[28px] md:text-5xl leading-[1.18] font-bold tracking-[-0.03em] text-center" />
+            </section>
+
             {/* CÓMO FUNCIONA: avanza con el scroll en el ordenador; pestañas en el móvil */}
-            <section id="como-funciona" className="scroll-mt-20 max-w-6xl mx-auto px-4 py-24 md:py-32">
+            <section id="como-funciona" className="scroll-mt-20 max-w-6xl mx-auto px-4 pb-24 md:pb-32">
                 <Aparece className="max-w-2xl">
                     {etiqueta(t.recorrido.etiqueta)}
                     {titulo(t.recorrido.titulo)}
@@ -318,7 +431,7 @@ export default function WebCorporativa() {
                             <p className="text-slate-600 leading-relaxed mt-3">{t.recorrido.pasos[paso].texto}</p>
                             <ul className="mt-5 space-y-2">{t.recorrido.pasos[paso].puntos.map(x => <li key={x} className="flex items-center gap-2.5 text-slate-700"><Check className="w-4 h-4 text-[#1769aa]" />{x}</li>)}</ul>
                         </div>
-                        <div className="rounded-2xl bg-[linear-gradient(145deg,#e4f1fa,#f6f9fc)] p-5 min-w-0">{maqueta(MAQUETAS[paso])}</div>
+                        <div key={paso} className="rounded-2xl bg-[linear-gradient(145deg,#e4f1fa,#f6f9fc)] p-5 min-w-0">{maqueta(MAQUETAS[paso])}</div>
                     </div>
                 </div>
             </section>
@@ -336,12 +449,12 @@ export default function WebCorporativa() {
                             const [n, d] = t.modulos.lista[i];
                             return (
                                 <Aparece key={i} retraso={(k % 3) * 90} className={ancho === 2 ? 'md:col-span-2' : ''}>
-                                    <div className={`h-full rounded-3xl border border-slate-200 bg-white p-7 transition hover:border-[#4197CB] hover:shadow-[0_16px_40px_rgba(0,58,112,0.10)] ${ancho === 2 ? 'bg-[linear-gradient(160deg,#ffffff_40%,#eef6fc)]' : ''}`}>
+                                    <TarjetaViva className={`h-full rounded-3xl border border-slate-200 bg-white p-7 hover:border-[#4197CB] hover:shadow-[0_16px_40px_rgba(0,58,112,0.10)] ${ancho === 2 ? 'bg-[linear-gradient(160deg,#ffffff_40%,#eef6fc)]' : ''}`}>
                                         <IconoDibujado icono={ICONOS_MODULOS[i]} className="w-9 h-9 text-[#1769aa]" retraso={(k % 3) * 120} />
                                         <div className={`mt-4 font-bold text-[#003A70] tracking-[-0.02em] ${ancho === 2 ? 'text-2xl' : 'text-xl'}`}>{n}</div>
                                         <p className="text-slate-500 mt-1.5 leading-relaxed">{d}</p>
                                         {miniModulo(i)}
-                                    </div>
+                                    </TarjetaViva>
                                 </Aparece>
                             );
                         })}
@@ -377,6 +490,36 @@ export default function WebCorporativa() {
                 </div>
             </section>
 
+            {/* EQUIPO: lo que ve cada perfil; pasan solos hasta que se pulsa uno */}
+            <section ref={equipoRef} className="bg-slate-50 border-y border-slate-200">
+                <div className="max-w-6xl mx-auto px-4 py-24 md:py-32">
+                    <Aparece className="max-w-2xl">
+                        {etiqueta(t.equipo.etiqueta)}
+                        {titulo(t.equipo.titulo)}
+                        <p className="text-lg text-slate-500 mt-4">{t.equipo.texto}</p>
+                    </Aparece>
+                    <div className="mt-10 flex gap-2 overflow-x-auto pb-2 -mx-4 px-4" role="tablist">
+                        {t.equipo.roles.map((r, i) => {
+                            const Icono = ICONOS_ROLES[i];
+                            return (
+                                <button key={r.nombre} type="button" role="tab" aria-selected={rol === i} onClick={() => { setRol(i); setRolAuto(false); }} className={`relative shrink-0 overflow-hidden flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium border transition ${rol === i ? 'bg-white border-[#1769aa] text-[#003A70] shadow-sm' : 'bg-white/60 border-slate-200 text-slate-500 hover:text-slate-800'}`}>
+                                    <Icono className="w-4 h-4" />{r.nombre}
+                                    {rol === i && rolAuto && equipoVisible && <span key={`barra-${rol}`} className="llena absolute left-0 bottom-0 h-0.5 bg-[#4197CB]" style={{ animationDuration: `${DURACION_ROL}ms` }} />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div key={rol} className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center animate-fade-in">
+                        <div>
+                            <h3 className="text-2xl md:text-3xl font-bold text-[#003A70] tracking-[-0.025em]">{t.equipo.roles[rol].nombre}</h3>
+                            <p className="text-slate-600 text-lg leading-relaxed mt-3">{t.equipo.roles[rol].texto}</p>
+                            <ul className="mt-5 space-y-2.5">{t.equipo.roles[rol].puntos.map(x => <li key={x} className="flex items-center gap-2.5 text-slate-700"><span className="w-5 h-5 rounded-full bg-sky-100 text-[#1769aa] flex items-center justify-center"><Check className="w-3.5 h-3.5" /></span>{x}</li>)}</ul>
+                        </div>
+                        <div className="rounded-3xl bg-[linear-gradient(145deg,#dcecf8,#f6f9fc)] p-5 sm:p-10 min-w-0">{maqueta(MAQUETAS_ROLES[rol])}</div>
+                    </div>
+                </div>
+            </section>
+
             {/* POR QUÉ TRAMITNOW (el único bloque oscuro, con el pie) */}
             <section className="relative overflow-hidden text-white bg-[linear-gradient(145deg,#003A70,#155b8e_62%,#1b7c9f)]">
                 <span className="absolute w-[620px] h-[620px] -left-[260px] -bottom-[320px] rounded-full border border-white/10" />
@@ -402,6 +545,7 @@ export default function WebCorporativa() {
             <section id="seguridad" className="scroll-mt-20 max-w-6xl mx-auto px-4 py-24 md:py-32 grid grid-cols-1 lg:grid-cols-2 gap-16">
                 <div>
                     <Aparece>{etiqueta(t.seguridad.etiqueta)}{titulo(t.seguridad.titulo)}</Aparece>
+                    <Aparece retraso={150} className="mt-8"><EttsSeparadas nombres={t.separadas} /></Aparece>
                     <div className="mt-10 space-y-6">
                         {t.seguridad.lista.map(([n, d], i) => (
                             <Aparece key={n} retraso={i * 80} className="flex gap-4">
@@ -431,6 +575,15 @@ export default function WebCorporativa() {
                         </div>
                     </Aparece>
                 </div>
+            </section>
+
+            {/* CÓMO EMPEZAMOS: la línea se rellena al bajar */}
+            <section className="max-w-6xl mx-auto px-4 pb-24 md:pb-32">
+                <Aparece className="max-w-2xl">
+                    {etiqueta(t.empezar.etiqueta)}
+                    {titulo(t.empezar.titulo)}
+                </Aparece>
+                <LineaEmpezar pasos={t.empezar.pasos} />
             </section>
 
             {/* PREGUNTAS FRECUENTES */}
@@ -502,7 +655,7 @@ export default function WebCorporativa() {
             </section>
 
             {/* PIE */}
-            <footer className="bg-[#002a52] text-sky-100/80 pb-20 md:pb-0">
+            <footer ref={pieRef} className="bg-[#002a52] text-sky-100/80">
                 <div className="max-w-6xl mx-auto px-4 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-sm">
                     <div className="lg:col-span-2">
                         <img src="/logo-tramitnow.svg" alt="TramitNow" className="h-7 w-auto brightness-0 invert" />
@@ -510,6 +663,9 @@ export default function WebCorporativa() {
                     </div>
                     <div className="space-y-2">{enlaces.map(([k, href]) => <a key={k} href={href} className="block hover:text-white">{t.menu[k]}</a>)}</div>
                     <div className="space-y-2"><div>{CONTACTO.email}</div><div>{CONTACTO.telefono}</div><div>{CONTACTO.direccion}</div></div>
+                </div>
+                <div className="max-w-6xl mx-auto px-4 overflow-hidden" aria-hidden="true">
+                    <div className="text-[19vw] lg:text-[210px] font-bold tracking-[-0.06em] leading-[0.8] text-transparent bg-clip-text bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0))] select-none translate-y-[12%]">TramitNow</div>
                 </div>
                 <div className="border-t border-white/10">
                     <div className="max-w-6xl mx-auto px-4 py-5 flex flex-wrap items-center justify-between gap-3 text-xs">
