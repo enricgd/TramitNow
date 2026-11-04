@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-04
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 0dbdb8a
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/web2.html. Desde la barra de arriba se pasa
   de una versión a la otra; la actual sigue en http://localhost:5173/web.html.
 
