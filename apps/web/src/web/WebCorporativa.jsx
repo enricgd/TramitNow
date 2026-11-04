@@ -42,7 +42,7 @@ export const MAQUETAS_ROLES = [
 const TONO = { ok: 'bg-emerald-50 text-emerald-700', azul: 'bg-sky-50 text-sky-700', aviso: 'bg-amber-50 text-amber-700' };
 const BIEN = ['Hecho', 'Confirmada', 'Al día', 'Aceptado'];
 
-function LineaEmpezar({ pasos }) {
+export function LineaEmpezar({ pasos }) {
     const [ref, progreso] = useProgresoScroll();
     return (
         <div ref={ref} className="relative mt-14">
@@ -68,7 +68,7 @@ function LineaEmpezar({ pasos }) {
 }
 
 // Dibujo de «cada ETT, separada»: TramitNow en el centro y cada ETT con su candado
-function EttsSeparadas({ nombres }) {
+export function EttsSeparadas({ nombres }) {
     const nodos = [[60, 52], [300, 52], [180, 196]];
     return (
         <div className="rounded-3xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff,#f1f7fc)] p-4">
@@ -76,7 +76,7 @@ function EttsSeparadas({ nombres }) {
                 {nodos.map(([x, y], i) => <line key={i} x1="180" y1="120" x2={x} y2={y} stroke="#4197CB" strokeWidth="2" className="fluye" strokeLinecap="round" />)}
                 <circle cx="180" cy="120" r="34" fill="#4197CB" className="late" />
                 <circle cx="180" cy="120" r="30" fill="#003A70" />
-                <text x="180" y="124" textAnchor="middle" fontSize="11" fontWeight="700" fill="#ffffff">TramitNow</text>
+                <text x="180" y="123.5" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="#ffffff">TramitNow</text>
                 {nodos.map(([x, y], i) => (
                     <g key={i}>
                         <rect x={x - 52} y={y - 20} width="104" height="40" rx="12" fill="#ffffff" stroke={i === 0 ? '#1769aa' : '#cbd5e1'} strokeWidth={i === 0 ? 2 : 1} />
@@ -289,7 +289,7 @@ export default function WebCorporativa() {
             <div className="bg-slate-900 text-slate-300 text-xs">
                 <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-2">
                     <span>Demo · web corporativa · en real: tramitnow.com</span>
-                    <span className="flex gap-4"><a href="/web2.html" className="text-indigo-300 hover:text-white">Ver la versión estilo Perk</a><a href="/" className="text-indigo-300 hover:text-white">Ir a la demo del ERP</a></span>
+                    <span className="flex gap-4"><a href="/web2.html" className="text-indigo-300 hover:text-white">Versión 2 (Perk)</a><a href="/web3.html" className="text-indigo-300 hover:text-white">Versión 3 (mezcla)</a><a href="/" className="text-indigo-300 hover:text-white">Ir a la demo del ERP</a></span>
                 </div>
             </div>
 
