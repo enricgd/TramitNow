@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-04
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 85c908e
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/web.html (en una ventana ancha y bajando poco
   a poco)
 
