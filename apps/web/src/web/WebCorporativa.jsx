@@ -20,7 +20,7 @@ const ICONOS_ACOMPANAMOS = [MoveRight, GraduationCap, Headphones];
 const BENTO = [[6, 2], [7, 1], [0, 1], [1, 1], [2, 1], [3, 1], [4, 2], [5, 1], [8, 1]];
 
 // Contenido de las maquetas de cada paso del recorrido (datos de ejemplo de la demo)
-const MAQUETAS = [
+export const MAQUETAS = [
     { titulo: 'PRE-2026-0042 · Campaña logística otoño', estado: ['Aceptado', 'ok'], cabecera: ['Puesto', 'Tarifa', 'Margen'], filas: [['Operario/a de almacén', '17,90 €/h', '14 %'], ['Carretillero/a', '19,55 €/h', '15 %']], pie: 'Total previsto: 105.792 €' },
     { titulo: 'PET-2026-0050 · Carretillero/a · tarde', estado: ['En selección', 'azul'], cabecera: ['Plaza', 'Persona', 'Estado'], filas: [['1', 'Unai García Zabaleta', 'Confirmada'], ['2', 'Carlos Manuel Ortiz Reyes', 'Confirmada'], ['3', 'David Aranguren Sola', 'Propuesta'], ['4', '—', 'Por cubrir']] },
     { titulo: 'Candidatos para carretillero/a · Bizkaia', estado: ['12 encontrados', 'azul'], cabecera: ['Persona', 'Encaje', 'Documentos'], filas: [['David Castillo Ruiz', '89 %', 'Al día'], ['Ibai Zubizarreta Lasa', '88 %', 'Al día'], ['Leire Ortuzar Bengoa', '80 %', 'Falta el carné']] },
@@ -32,7 +32,7 @@ const MAQUETAS = [
 const ICONOS_ROLES = [LayoutDashboard, Handshake, UserSearch, FileSignature, Receipt];
 const ICONOS_AVISOS = [CheckCircle2, FileSignature, Receipt, ClipboardList];
 const DURACION_ROL = 6000;
-const MAQUETAS_ROLES = [
+export const MAQUETAS_ROLES = [
     { titulo: 'Red de sucursales · hoy', estado: ['2 avisos', 'aviso'], cabecera: ['Indicador', 'Norte', 'Barcelona'], filas: [['En misión hoy', '5', '8'], ['Peticiones abiertas', '2', '2'], ['Partes por validar', '0', '1'], ['Por cobrar', '40.247 €', '—']], pie: 'Garantía financiera: vence en 40 días' },
     { titulo: 'Presupuestos en curso', estado: ['Comercial', 'azul'], cabecera: ['Presupuesto', 'Estado', 'Importe'], filas: [['PRE-2026-0042 · Trans-Logística', 'Aceptado', '105.792 €'], ['PRE-2026-0045 · Manufacturas', 'Enviado', '64.512 €'], ['PRE-2026-0048 · Trans-Logística', 'Borrador', '—']] },
     MAQUETAS[2],
@@ -289,7 +289,7 @@ export default function WebCorporativa() {
             <div className="bg-slate-900 text-slate-300 text-xs">
                 <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-2">
                     <span>Demo · web corporativa · en real: tramitnow.com</span>
-                    <a href="/" className="text-indigo-300 hover:text-white">Ir a la demo del ERP</a>
+                    <span className="flex gap-4"><a href="/web2.html" className="text-indigo-300 hover:text-white">Ver la versión estilo Perk</a><a href="/" className="text-indigo-300 hover:text-white">Ir a la demo del ERP</a></span>
                 </div>
             </div>
 

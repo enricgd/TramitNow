@@ -27,7 +27,8 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(`${pkg.version}-${commit}`),
   },
-  // Cuatro páginas: el ERP (index.html), los dos portales (trabajadores y empresas) y la web corporativa (web.html).
+  // Cinco páginas: el ERP (index.html), los dos portales (trabajadores y empresas) y la web corporativa en dos
+  // versiones para comparar (web.html y web2.html, estilo Perk).
   build: {
     rollupOptions: {
       input: {
@@ -35,6 +36,7 @@ export default defineConfig({
         trabajadores: fileURLToPath(new URL('./trabajadores.html', import.meta.url)),
         empresas: fileURLToPath(new URL('./empresas.html', import.meta.url)),
         web: fileURLToPath(new URL('./web.html', import.meta.url)),
+        web2: fileURLToPath(new URL('./web2.html', import.meta.url)),
       },
     },
   },
