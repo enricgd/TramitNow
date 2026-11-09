@@ -7,7 +7,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
       Building2, User, Calendar, Briefcase, FileSignature, Check, Eye, Lock,
       Unlock, HelpCircle, Sparkles, Filter, Search, ArrowUpRight, ChevronDown,
       Info, RefreshCw, SlidersHorizontal, BookOpen, FileSpreadsheet, GitBranch,
-      UserCheck, ExternalLink, ShieldAlert, Award, EyeOff, List, SquareKanban, GripVertical
+      UserCheck, ExternalLink, ShieldAlert, Award, EyeOff, List, SquareKanban, GripVertical, Archive, Upload, Paperclip
     } from 'lucide-react';
 import { Page, PageHeader, Card, KpiTile, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Segmented, Tabs, CAMPO, Modal, Drawer, Confirmar, Notice, EmptyState } from '../ui';
 
@@ -217,7 +217,7 @@ default: [
       comercial: 'Elena Navarro',
       margenObjetivo: 18,
       extrasDefecto: EXTRAS_DEFECTO.map(x => ({ ...x })),
-      estado: 'Borrador', // Borrador | En preparación | Enviado a Cliente | Pendiente de Firma | Firmado / Aceptado | Rechazado | Sustituido
+      estado: 'Borrador', // Borrador | En preparación | Enviado a Cliente | Pendiente de Firma | Firmado / Aceptado | Rechazado | Sustituido | Obsoleto
       esEditableDirecto: true,
       fechaEmision: '2026-10-27',
       fechaValidez: '2026-11-27',
@@ -783,6 +783,78 @@ margenServicio
         setVistaActual('detalle');
         mostrarToast(`Copia de ${p.id} creada como ${copia.id}. Elige la empresa.`, 'info');
       };
+      // Pasar a obsoleto y crear uno nuevo a partir de este: el original deja de valer (se queda para consultar) y el
+      // nuevo, con número nuevo, copia empresa, puestos, costes, extras, margen y condiciones. Distinto de «Nueva
+      // versión», que sigue siendo el mismo presupuesto (v2, v3...) para negociar con el cliente.
+      const MOTIVOS_OBSOLETO = ['Caducado sin respuesta del cliente', 'El cliente pide otras condiciones', 'Cambian las tablas del convenio', 'Error en el presupuesto', 'Otro motivo'];
+      const [modalObsoleto, setModalObsoleto] = useState(null); // { origen, motivo }
+      const abrirObsoleto = (p) => {
+        const origen = p.id === presupuesto.id ? presupuesto : (abiertos[p.id] ? { ...abiertos[p.id], estado: p.estado } : detalleDePresupuesto(p));
+        setModalObsoleto({ origen, motivo: MOTIVOS_OBSOLETO[0] });
+      };
+      const pasarAObsoletoYCrearNuevo = () => {
+        const { origen, motivo } = modalObsoleto;
+        const base = presupuestoVacio(listado);
+        const ahora = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        const copia = JSON.parse(JSON.stringify(origen));
+        const nuevo = {
+          ...base,
+          titulo: copia.titulo,
+          empresaId: copia.empresaId, cliente: copia.cliente, cif: copia.cif, sector: copia.sector, ciudad: copia.ciudad, convenioEmpresa: copia.convenioEmpresa,
+          contacto: copia.contacto, emailContacto: copia.emailContacto, telefonoContacto: copia.telefonoContacto, comercial: copia.comercial,
+          fechaInicioPrevista: copia.fechaInicioPrevista, duracionMeses: copia.duracionMeses,
+          modalidad: copia.modalidad, modalidadCustom: copia.modalidadCustom, iva: copia.iva, ivaCustom: copia.ivaCustom,
+          formaPago: copia.formaPago, formaPagoCustom: copia.formaPagoCustom, garantiaSustitucion: copia.garantiaSustitucion, garantiaSustitucionCustom: copia.garantiaSustitucionCustom,
+          observacionesComerciales: copia.observacionesComerciales,
+          margenObjetivo: copia.margenObjetivo, margenTipo: copia.margenTipo, margenImporte: copia.margenImporte,
+          extrasDefecto: copia.extrasDefecto, conceptosEscandallo: copia.conceptosEscandallo,
+          posiciones: (copia.posiciones || []).map((x, i) => ({ ...x, id: `pos-${Date.now()}-${i}` })),
+          creadoDesde: origen.id,
+          auditoria: [{ id: `aud-${Date.now()}`, fecha: ahora, usuario: 'Usuario Demo', accion: 'Creación de presupuesto', detalle: `Creado a partir de ${origen.codigoVersion || origen.id}, que pasa a obsoleto (${motivo.toLowerCase()}).` }],
+        };
+        const t = totalesDe(nuevo);
+        // El original pasa a obsoleto y apunta al nuevo
+        const obsoleto = {
+          ...origen, estado: 'Obsoleto', esEditableDirecto: false, obsoleto: { motivo, fecha: ahora.slice(0, 10), sustituidoPor: nuevo.id },
+          auditoria: [{ id: `aud-${Date.now()}-o`, fecha: ahora, usuario: 'Usuario Demo', accion: 'Pasa a obsoleto', detalle: `${motivo}. Se crea ${nuevo.id} a partir de este.` }, ...(origen.auditoria || [])],
+        };
+        setAbiertos(prev => ({ ...prev, [origen.id]: obsoleto }));
+        setListado(prev => [
+          { id: nuevo.id, titulo: nuevo.titulo || 'Sin título', cliente: nuevo.cliente || 'Sin empresa', comercial: nuevo.comercial || '—', estado: 'Borrador', puestosCount: nuevo.posiciones.length, importe: t.facturacion, tarifaMedia: t.tarifaMedia, margenPct: t.margenMedioPct, fechaValidez: nuevo.fechaValidez, esEditableDirecto: true },
+          ...prev.map(x => (x.id === origen.id ? { ...x, estado: 'Obsoleto', esEditableDirecto: false } : x)),
+        ]);
+        // Se abre el nuevo, listo para editar
+        setPresupuesto(nuevo);
+        setFormularioPresupuesto(JSON.parse(JSON.stringify(nuevo)));
+        setVersiones([]);
+        setModoEdicion(true);
+        setEsNuevo(false);
+        setHayCambiosSinGuardar(false);
+        setPestanaActiva('resumen');
+        setVistaActual('detalle');
+        setModalObsoleto(null);
+        mostrarToast(`${origen.id} pasa a obsoleto. Nuevo presupuesto ${nuevo.id} creado a partir de él.`, 'exito');
+      };
+      const abrirPorId = (id) => { const fila = listado.find(x => x.id === id); if (fila) abrirPresupuesto(fila); };
+
+      // Documentos añadidos a mano (presupuesto firmado por el cliente, pliegos, correos...)
+      const TIPOS_DOCUMENTO = ['Presupuesto firmado por el cliente', 'Condiciones o pliego del cliente', 'Correo del cliente', 'Otro documento'];
+      const [modalDocumento, setModalDocumento] = useState(null); // { tipo, nombre, archivo, interno }
+      const anadirDocumento = () => {
+        const doc = { id: `doc-${Date.now()}`, tipo: modalDocumento.tipo, nombre: modalDocumento.nombre.trim() || modalDocumento.archivo, archivo: modalDocumento.archivo, interno: modalDocumento.interno, fecha: new Date().toISOString().slice(0, 10), autor: 'Usuario Demo' };
+        const cambia = (prev) => ({ ...prev, documentosAnadidos: [doc, ...(prev.documentosAnadidos || [])] });
+        setPresupuesto(cambia);
+        setFormularioPresupuesto(cambia);
+        setModalDocumento(null);
+        mostrarToast(`Documento «${doc.nombre}» añadido.`, 'exito');
+      };
+      const quitarDocumentoAnadido = (id) => {
+        const cambia = (prev) => ({ ...prev, documentosAnadidos: (prev.documentosAnadidos || []).filter(d => d.id !== id) });
+        setPresupuesto(cambia);
+        setFormularioPresupuesto(cambia);
+        mostrarToast('Documento quitado.', 'info');
+      };
+
       const sinRespuesta = (p) => ['Enviado a Cliente', 'Pendiente de Firma'].includes(p.estado) && (p.diasSinRespuesta || 0) >= DIAS_RECORDATORIO;
       // Cada presupuesto abre sus datos; lo cambiado en esta sesión se conserva al volver a abrirlo
       const [abiertos, setAbiertos] = useState({});
@@ -1305,6 +1377,7 @@ return datosActivos.posiciones.map(pos => ({
           'Firmado / Aceptado': 'success',
           'Rechazado': 'danger',
           'Sustituido': 'neutral',
+          'Obsoleto': 'neutral',
         };
         const textos = { 'Enviado a Cliente': 'Enviado', 'Pendiente de Firma': 'Pendiente de firma', 'Firmado / Aceptado': 'Aceptado' };
         return <Badge tone={tonos[estado] || 'neutral'} dot>{textos[estado] || estado}</Badge>;
@@ -1434,6 +1507,7 @@ return datosActivos.posiciones.map(pos => ({
                           {p.esEditableDirecto ? 'Editar' : 'Ver'}
                         </Button>
                         <IconButton icon={Copy} title="Duplicar para otro cliente" onClick={() => handleDuplicarPresupuesto(p)} />
+                        {p.estado !== 'Obsoleto' && <IconButton icon={Archive} title="Pasar a obsoleto y crear uno nuevo a partir de este" onClick={() => abrirObsoleto(p)} />}
                       </div>
                     </td>
                   </tr>
@@ -1517,10 +1591,25 @@ return datosActivos.posiciones.map(pos => ({
               {['Rechazado', 'Sustituido'].includes(datosActivos.estado) && (
                 <Button variant="primary" icon={GitBranch} onClick={() => setModalNuevaVersionAbierto(true)}>Nueva versión</Button>
               )}
+              {datosActivos.estado === 'Obsoleto' && datosActivos.obsoleto?.sustituidoPor && (
+                <Button variant="primary" icon={ArrowUpRight} onClick={() => abrirPorId(datosActivos.obsoleto.sustituidoPor)}>Ver {datosActivos.obsoleto.sustituidoPor}</Button>
+              )}
             </>
           )
         }
       />
+
+      {datosActivos.estado === 'Obsoleto' && (
+        <Notice tone="neutral" icon={Archive}>
+          <strong>Presupuesto obsoleto</strong>{datosActivos.obsoleto ? ` desde el ${datosActivos.obsoleto.fecha}: ${datosActivos.obsoleto.motivo.toLowerCase()}.` : '.'} Ya no se puede enviar ni aceptar; se queda para consultar.
+          {datosActivos.obsoleto?.sustituidoPor && <> Lo sustituye <button type="button" className="font-semibold text-indigo-700 hover:underline" onClick={() => abrirPorId(datosActivos.obsoleto.sustituidoPor)}>{datosActivos.obsoleto.sustituidoPor}</button>.</>}
+        </Notice>
+      )}
+      {datosActivos.creadoDesde && (
+        <Notice tone="info" icon={Info}>
+          Creado a partir de <button type="button" className="font-semibold text-indigo-700 hover:underline" onClick={() => abrirPorId(datosActivos.creadoDesde)}>{datosActivos.creadoDesde}</button>, que ha pasado a obsoleto. Revisa los datos antes de enviarlo.
+        </Notice>
+      )}
 
       {datosActivos.aprobacion?.estado === 'pendiente' && (
         <Notice tone="warning" icon={AlertTriangle}>
@@ -1658,6 +1747,17 @@ return datosActivos.posiciones.map(pos => ({
                 ))}
               </div>
             </div>
+
+            {/* ¿Ya no sirve? Pasar a obsoleto y crear uno nuevo */}
+            {datosActivos.estado !== 'Obsoleto' && !modoEdicion && (
+              <div className="rounded-xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-xs">
+                  <div className="font-semibold text-slate-900">¿Este presupuesto ya no sirve?</div>
+                  <div className="text-slate-500">Pásalo a obsoleto y crea uno nuevo a partir de él, con los mismos puestos y condiciones. Para negociar cambios con el cliente, usa «Nueva versión».</div>
+                </div>
+                <Button icon={Archive} onClick={() => abrirObsoleto(presupuesto)}>Pasar a obsoleto y crear uno nuevo</Button>
+              </div>
+            )}
 
             {/* Observaciones comerciales */}
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
@@ -2193,6 +2293,12 @@ return datosActivos.posiciones.map(pos => ({
                 Generar nueva versión manual
               </button>
             </div>
+            {datosActivos.estado !== 'Obsoleto' && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3 text-xs -mt-2">
+                <span className="text-slate-600"><strong className="text-slate-900">Nueva versión</strong>: el mismo presupuesto (v2, v3...) para negociar. <strong className="text-slate-900">Obsoleto y nuevo</strong>: este deja de valer y empieza otro, con número nuevo.</span>
+                <Button size="sm" icon={Archive} onClick={() => abrirObsoleto(presupuesto)}>Pasar a obsoleto y crear uno nuevo</Button>
+              </div>
+            )}
 
             <Notice tone="info" icon={Info}>
               Mientras un presupuesto está en <strong>borrador o en preparación</strong> se edita sobre la misma versión. Cuando se
@@ -2245,9 +2351,12 @@ return datosActivos.posiciones.map(pos => ({
            ---------------------------------------------------- */}
         {pestanaActiva === 'documentos' && (
           <div className="space-y-4">
-            <div className="pb-4 border-b border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-900">Documentos del presupuesto</h3>
-              <p className="text-xs text-slate-500">Si cambias el presupuesto, elimina el documento y vuelve a generarlo para que recoja los cambios.</p>
+            <div className="pb-4 border-b border-slate-200 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Documentos del presupuesto</h3>
+                <p className="text-xs text-slate-500">Si cambias el presupuesto, elimina el documento y vuelve a generarlo para que recoja los cambios.</p>
+              </div>
+              <Button variant="primary" icon={Upload} onClick={() => setModalDocumento({ tipo: TIPOS_DOCUMENTO[0], nombre: '', archivo: '', interno: false })}>Añadir documento</Button>
             </div>
             <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
               {[
@@ -2278,6 +2387,27 @@ return datosActivos.posiciones.map(pos => ({
                 </li>
               ))}
             </ul>
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-slate-900">Documentos añadidos</h4>
+              {(datosActivos.documentosAnadidos || []).length === 0 ? (
+                <p className="text-xs text-slate-500">Todavía no hay ninguno. Añade aquí el presupuesto firmado por el cliente, sus condiciones o cualquier documento relacionado.</p>
+              ) : (
+                <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                  {datosActivos.documentosAnadidos.map(d => (
+                    <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-xs">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Paperclip className="w-4 h-4" /></div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-slate-900">{d.nombre}</div>
+                        <div className="text-[11px] text-slate-500">{d.tipo} · {d.archivo} · añadido el {d.fecha} por {d.autor}</div>
+                      </div>
+                      {d.interno && <Badge icon={EyeOff}>Interno</Badge>}
+                      <Button size="sm" icon={Download} onClick={() => mostrarToast(`Descargando ${d.archivo}...`, 'info')}>Descargar</Button>
+                      <IconButton icon={Trash2} title="Quitar documento" className="hover:text-rose-600 hover:bg-rose-50" onClick={() => quitarDocumentoAnadido(d.id)} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
 
@@ -3069,6 +3199,73 @@ return datosActivos.posiciones.map(pos => ({
   {/* ==========================================
       MODAL: CREAR NUEVA VERSIÓN EDITABLE
      ========================================== */}
+  {/* PASAR A OBSOLETO Y CREAR UNO NUEVO */}
+  {modalObsoleto && (
+    <Modal
+      title="Pasar a obsoleto y crear uno nuevo"
+      subtitle={`${modalObsoleto.origen.codigoVersion || modalObsoleto.origen.id} · ${modalObsoleto.origen.cliente || 'Sin empresa'}`}
+      onClose={() => setModalObsoleto(null)}
+      footer={<>
+        <Button onClick={() => setModalObsoleto(null)}>Cancelar</Button>
+        <Button variant="primary" icon={Archive} onClick={pasarAObsoletoYCrearNuevo}>Pasar a obsoleto y crear el nuevo</Button>
+      </>}
+    >
+      <div className="space-y-3 text-xs text-slate-600">
+        <p><strong className="text-slate-900">{modalObsoleto.origen.id}</strong> pasa a <strong>Obsoleto</strong>: ya no se podrá enviar ni aceptar, pero se queda para consultar.</p>
+        <p>Se crea un presupuesto nuevo, con número nuevo, que copia la empresa, los puestos, los costes, los extras, el margen y las condiciones. Se abre para revisarlo y editarlo.</p>
+        <label className="block">
+          <span className="block text-[11px] font-medium text-slate-600 mb-1">Motivo</span>
+          <Select value={modalObsoleto.motivo} onChange={(e) => setModalObsoleto(m => ({ ...m, motivo: e.target.value }))} className="w-full">
+            {MOTIVOS_OBSOLETO.map(m => <option key={m}>{m}</option>)}
+          </Select>
+        </label>
+        {modalObsoleto.origen.estado === 'Firmado / Aceptado' && (
+          <Notice tone="warning" icon={AlertTriangle}>Este presupuesto está aceptado por el cliente{modalObsoleto.origen.peticionCreada ? ` y tiene peticiones (${modalObsoleto.origen.peticionCreada})` : ''}. Las peticiones seguirán con sus tarifas hasta que se acepte el nuevo.</Notice>
+        )}
+        <p className="text-[11px] text-slate-500">Si solo hay que cambiar algo para negociar con el cliente, mejor «Nueva versión»: sigue siendo el mismo presupuesto.</p>
+      </div>
+    </Modal>
+  )}
+
+  {/* AÑADIR DOCUMENTO */}
+  {modalDocumento && (
+    <Modal
+      title="Añadir documento"
+      subtitle={datosActivos.codigoVersion}
+      onClose={() => setModalDocumento(null)}
+      footer={<>
+        <Button onClick={() => setModalDocumento(null)}>Cancelar</Button>
+        <Button variant="primary" icon={Upload} disabled={!modalDocumento.archivo} onClick={anadirDocumento}>Añadir</Button>
+      </>}
+    >
+      <div className="space-y-3 text-xs">
+        <label className="block">
+          <span className="block text-[11px] font-medium text-slate-600 mb-1">Tipo de documento</span>
+          <Select value={modalDocumento.tipo} onChange={(e) => setModalDocumento(m => ({ ...m, tipo: e.target.value }))} className="w-full">
+            {TIPOS_DOCUMENTO.map(t => <option key={t}>{t}</option>)}
+          </Select>
+        </label>
+        <label className="block">
+          <span className="block text-[11px] font-medium text-slate-600 mb-1">Nombre (opcional)</span>
+          <input value={modalDocumento.nombre} onChange={(e) => setModalDocumento(m => ({ ...m, nombre: e.target.value }))} placeholder="Si lo dejas vacío, el del archivo" className={`${CAMPO} w-full`} />
+        </label>
+        <button
+          type="button"
+          onClick={() => setModalDocumento(m => ({ ...m, archivo: m.archivo ? '' : `${(m.tipo === 'Correo del cliente' ? 'correo_cliente.eml' : m.tipo === 'Presupuesto firmado por el cliente' ? `${datosActivos.codigoVersion}_firmado.pdf` : 'documento.pdf')}` }))}
+          className={`w-full rounded-xl border-2 border-dashed p-5 text-center ${modalDocumento.archivo ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-700'}`}
+        >
+          {modalDocumento.archivo
+            ? <><CheckCircle2 className="w-5 h-5 mx-auto mb-1" />{modalDocumento.archivo} (pulsa para quitarlo)</>
+            : <><Upload className="w-5 h-5 mx-auto mb-1" />Arrastra el archivo aquí o pulsa para elegirlo (PDF, Word, Excel, imagen o correo)</>}
+        </button>
+        <label className="flex items-center gap-2 text-slate-600">
+          <input type="checkbox" checked={modalDocumento.interno} onChange={(e) => setModalDocumento(m => ({ ...m, interno: e.target.checked }))} className="accent-indigo-600" />
+          Solo uso interno (no se envía al cliente)
+        </label>
+      </div>
+    </Modal>
+  )}
+
   {modalNuevaVersionAbierto && (
     <Modal
       title={`¿Crear la versión ${presupuesto.versionNumero + 1}?`}
@@ -3484,6 +3681,7 @@ return datosActivos.posiciones.map(pos => ({
       { estado: 'Pendiente de Firma', tono: 'info', texto: 'Pendiente de firma' },
       { estado: 'Firmado / Aceptado', tono: 'success', texto: 'Aceptado' },
       { estado: 'Rechazado', tono: 'danger' },
+      { estado: 'Obsoleto', tono: 'neutral' },
     ];
 
     function PipelinePresupuestos({ lista, onAbrir, onMover }) {
