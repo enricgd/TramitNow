@@ -543,27 +543,37 @@ comentario: 'Campaña invierno finalizada con éxito.'
       let desgloseConceptos = [];
 
       conceptos.forEach(c => {
-// Ajuste del puesto: puede no aplicarse (salvo los legales) o tener otro valor
-const ajuste = pos.conceptos?.[c.id];
-if (!c.esObligatorioLegal && ajuste && ajuste.aplica === false) return;
-const valorConcepto = !c.esObligatorioLegal && ajuste && ajuste.valor !== '' && ajuste.valor != null ? Number(ajuste.valor) : Number(c.valor);
+// Ajuste del puesto: puede no aplicarse (salvo los legales) o llevar su valor en % o en €/h (solo vale uno)
+const ajuste = c.esObligatorioLegal ? { aplica: true, porcentaje: '', importe: '' } : ajusteDe(pos, c);
+if (!ajuste.aplica) return;
+let tipoConcepto = c.tipo;
+let baseCalculo = c.baseCalculo;
+let valorConcepto = Number(c.valor);
+if (ajuste.porcentaje !== '') {
+  tipoConcepto = 'porcentaje';
+  valorConcepto = Number(ajuste.porcentaje);
+  if (c.tipo !== 'porcentaje') baseCalculo = 'salario_bruto_hora'; // un coste fijo pasado a %: sobre el salario
+} else if (ajuste.importe !== '') {
+  tipoConcepto = 'fijo_hora';
+  valorConcepto = Number(ajuste.importe);
+}
 let base = salarioBrutoHora;
-if (c.baseCalculo === 'coste_salarial_total' || c.baseCalculo === 'base_ss_total') {
+if (baseCalculo === 'coste_salarial_total' || baseCalculo === 'base_ss_total') {
   base = costeSalarialHora;
-} else if (c.baseCalculo === 'tarifa_venta_hora') {
+} else if (baseCalculo === 'tarifa_venta_hora') {
   base = tarifaPVP;
-} else if (c.baseCalculo === 'horas_reales_efectivas') {
+} else if (baseCalculo === 'horas_reales_efectivas') {
   base = 1.0; // Fijo por hora
 }
 
 let importeHora = 0;
-if (c.tipo === 'porcentaje') {
+if (tipoConcepto === 'porcentaje') {
   importeHora = (base * valorConcepto) / 100;
-} else if (c.tipo === 'fijo_hora') {
+} else if (tipoConcepto === 'fijo_hora') {
   importeHora = valorConcepto;
-} else if (c.tipo === 'fijo_jornada') {
+} else if (tipoConcepto === 'fijo_jornada') {
   importeHora = valorConcepto / horasDia;
-} else if (c.tipo === 'fijo_mes') {
+} else if (tipoConcepto === 'fijo_mes') {
   importeHora = valorConcepto / (horasAnuales / 12);
 }
 
@@ -573,7 +583,7 @@ desgloseConceptos.push({
   nombre: c.nombre,
   importeHora: importeHora,
   esLegal: c.esObligatorioLegal,
-  propio: valorConcepto !== Number(c.valor)
+  propio: tipoConcepto !== c.tipo || valorConcepto !== Number(c.valor)
 });
       });
 
@@ -604,8 +614,13 @@ desgloseConceptos.push({
       const extras = (pos.extras || EXTRAS_DEFECTO).map(x => {
         // Un extra añadido a mano puede llevar su propio salario por hora
         const salarioHora = x.salarioManual !== '' && x.salarioManual != null ? Number(x.salarioManual) : salarioBrutoHora * (Number(x.coefSalario) || 1);
-        const coefTarifaAplicado = x.coefTarifa !== '' && x.coefTarifa != null ? Number(x.coefTarifa) : factorTarifa;
-        return { ...x, salarioHora, tarifaHora: salarioHora * coefTarifaAplicado, coefTarifaAplicado };
+        const lleno = (v) => v !== '' && v != null;
+        let tarifaHora;
+        if (lleno(x.recargoTarifa)) tarifaHora = tarifaPVP * (1 + Number(x.recargoTarifa) / 100);
+        else if (lleno(x.tarifaManual)) tarifaHora = Number(x.tarifaManual);
+        else tarifaHora = salarioHora * (lleno(x.coefTarifa) ? Number(x.coefTarifa) : factorTarifa);
+        const recargoEquivalente = tarifaPVP > 0 ? (tarifaHora / tarifaPVP - 1) * 100 : ((Number(x.coefSalario) || 1) - 1) * 100;
+        return { ...x, salarioHora, tarifaHora, recargoEquivalente };
       });
 
       // Importes del servicio: personas x horas por persona
@@ -1947,8 +1962,8 @@ return datosActivos.posiciones.map(pos => ({
               <div>
                 <h4 className="text-xs font-semibold text-slate-900">Qué se aplica en cada puesto</h4>
                 <p className="text-[11px] text-slate-500">
-                  Arriba están los valores por defecto del presupuesto. Aquí decides si cada puesto lleva cada concepto y con qué valor
-                  (vacío = el de por defecto). Por ejemplo, un puesto muy físico puede tener más absentismo y uno de oficina no necesitar EPIs.
+                  Arriba están los valores por defecto del presupuesto. Aquí decides si cada puesto lleva cada concepto y con qué valor,
+                  en % (sobre el salario) o en €/h: solo cuenta una de las dos casillas (vacías = el de por defecto). Por ejemplo, un puesto muy físico puede tener más absentismo y uno de oficina no necesitar EPIs.
                   {!modoEdicion && ' Pulsa Editar para cambiarlo.'}
                 </p>
               </div>
@@ -2743,7 +2758,7 @@ return datosActivos.posiciones.map(pos => ({
           {/* Costes internos de este puesto */}
           <div className="space-y-1.5">
             <h4 className="font-semibold text-slate-900 text-xs">Costes internos de este puesto</h4>
-            <p className="text-[11px] text-slate-500">Desmarca lo que este puesto no necesita o cambia su valor (vacío = el del presupuesto). El cliente no ve este desglose.</p>
+            <p className="text-[11px] text-slate-500">Desmarca lo que este puesto no necesita o pon su valor en % (sobre el salario) o en €/h: solo cuenta una de las dos casillas. Vacías = el del presupuesto. El cliente no ve este desglose.</p>
             <ConceptosPuesto
               conceptos={formularioPresupuesto.conceptosEscandallo}
               pos={posicionEnEdicion}
@@ -2816,7 +2831,7 @@ return datosActivos.posiciones.map(pos => ({
                     extras={ecoSim.extras}
                     editable
                     permitirNuevos
-                    onChange={(lista) => setPosicionEnEdicion(prev => ({ ...prev, extras: lista.map(({ salarioHora, tarifaHora, coefTarifaAplicado, ...x }) => x) }))}
+                    onChange={(lista) => setPosicionEnEdicion(prev => ({ ...prev, extras: lista.map(({ salarioHora, tarifaHora, recargoEquivalente, ...x }) => x) }))}
                   />
                 </div>
               </div>
@@ -3188,7 +3203,7 @@ return datosActivos.posiciones.map(pos => ({
       const quitar = (id) => onChange(extras.filter(x => x.id !== id));
       const anadir = () => {
         if (!nuevo.trim()) return;
-        onChange([...extras, { id: `x-${Date.now()}`, concepto: nuevo.trim(), coefSalario: 1, salarioManual: '', coefTarifa: '', mostrar: true, propio: true }]);
+        onChange([...extras, { id: `x-${Date.now()}`, concepto: nuevo.trim(), coefSalario: 1, salarioManual: '', recargoTarifa: '', tarifaManual: '', coefTarifa: '', mostrar: true, propio: true }]);
         setNuevo('');
       };
       const celda = 'h-7 w-16 bg-white border border-slate-200 rounded-md px-1.5 text-xs text-right focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
@@ -3199,7 +3214,7 @@ return datosActivos.posiciones.map(pos => ({
               <th className="py-1 text-left font-medium">Concepto extra</th>
               {editable && conCoefSalario && <th className="py-1 text-right font-medium">Coef. salario</th>}
               <th className="py-1 text-right font-medium">Salario</th>
-              {editable && <th className="py-1 text-right font-medium">Coef. tarifa</th>}
+              {editable && <th className="py-1 text-right font-medium" title="Recargo sobre la tarifa de la hora normal, o la tarifa en €/h. Solo vale una de las dos.">Tarifa en % o €/h</th>}
               <th className="py-1 text-right font-medium">Tarifa</th>
               <th className="py-1 text-right font-medium">En la propuesta</th>
             </tr>
@@ -3223,7 +3238,16 @@ return datosActivos.posiciones.map(pos => ({
                 </td>
                 {editable && (
                   <td className="py-1 text-right">
-                    <input type="number" step="0.01" value={x.coefTarifa} placeholder={x.coefTarifaAplicado ? x.coefTarifaAplicado.toFixed(2) : 'auto'} onChange={(e) => cambiar(x.id, 'coefTarifa', e.target.value)} className={celda} aria-label={`Coeficiente de tarifa de ${x.concepto}`} />
+                    <DosCasillas
+                      porcentaje={x.recargoTarifa ?? ''}
+                      importe={x.tarifaManual ?? ''}
+                      sugeridoPorcentaje={x.recargoEquivalente ?? ((Number(x.coefSalario) || 1) - 1) * 100}
+                      sugeridoImporte={x.tarifaHora}
+                      prefijo="+"
+                      etiqueta={`la tarifa de ${x.concepto}`}
+                      onPorcentaje={(v) => onChange(extras.map(e => (e.id === x.id ? { ...e, recargoTarifa: v, tarifaManual: '', coefTarifa: '' } : e)))}
+                      onImporte={(v) => onChange(extras.map(e => (e.id === x.id ? { ...e, tarifaManual: v, recargoTarifa: '', coefTarifa: '' } : e)))}
+                    />
                   </td>
                 )}
                 <td className="py-1 text-right font-medium text-slate-900 whitespace-nowrap">{x.tarifaHora != null ? euros(x.tarifaHora) : '—'}</td>
@@ -3526,7 +3550,34 @@ return datosActivos.posiciones.map(pos => ({
 
     function ajusteDe(pos, c) {
       const a = pos.conceptos?.[c.id] || {};
-      return { aplica: c.esObligatorioLegal ? true : a.aplica !== false, valor: a.valor ?? '' };
+      const lleno = (v) => v !== '' && v != null;
+      let porcentaje = lleno(a.porcentaje) ? a.porcentaje : '';
+      let importe = lleno(a.importe) ? a.importe : '';
+      // Ajustes guardados con un solo valor (en la unidad del concepto)
+      if (!lleno(porcentaje) && !lleno(importe) && lleno(a.valor)) {
+        if (c.tipo === 'porcentaje') porcentaje = a.valor; else if (c.tipo === 'fijo_hora') importe = a.valor;
+      }
+      return { aplica: c.esObligatorioLegal ? true : a.aplica !== false, porcentaje, importe };
+    }
+    // Lo que el puesto hereda del presupuesto, para enseñarlo en gris en su casilla
+    const defectoPorcentaje = (c) => (c.tipo === 'porcentaje' ? Number(c.valor) : null);
+    const defectoImporte = (c) => (c.tipo === 'fijo_hora' ? Number(c.valor) : null);
+
+    // Dos casillas, % y €/h: cuenta la que se rellena y la otra se vacía, así nunca cuentan las dos
+    function DosCasillas({ porcentaje, importe, sugeridoPorcentaje, sugeridoImporte, disabled = false, onPorcentaje, onImporte, prefijo = '', etiqueta = '' }) {
+      const celda = 'h-7 w-14 bg-white border border-slate-200 rounded-md px-1.5 text-xs text-right focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400 placeholder:text-slate-300';
+      const pctActivo = porcentaje !== '' && porcentaje != null;
+      const impActivo = importe !== '' && importe != null;
+      const fmt = (n, d) => (n == null || Number.isNaN(n) ? '—' : Number(n).toFixed(d));
+      return (
+        <span className="inline-flex items-center gap-1 whitespace-nowrap">
+          <input type="number" step="0.1" value={porcentaje ?? ''} placeholder={impActivo ? '' : fmt(sugeridoPorcentaje, 1)} disabled={disabled} onChange={(e) => onPorcentaje(e.target.value)} className={celda} aria-label={`Porcentaje de ${etiqueta}`} />
+          <span className={`text-[11px] ${pctActivo ? 'text-slate-700 font-semibold' : 'text-slate-400'}`}>{prefijo}%</span>
+          <span className="text-[11px] text-slate-300">o</span>
+          <input type="number" step="0.01" value={importe ?? ''} placeholder={pctActivo ? '' : fmt(sugeridoImporte, 2)} disabled={disabled} onChange={(e) => onImporte(e.target.value)} className={celda} aria-label={`Importe en euros por hora de ${etiqueta}`} />
+          <span className={`text-[11px] ${impActivo ? 'text-slate-700 font-semibold' : 'text-slate-400'}`}>€/h</span>
+        </span>
+      );
     }
 
     // Matriz conceptos x puestos (en Escandallo): ver y ajustar de un vistazo
@@ -3540,7 +3591,7 @@ return datosActivos.posiciones.map(pos => ({
               <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
                 <th className="py-2 px-3 text-left font-medium">Concepto interno</th>
                 <th className="py-2 px-3 text-right font-medium whitespace-nowrap">Por defecto</th>
-                {posiciones.map(p => <th key={p.id} className="py-2 px-3 text-left font-medium min-w-[150px]">{p.nombre || 'Puesto sin nombre'}</th>)}
+                {posiciones.map(p => <th key={p.id} className="py-2 px-3 text-left font-medium min-w-[210px]">{p.nombre || 'Puesto sin nombre'}<span className="block font-normal text-slate-400">en % o en €/h</span></th>)}
               </tr>
             </thead>
             <tbody>
@@ -3567,17 +3618,16 @@ return datosActivos.posiciones.map(pos => ({
                               className="accent-indigo-600"
                               aria-label={`Aplicar ${c.nombre} a ${p.nombre}`}
                             />
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={a.valor}
-                              placeholder={String(c.valor)}
+                            <DosCasillas
+                              porcentaje={a.porcentaje}
+                              importe={a.importe}
+                              sugeridoPorcentaje={defectoPorcentaje(c)}
+                              sugeridoImporte={defectoImporte(c)}
                               disabled={!editable || !a.aplica}
-                              onChange={(e) => onCambiar(p.id, c.id, { valor: e.target.value })}
-                              className={celda}
-                              aria-label={`Valor de ${c.nombre} para ${p.nombre}`}
+                              etiqueta={`${c.nombre} en ${p.nombre}`}
+                              onPorcentaje={(v) => onCambiar(p.id, c.id, { porcentaje: v, importe: '', valor: '' })}
+                              onImporte={(v) => onCambiar(p.id, c.id, { importe: v, porcentaje: '', valor: '' })}
                             />
-                            <span className="text-[11px] text-slate-400">{unidadConcepto(c)}</span>
                           </div>
                         )}
                       </td>
@@ -3615,19 +3665,16 @@ return datosActivos.posiciones.map(pos => ({
                 {c.esObligatorioLegal ? (
                   <span className="text-slate-500 whitespace-nowrap">{c.valor} {unidadConcepto(c)}</span>
                 ) : (
-                  <span className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={a.valor}
-                      placeholder={String(c.valor)}
-                      disabled={!a.aplica}
-                      onChange={(e) => onCambiar(c.id, { valor: e.target.value })}
-                      className={celda}
-                      aria-label={`Valor de ${c.nombre} en este puesto`}
-                    />
-                    <span className="w-9 text-[11px] text-slate-400">{unidadConcepto(c)}</span>
-                  </span>
+                  <DosCasillas
+                    porcentaje={a.porcentaje}
+                    importe={a.importe}
+                    sugeridoPorcentaje={defectoPorcentaje(c)}
+                    sugeridoImporte={defectoImporte(c)}
+                    disabled={!a.aplica}
+                    etiqueta={`${c.nombre} en este puesto`}
+                    onPorcentaje={(v) => onCambiar(c.id, { porcentaje: v, importe: '', valor: '' })}
+                    onImporte={(v) => onCambiar(c.id, { importe: v, porcentaje: '', valor: '' })}
+                  />
                 )}
               </li>
             );
