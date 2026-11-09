@@ -52,4 +52,4 @@ dos.
 
 - **Por confirmar**: el % de un coste fijo (EPIs, revisión médica) se calcula sobre el salario por hora. Si «al total»
   quería decir sobre el coste total o sobre la tarifa, se cambia la base.
-- **Por confirmar**: si las casillas del margen (% o €/h) se quedan o se quitan.
+- **Confirmado**: las dos casillas del margen (% o €/h) se mantienen.
