@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-09
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 69430cb
 - **Cómo verlo**: `npm --prefix apps/web run dev`.
   - Presupuestos → PRE-2026-0048 → pestaña **Posiciones** → «Editar» en un puesto.
   - Peticiones → PET-2026-0050 → Contratos y altas → «Ver condiciones».
