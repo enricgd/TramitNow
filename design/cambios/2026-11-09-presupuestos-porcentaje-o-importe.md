@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-09
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, a1f9640
 - **Cómo verlo**: `npm --prefix apps/web run dev` → Presupuestos → PRE-2026-0048 → Posiciones. Con «Editar», la tabla «Qué se
   aplica en cada puesto»; o «Añadir extra» en un puesto, que abre su panel.
 
