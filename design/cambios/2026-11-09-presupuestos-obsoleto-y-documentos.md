@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-09
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, a968296
 - **Cómo verlo**: `npm --prefix apps/web run dev` → Presupuestos.
   - En la lista, el icono del archivador de cada fila.
   - Dentro de un presupuesto: Resumen, Versiones y Documentos.
