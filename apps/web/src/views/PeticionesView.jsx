@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal } from '../ui';
 import { contactoDemo } from './personasDemo';
+import { REPRESENTANTE_ETT, AUTORIZACION_ETT } from './ettDemo';
 
 // --- DATOS DE EJEMPLO ---
 // Una petición = un puesto. Las peticiones siempre salen de un presupuesto aceptado. Un mismo puesto del presupuesto
@@ -2671,7 +2672,7 @@ export default function PeticionesView() {
                 >
                     <div className="space-y-4">
                     <dl className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-x-4 gap-y-2.5 text-xs">
-                        <dt className="text-slate-500">Empresa de trabajo temporal</dt><dd className="text-slate-900">ETT Global Servicios Temporales, S.L.</dd>
+                        <dt className="text-slate-500">Empresa de trabajo temporal</dt><dd className="text-slate-900">ETT Global Servicios Temporales, S.L. · autorización n.º {AUTORIZACION_ETT}</dd>
                         <dt className="text-slate-500">Empresa usuaria</dt><dd className="text-slate-900">{peticion.clienteNombre} · {peticion.cif}</dd>
                         <dt className="text-slate-500">Causa de la contratación</dt><dd className="text-slate-900">Circunstancias de la producción (campaña). Presupuesto {peticion.presupuestoOrigen}.</dd>
                         <dt className="text-slate-500">Puesto y cualificación</dt><dd className="text-slate-900">{peticion.puesto} · {peticion.categoria}. {peticion.carnetRequerido === 'Ninguno' ? 'Sin carné específico.' : `${peticion.carnetRequerido}.`}</dd>
@@ -2681,6 +2682,19 @@ export default function PeticionesView() {
                         <dt className="text-slate-500">Duración estimada</dt><dd className="text-slate-900">Del {fechaCorta(peticion.inicio)} al {fechaCorta(peticion.fin)} · {peticion.solicitados} {peticion.solicitados === 1 ? 'persona' : 'personas'}</dd>
                         <dt className="text-slate-500">Precio</dt><dd className="text-slate-900">{peticion.tarifaVentaHora} la hora ordinaria, más los conceptos extra del presupuesto (horas extra, nocturnidad, fin de semana y festivos).</dd>
                     </dl>
+                    {/* Quién firma el CPD por cada parte */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="rounded-lg border border-slate-200 p-3">
+                            <div className="text-[11px] text-slate-500">Firma por la ETT</div>
+                            <div className="font-medium text-slate-900 mt-0.5">{REPRESENTANTE_ETT.nombre}</div>
+                            <div className="text-slate-600">{REPRESENTANTE_ETT.cargo} · DNI {REPRESENTANTE_ETT.dni}</div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 p-3">
+                            <div className="text-[11px] text-slate-500">Firma por la empresa usuaria</div>
+                            <div className="font-medium text-slate-900 mt-0.5">{(peticion.contactoCliente || '').split(' (')[0] || 'Su representante'}</div>
+                            <div className="text-slate-600">{peticion.clienteNombre}</div>
+                        </div>
+                    </div>
                     <Notice tone="info" icon={Info}>
                         Al confirmar a cada persona se genera su CPD con estas condiciones y sus datos, y se envía a firmar.
                     </Notice>

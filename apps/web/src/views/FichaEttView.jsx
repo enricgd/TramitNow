@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PageHeader, Button, Badge, Tabs, Modal, Drawer, Card, SectionTitle, Field, TextInput, Interruptor, Notice, Select, IconButton, Confirmar } from '../ui';
 import { datosDeCp } from './codigosPostales';
+import { REPRESENTANTE_ETT } from './ettDemo';
 
 // Datos de la propia ETT. Los mismos que salen en Facturación (CIF, dirección, autorización e IBAN) y en la cabecera.
 const initialCompanyData = {
@@ -34,7 +35,7 @@ const initialCompanyData = {
     convenio: "Convenio colectivo estatal de empresas de trabajo temporal",
     registroMercantil: "Registro Mercantil de Bizkaia",
     tomo: "0000", folio: "00", hoja: "BI-00000",
-    representante: "Begoña Arrieta Lasa", representanteDni: "00000099K", representanteCargo: "Administradora única",
+    representante: REPRESENTANTE_ETT.nombre, representanteDni: REPRESENTANTE_ETT.dni, representanteCargo: REPRESENTANTE_ETT.cargo,
     mutua: "Mutua colaboradora con la Seguridad Social de ejemplo",
     servicioPrevencion: "Servicio de prevención ajeno de ejemplo",
     // Garantía financiera obligatoria de las ETT: se actualiza cada año

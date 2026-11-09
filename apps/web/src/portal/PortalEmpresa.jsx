@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Card, SectionTitle, Notice, Field, TextInput, Select, Modal, KpiTile, Interruptor } from '../ui';
 import { PERMISOS_PORTAL } from './permisosEmpresa';
+import { REPRESENTANTE_ETT } from '../views/ettDemo';
 
 // ==========================================
 // DATOS DE EJEMPLO (los mismos que en el ERP: Peticiones, Horas, Contratos y altas, Facturación)
@@ -891,6 +892,9 @@ export default function PortalEmpresa({ usuario: usuarioInicial, onSalir, onCamb
                                 })}
                             </div>
                             <p className="text-xs text-slate-500">Recoge el puesto, la causa del contrato, las fechas, el centro y los riesgos del puesto, según el presupuesto {cliente.presupuesto} que aceptasteis.</p>
+                            <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-600">
+                                Por {ETT.nombre} lo firma <strong className="text-slate-900">{REPRESENTANTE_ETT.nombre}</strong>, {REPRESENTANTE_ETT.cargo.toLowerCase()}, DNI {REPRESENTANTE_ETT.dni}.
+                            </div>
                             <label className="flex items-start gap-2 text-slate-700">
                                 <input type="checkbox" checked={firma.ok} onChange={(e) => setFirma(f => ({ ...f, ok: e.target.checked }))} className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                 He revisado {firma.cpds.length > 1 ? 'los contratos' : 'el contrato'} y estoy de acuerdo

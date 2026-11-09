@@ -324,14 +324,14 @@ default: [
 {
   id: 'c-epi',
   recomendado: true,
-  nombre: 'EPIs (calzado S3, chaleco y guantes anticorte)',
+  nombre: 'EPIs',
   tipo: 'fijo_hora',
   tipoCustom: '',
   valor: 0.18,
   baseCalculo: 'horas_reales_efectivas',
   baseCalculoCustom: '',
   esObligatorioLegal: false,
-  descripcion: 'Amortización del kit de protección individual y reposición de consumibles.'
+  descripcion: 'Equipos de protección individual que necesite el puesto.'
 },
 {
   id: 'c-prl',
@@ -516,6 +516,9 @@ comentario: 'Campaña invierno finalizada con éxito.'
     // ==========================================
     // UTILIDADES DE CÁLCULO ECONÓMICO ETT
     // ==========================================
+    // Margen objetivo del presupuesto: en % sobre la tarifa o en €/h
+    const margenDe = (d) => (d?.margenTipo === 'importe' ? { tipo: 'importe', valor: Number(d.margenImporte) || 0 } : { tipo: 'porcentaje', valor: Number(d?.margenObjetivo ?? 18) });
+
     function calcularEconomiaPosicion(pos, conceptos, margenGlobal = 18) {
       const horasAnuales = pos.horasAnuales > 0 ? pos.horasAnuales : 1784;
       const salarioBase = Number(pos.salarioBaseAnual) || 0;
@@ -581,15 +584,26 @@ desgloseConceptos.push({
       const margenEuroHora = tarifaPVP - costeTotalEmpresaHora;
       const margenPorcentaje = tarifaPVP > 0 ? (margenEuroHora / tarifaPVP) * 100 : 0;
 
-      // Tarifa sugerida con el margen objetivo (margen sobre la tarifa)
-      const margenObjetivo = Number(pos.margenObjetivo ?? margenGlobal ?? 18);
-      const tarifaSugerida = margenObjetivo < 100 ? costeTotalEmpresaHora / (1 - margenObjetivo / 100) : 0;
+      // Tarifa sugerida con el margen objetivo: en % sobre la tarifa o en €/h sobre el coste.
+      // El del puesto manda; si no tiene, el del presupuesto.
+      const global = typeof margenGlobal === 'object' && margenGlobal ? margenGlobal : { tipo: 'porcentaje', valor: Number(margenGlobal ?? 18) };
+      const vacio = (v) => v === '' || v == null;
+      const propio = pos.margenTipo === 'importe' && !vacio(pos.margenImporte) ? { tipo: 'importe', valor: Number(pos.margenImporte) }
+        : !vacio(pos.margenObjetivo) ? { tipo: 'porcentaje', valor: Number(pos.margenObjetivo) } : null;
+      const margenAplicado = propio || global;
+      const tarifaSugerida = margenAplicado.tipo === 'importe'
+        ? costeTotalEmpresaHora + margenAplicado.valor
+        : (margenAplicado.valor < 100 ? costeTotalEmpresaHora / (1 - margenAplicado.valor / 100) : 0);
+      const margenObjetivo = margenAplicado.tipo === 'importe' ? (tarifaSugerida > 0 ? (margenAplicado.valor / tarifaSugerida) * 100 : 0) : margenAplicado.valor;
+      const margenObjetivoImporte = tarifaSugerida - costeTotalEmpresaHora;
+      const margenObjetivoTipo = margenAplicado.tipo;
 
       // Conceptos extra: salario = hora normal x coeficiente; tarifa = salario x coeficiente de tarifa
       // (si no se indica, el mismo factor tarifa/salario de la hora normal)
       const factorTarifa = salarioBrutoHora > 0 ? tarifaPVP / salarioBrutoHora : 0;
       const extras = (pos.extras || EXTRAS_DEFECTO).map(x => {
-        const salarioHora = salarioBrutoHora * (Number(x.coefSalario) || 1);
+        // Un extra añadido a mano puede llevar su propio salario por hora
+        const salarioHora = x.salarioManual !== '' && x.salarioManual != null ? Number(x.salarioManual) : salarioBrutoHora * (Number(x.coefSalario) || 1);
         const coefTarifaAplicado = x.coefTarifa !== '' && x.coefTarifa != null ? Number(x.coefTarifa) : factorTarifa;
         return { ...x, salarioHora, tarifaHora: salarioHora * coefTarifaAplicado, coefTarifaAplicado };
       });
@@ -619,6 +633,8 @@ desgloseConceptos,
 tarifaPVP,
 horasDia,
 margenObjetivo,
+margenObjetivoImporte,
+margenObjetivoTipo,
 tarifaSugerida,
 extras,
 personas,
@@ -789,7 +805,7 @@ margenServicio
       const [versiones, setVersiones] = useState(VERSIONES_0048);
       const [versionAComparar, setVersionAComparar] = useState(null);
 
-      const [pestanaActiva, setPestanaActiva] = useState('resumen'); // 'resumen' | 'posiciones' | 'escandallo' | 'condiciones' | 'historial' | 'documentos' | 'auditoria'
+      const [pestanaActiva, setPestanaActiva] = useState('resumen'); // 'resumen' | 'empresa' | 'posiciones' (con costes internos y extras) | 'condiciones' | 'historial' | 'documentos' | 'auditoria'
 
       // Rol de usuario (Dirección con costes/márgenes, Comercial con datos sensibles ocultos/limitados)
       const [rolUsuario, setRolUsuario] = useState('direccion'); // 'direccion' | 'comercial'
@@ -1030,7 +1046,7 @@ setTimeout(() => {
   setPresupuesto(updated);
   setFormularioPresupuesto(updated);
   if (esNuevo) {
-    const ecos = updated.posiciones.map(p => calcularEconomiaPosicion(p, updated.conceptosEscandallo, updated.margenObjetivo));
+    const ecos = updated.posiciones.map(p => calcularEconomiaPosicion(p, updated.conceptosEscandallo, margenDe(updated)));
     const media = (k) => (ecos.length ? ecos.reduce((s, e) => s + e[k], 0) / ecos.length : 0);
     setListado(prev => [{ id: updated.id, titulo: updated.titulo || 'Sin título', cliente: updated.cliente || 'Sin empresa', comercial: updated.comercial || '—', estado: updated.estado, puestosCount: updated.posiciones.length, importe: totalesDe(updated).facturacion, tarifaMedia: media('tarifaPVP'), margenPct: media('margenPorcentaje'), fechaValidez: updated.fechaValidez, esEditableDirecto: true }, ...prev]);
     setEsNuevo(false);
@@ -1246,7 +1262,7 @@ if (confirm(`¿Deseas eliminar el concepto "${concepto?.nombre}"?`)) {
       const calculosPosiciones = useMemo(() => {
 return datosActivos.posiciones.map(pos => ({
   pos,
-  eco: calcularEconomiaPosicion(pos, datosActivos.conceptosEscandallo, datosActivos.margenObjetivo)
+  eco: calcularEconomiaPosicion(pos, datosActivos.conceptosEscandallo, margenDe(datosActivos))
 }));
       }, [datosActivos]);
 
@@ -1541,7 +1557,6 @@ return datosActivos.posiciones.map(pos => ({
           { id: 'resumen', label: 'Resumen' },
           { id: 'empresa', label: 'Empresa', alert: !datosActivos.cliente },
           { id: 'posiciones', label: 'Posiciones', count: datosActivos.posiciones.length },
-          { id: 'escandallo', label: 'Escandallo y costes' },
           { id: 'condiciones', label: 'Condiciones' },
           { id: 'historial', label: 'Versiones' },
           { id: 'documentos', label: 'Documentos' },
@@ -1663,8 +1678,8 @@ return datosActivos.posiciones.map(pos => ({
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Desglose de posiciones y perfiles ETT</h3>
-                <p className="text-xs text-slate-500">Configura salarios base, convenio, categoría profesional y calcula la tarifa por hora ofertada.</p>
+                <h3 className="text-sm font-semibold text-slate-900">Posiciones</h3>
+                <p className="text-xs text-slate-500">Cada puesto con su convenio, salario, tarifa por hora y conceptos extra. Debajo, el margen y los costes internos con los que se calcula la tarifa.</p>
               </div>
 
               <button
@@ -1751,6 +1766,21 @@ return datosActivos.posiciones.map(pos => ({
 
                     <DesgloseTarifa eco={eco} rol={rolUsuario} />
 
+                    {/* Conceptos extra del puesto */}
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[11px] font-semibold text-slate-700">Conceptos extra</span>
+                        <button type="button" onClick={() => handleAbrirDrawerPosicion(pos)} className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><Plus className="w-3 h-3" />Añadir extra</button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {eco.extras.map(x => (
+                          <span key={x.id} className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] border ${x.mostrar ? 'bg-slate-50 border-slate-200 text-slate-700' : 'border-dashed border-slate-200 text-slate-400'}`} title={x.mostrar ? '' : 'Está en la oferta, pero no se imprime en la propuesta'}>
+                            {x.concepto} <strong className="text-slate-900">{euros(x.tarifaHora)}</strong>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
                     {pos.descripcionTareas && (
                       <p className="text-xs text-slate-500 mt-3 pt-2 border-t border-slate-100 line-clamp-2">
                         <strong className="text-slate-700">Tareas:</strong> {pos.descripcionTareas}
@@ -1795,14 +1825,15 @@ return datosActivos.posiciones.map(pos => ({
         )}
 
         {/* ----------------------------------------------------
-            PESTAÑA 3: ESCANDALLO ECONÓMICO & COSTES
+            POSICIONES (continuación): MARGEN, COSTES INTERNOS Y EXTRAS POR DEFECTO
+            Antes era la pestaña «Escandallo y costes»; ahora va en Posiciones.
            ---------------------------------------------------- */}
-        {pestanaActiva === 'escandallo' && (
-          <div className="space-y-6">
+        {pestanaActiva === 'posiciones' && (
+          <div className="space-y-6 mt-8 pt-6 border-t border-slate-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-slate-900">Escandallo económico y conceptos de coste</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">Margen y costes internos</h3>
                   <span className="bg-indigo-100 text-indigo-700 text-[10px] font-semibold px-2 py-0.5 rounded">Fórmulas ETT</span>
                 </div>
                 <p className="text-xs text-slate-500">Estructura de costes sociales, indemnizaciones legales obligatorias y dotaciones de servicio.</p>
@@ -1820,21 +1851,18 @@ return datosActivos.posiciones.map(pos => ({
             <div className="grid gap-3 lg:grid-cols-[280px_1fr]">
               <div className="rounded-xl border border-slate-200 p-4 space-y-2">
                 <label className="block text-xs font-semibold text-slate-900">Margen ETT objetivo</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="0.5"
-                    disabled={!modoEdicion}
-                    value={datosActivos.margenObjetivo ?? 18}
-                    onChange={(e) => handleActualizarCampoPresupuesto('margenObjetivo', parseFloat(e.target.value) || 0)}
-                    className={`${CAMPO} w-24 text-right disabled:bg-slate-50`}
-                  />
-                  <span className="text-xs text-slate-500">% sobre la tarifa</span>
-                </div>
-                <p className="text-[11px] text-slate-500">Con este margen se calcula la tarifa sugerida de cada puesto. Cada puesto puede tener el suyo.</p>
+                <CasillasMargen
+                  tipo={datosActivos.margenTipo === 'importe' ? 'importe' : 'porcentaje'}
+                  porcentaje={datosActivos.margenTipo === 'importe' ? '' : (datosActivos.margenObjetivo ?? 18)}
+                  importe={datosActivos.margenTipo === 'importe' ? datosActivos.margenImporte : ''}
+                  disabled={!modoEdicion}
+                  onPorcentaje={(v) => actualizarVarios({ margenTipo: 'porcentaje', margenObjetivo: v === '' ? 18 : parseFloat(v) || 0 })}
+                  onImporte={(v) => actualizarVarios(v === '' ? { margenTipo: 'porcentaje' } : { margenTipo: 'importe', margenImporte: parseFloat(v) || 0 })}
+                />
+                <p className="text-[11px] text-slate-500">Escribe el margen en % sobre la tarifa o en € por hora sobre el coste: la casilla que rellenes es la que cuenta. Con él se calcula la tarifa sugerida de cada puesto, y cada puesto puede tener el suyo.</p>
               </div>
               <Notice tone="info" icon={EyeOff}>
-                <strong>Todo lo de esta pestaña es interno.</strong> Seguridad Social, indemnización, EPIs, revisión médica y margen
+                <strong>Todo lo de este apartado es interno.</strong> Seguridad Social, indemnización, EPIs, revisión médica y margen
                 sirven para calcular la tarifa, pero el cliente no ve el desglose: en la propuesta solo aparecen el salario y la tarifa
                 de cada puesto, y sus conceptos extra (horas extra, nocturnas, fin de semana...).
               </Notice>
@@ -1944,6 +1972,8 @@ return datosActivos.posiciones.map(pos => ({
               <TablaExtras
                 extras={datosActivos.extrasDefecto || EXTRAS_DEFECTO}
                 editable={modoEdicion}
+                conCoefSalario
+                permitirNuevos
                 onChange={(lista) => handleActualizarCampoPresupuesto('extrasDefecto', lista)}
               />
             </div>
@@ -2726,7 +2756,7 @@ return datosActivos.posiciones.map(pos => ({
 
           {/* Tarifa: margen objetivo, tarifa sugerida y desglose */}
           {(() => {
-            const ecoSim = calcularEconomiaPosicion(posicionEnEdicion, formularioPresupuesto.conceptosEscandallo, formularioPresupuesto.margenObjetivo);
+            const ecoSim = calcularEconomiaPosicion(posicionEnEdicion, formularioPresupuesto.conceptosEscandallo, margenDe(formularioPresupuesto));
             return (
               <div className="p-4 rounded-xl border border-slate-200 space-y-4">
                 <h4 className="font-semibold text-slate-900 text-xs">Tarifa del puesto</h4>
@@ -2748,16 +2778,17 @@ return datosActivos.posiciones.map(pos => ({
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] text-slate-600 block mb-1">Margen objetivo (%)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={posicionEnEdicion.margenObjetivo ?? ''}
-                      placeholder={String(formularioPresupuesto.margenObjetivo ?? 18)}
-                      onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, margenObjetivo: e.target.value === '' ? undefined : parseFloat(e.target.value) }))}
-                      className={`${CAMPO} w-full`}
+                    <label className="text-[11px] text-slate-600 block mb-1">Margen objetivo</label>
+                    <CasillasMargen
+                      tipo={ecoSim.margenObjetivoTipo}
+                      porcentaje={posicionEnEdicion.margenTipo !== 'importe' ? (posicionEnEdicion.margenObjetivo ?? '') : ''}
+                      importe={posicionEnEdicion.margenTipo === 'importe' ? (posicionEnEdicion.margenImporte ?? '') : ''}
+                      sugeridoPorcentaje={ecoSim.margenObjetivo}
+                      sugeridoImporte={ecoSim.margenObjetivoImporte}
+                      onPorcentaje={(v) => setPosicionEnEdicion(prev => ({ ...prev, margenTipo: v === '' ? undefined : 'porcentaje', margenObjetivo: v === '' ? undefined : parseFloat(v), margenImporte: undefined }))}
+                      onImporte={(v) => setPosicionEnEdicion(prev => ({ ...prev, margenTipo: v === '' ? undefined : 'importe', margenImporte: v === '' ? undefined : parseFloat(v), margenObjetivo: undefined }))}
                     />
-                    <p className="mt-1 text-[11px] text-slate-400">Vacío: el del presupuesto.</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Rellena una: la otra se calcula. Vacías: el del presupuesto.</p>
                   </div>
                   <div>
                     <label className="text-[11px] text-slate-600 block mb-1">Tarifa hora al cliente (€/h) *</label>
@@ -2780,10 +2811,11 @@ return datosActivos.posiciones.map(pos => ({
                 <DesgloseTarifa eco={ecoSim} rol={rolUsuario} />
                 <div className="space-y-1.5">
                   <h5 className="text-xs font-semibold text-slate-900">Conceptos extra de este puesto</h5>
-                  <p className="text-[11px] text-slate-500">Siempre quedan en la oferta para poder facturarlos. Desmarca "En la propuesta" si no quieres imprimirlos.</p>
+                  <p className="text-[11px] text-slate-500">Siempre quedan en la oferta para poder facturarlos. Desmarca "En la propuesta" si no quieres imprimirlos. El salario sale del convenio; en un extra que añadas, escribe su salario por hora.</p>
                   <TablaExtras
                     extras={ecoSim.extras}
                     editable
+                    permitirNuevos
                     onChange={(lista) => setPosicionEnEdicion(prev => ({ ...prev, extras: lista.map(({ salarioHora, tarifaHora, coefTarifaAplicado, ...x }) => x) }))}
                   />
                 </div>
@@ -2814,7 +2846,7 @@ return datosActivos.posiciones.map(pos => ({
      ========================================== */}
   {drawerConceptoAbierto && conceptoEnEdicion && (
     <Drawer
-      title={formularioPresupuesto.conceptosEscandallo.some(c => c.id === conceptoEnEdicion.id) ? 'Editar concepto' : 'Añadir concepto al escandallo'}
+      title={formularioPresupuesto.conceptosEscandallo.some(c => c.id === conceptoEnEdicion.id) ? 'Editar coste interno' : 'Añadir coste interno'}
       subtitle={'Coste, provisión o dotación'}
       onClose={() => setDrawerConceptoAbierto(false)}
       width="max-w-lg"
@@ -3147,16 +3179,25 @@ return datosActivos.posiciones.map(pos => ({
     }
 
     // Conceptos extra (horas extra, nocturnas...). Editable en el panel del puesto; solo lectura en la tarjeta.
-    function TablaExtras({ extras, editable = false, onChange }) {
-      if (!extras || extras.length === 0) return null;
+    // conCoefSalario: solo en los extras por defecto del presupuesto. En cada puesto, el salario sale del convenio
+    // (o lo escribe quien añade un extra nuevo). permitirNuevos: deja añadir conceptos extra propios.
+    function TablaExtras({ extras, editable = false, onChange, conCoefSalario = false, permitirNuevos = false }) {
+      const [nuevo, setNuevo] = useState('');
+      if (!extras || (extras.length === 0 && !(editable && permitirNuevos))) return null;
       const cambiar = (id, campo, valor) => onChange(extras.map(x => (x.id === id ? { ...x, [campo]: valor } : x)));
+      const quitar = (id) => onChange(extras.filter(x => x.id !== id));
+      const anadir = () => {
+        if (!nuevo.trim()) return;
+        onChange([...extras, { id: `x-${Date.now()}`, concepto: nuevo.trim(), coefSalario: 1, salarioManual: '', coefTarifa: '', mostrar: true, propio: true }]);
+        setNuevo('');
+      };
       const celda = 'h-7 w-16 bg-white border border-slate-200 rounded-md px-1.5 text-xs text-right focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
       return (
         <table className="w-full text-xs">
           <thead>
             <tr className="text-[11px] text-slate-500">
               <th className="py-1 text-left font-medium">Concepto extra</th>
-              {editable && <th className="py-1 text-right font-medium">Coef. salario</th>}
+              {editable && conCoefSalario && <th className="py-1 text-right font-medium">Coef. salario</th>}
               <th className="py-1 text-right font-medium">Salario</th>
               {editable && <th className="py-1 text-right font-medium">Coef. tarifa</th>}
               <th className="py-1 text-right font-medium">Tarifa</th>
@@ -3166,13 +3207,20 @@ return datosActivos.posiciones.map(pos => ({
           <tbody>
             {extras.map(x => (
               <tr key={x.id} className="border-t border-slate-100">
-                <td className="py-1 text-slate-700">{x.concepto}</td>
-                {editable && (
+                <td className="py-1 text-slate-700">
+                  {x.concepto}
+                  {x.propio && <span className="ml-1 text-[10px] text-slate-400">(añadido)</span>}
+                </td>
+                {editable && conCoefSalario && (
                   <td className="py-1 text-right">
                     <input type="number" step="0.05" value={x.coefSalario} onChange={(e) => cambiar(x.id, 'coefSalario', e.target.value)} className={celda} aria-label={`Coeficiente de salario de ${x.concepto}`} />
                   </td>
                 )}
-                <td className="py-1 text-right text-slate-800 whitespace-nowrap">{x.salarioHora != null ? euros(x.salarioHora) : `×${x.coefSalario}`}</td>
+                <td className="py-1 text-right text-slate-800 whitespace-nowrap">
+                  {editable && !conCoefSalario && x.propio ? (
+                    <input type="number" step="0.05" value={x.salarioManual ?? ''} placeholder={x.salarioHora != null ? x.salarioHora.toFixed(2) : ''} onChange={(e) => cambiar(x.id, 'salarioManual', e.target.value)} className={celda} aria-label={`Salario por hora de ${x.concepto}`} />
+                  ) : x.salarioHora != null ? euros(x.salarioHora) : `×${x.coefSalario}`}
+                </td>
                 {editable && (
                   <td className="py-1 text-right">
                     <input type="number" step="0.01" value={x.coefTarifa} placeholder={x.coefTarifaAplicado ? x.coefTarifaAplicado.toFixed(2) : 'auto'} onChange={(e) => cambiar(x.id, 'coefTarifa', e.target.value)} className={celda} aria-label={`Coeficiente de tarifa de ${x.concepto}`} />
@@ -3188,10 +3236,53 @@ return datosActivos.posiciones.map(pos => ({
                     <span className="text-slate-400" title="Está en la oferta y se podrá facturar, pero no se imprime en la propuesta">No se imprime</span>
                   )}
                 </td>
+                {editable && permitirNuevos && (
+                  <td className="py-1 pl-2 text-right w-6">
+                    {x.propio && <button type="button" onClick={() => quitar(x.id)} className="p-0.5 text-slate-400 hover:text-rose-600" title={`Quitar ${x.concepto}`} aria-label={`Quitar ${x.concepto}`}><Trash2 className="w-3.5 h-3.5" /></button>}
+                  </td>
+                )}
               </tr>
             ))}
+            {editable && permitirNuevos && (
+              <tr className="border-t border-slate-100">
+                <td colSpan={7} className="pt-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={nuevo}
+                      onChange={(e) => setNuevo(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); anadir(); } }}
+                      placeholder="Nuevo concepto extra (p. ej., plus de peligrosidad, kilometraje)"
+                      className="h-7 flex-1 bg-white border border-slate-200 rounded-md px-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                    <button type="button" onClick={anadir} disabled={!nuevo.trim()} className="h-7 px-2.5 rounded-md text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 disabled:opacity-50 flex items-center gap-1"><Plus className="w-3 h-3" />Añadir</button>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+      );
+    }
+
+    // Margen objetivo en dos casillas: % sobre la tarifa o €/h sobre el coste. Cuenta la que se rellena;
+    // la otra enseña, en gris, lo que sale (si se puede calcular).
+    function CasillasMargen({ tipo, porcentaje, importe, sugeridoPorcentaje, sugeridoImporte, disabled = false, onPorcentaje, onImporte }) {
+      const celda = (activa) => `${CAMPO} w-full text-right disabled:bg-slate-50 ${activa ? '' : 'placeholder:text-slate-400'}`;
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="flex items-center gap-1.5">
+              <input type="number" step="0.5" disabled={disabled} value={porcentaje} placeholder={sugeridoPorcentaje != null ? sugeridoPorcentaje.toFixed(1) : '—'} onChange={(e) => onPorcentaje(e.target.value)} className={celda(tipo === 'porcentaje')} aria-label="Margen en porcentaje" />
+              <span className={`text-xs ${tipo === 'porcentaje' ? 'text-slate-700 font-semibold' : 'text-slate-400'}`}>%</span>
+            </span>
+          </label>
+          <label className="block">
+            <span className="flex items-center gap-1.5">
+              <input type="number" step="0.05" disabled={disabled} value={importe} placeholder={sugeridoImporte != null ? sugeridoImporte.toFixed(2) : '—'} onChange={(e) => onImporte(e.target.value)} className={celda(tipo === 'importe')} aria-label="Margen en euros por hora" />
+              <span className={`text-xs whitespace-nowrap ${tipo === 'importe' ? 'text-slate-700 font-semibold' : 'text-slate-400'}`}>€/h</span>
+            </span>
+          </label>
+        </div>
       );
     }
 
@@ -3554,7 +3645,7 @@ return datosActivos.posiciones.map(pos => ({
     const horasFmt = (n) => (Number(n) || 0).toLocaleString('es-ES');
 
     function totalesDe(datos) {
-      const ecos = datos.posiciones.map(p => calcularEconomiaPosicion(p, datos.conceptosEscandallo, datos.margenObjetivo));
+      const ecos = datos.posiciones.map(p => calcularEconomiaPosicion(p, datos.conceptosEscandallo, margenDe(datos)));
       const suma = (k) => ecos.reduce((s, e) => s + (e[k] || 0), 0);
       const facturacion = suma('facturacionTotal');
       const margen = suma('margenServicio');
@@ -3698,8 +3789,8 @@ return datosActivos.posiciones.map(pos => ({
             {ids.map(id => {
               const pa = anterior.posiciones.find(p => p.id === id);
               const pb = actual.posiciones.find(p => p.id === id);
-              const ea = pa && calcularEconomiaPosicion(pa, anterior.conceptosEscandallo, anterior.margenObjetivo);
-              const eb = pb && calcularEconomiaPosicion(pb, actual.conceptosEscandallo, actual.margenObjetivo);
+              const ea = pa && calcularEconomiaPosicion(pa, anterior.conceptosEscandallo, margenDe(anterior));
+              const eb = pb && calcularEconomiaPosicion(pb, actual.conceptosEscandallo, margenDe(actual));
               const nombre = (pb || pa).nombre;
               const nota = !pa ? <Badge tone="success">Nuevo</Badge> : !pb ? <Badge tone="danger">Quitado</Badge> : null;
               return [
