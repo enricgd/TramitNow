@@ -8,7 +8,7 @@ import {
     Layers, Sliders, History, Info, ChevronUp, Bell, ArrowUpRight,
     CheckSquare, AlertTriangle, FileSpreadsheet, Lock, Radio,
     Home, UserCheck, UserPlus, DollarSign, BarChart3, Settings,
-    Shield, Cpu, BookOpen, Layers2, FolderKanban, List, SquareKanban, GripVertical
+    Shield, Cpu, BookOpen, Layers2, FolderKanban, List, SquareKanban, GripVertical, Upload, Paperclip, FileSignature
 } from 'lucide-react';
 import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal } from '../ui';
 import { contactoDemo } from './personasDemo';
@@ -159,7 +159,19 @@ const PRESUPUESTOS_ACEPTADOS = [
         titulo: 'Servicio ETT camareros/as y cocina fiestas locales',
         puestos: [{ tipo: 'camarero', personas: 10 }, { tipo: 'camarero_barra', personas: 3 }, { tipo: 'ayudante_cocina', personas: 4 }, { tipo: 'cocinero', personas: 2 }],
     },
+    {
+        id: 'PRE-2026-0033', version: 'v2', cliente: 'mediterranea', aceptado: '2026-08-26',
+        titulo: 'Envasado campaña de Navidad',
+        puestos: [{ tipo: 'envasado', personas: 5 }],
+    },
+    {
+        id: 'PRE-2026-0029', version: 'v1', cliente: 'translog', aceptado: '2026-06-10',
+        titulo: 'Campaña logística verano HUB central',
+        puestos: [{ tipo: 'mozo', personas: 6 }],
+    },
 ];
+// Tipos de documento que se suben a una petición
+const TIPOS_DOC_SERVICIO = ['Presupuesto firmado por el cliente', 'Pedido u orden de compra del cliente', 'Evaluación de riesgos del cliente', 'Correo del cliente', 'Otro documento'];
 
 // plantilla: turno del horario (HORARIO_TEMPLATES). cubiertas: plazas ya cubiertas en la demo.
 const PETICIONES_BASE = [
@@ -903,6 +915,10 @@ export default function PeticionesView() {
     const [motivosBaja, setMotivosBaja] = useState(MOTIVOS_BAJA);
     const [cpdPrevio, setCpdPrevio] = useState(INITIAL_CPD_PREVIO);
     const [verCpdPrevio, setVerCpdPrevio] = useState(false);
+    // Documentos del servicio que se suben a cada petición (además de los que salen solos)
+    const [docsServicio, setDocsServicio] = useState({});
+    const [subirDoc, setSubirDoc] = useState(null); // { tipo, nombre, archivo }
+    const [buscarPresu, setBuscarPresu] = useState('');
     const [portalesPropios, setPortalesPropios] = useState(INITIAL_PORTALES_PROPIOS);
     const enviarCpdPrevio = () => {
         setCpdPrevio(prev => ({ ...prev, [peticion.id]: { estado: 'enviado', fecha: new Date().toISOString().slice(0, 10) } }));
@@ -1340,7 +1356,7 @@ export default function PeticionesView() {
                             title="Peticiones"
                             count={peticiones.length}
                             subtitle="Cada petición es un puesto de un presupuesto aceptado, con su horario, sus plazas y su difusión en portales."
-                            actions={<Button variant="primary" icon={Plus} onClick={() => setNuevaPeticion({ presupuesto: '', tipo: '', plantilla: 'manana', solicitados: 1, inicio: '' })}>Nueva petición</Button>}
+                            actions={<Button variant="primary" icon={Plus} onClick={() => { setBuscarPresu(''); setNuevaPeticion({ presupuesto: '', tipo: '', plantilla: 'manana', solicitados: 1, inicio: '' }); }}>Nueva petición</Button>}
                         />
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -2509,8 +2525,13 @@ export default function PeticionesView() {
                                 </Card>
 
                                 <Card className="p-4 space-y-2 text-xs">
-                                    <SectionTitle>Documentos del servicio</SectionTitle>
+                                    <SectionTitle actions={<Button size="sm" variant="primary" icon={Upload} onClick={() => setSubirDoc({ tipo: TIPOS_DOC_SERVICIO[1], nombre: '', archivo: '' })}>Subir documento</Button>}>Documentos del servicio</SectionTitle>
                                     {[
+                                        (() => {
+                                            const pa = PRESUPUESTOS_ACEPTADOS.find(x => x.id === peticion.presupuesto);
+                                            return { nombre: `Presupuesto_${peticion.presupuesto}_${peticion.version}_firmado.pdf`, texto: `Presupuesto firmado por el cliente${pa ? ` el ${fechaCorta(pa.aceptado)}` : ''} · sale solo del presupuesto aceptado`, icono: FileSignature };
+                                        })(),
+                                        ...(docsServicio[peticion.id] || []).map(d => ({ id: d.id, nombre: d.nombre, texto: `${d.tipo} · subido el ${fechaCorta(d.fecha)} por ${d.autor}`, icono: Paperclip, subido: true })),
                                         { nombre: `CPD_previo_${peticion.id}.pdf`, texto: 'Condiciones de la puesta a disposición para la empresa', icono: FileText },
                                         { nombre: `Riesgos_PRL_${peticion.tipo}.pdf`, texto: `Información de riesgos del puesto: ${peticion.puesto.toLowerCase()}`, icono: ShieldCheck },
                                     ].map(doc => (
@@ -2522,7 +2543,10 @@ export default function PeticionesView() {
                                                     <div className="text-slate-500 text-[11px]">{doc.texto}</div>
                                                 </div>
                                             </div>
-                                            <Button size="sm" variant="ghost" onClick={() => showToast(`Descarga simulada: ${doc.nombre}`)}>Descargar</Button>
+                                            <span className="flex items-center gap-1 shrink-0">
+                                                <Button size="sm" variant="ghost" onClick={() => showToast(`Descarga simulada: ${doc.nombre}`)}>Descargar</Button>
+                                                {doc.subido && <Button size="sm" variant="ghost" icon={Trash2} onClick={() => { setDocsServicio(prev => ({ ...prev, [peticion.id]: prev[peticion.id].filter(x => x.id !== doc.id) })); showToast('Documento quitado'); }} aria-label={`Quitar ${doc.nombre}`} />}
+                                            </span>
                                         </div>
                                     ))}
                                 </Card>
@@ -2798,6 +2822,46 @@ export default function PeticionesView() {
                 );
             })()}
 
+            {/* SUBIR UN DOCUMENTO DEL SERVICIO */}
+            {subirDoc && peticion && (
+                <Modal
+                    title="Subir documento del servicio"
+                    subtitle={`${peticion.id} · ${peticion.clienteNombre}`}
+                    onClose={() => setSubirDoc(null)}
+                    size="max-w-md"
+                    footer={<>
+                        <Button onClick={() => setSubirDoc(null)}>Cancelar</Button>
+                        <Button variant="primary" icon={Upload} disabled={!subirDoc.archivo} onClick={() => {
+                            const doc = { id: `ds-${Date.now()}`, tipo: subirDoc.tipo, nombre: subirDoc.nombre.trim() || subirDoc.archivo, fecha: new Date().toISOString().slice(0, 10), autor: 'Usuario Demo' };
+                            setDocsServicio(prev => ({ ...prev, [peticion.id]: [doc, ...(prev[peticion.id] || [])] }));
+                            setSubirDoc(null);
+                            showToast(`Documento «${doc.nombre}» subido a ${peticion.id}`);
+                        }}>Subir</Button>
+                    </>}
+                >
+                    <div className="space-y-3 text-xs">
+                        <Field label="Tipo de documento">
+                            <Select value={subirDoc.tipo} onChange={(e) => setSubirDoc(d => ({ ...d, tipo: e.target.value }))} className="w-full">
+                                {TIPOS_DOC_SERVICIO.map(t => <option key={t}>{t}</option>)}
+                            </Select>
+                        </Field>
+                        <Field label="Nombre (opcional)">
+                            <TextInput value={subirDoc.nombre} onChange={(e) => setSubirDoc(d => ({ ...d, nombre: e.target.value }))} placeholder="Si lo dejas vacío, el del archivo" />
+                        </Field>
+                        <button
+                            type="button"
+                            onClick={() => setSubirDoc(d => ({ ...d, archivo: d.archivo ? '' : `${d.tipo.startsWith('Pedido') ? 'pedido_cliente' : d.tipo.startsWith('Evaluación') ? 'evaluacion_riesgos' : d.tipo.startsWith('Correo') ? 'correo_cliente' : 'documento'}_${peticion.id}.pdf` }))}
+                            className={`w-full rounded-xl border-2 border-dashed p-5 text-center ${subirDoc.archivo ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-700'}`}
+                        >
+                            {subirDoc.archivo
+                                ? <><CheckCircle2 className="w-5 h-5 mx-auto mb-1" />{subirDoc.archivo} (pulsa para quitarlo)</>
+                                : <><Upload className="w-5 h-5 mx-auto mb-1" />Arrastra el archivo aquí o pulsa para elegirlo</>}
+                        </button>
+                        <p className="text-[11px] text-slate-500">El presupuesto firmado ya sale solo, desde el presupuesto aceptado. Sube aquí el resto: el pedido del cliente, su evaluación de riesgos, correos...</p>
+                    </div>
+                </Modal>
+            )}
+
             {/* NUEVA PETICIÓN: siempre desde un puesto de un presupuesto aceptado */}
             {nuevaPeticion && (() => {
                 const presu = PRESUPUESTOS_ACEPTADOS.find(p => p.id === nuevaPeticion.presupuesto);
@@ -2817,10 +2881,44 @@ export default function PeticionesView() {
                     >
                         <div className="space-y-4 text-xs">
                             <Field label="Presupuesto aceptado">
-                                <Select value={nuevaPeticion.presupuesto} onChange={(e) => setNuevaPeticion(n => ({ ...n, presupuesto: e.target.value, tipo: '' }))} className="w-full">
-                                    <option value="">Elige un presupuesto...</option>
-                                    {PRESUPUESTOS_ACEPTADOS.map(p => <option key={p.id} value={p.id}>{p.id} {p.version} · {CLIENTES[p.cliente].clienteNombre}</option>)}
-                                </Select>
+                                {presu ? (
+                                    <div className="rounded-lg border border-indigo-300 bg-indigo-50/50 px-3 py-2 flex items-center justify-between gap-2">
+                                        <span className="min-w-0">
+                                            <span className="block font-medium text-slate-900">{presu.id} {presu.version} · {CLIENTES[presu.cliente].clienteNombre}</span>
+                                            <span className="block text-[11px] text-slate-500 truncate">{presu.titulo} · aceptado el {fechaCorta(presu.aceptado)}</span>
+                                        </span>
+                                        <Button size="sm" variant="ghost" onClick={() => { setNuevaPeticion(n => ({ ...n, presupuesto: '', tipo: '' })); setBuscarPresu(''); }}>Cambiar</Button>
+                                    </div>
+                                ) : (() => {
+                                    // Buscador: con cientos de presupuestos, un desplegable no sirve
+                                    const q = buscarPresu.trim().toLowerCase();
+                                    const pendientes = (p) => p.puestos.reduce((s, x) => s + Math.max(0, x.personas - peticiones.filter(pp => pp.presupuesto === p.id && pp.tipo === x.tipo && pp.estado !== 'Cancelada').reduce((t, pp) => t + pp.solicitados, 0)), 0);
+                                    const lista = PRESUPUESTOS_ACEPTADOS
+                                        .filter(p => !q || `${p.id} ${CLIENTES[p.cliente].clienteNombre} ${p.titulo} ${CLIENTES[p.cliente].cif}`.toLowerCase().includes(q))
+                                        .sort((a, b) => (pendientes(b) > 0) - (pendientes(a) > 0) || b.aceptado.localeCompare(a.aceptado));
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <SearchInput value={buscarPresu} onChange={setBuscarPresu} placeholder="Busca por cliente, CIF, código o título..." className="w-full" />
+                                            <div className="text-[11px] text-slate-500">{q ? `${lista.length} encontrados` : 'Primero, los que tienen personas sin petición; después, los más recientes.'}</div>
+                                            <div className="max-h-56 overflow-y-auto space-y-1.5">
+                                                {lista.slice(0, 8).map(p => {
+                                                    const sin = pendientes(p);
+                                                    return (
+                                                        <button key={p.id} type="button" onClick={() => setNuevaPeticion(n => ({ ...n, presupuesto: p.id, tipo: '' }))} className="w-full text-left rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-slate-50 px-3 py-2 flex items-center justify-between gap-2">
+                                                            <span className="min-w-0">
+                                                                <span className="block font-medium text-slate-900">{p.id} {p.version} · {CLIENTES[p.cliente].clienteNombre}</span>
+                                                                <span className="block text-[11px] text-slate-500 truncate">{p.titulo} · aceptado el {fechaCorta(p.aceptado)}</span>
+                                                            </span>
+                                                            {sin > 0 ? <Badge tone="accent">{sin} sin petición</Badge> : <Badge tone="neutral">Todo en peticiones</Badge>}
+                                                        </button>
+                                                    );
+                                                })}
+                                                {lista.length === 0 && <div className="text-slate-500 py-2">No hay presupuestos aceptados con «{buscarPresu}».</div>}
+                                                {lista.length > 8 && <div className="text-[11px] text-slate-500">Y {lista.length - 8} más: afina la búsqueda.</div>}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </Field>
                             {presu && (
                                 <Field label="Puesto">

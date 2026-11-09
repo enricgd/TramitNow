@@ -1503,6 +1503,9 @@ return datosActivos.posiciones.map(pos => ({
                         {sinRespuesta(p) && (
                           <Button size="sm" icon={Send} onClick={() => mostrarToast(`Recordatorio enviado a ${p.cliente}.`, 'exito')}>Recordar</Button>
                         )}
+                        {p.estado === 'Firmado / Aceptado' && !(p.id === presupuesto.id ? presupuesto : (abiertos[p.id] || detalleDePresupuesto(p))).peticionCreada && (
+                          <Button size="sm" variant="primary" icon={ArrowUpRight} title="Abre el presupuesto para crear sus peticiones" onClick={() => abrirPresupuesto(p)}>Crear peticiones</Button>
+                        )}
                         <Button size="sm" icon={p.esEditableDirecto ? Edit3 : Eye} onClick={() => abrirPresupuesto(p)}>
                           {p.esEditableDirecto ? 'Editar' : 'Ver'}
                         </Button>
@@ -1599,6 +1602,15 @@ return datosActivos.posiciones.map(pos => ({
         }
       />
 
+      {datosActivos.estado === 'Firmado / Aceptado' && !datosActivos.peticionCreada && !modoEdicion && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-emerald-900">
+            <div className="font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" />El cliente ha aceptado el presupuesto</div>
+            <div className="text-emerald-800">Ya puedes crear las peticiones: una por puesto, con sus tarifas y conceptos extra, sin volver a escribirlos.</div>
+          </div>
+          <Button variant="primary" icon={ArrowUpRight} onClick={abrirCrearPeticiones}>Crear peticiones</Button>
+        </div>
+      )}
       {datosActivos.estado === 'Obsoleto' && (
         <Notice tone="neutral" icon={Archive}>
           <strong>Presupuesto obsoleto</strong>{datosActivos.obsoleto ? ` desde el ${datosActivos.obsoleto.fecha}: ${datosActivos.obsoleto.motivo.toLowerCase()}.` : '.'} Ya no se puede enviar ni aceptar; se queda para consultar.
