@@ -13,6 +13,7 @@ import {
 import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal } from '../ui';
 import { contactoDemo } from './personasDemo';
 import { REPRESENTANTE_ETT, AUTORIZACION_ETT } from './ettDemo';
+import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
 
 // --- DATOS DE EJEMPLO ---
 // Una petición = un puesto. Las peticiones siempre salen de un presupuesto aceptado. Un mismo puesto del presupuesto
@@ -899,6 +900,7 @@ export default function PeticionesView() {
     const [filtroCliente, setFiltroCliente] = useState('');
     const [filtroPresupuesto, setFiltroPresupuesto] = useState('');
     const [filtroResponsable, setFiltroResponsable] = useState('');
+    const [filtroSucursal, setFiltroSucursal] = useState(''); // solo para quien ve más de una sucursal
     const [vistaListado, setVistaListado] = useState('tabla'); // 'tabla' | 'pipeline'
     const [agruparPorPresupuesto, setAgruparPorPresupuesto] = useState(false);
 
@@ -973,9 +975,9 @@ export default function PeticionesView() {
     const posiciones = [posActual];
 
     // Listado
-    const hayFiltros = filtroEstado !== 'activas' || filtroCliente || filtroPresupuesto || filtroResponsable || busquedaPeticiones;
+    const hayFiltros = filtroEstado !== 'activas' || filtroCliente || filtroPresupuesto || filtroResponsable || filtroSucursal || busquedaPeticiones;
     const limpiarFiltros = () => {
-        setFiltroEstado('activas'); setFiltroCliente(''); setFiltroPresupuesto(''); setFiltroResponsable(''); setBusquedaPeticiones('');
+        setFiltroEstado('activas'); setFiltroCliente(''); setFiltroPresupuesto(''); setFiltroResponsable(''); setFiltroSucursal(''); setBusquedaPeticiones('');
     };
     const peticionesFiltradas = useMemo(() => {
         const q = busquedaPeticiones.trim().toLowerCase();
@@ -984,9 +986,11 @@ export default function PeticionesView() {
             (!filtroCliente || p.cliente === filtroCliente) &&
             (!filtroPresupuesto || p.presupuesto === filtroPresupuesto) &&
             (!filtroResponsable || p.responsable === filtroResponsable) &&
+            SUCURSALES_USUARIO.includes(sucursalDeCliente(p.clienteNombre)) &&
+            (!filtroSucursal || sucursalDeCliente(p.clienteNombre) === filtroSucursal) &&
             (!q || [p.id, p.clienteNombre, p.puesto, p.presupuesto].some(t => t.toLowerCase().includes(q)))
         );
-    }, [peticiones, filtroEstado, filtroCliente, filtroPresupuesto, filtroResponsable, busquedaPeticiones]);
+    }, [peticiones, filtroEstado, filtroCliente, filtroPresupuesto, filtroResponsable, filtroSucursal, busquedaPeticiones]);
     const gruposListado = useMemo(() => {
         if (!agruparPorPresupuesto) return [{ id: 'todas', items: peticionesFiltradas }];
         const grupos = [];
@@ -1379,6 +1383,12 @@ export default function PeticionesView() {
                                     <option value="todas">Todos los estados</option>
                                     {ESTADOS_PETICION.map(e => <option key={e.estado} value={e.estado}>{e.estado}</option>)}
                                 </Select>
+                                {veVariasSucursales && (
+                                    <Select value={filtroSucursal} onChange={(e) => setFiltroSucursal(e.target.value)} aria-label="Sucursal">
+                                        <option value="">Todas las sucursales</option>
+                                        {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                                    </Select>
+                                )}
                                 <Select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} aria-label="Cliente">
                                     <option value="">Todos los clientes</option>
                                     {Object.entries(CLIENTES).map(([id, c]) => <option key={id} value={id}>{c.clienteNombre}</option>)}
@@ -1450,7 +1460,7 @@ export default function PeticionesView() {
                                                                 </td>
                                                                 <td className="py-2.5 px-3">
                                                                     <div className="text-slate-700">{p.clienteNombre}</div>
-                                                                    <div className="text-[11px] text-slate-500">{p.presupuestoOrigen}</div>
+                                                                    <div className="text-[11px] text-slate-500">{veVariasSucursales && <span className="text-slate-600">{sucursal(sucursalDeCliente(p.clienteNombre)).corto} · </span>}{p.presupuestoOrigen}</div>
                                                                 </td>
                                                                 <td className="py-2.5 px-3 whitespace-nowrap">
                                                                     <div className="text-slate-700">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</div>

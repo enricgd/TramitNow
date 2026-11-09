@@ -10,6 +10,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
       UserCheck, ExternalLink, ShieldAlert, Award, EyeOff, List, SquareKanban, GripVertical, Archive, Upload, Paperclip
     } from 'lucide-react';
 import { Page, PageHeader, Card, KpiTile, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Segmented, Tabs, CAMPO, Modal, Drawer, Confirmar, Notice, EmptyState } from '../ui';
+import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
 
     // ==========================================
     // CATÁLOGOS ESTRUCTURADOS CON "OTRO / PERSONALIZADO"
@@ -673,6 +674,7 @@ margenServicio
       const [filtroEstado, setFiltroEstado] = useState('todos');
       const [filtroComercial, setFiltroComercial] = useState('todos');
       const [filtroValidez, setFiltroValidez] = useState('todas');
+      const [filtroSucursal, setFiltroSucursal] = useState(''); // solo para quien ve más de una sucursal
       const [vistaListado, setVistaListado] = useState('tabla');
       const [esNuevo, setEsNuevo] = useState(false);
       const [conveniosExtra, setConveniosExtra] = useState([]);
@@ -681,13 +683,15 @@ margenServicio
         const dias = (new Date(fecha) - new Date(new Date().toISOString().slice(0, 10))) / 86400000;
         return dias < 0 ? 'caducado' : dias <= 7 ? 'pronto' : 'vigente';
       };
-      const hayFiltrosListado = busquedaPresupuestos || filtroEstado !== 'todos' || filtroComercial !== 'todos' || filtroValidez !== 'todas';
-      const limpiarFiltrosListado = () => { setBusquedaPresupuestos(''); setFiltroEstado('todos'); setFiltroComercial('todos'); setFiltroValidez('todas'); };
+      const hayFiltrosListado = busquedaPresupuestos || filtroEstado !== 'todos' || filtroComercial !== 'todos' || filtroValidez !== 'todas' || filtroSucursal;
+      const limpiarFiltrosListado = () => { setBusquedaPresupuestos(''); setFiltroEstado('todos'); setFiltroComercial('todos'); setFiltroValidez('todas'); setFiltroSucursal(''); };
       const listadoFiltrado = listado.filter(p => {
         const q = busquedaPresupuestos.trim().toLowerCase();
         if (q && !`${p.id} ${p.cliente} ${p.titulo}`.toLowerCase().includes(q)) return false;
         if (filtroEstado !== 'todos' && p.estado !== filtroEstado) return false;
         if (filtroComercial !== 'todos' && p.comercial !== filtroComercial) return false;
+        if (!SUCURSALES_USUARIO.includes(sucursalDeCliente(p.cliente))) return false;
+        if (filtroSucursal && sucursalDeCliente(p.cliente) !== filtroSucursal) return false;
         if (filtroValidez === 'vigentes' && estadoValidez(p.fechaValidez) === 'caducado') return false;
         if (filtroValidez === 'pronto' && estadoValidez(p.fechaValidez) !== 'pronto') return false;
         if (filtroValidez === 'caducados' && estadoValidez(p.fechaValidez) !== 'caducado') return false;
@@ -1429,6 +1433,12 @@ return datosActivos.posiciones.map(pos => ({
             <option value="todos">Todos los estados</option>
             {ESTADOS_PIPELINE.map(s => <option key={s.estado} value={s.estado}>{s.texto || s.estado}</option>)}
           </Select>
+{veVariasSucursales && (
+            <Select value={filtroSucursal} onChange={(e) => setFiltroSucursal(e.target.value)} aria-label="Sucursal">
+              <option value="">Todas las sucursales</option>
+              {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+            </Select>
+          )}
           <Select value={filtroComercial} onChange={(e) => setFiltroComercial(e.target.value)}>
             <option value="todos">Todos los comerciales</option>
             {[...new Set(listado.map(p => p.comercial))].sort().map(c => <option key={c} value={c}>{c}</option>)}
@@ -1483,7 +1493,7 @@ return datosActivos.posiciones.map(pos => ({
                     <td className="py-2.5 px-3 whitespace-nowrap font-mono text-slate-700">{p.id}</td>
                     <td className="py-2.5 px-3">
                       <div className="font-medium text-slate-900">{p.cliente}</div>
-                      <div className="text-[11px] text-slate-500 line-clamp-1">{p.titulo}</div>
+                      <div className="text-[11px] text-slate-500 line-clamp-1">{veVariasSucursales && <span className="text-slate-600">{sucursal(sucursalDeCliente(p.cliente)).corto} · </span>}{p.titulo}</div>
                     </td>
                     <td className="py-2.5 px-3 whitespace-nowrap text-slate-600">{p.comercial}</td>
                     <td className="py-2.5 px-3 whitespace-nowrap text-slate-600">{p.puestosCount}</td>
