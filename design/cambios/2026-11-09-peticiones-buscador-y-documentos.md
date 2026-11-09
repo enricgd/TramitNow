@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-09
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, beef34d
 - **Cómo verlo**: `npm --prefix apps/web run dev`.
   - Peticiones → «Nueva petición».
   - Peticiones → PET-2026-0050 → Contratos y altas → «Documentos del servicio».
