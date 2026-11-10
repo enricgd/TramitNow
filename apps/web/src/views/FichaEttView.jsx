@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PageHeader, Button, Badge, Tabs, Modal, Drawer, Card, SectionTitle, Field, TextInput, Interruptor, Notice, Select, IconButton, Confirmar } from '../ui';
 import { datosDeCp } from './codigosPostales';
+import { SERVICIOS_INICIALES, FORMAS_COBRO } from './serviciosDemo';
 import { REPRESENTANTE_ETT } from './ettDemo';
 
 // Datos de la propia ETT. Los mismos que salen en Facturación (CIF, dirección, autorización e IBAN) y en la cabecera.
@@ -129,6 +130,9 @@ export default function FichaEttView() {
     // UI State
     const [density, setDensity] = useState('comfortable'); // comfortable | compact
     const [toast, setToast] = useState(null);
+    // Servicios que factura la ETT además de las horas
+    const [servicios, setServicios] = useState(SERVICIOS_INICIALES);
+    const cambiarServicio = (id, campo, valor) => setServicios(prev => prev.map(x => (x.id === id ? { ...x, [campo]: valor } : x)));
     const [isEditingFiscal, setIsEditingFiscal] = useState(false);
     const [isEditingBilling, setIsEditingBilling] = useState(false);
     const [branchDrawer, setBranchDrawer] = useState({ open: false, mode: 'create', data: null });
@@ -654,6 +658,56 @@ export default function FichaEttView() {
                                     <span className="text-[11px] text-slate-400">Numeración sin huecos por serie</span>
                                 </div>
                             </div>
+
+                            {/* SERVICIOS QUE SE FACTURAN ADEMÁS DE LAS HORAS */}
+                            <Card className="overflow-hidden">
+                                <div className="p-4 border-b border-slate-100 flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-slate-900">Servicios que factura la ETT</h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">Además de las horas: selección de personal, formación, reconocimientos... Se registran en Facturación («Añadir servicio a facturar») con este precio por defecto, que se puede cambiar en cada caso.</p>
+                                    </div>
+                                    <Button size="sm" icon={Plus} onClick={() => setServicios(prev => [...prev, { id: `srv-${Date.now()}`, nombre: '', cobro: 'fijo', valor: 0, unidad: 'servicio', activo: true, nuevo: true }])}>Añadir servicio</Button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                <th className="py-2 px-4 font-medium">Servicio</th>
+                                                <th className="py-2 px-4 font-medium">Cómo se cobra</th>
+                                                <th className="py-2 px-4 font-medium text-right">Precio o %</th>
+                                                <th className="py-2 px-4 font-medium">Se cuenta por</th>
+                                                <th className="py-2 px-4 font-medium">Activo</th>
+                                                <th className="py-2 px-2" aria-label="Acciones"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {servicios.map(x => (
+                                                <tr key={x.id} className="border-b border-slate-100 last:border-0">
+                                                    <td className="py-2 px-4"><TextInput value={x.nombre} autoFocus={x.nuevo} placeholder="Nombre del servicio" onChange={(e) => cambiarServicio(x.id, 'nombre', e.target.value)} aria-label="Nombre del servicio" /></td>
+                                                    <td className="py-2 px-4">
+                                                        <Select value={x.cobro} onChange={(e) => { const v = e.target.value; cambiarServicio(x.id, 'cobro', v); cambiarServicio(x.id, 'unidad', FORMAS_COBRO[v].unidad); }} aria-label={`Cómo se cobra ${x.nombre}`}>
+                                                            {Object.entries(FORMAS_COBRO).map(([id, f]) => <option key={id} value={id}>{f.texto}</option>)}
+                                                        </Select>
+                                                    </td>
+                                                    <td className="py-2 px-4">
+                                                        <span className="flex items-center justify-end gap-1.5">
+                                                            <TextInput type="number" step="0.01" min="0" value={x.valor} onChange={(e) => cambiarServicio(x.id, 'valor', parseFloat(e.target.value) || 0)} className="w-24! text-right" aria-label={`Precio de ${x.nombre}`} />
+                                                            <span className="text-slate-500 w-4">{x.cobro === 'porcentaje' ? '%' : '€'}</span>
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-2 px-4">{x.cobro === 'porcentaje' || x.cobro === 'fijo' ? <span className="text-slate-500">{x.cobro === 'porcentaje' ? 'Salario anual de la persona contratada' : 'Cada servicio'}</span> : <TextInput value={x.unidad} onChange={(e) => cambiarServicio(x.id, 'unidad', e.target.value)} className="w-28!" aria-label={`Unidad de ${x.nombre}`} />}</td>
+                                                    <td className="py-2 px-4"><Interruptor checked={x.activo} onChange={(v) => cambiarServicio(x.id, 'activo', v)} label={`${x.nombre} activo`} /></td>
+                                                    <td className="py-2 px-2 text-right">{x.nuevo && <IconButton icon={Trash2} title="Quitar" onClick={() => setServicios(prev => prev.filter(y => y.id !== x.id))} />}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between gap-3">
+                                    <span className="text-[11px] text-slate-500">Los servicios desactivados ya no salen al registrar uno nuevo; los ya facturados no cambian.</span>
+                                    <Button size="sm" variant="primary" icon={Save} onClick={() => { setServicios(prev => prev.filter(x => x.nombre.trim()).map(({ nuevo, ...x }) => x)); showToast('Servicios guardados'); }}>Guardar</Button>
+                                </div>
+                            </Card>
                         </div>
                     )}
 

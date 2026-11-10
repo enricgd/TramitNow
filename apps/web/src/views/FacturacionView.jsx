@@ -1,15 +1,16 @@
 // Facturación: de las horas cerradas en Horas e incidencias a la factura, el envío y el cobro.
 // No partió de ninguna maqueta de design/: se diseñó directamente con el sistema común.
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Receipt, Building2, Send, CheckCircle2, AlertTriangle, Info, X, Plus, Trash2, Eye, FileCheck2, Wallet,
-    ArrowUpRight, Clock, Undo2, BellRing, FileMinus2, CalendarDays, ChevronDown, Download, FileSpreadsheet, Printer
+    ArrowUpRight, Clock, Undo2, BellRing, FileMinus2, CalendarDays, ChevronDown, Download, FileSpreadsheet, Printer, BriefcaseBusiness, FilePlus2
 } from 'lucide-react';
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, SearchInput,
     Select, Field, TextInput, Modal, Drawer, Confirmar
 } from '../ui';
 import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
+import { SERVICIOS_INICIALES, FORMAS_COBRO, CLAVE_SERVICIO_PENDIENTE } from './serviciosDemo';
 
 // ==========================================
 // DATOS DE EJEMPLO (los mismos clientes, peticiones y horas que en Peticiones y Horas e incidencias)
@@ -32,6 +33,11 @@ const CLIENTES = {
         iva: 21, retencion: 0, pago: 'Transferencia a 30 días', diasPago: 30, diasFijos: [],
         email: 'facturacion@premiumeventsbcn.cat',
         detalle: 'persona',
+    },
+    metal: {
+        nombre: 'Manufacturas Metálicas del Henares, S.A.', cif: 'A-28193847', direccion: 'C/ del Torno 8, 28806 Alcalá de Henares (Madrid)',
+        iva: 21, retencion: 0, pago: 'Confirming bancario a 60 días', diasPago: 60, diasFijos: [],
+        email: 'aserrano@metalhenares.com', detalle: 'concepto',
     },
 };
 // Tarifa por hora del presupuesto aceptado; los recargos son los del presupuesto (EXTRAS_DEFECTO)
@@ -73,6 +79,25 @@ const HORAS_PERSONA = {
 };
 // Horas validadas distintas de las facturadas, por persona
 const VALIDADAS_PERSONA = { 'PET-2026-0031|2026-08': { 'Adrián Vela Soto': { normales: 150 } } };
+
+// Servicios hechos que se facturan además de las horas (catálogo en Mi ETT → Facturación).
+// Selección: importe = salario bruto anual × %. El resto: cantidad × precio.
+const SERVICIOS_REGISTRADOS = [
+    { id: 's1', cliente: 'hosteleria', servicio: 'reconocimiento', fecha: '2026-10-28', descripcion: 'Reconocimientos médicos de los ayudantes de cocina', referencia: 'PET-2026-0045', cantidad: 4, precio: 45 },
+    { id: 's2', cliente: 'metal', servicio: 'seleccion', fecha: '2026-11-04', descripcion: 'Selección de un/a jefe/a de taller, contratado/a por el cliente', referencia: '', salario: 38000, porcentaje: 15 },
+    { id: 's3', cliente: 'translog', servicio: 'formacion_prl', fecha: '2026-11-06', descripcion: 'Formación PRL de carretilleros', referencia: 'PET-2026-0050', cantidad: 2, precio: 85 },
+];
+const servicioDe = (id) => SERVICIOS_INICIALES.find(x => x.id === id) || { nombre: 'Servicio', cobro: 'fijo', unidad: 'servicio' };
+const importeServicio = (x) => redondear(x.salario != null ? Number(x.salario) * Number(x.porcentaje) / 100 : Number(x.cantidad) * Number(x.precio));
+const lineaDeServicio = (x) => {
+    const sv = servicioDe(x.servicio);
+    const pct = x.salario != null;
+    return {
+        id: `linea-${x.id}`, servicio: x.id,
+        concepto: `${sv.nombre}: ${x.descripcion}${x.referencia ? ` (${x.referencia})` : ''}${pct ? ` · ${num(Number(x.porcentaje))} % de ${euros(Number(x.salario))} de salario bruto anual` : ''}`,
+        cantidad: pct ? 1 : Number(x.cantidad), unidad: pct ? 'proceso' : sv.unidad, precio: pct ? importeServicio(x) : Number(x.precio),
+    };
+};
 
 const MOTIVOS_RECTIFICACION = ['Error en las horas', 'Error en la tarifa', 'Error en los datos del cliente', 'Otro'];
 
@@ -276,6 +301,17 @@ export default function FacturacionView() {
     const [cobro, setCobro] = useState(null); // { fecha, importe, nota }
     const [rectificar, setRectificar] = useState(null); // { motivo, nota, nueva }
     const [toast, setToast] = useState(null);
+    const [servicios, setServicios] = useState(SERVICIOS_REGISTRADOS);
+    const [nuevoServicio, setNuevoServicio] = useState(null); // formulario «Añadir servicio a facturar»
+    const [nuevaFactura, setNuevaFactura] = useState(null); // { cliente }
+    // Desde la ficha de un cliente (Empresas) se llega aquí con el formulario de servicio abierto
+    useEffect(() => {
+        let nombre = null;
+        try { nombre = sessionStorage.getItem(CLAVE_SERVICIO_PENDIENTE); sessionStorage.removeItem(CLAVE_SERVICIO_PENDIENTE); } catch { /* sin almacenamiento */ }
+        if (!nombre) return;
+        const id = Object.keys(CLIENTES).find(k => CLIENTES[k].nombre === nombre);
+        if (id) abrirServicio(id); else showToast(`${nombre} todavía no tiene datos de facturación: complétalos en su ficha`);
+    }, []);
 
     const showToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3800); };
     const actualizar = (id, cambios, texto) => {
@@ -290,17 +326,28 @@ export default function FacturacionView() {
 
     // Meses con horas que aún no tienen factura (o solo un borrador), agrupados por cliente y mes
     const facturado = (h) => facturas.find(f => !f.anulada && !f.rectifica && f.lineas.some(l => l.petId === h.petId && l.mes === h.mes));
+    const facturaDeServicio = (x) => facturas.find(f => !f.anulada && !f.rectifica && f.lineas.some(l => l.servicio === x.id));
     const porFacturar = useMemo(() => {
         const grupos = {};
+        const grupo = (cliente, mes) => (grupos[`${cliente}|${mes}`] = grupos[`${cliente}|${mes}`] || { cliente, mes, horas: [], servicios: [], borrador: null });
         horas.forEach(h => {
             const f = facturado(h);
             if (f && f.estado !== 'borrador') return;
-            const k = `${PETICIONES[h.petId].cliente}|${h.mes}`;
-            (grupos[k] = grupos[k] || { cliente: PETICIONES[h.petId].cliente, mes: h.mes, horas: [], borrador: null }).horas.push(h);
-            if (f) grupos[k].borrador = f.id;
+            const g = grupo(PETICIONES[h.petId].cliente, h.mes);
+            g.horas.push(h);
+            if (f) g.borrador = f.id;
+        });
+        // Servicios aún sin factura emitida: con las horas del mismo cliente y mes, o solos
+        servicios.forEach(x => {
+            const f = facturaDeServicio(x);
+            if (f && f.estado !== 'borrador') return;
+            const g = grupo(x.cliente, x.fecha.slice(0, 7));
+            g.servicios.push(x);
+            if (f) g.borrador = f.id;
         });
         return Object.values(grupos).sort((a, b) => b.mes.localeCompare(a.mes));
-    }, [horas, facturas]);
+    }, [horas, facturas, servicios]);
+    const baseGrupo = (g) => g.horas.flatMap(lineasDesdeHoras).reduce((s, l) => s + redondear(l.cantidad * l.precio), 0) + g.servicios.reduce((s, x) => s + importeServicio(x), 0);
     const [rangoDesde, rangoHasta] = rangoDe(periodo, desde, hasta);
     // Sucursal: la del cliente (en real, la de la petición o la factura). Solo las que ve el usuario.
     const sucursalDe = (clienteId) => sucursalDeCliente(CLIENTES[clienteId].nombre);
@@ -309,9 +356,9 @@ export default function FacturacionView() {
     const porFacturarFiltrado = porFacturar
         .filter(g => enSucursal(g.cliente))
         .filter(g => !filtroCliente || g.cliente === filtroCliente)
-        .filter(g => !filtroPeticion || g.horas.some(h => h.petId === filtroPeticion))
+        .filter(g => !filtroPeticion || g.horas.some(h => h.petId === filtroPeticion) || g.servicios.some(x => x.referencia === filtroPeticion))
         .filter(g => `${g.mes}-01` <= rangoHasta && finDeMes(g.mes) >= rangoDesde)
-        .filter(g => { const q = normalizar(busqueda.trim()); return !q || normalizar([CLIENTES[g.cliente].nombre, nombreMes(g.mes), ...g.horas.map(h => textoPeticion(h.petId))].join(' ')).includes(q); });
+        .filter(g => { const q = normalizar(busqueda.trim()); return !q || normalizar([CLIENTES[g.cliente].nombre, nombreMes(g.mes), ...g.horas.map(h => textoPeticion(h.petId)), ...g.servicios.map(x => `${servicioDe(x.servicio).nombre} ${x.descripcion}`)].join(' ')).includes(q); });
 
     const lista = useMemo(() => {
         const q = busqueda.trim().toLowerCase();
@@ -349,11 +396,11 @@ export default function FacturacionView() {
         const filas = emitidasLista.flatMap(x => {
             const c = CLIENTES[x.cliente];
             const personas = personasDe(x);
-            if (!personas.length) return x.lineas.map(l => [x.numero, fechaES(x.emision), c.nombre, sucursal(sucursalDe(x.cliente)).nombre, '', '', l.concepto, numExcel(l.cantidad), l.unidad, numExcel(l.precio), numExcel(l.cantidad * l.precio)]);
-            return personas.flatMap(p => CONCEPTOS.filter(k => p.horas[k.id]).map(k => {
+            const otras = x.lineas.filter(l => !l.petId || !personas.some(p => p.petId === l.petId && p.mes === l.mes)).map(l => [x.numero, fechaES(x.emision), c.nombre, sucursal(sucursalDe(x.cliente)).nombre, l.petId || '', '', l.concepto, numExcel(l.cantidad), l.unidad, numExcel(l.precio), numExcel(l.cantidad * l.precio)]);
+            return [...personas.flatMap(p => CONCEPTOS.filter(k => p.horas[k.id]).map(k => {
                 const precio = redondear(PETICIONES[p.petId].tarifa * k.recargo);
                 return [x.numero, fechaES(x.emision), c.nombre, sucursal(sucursalDe(x.cliente)).nombre, p.petId, p.nombre, `${mayus(k.texto)} · ${nombreMes(p.mes)}`, numExcel(p.horas[k.id]), 'h', numExcel(precio), numExcel(p.horas[k.id] * precio)];
-            }));
+            })), ...otras];
         });
         descargarCsv(`facturas_horas_por_persona_${hoyIso()}.csv`, ['Número', 'Fecha de emisión', 'Cliente', 'Sucursal', 'Petición', 'Persona', 'Concepto', 'Cantidad', 'Unidad', 'Precio', 'Importe'], filas);
         setMenuExportar(false);
@@ -368,12 +415,42 @@ export default function FacturacionView() {
     };
 
     const prepararFactura = (g) => {
-        if (g.borrador) { setAbierta(g.borrador); return; }
+        if (g.borrador) {
+            // Servicios registrados después de preparar el borrador: se añaden a él
+            const fb = facturas.find(x => x.id === g.borrador);
+            const faltanServicios = g.servicios.filter(x => !fb.lineas.some(l => l.servicio === x.id));
+            if (faltanServicios.length) actualizar(fb.id, (x) => ({ lineas: [...x.lineas, ...faltanServicios.map(lineaDeServicio)] }), `${faltanServicios.length} ${faltanServicios.length === 1 ? 'servicio añadido' : 'servicios añadidos'} al borrador`);
+            setAbierta(g.borrador);
+            return;
+        }
         const id = `borrador-${Date.now()}`;
         setFacturas(prev => [...prev, {
             id, numero: null, cliente: g.cliente, periodo: g.mes, emision: null, vencimiento: null, estado: 'borrador', detalle: CLIENTES[g.cliente].detalle,
-            lineas: g.horas.flatMap(lineasDesdeHoras), cobros: [], historial: [{ fecha: hoyIso(), texto: `Borrador preparado con las horas de Horas e incidencias, ${CLIENTES[g.cliente].detalle === 'persona' ? 'por persona' : 'por concepto'} como quiere el cliente` }],
+            lineas: [...g.horas.flatMap(lineasDesdeHoras), ...g.servicios.map(lineaDeServicio)], cobros: [], historial: [{ fecha: hoyIso(), texto: `Borrador preparado con las horas de Horas e incidencias, ${CLIENTES[g.cliente].detalle === 'persona' ? 'por persona' : 'por concepto'} como quiere el cliente` }],
         }]);
+        setAbierta(id);
+    };
+    const abrirServicio = (cliente = '', enFactura = null) => {
+        const sv = SERVICIOS_INICIALES.find(x => x.activo);
+        setNuevoServicio({ cliente, enFactura, servicio: sv.id, fecha: hoyIso(), descripcion: '', referencia: '', cantidad: 1, precio: sv.valor, salario: '', porcentaje: sv.valor });
+    };
+    const guardarServicio = () => {
+        const n = nuevoServicio;
+        const sv = servicioDe(n.servicio);
+        const x = { id: `s-${Date.now()}`, cliente: n.cliente, servicio: n.servicio, fecha: n.fecha, descripcion: n.descripcion.trim() || sv.nombre, referencia: n.referencia.trim(),
+            ...(sv.cobro === 'porcentaje' ? { salario: Number(n.salario), porcentaje: Number(n.porcentaje) } : { cantidad: Number(n.cantidad), precio: Number(n.precio) }) };
+        setServicios(prev => [...prev, x]);
+        if (n.enFactura) actualizar(n.enFactura, (fx) => ({ lineas: [...fx.lineas, lineaDeServicio(x)] }), `Servicio añadido: ${sv.nombre}`);
+        else showToast(`Servicio registrado: saldrá en «Por facturar» de ${nombreMes(n.fecha.slice(0, 7))}`);
+        setNuevoServicio(null);
+    };
+    const crearFacturaManual = () => {
+        const id = `borrador-${Date.now()}`;
+        setFacturas(prev => [...prev, {
+            id, numero: null, cliente: nuevaFactura.cliente, periodo: hoyIso().slice(0, 7), emision: null, vencimiento: null, estado: 'borrador', detalle: 'concepto',
+            lineas: [], cobros: [], historial: [{ fecha: hoyIso(), texto: 'Factura nueva, sin horas: líneas y servicios añadidos a mano' }],
+        }]);
+        setNuevaFactura(null);
         setAbierta(id);
     };
     const horasDe = (fac) => horas.filter(h => fac.lineas.some(l => l.petId === h.petId && l.mes === h.mes));
@@ -417,11 +494,15 @@ export default function FacturacionView() {
                 <PageHeader
                     title="Facturación"
                     count={pendientes.length}
-                    subtitle="Las horas validadas de cada mes se convierten en la factura al cliente. Aquí se emite, se envía y se sigue el cobro."
+                    subtitle="Las horas validadas de cada mes y los servicios hechos (selección, formación...) se convierten en la factura al cliente. Aquí se emite, se envía y se sigue el cobro."
+                    actions={<>
+                        <Button icon={BriefcaseBusiness} onClick={() => abrirServicio(filtroCliente)}>Añadir servicio a facturar</Button>
+                        <Button variant="primary" icon={FilePlus2} onClick={() => setNuevaFactura({ cliente: filtroCliente || '' })}>Nueva factura</Button>
+                    </>}
                 />
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <KpiTile label="Por facturar" tone="accent" value={porFacturar.filter(g => !g.borrador).length} hint="Meses con horas sin factura" onClick={() => document.getElementById('por-facturar')?.scrollIntoView({ behavior: 'smooth' })} />
+                    <KpiTile label="Por facturar" tone="accent" value={porFacturar.filter(g => !g.borrador).length} hint="Meses con horas o servicios sin factura" onClick={() => document.getElementById('por-facturar')?.scrollIntoView({ behavior: 'smooth' })} />
                     <KpiTile label="En borrador" value={facturas.filter(x => x.estado === 'borrador').length} hint="Por revisar y emitir" active={filtroEstado === 'borrador'} onClick={() => setFiltroEstado('borrador')} />
                     <KpiTile label="Pendiente de cobro" tone="info" value={euros(suma(pendientes))} hint={`${pendientes.length} ${pendientes.length === 1 ? 'factura' : 'facturas'}`} active={filtroEstado === 'pendientes'} onClick={() => setFiltroEstado('pendientes')} />
                     <KpiTile label="Vencidas" tone="danger" value={euros(suma(vencidas))} hint={`${vencidas.length} ${vencidas.length === 1 ? 'factura' : 'facturas'}`} active={filtroEstado === 'vencida'} onClick={() => setFiltroEstado('vencida')} />
@@ -508,7 +589,7 @@ export default function FacturacionView() {
                                         const pf = porFacturarFiltrado.filter(g => sucursalDe(g.cliente) === su.id);
                                         const pendiente = fs.filter(x => PENDIENTES_COBRO.includes(estadoDe(x).id)).reduce((s, x) => s + totalesDe(x).pendiente, 0);
                                         const vencido = fs.filter(x => estadoDe(x).id === 'vencida').reduce((s, x) => s + totalesDe(x).pendiente, 0);
-                                        const porFacturarBase = pf.reduce((s, g) => s + g.horas.flatMap(lineasDesdeHoras).reduce((a, l) => a + redondear(l.cantidad * l.precio), 0), 0);
+                                        const porFacturarBase = pf.reduce((s, g) => s + baseGrupo(g), 0);
                                         return (
                                             <tr key={su.id} onClick={() => setFiltroSucursal(su.id)} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer" title={`Ver solo ${su.nombre}`}>
                                                 <td className="py-2.5 px-3 font-medium text-slate-900">{su.nombre}</td>
@@ -539,17 +620,28 @@ export default function FacturacionView() {
                                 const listo = g.horas.every(h => h.listo);
                                 const faltan = g.horas.reduce((s, h) => s + (h.partesPendientes || 0), 0);
                                 const total = g.horas.reduce((s, h) => s + Object.values(h.horas).reduce((a, b) => a + b, 0), 0);
+                                const soloServicios = g.horas.length === 0;
                                 return (
                                     <Card key={`${g.cliente}|${g.mes}`} className="p-4 space-y-3">
                                         <div className="flex flex-wrap items-start justify-between gap-2">
                                             <div>
                                                 <div className="text-sm font-medium text-slate-900">{cliente.nombre}</div>
-                                                <div className="text-[11px] text-slate-500">{mayus(nombreMes(g.mes))} · {g.horas.map(h => `${h.petId} (${PETICIONES[h.petId].puesto.toLowerCase()})`).join(', ')}</div>
+                                                <div className="text-[11px] text-slate-500">{mayus(nombreMes(g.mes))}{g.horas.length > 0 && ` · ${g.horas.map(h => `${h.petId} (${PETICIONES[h.petId].puesto.toLowerCase()})`).join(', ')}`}</div>
                                             </div>
-                                            <Badge tone={g.borrador ? 'neutral' : listo ? 'success' : 'warning'} dot>{g.borrador ? 'En borrador' : listo ? 'Horas validadas' : 'Esperando horas'}</Badge>
+                                            <Badge tone={g.borrador ? 'neutral' : listo ? 'success' : 'warning'} dot>{g.borrador ? 'En borrador' : soloServicios ? 'Servicios' : listo ? 'Horas validadas' : 'Esperando horas'}</Badge>
                                         </div>
+                                        {g.servicios.length > 0 && (
+                                            <ul className="space-y-1 text-xs">
+                                                {g.servicios.map(x => (
+                                                    <li key={x.id} className="flex items-start justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5">
+                                                        <span className="flex items-start gap-1.5 min-w-0"><BriefcaseBusiness className="w-3.5 h-3.5 text-indigo-500 mt-0.5 shrink-0" /><span className="min-w-0"><span className="text-slate-800">{servicioDe(x.servicio).nombre}</span><span className="block text-[11px] text-slate-500 truncate">{x.descripcion} · {fechaES(x.fecha)}</span></span></span>
+                                                        <span className="text-slate-900 whitespace-nowrap">{euros(importeServicio(x))}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
                                         <div className="text-xs text-slate-700">
-                                            {num(total)} h · {euros(g.horas.flatMap(lineasDesdeHoras).reduce((s, l) => s + redondear(l.cantidad * l.precio), 0))} de base con las tarifas del presupuesto
+                                            {g.horas.length > 0 && <>{num(total)} h{g.servicios.length > 0 && ` + ${g.servicios.length} ${g.servicios.length === 1 ? 'servicio' : 'servicios'}`} · </>}{euros(baseGrupo(g))} de base{g.horas.length > 0 ? ' con las tarifas del presupuesto' : ''}
                                             {!listo && <span className="block text-amber-700 mt-0.5">Faltan {faltan} partes por validar en Horas e incidencias. Puedes preparar el borrador, pero no emitirlo.</span>}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
@@ -564,6 +656,49 @@ export default function FacturacionView() {
                         </div>
                     )}
                 </div>
+
+                {/* SERVICIOS REGISTRADOS: los hechos, con en qué factura están */}
+                {(() => {
+                    const lista = servicios.filter(x => enSucursal(x.cliente) && (!filtroCliente || x.cliente === filtroCliente)).sort((a, b) => b.fecha.localeCompare(a.fecha));
+                    return (
+                        <div className="space-y-2">
+                            <SectionTitle actions={<Button size="sm" icon={Plus} onClick={() => abrirServicio(filtroCliente)}>Añadir servicio a facturar</Button>}>Servicios (además de las horas)</SectionTitle>
+                            {lista.length === 0 ? <Card className="p-4 text-xs text-slate-500">No hay servicios registrados con estos filtros.</Card> : (
+                                <Card className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                <th className="py-2 px-3 font-medium">Fecha</th>
+                                                <th className="py-2 px-3 font-medium">Cliente</th>
+                                                <th className="py-2 px-3 font-medium">Servicio</th>
+                                                <th className="py-2 px-3 font-medium text-right">Importe</th>
+                                                <th className="py-2 px-3 font-medium">Factura</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {lista.map(x => {
+                                                const fx = facturaDeServicio(x);
+                                                return (
+                                                    <tr key={x.id} className="border-b border-slate-100 last:border-0">
+                                                        <td className="py-2 px-3 whitespace-nowrap text-slate-700">{fechaES(x.fecha)}</td>
+                                                        <td className="py-2 px-3 text-slate-800">{CLIENTES[x.cliente].nombre}</td>
+                                                        <td className="py-2 px-3"><span className="text-slate-900">{servicioDe(x.servicio).nombre}</span><span className="block text-[11px] text-slate-500">{x.descripcion}{x.referencia ? ` · ${x.referencia}` : ''}{x.salario != null ? ` · ${num(x.porcentaje)} % de ${euros(x.salario)}` : ` · ${num(x.cantidad)} × ${euros(x.precio)}`}</span></td>
+                                                        <td className="py-2 px-3 text-right whitespace-nowrap text-slate-900">{euros(importeServicio(x))}</td>
+                                                        <td className="py-2 px-3 whitespace-nowrap">
+                                                            {!fx ? <Badge tone="warning" dot>Por facturar</Badge>
+                                                                : fx.estado === 'borrador' ? <button type="button" onClick={() => setAbierta(fx.id)}><Badge tone="neutral" dot>En borrador</Badge></button>
+                                                                    : <button type="button" onClick={() => setAbierta(fx.id)} className="text-indigo-700 hover:underline">Facturado en {fx.numero}</button>}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </Card>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 {/* FACTURAS, agrupadas por cliente */}
                 <SectionTitle actions={
@@ -735,6 +870,7 @@ export default function FacturacionView() {
                                         </span>
                                         : <Badge tone="neutral">{f.detalle === 'persona' ? 'Líneas por persona' : 'Líneas por concepto'}</Badge>)}
                                     {borrador && personasDe(f).length > 0 && (f.detalle === 'persona' ? 'persona' : 'concepto') !== (cliente.detalle || 'concepto') && <span className="text-[11px] text-amber-700">El cliente las quiere {cliente.detalle === 'persona' ? 'por persona' : 'por concepto'}</span>}
+                                    {borrador && <Button size="sm" icon={BriefcaseBusiness} onClick={() => abrirServicio(f.cliente, f.id)}>Añadir servicio</Button>}
                                     {borrador && <Button size="sm" icon={Plus} onClick={() => setLinea({ concepto: '', cantidad: 1, precio: '' })}>Añadir línea</Button>}
                                 </span>}>Líneas</SectionTitle>
                                 <div className="overflow-x-auto rounded-lg border border-slate-200">
@@ -751,11 +887,11 @@ export default function FacturacionView() {
                                         <tbody>
                                             {lineasDe(f).map(l => (
                                                 <tr key={l.id} className="border-b border-slate-100 last:border-0">
-                                                    <td className="py-2 px-3 text-slate-800">{l.concepto}{l.manual && <span className="block text-[11px] text-slate-500">Línea manual</span>}</td>
+                                                    <td className="py-2 px-3 text-slate-800">{l.concepto}{l.manual && <span className="block text-[11px] text-slate-500">Línea manual</span>}{l.servicio && <span className="block text-[11px] text-indigo-600">Servicio</span>}</td>
                                                     <td className="py-2 px-3 text-right whitespace-nowrap">{num(l.cantidad)} {l.unidad}</td>
                                                     <td className="py-2 px-3 text-right whitespace-nowrap">{euros(l.precio)}</td>
                                                     <td className="py-2 px-3 text-right whitespace-nowrap text-slate-900">{euros(redondear(l.cantidad * l.precio))}</td>
-                                                    {borrador && <td className="py-1 px-2 text-right">{l.manual && <IconButton icon={Trash2} title="Quitar línea" onClick={() => setLineaAEliminar(l)} />}</td>}
+                                                    {borrador && <td className="py-1 px-2 text-right">{(l.manual || l.servicio) && <IconButton icon={Trash2} title={l.servicio ? 'Quitar de esta factura (el servicio vuelve a «Por facturar»)' : 'Quitar línea'} onClick={() => setLineaAEliminar(l)} />}</td>}
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -919,6 +1055,77 @@ export default function FacturacionView() {
                     </Modal>
                 );
             })()}
+
+            {/* AÑADIR SERVICIO A FACTURAR */}
+            {nuevoServicio && (() => {
+                const n = nuevoServicio;
+                const sv = servicioDe(n.servicio);
+                const pct = sv.cobro === 'porcentaje';
+                const importe = pct ? redondear((Number(n.salario) || 0) * (Number(n.porcentaje) || 0) / 100) : redondear((Number(n.cantidad) || 0) * (Number(n.precio) || 0));
+                const cambiar = (k, v) => setNuevoServicio(x => ({ ...x, [k]: v }));
+                const valido = n.cliente && n.fecha && importe > 0;
+                return (
+                    <Modal title={n.enFactura ? 'Añadir servicio a esta factura' : 'Añadir servicio a facturar'} subtitle="Selección, formación, reconocimientos... Sale en «Por facturar» con las horas del cliente de ese mes" onClose={() => setNuevoServicio(null)} size="max-w-lg"
+                        footer={<>
+                            <Button onClick={() => setNuevoServicio(null)}>Cancelar</Button>
+                            <Button variant="primary" icon={CheckCircle2} disabled={!valido} onClick={guardarServicio}>{n.enFactura ? 'Añadir a la factura' : 'Registrar servicio'}</Button>
+                        </>}>
+                        <div className="space-y-3 text-xs">
+                            <Field label="Cliente">
+                                <Select value={n.cliente} disabled={!!n.enFactura} onChange={(e) => cambiar('cliente', e.target.value)} className="w-full">
+                                    <option value="">Elige el cliente…</option>
+                                    {Object.entries(CLIENTES).filter(([id]) => SUCURSALES_USUARIO.includes(sucursalDe(id))).map(([id, c]) => <option key={id} value={id}>{c.nombre}</option>)}
+                                </Select>
+                            </Field>
+                            <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] gap-3">
+                                <Field label="Servicio">
+                                    <Select value={n.servicio} onChange={(e) => { const nv = servicioDe(e.target.value); setNuevoServicio(x => ({ ...x, servicio: e.target.value, precio: nv.cobro === 'porcentaje' ? x.precio : nv.valor, porcentaje: nv.cobro === 'porcentaje' ? nv.valor : x.porcentaje })); }} className="w-full">
+                                        {SERVICIOS_INICIALES.filter(x => x.activo).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label="Fecha"><TextInput type="date" value={n.fecha} onChange={(e) => cambiar('fecha', e.target.value)} /></Field>
+                            </div>
+                            <Field label="Descripción"><TextInput value={n.descripcion} onChange={(e) => cambiar('descripcion', e.target.value)} placeholder={pct ? 'Por ejemplo: selección de un/a jefe/a de taller' : 'Por ejemplo: formación PRL de 4 carretilleros'} /></Field>
+                            <Field label="Petición o proceso (opcional)"><TextInput value={n.referencia} onChange={(e) => cambiar('referencia', e.target.value)} placeholder="PET-2026-0050" /></Field>
+                            {pct ? (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Field label="Salario bruto anual de la persona contratada (€)"><TextInput type="number" min="0" step="100" value={n.salario} onChange={(e) => cambiar('salario', e.target.value)} /></Field>
+                                    <Field label="Porcentaje (%)"><TextInput type="number" min="0" step="0.5" value={n.porcentaje} onChange={(e) => cambiar('porcentaje', e.target.value)} /></Field>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Field label={`Cantidad (${sv.unidad})`}><TextInput type="number" min="0" step="1" value={n.cantidad} onChange={(e) => cambiar('cantidad', e.target.value)} /></Field>
+                                    <Field label={`Precio por ${sv.unidad} (€)`}><TextInput type="number" min="0" step="0.01" value={n.precio} onChange={(e) => cambiar('precio', e.target.value)} /></Field>
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                                <span className="text-slate-600">{FORMAS_COBRO[sv.cobro]?.texto}{pct && n.salario ? ` · ${num(Number(n.porcentaje) || 0)} % de ${euros(Number(n.salario) || 0)}` : ''}</span>
+                                <span className="text-sm font-medium text-slate-900">{euros(importe)} <span className="text-[11px] font-normal text-slate-500">sin IVA</span></span>
+                            </div>
+                            {!n.enFactura && n.cliente && <p className="text-[11px] text-slate-500">Saldrá en «Por facturar» de {CLIENTES[n.cliente].nombre}, {nombreMes(n.fecha.slice(0, 7))}, junto a sus horas si las hay.</p>}
+                        </div>
+                    </Modal>
+                );
+            })()}
+
+            {/* NUEVA FACTURA (sin horas) */}
+            {nuevaFactura && (
+                <Modal title="Nueva factura" subtitle="Para lo que no sale de las horas ni de un servicio registrado. Se crea en borrador." onClose={() => setNuevaFactura(null)} size="max-w-md"
+                    footer={<>
+                        <Button onClick={() => setNuevaFactura(null)}>Cancelar</Button>
+                        <Button variant="primary" icon={FilePlus2} disabled={!nuevaFactura.cliente} onClick={crearFacturaManual}>Crear borrador</Button>
+                    </>}>
+                    <div className="space-y-3 text-xs">
+                        <Field label="Cliente">
+                            <Select value={nuevaFactura.cliente} onChange={(e) => setNuevaFactura({ cliente: e.target.value })} className="w-full">
+                                <option value="">Elige el cliente…</option>
+                                {Object.entries(CLIENTES).filter(([id]) => SUCURSALES_USUARIO.includes(sucursalDe(id))).map(([id, c]) => <option key={id} value={id}>{c.nombre}</option>)}
+                            </Select>
+                        </Field>
+                        <p className="text-slate-500">Después añade servicios del catálogo o líneas libres, y emítela como las demás.</p>
+                    </div>
+                </Modal>
+            )}
 
             {/* AÑADIR LÍNEA */}
             {linea && f && (

@@ -10,6 +10,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
     } from 'lucide-react';
 import { Page, PageHeader, Card, EmptyState, Notice, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Tabs, Modal, Drawer, Confirmar, Interruptor } from '../ui';
 import { PERMISOS_PORTAL, permisosPorRoles } from '../portal/permisosEmpresa';
+import { CLAVE_SERVICIO_PENDIENTE } from './serviciosDemo';
 
     // DATOS DEMO INICIALES
     const INITIAL_COMPANIES = [
@@ -1332,6 +1333,15 @@ return companies.filter(c => {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* SERVICIOS QUE SE LE FACTURAN ADEMÁS DE LAS HORAS */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-xs">
+                  <div className="font-semibold text-slate-900">Servicios a facturar</div>
+                  <div className="text-slate-500">Selección de personal, formación, reconocimientos... Se registran y salen en Facturación con sus horas del mes.</div>
+                </div>
+                <Button size="sm" icon={Briefcase} onClick={() => { try { sessionStorage.setItem(CLAVE_SERVICIO_PENDIENTE, currentCompany.name); } catch { /* sin almacenamiento */ } window.location.hash = '#/facturacion'; }}>Añadir servicio a facturar</Button>
               </div>
 
               {/* DETALLE DE CAMPOS FINANCIEROS */}
