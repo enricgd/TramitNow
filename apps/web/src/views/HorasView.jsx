@@ -10,6 +10,7 @@ import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar,
     SearchInput, Select, Field, TextInput, Modal, Drawer, Tabs
 } from '../ui';
+import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
 
 // ==========================================
 // DATOS DE EJEMPLO (las mismas peticiones y personas que en Personal en misión)
@@ -275,6 +276,7 @@ export default function HorasView() {
     const [filtroEstado, setFiltroEstado] = useState('todos');
     const [filtroPeticion, setFiltroPeticion] = useState('');
     const [filtroCliente, setFiltroCliente] = useState('');
+    const [filtroSucursal, setFiltroSucursal] = useState(''); // solo para quien ve más de una sucursal
     const [busqueda, setBusqueda] = useState('');
     const [filtroCierre, setFiltroCierre] = useState('todos');
     const [periodo, setPeriodo] = useState('reciente');
@@ -308,6 +310,8 @@ export default function HorasView() {
         const p = PETICIONES[petId];
         return [petId, p.puesto, p.turno, p.cliente, p.centro].some(x => normalizar(x).includes(q));
     };
+    // Sucursal: la del cliente (en real, la de la petición). Solo las que ve el usuario.
+    const enSucursal = (cliente) => SUCURSALES_USUARIO.includes(sucursalDeCliente(cliente)) && (!filtroSucursal || sucursalDeCliente(cliente) === filtroSucursal);
     const lista = useMemo(() => Object.entries(partes)
         .map(([k, p]) => ({ k, ...p }))
         .filter(p => p.lunes <= rangoHasta && sumar(p.lunes, 6) >= rangoDesde)
@@ -316,10 +320,11 @@ export default function HorasView() {
             if (filtroEstado === 'todos') return true;
             return p.estado === filtroEstado;
         })
+        .filter(p => enSucursal(PETICIONES[p.petId].cliente))
         .filter(p => !filtroCliente || PETICIONES[p.petId].cliente === filtroCliente)
         .filter(p => !filtroPeticion || p.petId === filtroPeticion)
         .filter(p => coincide(p.petId))
-        .sort((a, b) => b.lunes.localeCompare(a.lunes) || a.petId.localeCompare(b.petId)), [partes, filtroEstado, filtroPeticion, filtroCliente, rangoDesde, rangoHasta, busqueda]);
+        .sort((a, b) => b.lunes.localeCompare(a.lunes) || a.petId.localeCompare(b.petId)), [partes, filtroEstado, filtroPeticion, filtroCliente, filtroSucursal, rangoDesde, rangoHasta, busqueda]);
     const cuenta = (e) => Object.values(partes).filter(p => p.estado === e).length;
 
     // Meses con horas por petición, para el cierre
@@ -763,13 +768,14 @@ export default function HorasView() {
     // ==========================================
     // ENTRADA: PARTES Y CIERRE DEL MES
     // ==========================================
-    const hayFiltros = filtroEstado !== 'todos' || filtroPeticion || filtroCliente || periodo !== 'reciente' || busqueda;
-    const limpiar = () => { setFiltroEstado('todos'); setFiltroPeticion(''); setFiltroCliente(''); setPeriodo('reciente'); setDesde(''); setHasta(''); setBusqueda(''); };
+    const hayFiltros = filtroEstado !== 'todos' || filtroPeticion || filtroCliente || filtroSucursal || periodo !== 'reciente' || busqueda;
+    const limpiar = () => { setFiltroEstado('todos'); setFiltroPeticion(''); setFiltroCliente(''); setFiltroSucursal(''); setPeriodo('reciente'); setDesde(''); setHasta(''); setBusqueda(''); };
     const totalLista = lista.reduce((acc, p) => sumarConceptos(acc, conceptosParte(p)), { ...CERO });
     // Fecha → cliente → petición: partes del periodo sin filtrar por cliente, para los botones de cliente
     const delPeriodo = Object.entries(partes)
         .map(([k, p]) => ({ k, ...p }))
         .filter(p => p.lunes <= rangoHasta && sumar(p.lunes, 6) >= rangoDesde)
+        .filter(p => enSucursal(PETICIONES[p.petId].cliente))
         .filter(p => filtroEstado === 'todos' || (filtroEstado === 'pendientes' ? ['borrador', 'enviado', 'reparos'].includes(p.estado) : p.estado === filtroEstado));
     const resumenCliente = (cliente) => {
         const ps = delPeriodo.filter(p => PETICIONES[p.petId].cliente === cliente);
@@ -788,12 +794,13 @@ export default function HorasView() {
     const filasMesTodas = Object.keys(PETICIONES).map(petId => ({ petId, r: resumenMes(petId, mes) })).filter(x => x.r);
     const estadoCierre = (r) => (r.completo ? 'cerrado' : !r.listo ? 'faltan' : mes < mesDe(hoyIso()) ? 'listo' : 'abierto');
     const filasMes = filasMesTodas
+        .filter(x => enSucursal(PETICIONES[x.petId].cliente))
         .filter(x => !filtroCliente || PETICIONES[x.petId].cliente === filtroCliente)
         .filter(x => !filtroPeticion || x.petId === filtroPeticion)
         .filter(x => coincide(x.petId))
         .filter(x => filtroCierre === 'todos' || estadoCierre(x.r) === filtroCierre);
-    const hayFiltrosCierre = filtroCliente || filtroPeticion || busqueda || filtroCierre !== 'todos';
-    const limpiarCierre = () => { setFiltroCliente(''); setFiltroPeticion(''); setBusqueda(''); setFiltroCierre('todos'); };
+    const hayFiltrosCierre = filtroCliente || filtroSucursal || filtroPeticion || busqueda || filtroCierre !== 'todos';
+    const limpiarCierre = () => { setFiltroCliente(''); setFiltroSucursal(''); setFiltroPeticion(''); setBusqueda(''); setFiltroCierre('todos'); };
 
     // Campos de filtro comunes a las dos pestañas: buscador, cliente y petición (la petición, cuando hay cliente)
     const etiqueta = (texto, icono) => <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600">{icono}{texto}</span>;
@@ -803,12 +810,22 @@ export default function HorasView() {
             <SearchInput value={busqueda} onChange={(v) => { setBusqueda(v); setFiltroPeticion(''); }} placeholder="Petición, puesto, cliente o centro..." />
         </label>
     );
+    // Sucursal: solo para quien ve más de una
+    const campoSucursal = veVariasSucursales && (
+        <label className="flex flex-col gap-1 min-w-[200px] flex-1 sm:flex-none">
+            {etiqueta('Sucursal')}
+            <Select value={filtroSucursal} onChange={(e) => { const v = e.target.value; setFiltroSucursal(v); if (filtroCliente && v && sucursalDeCliente(filtroCliente) !== v) { setFiltroCliente(''); setFiltroPeticion(''); } }} aria-label="Sucursal">
+                <option value="">Todas las sucursales</option>
+                {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+            </Select>
+        </label>
+    );
     const campoCliente = (contar) => (
         <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
             {etiqueta('Cliente', <Building2 className="w-3.5 h-3.5 text-slate-400" />)}
             <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
                 <option value="">Todos los clientes</option>
-                {CLIENTES.slice().sort((a, b) => a.localeCompare(b)).map(c => <option key={c} value={c}>{c}{contar(c)}</option>)}
+                {CLIENTES.filter(enSucursal).sort((a, b) => a.localeCompare(b)).map(c => <option key={c} value={c}>{c}{contar(c)}</option>)}
             </Select>
         </label>
     );
@@ -853,6 +870,7 @@ export default function HorasView() {
                         <Card className="p-3">
                             <div className="flex flex-wrap items-end gap-3">
                                 {campoBuscar}
+                                {campoSucursal}
                                 {campoCliente((c) => { const r = clientesPeriodo.find(x => x.cliente === c); return r ? ` · ${r.peticiones.length} ${r.peticiones.length === 1 ? 'petición' : 'peticiones'}` : ' · sin partes en estas fechas'; })}
                                 {campoPeticion([...new Set(delPeriodo.map(p => p.petId))])}
                                 <label className="flex flex-col gap-1">
@@ -888,7 +906,7 @@ export default function HorasView() {
                         {/* Totales de lo que se ve */}
                         {lista.length > 0 && (
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-slate-600">
-                                <span className="text-slate-900">{filtroPeticion || filtroCliente || 'Todos los clientes'}</span>
+                                <span className="text-slate-900">{filtroPeticion || filtroCliente || (filtroSucursal ? `Todos los clientes de ${sucursal(filtroSucursal).nombre}` : 'Todos los clientes')}</span>
                                 <span>Normales {fmtTotal(totalLista.normales + totalLista.nocturnas)} h</span>
                                 <span>Extra {fmtTotal(totalLista.extra)} h</span>
                                 <span>Fin de semana {fmtTotal(totalLista.finde)} h</span>
@@ -990,6 +1008,7 @@ export default function HorasView() {
                         <Card className="p-3">
                             <div className="flex flex-wrap items-end gap-3">
                                 {campoBuscar}
+                                {campoSucursal}
                                 {campoCliente((c) => { const n = filasMesTodas.filter(x => PETICIONES[x.petId].cliente === c).length; return n ? ` · ${n} ${n === 1 ? 'petición' : 'peticiones'}` : ' · sin horas este mes'; })}
                                 {campoPeticion(filasMesTodas.map(x => x.petId))}
                                 <label className="flex flex-col gap-1">
