@@ -51,6 +51,26 @@ const HORAS_INICIALES = [
     { petId: 'PET-2026-0031', mes: '2026-09', horas: { normales: 990, extra: 2 }, listo: true },
     { petId: 'PET-2026-0044', mes: '2026-10', horas: { normales: 667.33, extra: 4, finde: 144, festivas: 72 }, listo: false, partesPendientes: 2 },
 ];
+// Horas de cada persona en cada mes facturado (las de sus partes en Horas e incidencias). Suman lo de HORAS_INICIALES.
+const MOZOS_0031 = ['Clara Esteve Ros', 'Bruno Lage Costa', 'Nerea Olabarria Gil', 'Adrián Vela Soto', 'Paula Rius Ferrer', 'Sergio Navas Peña'];
+const CAMAREROS_0044 = ['Garazi Uribe Arana', 'Pablo Ruiz Cano', 'Youssef Amrani', 'Lucía Ferrer Sanz', 'Marc Puig Soler', 'Aitana Roca Vidal', 'Daniel Sousa Prieto', 'Irene Campos Gil', 'Óscar León Mena'];
+const HORAS_PERSONA = {
+    // Julio: 23 días × 7,5 h; Clara tuvo una ausencia justificada el 16/07
+    'PET-2026-0031|2026-07': MOZOS_0031.map((n, i) => [n, { normales: i === 0 ? 165 : 172.5 }]),
+    // Agosto: 21 días × 7,5 h. Se facturó así, pero Adrián tuvo una ausencia sin justificar el 10/08 (validadas: 150 h)
+    'PET-2026-0031|2026-08': MOZOS_0031.map(n => [n, { normales: 157.5 }]),
+    // Septiembre: 22 días × 7,5 h; Bruno hizo 2 h extra el 28/09
+    'PET-2026-0031|2026-09': MOZOS_0031.map((n, i) => [n, i === 1 ? { normales: 165, extra: 2 } : { normales: 165 }]),
+    // Octubre (por facturar): fin de semana de apertura y festivo del 12/10; extra en la cena de clausura
+    'PET-2026-0044|2026-10': CAMAREROS_0044.map((n, i) => [n, {
+        normales: [75.11, 75.11, 75.11, 75.11, 75.11, 75.11, 74.44, 67.11, 75.12][i],
+        ...([0, 3].includes(i) ? { extra: 2 } : {}),
+        finde: 16, festivas: 8,
+    }]),
+};
+// Horas validadas distintas de las facturadas, por persona
+const VALIDADAS_PERSONA = { 'PET-2026-0031|2026-08': { 'Adrián Vela Soto': { normales: 150 } } };
+
 const MOTIVOS_RECTIFICACION = ['Error en las horas', 'Error en la tarifa', 'Error en los datos del cliente', 'Otro'];
 
 // ==========================================
@@ -81,9 +101,37 @@ const lineasDesdeHoras = (h) => {
         cantidad: h.horas[c.id], unidad: 'h', precio: redondear(pet.tarifa * c.recargo),
     }));
 };
+// Personas de las líneas de horas de una factura: una fila por persona y petición, con sus horas por concepto
+const personasDe = (f) => {
+    const grupos = [...new Set(f.lineas.filter(l => l.petId && l.mes).map(l => `${l.petId}|${l.mes}`))];
+    return grupos.flatMap(g => {
+        const [petId, mes] = g.split('|');
+        // Rectificativas: las líneas van en negativo
+        const signo = f.lineas.some(l => l.petId === petId && l.mes === mes && l.cantidad < 0) ? -1 : 1;
+        return (HORAS_PERSONA[g] || []).map(([nombre, h]) => ({
+            nombre, petId, mes,
+            horas: Object.fromEntries(Object.entries(h).map(([k, v]) => [k, v * signo])),
+            validadas: VALIDADAS_PERSONA[g]?.[nombre],
+        }));
+    });
+};
+// Líneas como salen en la factura: por concepto (resumen) o por persona (desglosadas)
+const lineasDe = (f) => {
+    if (f.detalle !== 'persona') return f.lineas;
+    const conPersonas = new Set(personasDe(f).map(p => `${p.petId}|${p.mes}`));
+    return f.lineas.flatMap(l => {
+        if (!l.petId || !conPersonas.has(`${l.petId}|${l.mes}`)) return [l];
+        const c = CONCEPTOS.find(x => l.id.endsWith(`-${x.id}`));
+        return personasDe(f).filter(p => p.petId === l.petId && p.mes === l.mes && p.horas[c.id]).map(p => ({
+            id: `${l.id}-${p.nombre}`, petId: l.petId, mes: l.mes, persona: p.nombre,
+            concepto: `${p.nombre} · ${c.texto} · ${nombreMes(l.mes)} (${l.petId})`,
+            cantidad: p.horas[c.id], unidad: 'h', precio: l.precio,
+        }));
+    });
+};
 const totalesDe = (f) => {
     const cliente = CLIENTES[f.cliente];
-    const base = redondear(f.lineas.reduce((s, l) => s + redondear(l.cantidad * l.precio), 0));
+    const base = redondear(lineasDe(f).reduce((s, l) => s + redondear(l.cantidad * l.precio), 0));
     const iva = redondear(base * cliente.iva / 100);
     const retencion = redondear(base * cliente.retencion / 100);
     const total = redondear(base + iva - retencion);
@@ -515,7 +563,17 @@ export default function FacturacionView() {
 
                             {/* LÍNEAS */}
                             <div className="space-y-2">
-                                <SectionTitle actions={borrador && <Button size="sm" icon={Plus} onClick={() => setLinea({ concepto: '', cantidad: 1, precio: '' })}>Añadir línea</Button>}>Líneas</SectionTitle>
+                                <SectionTitle actions={<span className="flex flex-wrap items-center gap-2">
+                                    {personasDe(f).length > 0 && (borrador
+                                        ? <span className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[11px]" role="group" aria-label="Cómo salen las líneas">
+                                            {[['concepto', 'Por concepto'], ['persona', 'Por persona']].map(([id, texto]) => {
+                                                const activo = (f.detalle === 'persona' ? 'persona' : 'concepto') === id;
+                                                return <button key={id} type="button" aria-pressed={activo} onClick={() => !activo && actualizar(f.id, { detalle: id }, id === 'persona' ? 'Las líneas salen por persona' : 'Las líneas salen por concepto')} className={`px-2.5 py-1 rounded-md ${activo ? 'bg-white shadow-xs text-slate-900 font-medium' : 'text-slate-600 hover:text-slate-900'}`}>{texto}</button>;
+                                            })}
+                                        </span>
+                                        : <Badge tone="neutral">{f.detalle === 'persona' ? 'Líneas por persona' : 'Líneas por concepto'}</Badge>)}
+                                    {borrador && <Button size="sm" icon={Plus} onClick={() => setLinea({ concepto: '', cantidad: 1, precio: '' })}>Añadir línea</Button>}
+                                </span>}>Líneas</SectionTitle>
                                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                                     <table className="w-full text-left">
                                         <thead>
@@ -528,7 +586,7 @@ export default function FacturacionView() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {f.lineas.map(l => (
+                                            {lineasDe(f).map(l => (
                                                 <tr key={l.id} className="border-b border-slate-100 last:border-0">
                                                     <td className="py-2 px-3 text-slate-800">{l.concepto}{l.manual && <span className="block text-[11px] text-slate-500">Línea manual</span>}</td>
                                                     <td className="py-2 px-3 text-right whitespace-nowrap">{num(l.cantidad)} {l.unidad}</td>
@@ -550,6 +608,57 @@ export default function FacturacionView() {
                                     {cobrable && <div className="flex justify-between"><dt className="text-slate-500">Pendiente</dt><dd className="text-slate-900">{euros(t.pendiente)}</dd></div>}
                                 </dl>
                             </div>
+
+                            {/* DESGLOSE POR PERSONA: las horas de cada candidato que suman las líneas */}
+                            {personasDe(f).length > 0 && (() => {
+                                const filas = personasDe(f);
+                                const usados = CONCEPTOS.filter(c => filas.some(p => p.horas[c.id]));
+                                const importe = (p) => redondear(usados.reduce((s, c) => s + (p.horas[c.id] || 0) * redondear(PETICIONES[p.petId].tarifa * c.recargo), 0));
+                                const conDiferencia = filas.filter(p => p.validadas);
+                                return (
+                                    <div className="space-y-2">
+                                        <SectionTitle>Desglose por persona</SectionTitle>
+                                        <p className="text-[11px] text-slate-500 -mt-1">Las horas de cada persona en sus partes de Horas e incidencias, por la tarifa del presupuesto.{f.detalle !== 'persona' && ' Si el cliente lo quiere en la factura, elige «Por persona» en las líneas (o sale como anexo en la vista previa).'}</p>
+                                        <div className="overflow-x-auto rounded-lg border border-slate-200">
+                                            <table className="w-full text-left">
+                                                <thead>
+                                                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                                        <th className="py-2 px-3 font-medium">Persona</th>
+                                                        {usados.map(c => <th key={c.id} className="py-2 px-3 font-medium text-right whitespace-nowrap">{mayus(c.texto.replace('horas ', ''))}</th>)}
+                                                        <th className="py-2 px-3 font-medium text-right">Total h</th>
+                                                        <th className="py-2 px-3 font-medium text-right">Importe</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {filas.map(p => (
+                                                        <tr key={`${p.petId}-${p.mes}-${p.nombre}`} className="border-b border-slate-100 last:border-0">
+                                                            <td className="py-2 px-3 text-slate-800">
+                                                                {p.nombre}
+                                                                {peticionesDe(f).length > 1 && <span className="block text-[11px] text-slate-500">{p.petId} · {nombreMes(p.mes)}</span>}
+                                                                {p.validadas && <span className="block text-[11px] text-amber-700">Validadas en sus partes: {num(p.validadas.normales)} h normales</span>}
+                                                            </td>
+                                                            {usados.map(c => <td key={c.id} className={`py-2 px-3 text-right whitespace-nowrap ${p.validadas && c.id === 'normales' ? 'text-amber-700 font-medium' : ''}`}>{p.horas[c.id] ? num(p.horas[c.id]) : '—'}</td>)}
+                                                            <td className="py-2 px-3 text-right whitespace-nowrap text-slate-900">{num(usados.reduce((s, c) => s + (p.horas[c.id] || 0), 0))}</td>
+                                                            <td className="py-2 px-3 text-right whitespace-nowrap text-slate-900">{euros(importe(p))}</td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr className="bg-slate-50 font-medium text-slate-900">
+                                                        <td className="py-2 px-3">{filas.length} personas</td>
+                                                        {usados.map(c => <td key={c.id} className="py-2 px-3 text-right whitespace-nowrap">{num(redondear(filas.reduce((s, p) => s + (p.horas[c.id] || 0), 0)))}</td>)}
+                                                        <td className="py-2 px-3 text-right whitespace-nowrap">{num(redondear(filas.reduce((s, p) => s + usados.reduce((t, c) => t + (p.horas[c.id] || 0), 0), 0)))}</td>
+                                                        <td className="py-2 px-3 text-right whitespace-nowrap">{euros(redondear(filas.reduce((s, p) => s + importe(p), 0)))}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {conDiferencia.length > 0 && (
+                                            <Notice tone="warning" icon={AlertTriangle}>
+                                                {conDiferencia.map(p => `${p.nombre}: facturadas ${num(p.horas.normales)} h y validadas ${num(p.validadas.normales)} h`).join('. ')}. Es la diferencia que avisa Horas e incidencias; se corrige con una rectificativa.
+                                            </Notice>
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {/* COBROS */}
                             {!borrador && !f.rectifica && (
@@ -612,7 +721,7 @@ export default function FacturacionView() {
                             <div className="overflow-x-auto">
                                 <table className="w-full min-w-[480px] text-left">
                                     <thead><tr className="border-b border-slate-300 text-[11px] text-slate-500"><th className="py-1.5 font-medium">Concepto</th><th className="py-1.5 pl-3 font-medium text-right">Cantidad</th><th className="py-1.5 pl-3 font-medium text-right">Precio</th><th className="py-1.5 pl-3 font-medium text-right">Importe</th></tr></thead>
-                                    <tbody>{f.lineas.map(l => <tr key={l.id} className="border-b border-slate-100"><td className="py-1.5 pr-2">{l.concepto}</td><td className="py-1.5 pl-3 text-right whitespace-nowrap">{num(l.cantidad)} {l.unidad}</td><td className="py-1.5 pl-3 text-right whitespace-nowrap">{euros(l.precio)}</td><td className="py-1.5 pl-3 text-right whitespace-nowrap">{euros(redondear(l.cantidad * l.precio))}</td></tr>)}</tbody>
+                                    <tbody>{lineasDe(f).map(l => <tr key={l.id} className="border-b border-slate-100"><td className="py-1.5 pr-2">{l.concepto}</td><td className="py-1.5 pl-3 text-right whitespace-nowrap">{num(l.cantidad)} {l.unidad}</td><td className="py-1.5 pl-3 text-right whitespace-nowrap">{euros(l.precio)}</td><td className="py-1.5 pl-3 text-right whitespace-nowrap">{euros(redondear(l.cantidad * l.precio))}</td></tr>)}</tbody>
                                 </table>
                             </div>
                             <dl className="ml-auto w-full sm:w-64 space-y-1">
@@ -621,6 +730,21 @@ export default function FacturacionView() {
                                 <div className="flex justify-between border-t border-slate-300 pt-1 text-sm text-slate-900"><dt>Total</dt><dd>{euros(t.total)}</dd></div>
                             </dl>
                             {!f.rectifica && <div className="text-slate-600">Forma de pago: {cliente.pago.toLowerCase()} a {ETT.iban}. Vencimiento: {fechaES(f.vencimiento || vencimientoDe(cliente, hoyIso()))}.</div>}
+                            {f.detalle !== 'persona' && personasDe(f).length > 0 && (() => {
+                                const filas = personasDe(f);
+                                const usados = CONCEPTOS.filter(c => filas.some(p => p.horas[c.id]));
+                                return (
+                                    <div className="border-t border-slate-200 pt-4 space-y-2">
+                                        <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Anexo: horas por persona</div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full min-w-[420px] text-left">
+                                                <thead><tr className="border-b border-slate-300 text-[11px] text-slate-500"><th className="py-1.5 font-medium">Persona</th>{usados.map(c => <th key={c.id} className="py-1.5 pl-3 font-medium text-right">{mayus(c.texto.replace('horas ', ''))}</th>)}</tr></thead>
+                                                <tbody>{filas.map(p => <tr key={`${p.petId}-${p.nombre}`} className="border-b border-slate-100"><td className="py-1 pr-2">{p.nombre}</td>{usados.map(c => <td key={c.id} className="py-1 pl-3 text-right">{p.horas[c.id] ? num(p.horas[c.id]) : '—'}</td>)}</tr>)}</tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </Modal>
                 );
