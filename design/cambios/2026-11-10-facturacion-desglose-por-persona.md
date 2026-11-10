@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-10
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, a650c5a
 - **Cómo verlo**: `npm --prefix apps/web run dev` → Facturación.
   - Abre F2026-0094 (agosto) para ver el desglose y la diferencia de Adrián.
   - O «Preparar borrador» de octubre y elige «Por persona» en las líneas.
