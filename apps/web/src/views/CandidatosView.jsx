@@ -597,6 +597,7 @@ const CATALOGOS_INICIALES = {
         item('Manipulador/a de alimentos', 'Carné profesional', 'manipuladora de alimentos', 'carnet de manipulador', 'manipulador'),
         item('Formación PRL 20 h', 'Prevención', 'PRL 20h', 'PRL básico 20 h'),
         item('Formación PRL 60 h', 'Prevención', 'PRL 60h', 'PRL básico 60h', 'PRL nivel básico'),
+        item('Otros', 'Otros', 'otro', 'otros carnés', 'otros permisos'),
     ],
     habilidades: [
         item('Picking con radiofrecuencia', 'Almacén', 'picking RF', 'picking radiofrecuencia', 'picking con PDA', 'radiofrecuencia', 'PDA', 'picking por radiofrecuencia'),
@@ -2130,14 +2131,39 @@ export default function CandidatosView() {
                                             <div className="space-y-4">
                                                 <Notice tone="info" icon={Info}>Elige de los listados para que todos los candidatos usen los mismos nombres. Puedes buscar por sinónimos (por ejemplo, «toro» encuentra «Carretillero/a»). Si no está, añádelo al listado.</Notice>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                    <div className="space-y-1">
-                                                        <span className="block text-[11px] font-medium text-slate-600">Perfil principal: <span className="text-slate-900">{d.category}</span></span>
-                                                        <SelectorCatalogo unico lista={catalogos.perfiles} valores={[d.category]} onChange={(v) => campo('category', v[0])} onAnadir={(n) => anadirACatalogo('perfiles', n)} placeholder="Busca un perfil" />
-                                                    </div>
+                                                    <Field label="Perfil principal">
+                                                        {d.perfilNuevo !== undefined ? (
+                                                            <div className="flex gap-2">
+                                                                <TextInput autoFocus value={d.perfilNuevo ?? ''} placeholder="Nombre del perfil nuevo" onChange={(e) => campo('perfilNuevo', e.target.value)} />
+                                                                <Button size="sm" variant="primary" disabled={!(d.perfilNuevo || '').trim()} onClick={() => { const nombre = d.perfilNuevo.trim().replace(/^./, (l) => l.toUpperCase()); anadirACatalogo('perfiles', nombre); setEdicion(e => { const { perfilNuevo, ...resto } = e.datos; return { ...e, datos: { ...resto, category: nombre } }; }); }}>Añadir</Button>
+                                                                <Button size="sm" onClick={() => setEdicion(e => { const { perfilNuevo, ...resto } = e.datos; return { ...e, datos: resto }; })}>Cancelar</Button>
+                                                            </div>
+                                                        ) : (
+                                                            <Select value={d.category} onChange={(e) => (e.target.value === '__nuevo__' ? campo('perfilNuevo', '') : campo('category', e.target.value))} className="w-full">
+                                                                {!catalogos.perfiles.some(x => x.nombre === d.category) && <option value={d.category}>{d.category}</option>}
+                                                                {[...new Set(catalogos.perfiles.map(x => x.grupo))].map(g => (
+                                                                    <optgroup key={g} label={g}>
+                                                                        {catalogos.perfiles.filter(x => x.grupo === g).map(x => <option key={x.nombre} value={x.nombre}>{x.nombre}</option>)}
+                                                                    </optgroup>
+                                                                ))}
+                                                                <option value="__nuevo__">Otro perfil (añadir al listado)…</option>
+                                                            </Select>
+                                                        )}
+                                                    </Field>
                                                     <Field label="Años de experiencia"><TextInput type="number" min="0" max="50" value={d.experienceYears} onChange={(e) => campo('experienceYears', parseInt(e.target.value) || 0)} /></Field>
                                                 </div>
-                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Otros perfiles que puede cubrir</span><SelectorCatalogo lista={catalogos.perfiles.filter(p => p.nombre !== d.category)} valores={d.otherProfiles} onChange={(v) => campo('otherProfiles', v)} onAnadir={(n) => anadirACatalogo('perfiles', n)} placeholder="Busca un perfil, por ejemplo: reponedor" /></div>
-                                                <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Permisos de conducir y carnés</span><SelectorCatalogo lista={catalogos.carnes} valores={d.drivingLicenses} onChange={(v) => campo('drivingLicenses', v)} onAnadir={(n) => anadirACatalogo('carnes', n)} placeholder="Busca un permiso o carné, por ejemplo: C1 o carretillero" /></div>
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="block text-[11px] font-medium text-slate-600">Permisos de conducir y carnés</span>
+                                                        {!d.drivingLicenses.includes('Otros') && <button type="button" onClick={() => campo('drivingLicenses', [...d.drivingLicenses, 'Otros'])} className="text-[11px] font-medium text-indigo-600 hover:underline">+ Otros</button>}
+                                                    </div>
+                                                    <SelectorCatalogo lista={catalogos.carnes} valores={d.drivingLicenses} onChange={(v) => campo('drivingLicenses', v)} onAnadir={(n) => anadirACatalogo('carnes', n)} placeholder="Busca un permiso o carné, por ejemplo: C1 o carretillero" />
+                                                    {d.drivingLicenses.includes('Otros') && (
+                                                        <Field label="Otros permisos o carnés: ¿cuáles?">
+                                                            <TextInput value={d.otrosCarnes || ''} onChange={(e) => campo('otrosCarnes', e.target.value)} placeholder="Por ejemplo: carné de grúa autopropulsada, licencia de armas…" />
+                                                        </Field>
+                                                    )}
+                                                </div>
                                                 <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Habilidades</span><SelectorCatalogo lista={catalogos.habilidades} valores={d.skills} onChange={(v) => campo('skills', v)} onAnadir={(n) => anadirACatalogo('habilidades', n)} placeholder="Busca una habilidad, por ejemplo: picking" /></div>
                                                 <div className="space-y-1"><span className="block text-[11px] font-medium text-slate-600">Idiomas</span><SelectorIdiomas valores={d.languages} onChange={(v) => campo('languages', v)} idiomas={catalogos.idiomas} onAnadirIdioma={(n) => anadirACatalogo('idiomas', n)} /></div>
                                                 <label className="inline-flex items-center gap-2 text-slate-700">
@@ -2180,8 +2206,7 @@ export default function CandidatosView() {
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <Dato label="Perfil principal">{c.category}</Dato>
                                                 <Dato label="Años de experiencia">{c.experienceYears} años</Dato>
-                                                <Dato label="Otros perfiles">{c.otherProfiles?.join(', ')}</Dato>
-                                                <Dato label="Permisos de conducir y carnés">{c.drivingLicenses?.join(', ')}</Dato>
+                                                <Dato label="Permisos de conducir y carnés">{c.drivingLicenses?.map(x => (x === 'Otros' ? `Otros${c.otrosCarnes ? `: ${c.otrosCarnes}` : ''}` : x)).join(', ')}</Dato>
                                                 <Dato label="Habilidades">{c.skills?.join(', ')}</Dato>
                                                 <Dato label="Idiomas">{c.languages?.join(', ')}</Dato>
                                                 <Dato label="Vehículo propio">{c.hasCar ? 'Sí' : 'No'}</Dato>
