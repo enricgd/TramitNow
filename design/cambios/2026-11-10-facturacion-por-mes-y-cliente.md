@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-10
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 91c2902
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/facturacion
   - Pestaña «Facturar el mes»: «Seleccionar las N listas para facturar» → «Emitir facturas».
   - Pulsar un cliente → ficha de facturación → «Añadir servicio».
