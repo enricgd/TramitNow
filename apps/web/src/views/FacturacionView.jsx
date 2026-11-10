@@ -3,11 +3,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     Receipt, Building2, Send, CheckCircle2, AlertTriangle, Info, X, Plus, Trash2, Eye, FileCheck2, Wallet,
-    ArrowUpRight, Clock, Undo2, BellRing, FileMinus2, CalendarDays, ChevronDown, Download, FileSpreadsheet, Printer, BriefcaseBusiness, FilePlus2
+    ArrowUpRight, Clock, Undo2, BellRing, FileMinus2, CalendarDays, ChevronDown, Download, FileSpreadsheet, Printer, BriefcaseBusiness, FilePlus2,
+    MoreHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, Search, Check
 } from 'lucide-react';
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, SearchInput,
-    Select, Field, TextInput, Modal, Drawer, Confirmar
+    Select, Field, TextInput, Modal, Drawer, Confirmar, Tabs
 } from '../ui';
 import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
 import { SERVICIOS_INICIALES, FORMAS_COBRO, CLAVE_SERVICIO_PENDIENTE } from './serviciosDemo';
@@ -98,6 +99,27 @@ const lineaDeServicio = (x) => {
         cantidad: pct ? 1 : Number(x.cantidad), unidad: pct ? 'proceso' : sv.unidad, precio: pct ? importeServicio(x) : Number(x.precio),
     };
 };
+
+// Más clientes de ejemplo, para ver cómo funciona con muchos (una ETT grande puede tener cientos).
+// Nombres inventados. Cada uno con una petición y sus horas de octubre; algunos, también con un servicio.
+const SECTORES_DEMO = [['Almacenes', 'Mozo/a de almacén'], ['Logística', 'Operario/a de almacén'], ['Conservas', 'Operario/a de producción'], ['Hoteles', 'Camarero/a de pisos'], ['Industrias', 'Operario/a de línea'], ['Transportes', 'Carretillero/a']];
+const LUGARES_DEMO = [['Arratia', 'norte'], ['Nervión', 'norte'], ['Llobregat', 'bcn'], ['Txingudi', 'norte'], ['Montseny', 'bcn'], ['Urola', 'norte'], ['Penedès', 'bcn'], ['Bidasoa', 'norte'], ['Maresme', 'bcn'], ['Gorbea', 'norte'], ['Cadí', 'bcn'], ['Zadorra', 'norte']];
+for (let i = 0; i < 36; i++) {
+    const [sector, puesto] = SECTORES_DEMO[i % SECTORES_DEMO.length];
+    const [lugar, suc] = LUGARES_DEMO[(i * 5) % LUGARES_DEMO.length];
+    const id = `g${i}`;
+    const petId = `PET-2026-${String(200 + i).padStart(4, '0')}`;
+    CLIENTES[id] = {
+        nombre: `${sector} ${lugar}${i >= 12 ? ` ${['Norte', 'Sur', 'Centro'][Math.floor(i / 12) - 1]}` : ''}, S.L.`, cif: `B-9${String(1000000 + i * 7919).slice(-7)}`,
+        direccion: `Polígono Ejemplo ${i + 1}, ${suc === 'bcn' ? '08000 Barcelona' : '48000 Bilbao'}`, sucursal: suc,
+        iva: 21, retencion: 0, pago: 'Transferencia a 30 días', diasPago: 30, diasFijos: [], email: `facturacion@cliente${i + 1}.example`, detalle: i % 7 === 0 ? 'persona' : 'concepto',
+    };
+    PETICIONES[petId] = { cliente: id, puesto, presupuesto: `PRE-2026-${String(100 + i).padStart(4, '0')}`, tarifa: Math.round((15.9 + (i % 7) * 0.6) * 100) / 100 };
+    const personas = 2 + (i % 9);
+    const listo = i % 4 !== 1;
+    HORAS_INICIALES.push({ petId, mes: '2026-10', horas: { normales: personas * 150 - (i % 4) * 7.5, ...(i % 6 === 0 ? { extra: personas * 2 } : {}) }, listo, ...(listo ? {} : { partesPendientes: 1 + (i % 3) }) });
+    if (i % 5 === 0) SERVICIOS_REGISTRADOS.push({ id: `sg${i}`, cliente: id, servicio: 'formacion_prl', fecha: '2026-10-20', descripcion: 'Formación PRL de incorporación', referencia: petId, cantidad: 2 + (i % 3), precio: 85 });
+}
 
 const MOTIVOS_RECTIFICACION = ['Error en las horas', 'Error en la tarifa', 'Error en los datos del cliente', 'Otro'];
 
@@ -279,6 +301,60 @@ const descargarCsv = (nombre, cabecera, filas) => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+// Buscador de clientes: con cientos de clientes, un desplegable no sirve. Se escribe el nombre o el CIF;
+// sin escribir, salen primero los que tienen algo por facturar.
+function BuscadorCliente({ valor, onChange, ids, destacados = [], sucursalDe, vacio = '' }) {
+    const [q, setQ] = useState('');
+    const [abierto, setAbierto] = useState(false);
+    if (valor) {
+        return (
+            <div className="flex items-center justify-between gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs">
+                <span className="min-w-0">
+                    <span className="block truncate text-slate-900">{CLIENTES[valor].nombre}</span>
+                    <span className="text-[11px] text-slate-500">{CLIENTES[valor].cif} · {sucursal(sucursalDe(valor)).corto}</span>
+                </span>
+                <button type="button" onClick={() => { onChange(''); setQ(''); setAbierto(true); }} className="shrink-0 text-indigo-700 hover:underline">{vacio ? 'Quitar' : 'Cambiar'}</button>
+            </div>
+        );
+    }
+    const texto = normalizar(q.trim());
+    const encontrados = texto
+        ? ids.filter(id => normalizar(`${CLIENTES[id].nombre} ${CLIENTES[id].cif}`).includes(texto))
+        : [...new Set([...destacados.filter(id => ids.includes(id)), ...ids])];
+    const MAX = 8;
+    return (
+        <div className="relative">
+            <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                    type="text" value={q} autoComplete="off" role="combobox" aria-expanded={abierto} aria-label="Buscar cliente"
+                    placeholder={vacio ? `${vacio} · escribe nombre o CIF` : 'Escribe el nombre o el CIF del cliente...'}
+                    onChange={(e) => { setQ(e.target.value); setAbierto(true); }}
+                    onFocus={() => setAbierto(true)}
+                    onBlur={() => setTimeout(() => setAbierto(false), 150)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && encontrados.length) { e.preventDefault(); onChange(encontrados[0]); setAbierto(false); } }}
+                    className="w-full rounded-md border border-slate-300 bg-white pl-8 pr-2.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                />
+            </div>
+            {abierto && (
+                <ul role="listbox" className="absolute z-40 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg py-1 text-xs">
+                    {!texto && destacados.some(id => ids.includes(id)) && <li className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wide text-slate-400">Con algo por facturar primero</li>}
+                    {encontrados.slice(0, MAX).map(id => (
+                        <li key={id}>
+                            <button type="button" role="option" aria-selected="false" onMouseDown={(e) => e.preventDefault()} onClick={() => { onChange(id); setAbierto(false); setQ(''); }} className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-slate-50">
+                                <span className="min-w-0"><span className="block truncate text-slate-900">{CLIENTES[id].nombre}</span><span className="text-[11px] text-slate-500">{CLIENTES[id].cif} · {sucursal(sucursalDe(id)).corto}</span></span>
+                                {destacados.includes(id) && <Badge tone="warning">Por facturar</Badge>}
+                            </button>
+                        </li>
+                    ))}
+                    {encontrados.length === 0 && <li className="px-3 py-2 text-slate-500">Ningún cliente con «{q}»</li>}
+                    {encontrados.length > MAX && <li className="px-3 py-1.5 text-[11px] text-slate-400 border-t border-slate-100">y {encontrados.length - MAX} más: sigue escribiendo para afinar</li>}
+                </ul>
+            )}
+        </div>
+    );
+}
+
 export default function FacturacionView() {
     const [facturas, setFacturas] = useState(INITIAL_FACTURAS);
     const [horas, setHoras] = useState(HORAS_INICIALES);
@@ -310,7 +386,7 @@ export default function FacturacionView() {
         try { nombre = sessionStorage.getItem(CLAVE_SERVICIO_PENDIENTE); sessionStorage.removeItem(CLAVE_SERVICIO_PENDIENTE); } catch { /* sin almacenamiento */ }
         if (!nombre) return;
         const id = Object.keys(CLIENTES).find(k => CLIENTES[k].nombre === nombre);
-        if (id) abrirServicio(id); else showToast(`${nombre} todavía no tiene datos de facturación: complétalos en su ficha`);
+        if (id) { setClienteAbierto(id); abrirServicio(id); } else showToast(`${nombre} todavía no tiene datos de facturación: complétalos en su ficha`);
     }, []);
 
     const showToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3800); };
@@ -350,7 +426,7 @@ export default function FacturacionView() {
     const baseGrupo = (g) => g.horas.flatMap(lineasDesdeHoras).reduce((s, l) => s + redondear(l.cantidad * l.precio), 0) + g.servicios.reduce((s, x) => s + importeServicio(x), 0);
     const [rangoDesde, rangoHasta] = rangoDe(periodo, desde, hasta);
     // Sucursal: la del cliente (en real, la de la petición o la factura). Solo las que ve el usuario.
-    const sucursalDe = (clienteId) => sucursalDeCliente(CLIENTES[clienteId].nombre);
+    const sucursalDe = (clienteId) => CLIENTES[clienteId].sucursal || sucursalDeCliente(CLIENTES[clienteId].nombre);
     const enSucursal = (clienteId) => SUCURSALES_USUARIO.includes(sucursalDe(clienteId)) && (!filtroSucursal || sucursalDe(clienteId) === filtroSucursal);
     const textoPeticion = (petId) => `${petId} ${PETICIONES[petId].puesto}`;
     const porFacturarFiltrado = porFacturar
@@ -414,6 +490,11 @@ export default function FacturacionView() {
         if (!descargarPdf([x], x.numero || 'Borrador')) showToast('El navegador ha bloqueado la ventana: permite las ventanas emergentes para descargar el PDF');
     };
 
+    const borradorDe = (g, sufijo = '') => ({
+        id: `borrador-${Date.now()}${sufijo}`, numero: null, cliente: g.cliente, periodo: g.mes, emision: null, vencimiento: null, estado: 'borrador', detalle: CLIENTES[g.cliente].detalle,
+        lineas: [...g.horas.flatMap(lineasDesdeHoras), ...g.servicios.map(lineaDeServicio)], cobros: [],
+        historial: [{ fecha: hoyIso(), texto: `Borrador preparado con ${g.horas.length ? 'las horas de Horas e incidencias' : 'los servicios del mes'}, ${CLIENTES[g.cliente].detalle === 'persona' ? 'por persona' : 'por concepto'} como quiere el cliente` }],
+    });
     const prepararFactura = (g) => {
         if (g.borrador) {
             // Servicios registrados después de preparar el borrador: se añaden a él
@@ -423,12 +504,9 @@ export default function FacturacionView() {
             setAbierta(g.borrador);
             return;
         }
-        const id = `borrador-${Date.now()}`;
-        setFacturas(prev => [...prev, {
-            id, numero: null, cliente: g.cliente, periodo: g.mes, emision: null, vencimiento: null, estado: 'borrador', detalle: CLIENTES[g.cliente].detalle,
-            lineas: [...g.horas.flatMap(lineasDesdeHoras), ...g.servicios.map(lineaDeServicio)], cobros: [], historial: [{ fecha: hoyIso(), texto: `Borrador preparado con las horas de Horas e incidencias, ${CLIENTES[g.cliente].detalle === 'persona' ? 'por persona' : 'por concepto'} como quiere el cliente` }],
-        }]);
-        setAbierta(id);
+        const nuevo = borradorDe(g);
+        setFacturas(prev => [...prev, nuevo]);
+        setAbierta(nuevo.id);
     };
     const abrirServicio = (cliente = '', enFactura = null) => {
         const sv = SERVICIOS_INICIALES.find(x => x.activo);
@@ -441,7 +519,7 @@ export default function FacturacionView() {
             ...(sv.cobro === 'porcentaje' ? { salario: Number(n.salario), porcentaje: Number(n.porcentaje) } : { cantidad: Number(n.cantidad), precio: Number(n.precio) }) };
         setServicios(prev => [...prev, x]);
         if (n.enFactura) actualizar(n.enFactura, (fx) => ({ lineas: [...fx.lineas, lineaDeServicio(x)] }), `Servicio añadido: ${sv.nombre}`);
-        else showToast(`Servicio registrado: saldrá en «Por facturar» de ${nombreMes(n.fecha.slice(0, 7))}`);
+        else showToast(`Servicio registrado: entra en la factura de ${nombreMes(n.fecha.slice(0, 7))} de ${CLIENTES[n.cliente].nombre}`);
         setNuevoServicio(null);
     };
     const crearFacturaManual = () => {
@@ -488,266 +566,410 @@ export default function FacturacionView() {
         setAbierta(rectificar.nueva ? nuevas[1].id : numero);
     };
 
+    // ==========================================
+    // FACTURAR EL MES: una fila por cliente con actividad en el mes elegido
+    // ==========================================
+    const [pestana, setPestana] = useState('mes');
+    const mesesConDatos = useMemo(() => [...new Set([...horas.map(h => h.mes), ...servicios.map(x => x.fecha.slice(0, 7)), ...facturas.filter(x => /^\d{4}-\d{2}$/.test(x.periodo)).map(x => x.periodo)])].sort().reverse(), [horas, servicios, facturas]);
+    const [mesSel, setMesSel] = useState(() => {
+        const cuenta = {};
+        porFacturar.forEach(g => { cuenta[g.mes] = (cuenta[g.mes] || 0) + 1; });
+        return Object.entries(cuenta).sort((a, b) => b[1] - a[1])[0]?.[0] || hoyIso().slice(0, 7);
+    });
+    const [buscarMes, setBuscarMes] = useState('');
+    const [estadoMes, setEstadoMes] = useState('pendientes');
+    const [orden, setOrden] = useState({ campo: 'estado', asc: true });
+    const [pagina, setPagina] = useState(0);
+    const [paginaFact, setPaginaFact] = useState(0);
+    const [seleccion, setSeleccion] = useState([]);
+    const [menuFila, setMenuFila] = useState(null); // cliente con el menú ⋯ abierto
+    const [clienteAbierto, setClienteAbierto] = useState(null);
+    const [pestanaCliente, setPestanaCliente] = useState('mes');
+    const POR_PAGINA = 25;
+    const ORDEN_ESTADO = { esperando: 0, lista: 1, borrador: 2, facturada: 3 };
+
+    const filaDe = (cliente, mes) => {
+        const g = porFacturar.find(x => x.cliente === cliente && x.mes === mes);
+        const fMes = facturas.find(x => x.cliente === cliente && x.periodo === mes && x.estado !== 'borrador' && !x.rectifica && !x.anulada);
+        const hs = horas.filter(h => PETICIONES[h.petId].cliente === cliente && h.mes === mes);
+        const svs = servicios.filter(x => x.cliente === cliente && x.fecha.slice(0, 7) === mes);
+        if (!g && !fMes && !hs.length && !svs.length) return null;
+        const faltan = g ? g.horas.reduce((t, h) => t + (h.partesPendientes || 0), 0) : 0;
+        const estado = g
+            ? (g.borrador ? { id: 'borrador', texto: 'En borrador', tono: 'neutral' } : faltan ? { id: 'esperando', texto: `Esperando horas · faltan ${faltan} ${faltan === 1 ? 'parte' : 'partes'}`, tono: 'warning' } : { id: 'lista', texto: 'Lista para facturar', tono: 'success' })
+            : fMes ? { id: 'facturada', texto: `${fMes.numero} · ${estadoDe(fMes).texto.toLowerCase()}`, tono: estadoDe(fMes).tono } : { id: 'facturada', texto: 'Facturada', tono: 'neutral' };
+        return {
+            cliente, mes, g, factura: fMes, estado,
+            horas: hs.reduce((t, h) => t + Object.values(h.horas).reduce((a, b) => a + b, 0), 0), peticiones: [...new Set(hs.map(h => h.petId))].length,
+            nServicios: svs.length, importeServicios: svs.reduce((t, x) => t + importeServicio(x), 0),
+            base: g ? baseGrupo(g) : fMes ? totalesDe(fMes).base : 0,
+        };
+    };
+    const filasMesTodas = useMemo(() => Object.keys(CLIENTES).map(c => filaDe(c, mesSel)).filter(Boolean), [mesSel, porFacturar, facturas, horas, servicios]);
+    const filasMes = useMemo(() => {
+        const q = normalizar(buscarMes.trim());
+        const lista = filasMesTodas
+            .filter(x => enSucursal(x.cliente))
+            .filter(x => !q || normalizar(`${CLIENTES[x.cliente].nombre} ${CLIENTES[x.cliente].cif}`).includes(q))
+            .filter(x => estadoMes === 'todos' || (estadoMes === 'pendientes' ? x.estado.id !== 'facturada' : x.estado.id === estadoMes));
+        const val = (x) => (orden.campo === 'cliente' ? CLIENTES[x.cliente].nombre : orden.campo === 'base' ? x.base : orden.campo === 'horas' ? x.horas : ORDEN_ESTADO[x.estado.id]);
+        return lista.sort((a, b) => { const va = val(a), vb = val(b); const c = typeof va === 'string' ? va.localeCompare(vb) : va - vb; return orden.asc ? c : -c; });
+    }, [filasMesTodas, buscarMes, estadoMes, orden, filtroSucursal]);
+    const paginas = Math.max(1, Math.ceil(filasMes.length / POR_PAGINA));
+    const paginaActual = Math.min(pagina, paginas - 1);
+    const filasPagina = filasMes.slice(paginaActual * POR_PAGINA, (paginaActual + 1) * POR_PAGINA);
+    const delMes = filasMesTodas.filter(x => enSucursal(x.cliente));
+    const cuentaMes = (id) => delMes.filter(x => x.estado.id === id).length;
+    const ordenarPor = (campo) => setOrden(o => ({ campo, asc: o.campo === campo ? !o.asc : true }));
+    const marcar = (c) => setSeleccion(sel => (sel.includes(c) ? sel.filter(x => x !== c) : [...sel, c]));
+    const filasSeleccionadas = filasMes.filter(x => seleccion.includes(x.cliente));
+    const cambiarMes = (m) => { setMesSel(m); setSeleccion([]); setPagina(0); };
+
+    // Acciones en bloque
+    const prepararVarios = () => {
+        const nuevos = filasSeleccionadas.filter(x => x.g && !x.g.borrador).map((x, i) => borradorDe(x.g, `-${i}`));
+        setFacturas(prev => [...prev, ...nuevos]);
+        setSeleccion([]);
+        showToast(`${nuevos.length} ${nuevos.length === 1 ? 'borrador preparado' : 'borradores preparados'}${nuevos.some(n => horasDe(n).some(h => !h.listo)) ? '. Los que esperan horas no se podrán emitir hasta que se validen.' : ''}`);
+    };
+    const emitirVarios = () => {
+        // Prepara el borrador si hace falta y emite las que tienen las horas validadas
+        const listas = filasSeleccionadas.filter(x => x.g && x.g.horas.every(h => h.listo));
+        let numero = siguiente.F;
+        const emitidas = listas.map((x, i) => {
+            const base = x.g.borrador ? facturas.find(fx => fx.id === x.g.borrador) : borradorDe(x.g, `-e${i}`);
+            const n = `F2026-${String(numero++).padStart(4, '0')}`;
+            return { ...base, numero: n, estado: 'emitida', emision: hoyIso(), vencimiento: vencimientoDe(CLIENTES[x.cliente], hoyIso()), historial: [...base.historial, { fecha: hoyIso(), texto: `Factura ${n} emitida. Ya no se puede cambiar.` }] };
+        });
+        setFacturas(prev => [...prev.filter(fx => !emitidas.some(e => e.id === fx.id)), ...emitidas]);
+        setSiguiente(sx => ({ ...sx, F: numero }));
+        setSeleccion([]);
+        const sinHoras = filasSeleccionadas.length - listas.length;
+        showToast(`${emitidas.length} ${emitidas.length === 1 ? 'factura emitida' : 'facturas emitidas'}${emitidas.length ? ` (${emitidas[0].numero}${emitidas.length > 1 ? ` a ${emitidas[emitidas.length - 1].numero}` : ''})` : ''}${sinHoras ? `. ${sinHoras} sin emitir: esperan horas o ya estaban facturadas.` : ''}`);
+    };
+    const enviarVarios = () => {
+        const ids = filasSeleccionadas.filter(x => x.factura && x.factura.estado === 'emitida').map(x => x.factura.id);
+        setFacturas(prev => prev.map(fx => (ids.includes(fx.id) ? { ...fx, estado: 'enviada', historial: [...fx.historial, { fecha: hoyIso(), texto: `Factura ${fx.numero} enviada a ${CLIENTES[fx.cliente].email}` }] } : fx)));
+        setSeleccion([]);
+        showToast(ids.length ? `${ids.length} ${ids.length === 1 ? 'factura enviada' : 'facturas enviadas'} por correo a cada cliente` : 'Ninguna de las seleccionadas está emitida y sin enviar');
+    };
+    const pdfVarios = () => {
+        const fs = filasSeleccionadas.map(x => x.factura).filter(Boolean);
+        if (!fs.length) return showToast('Ninguna de las seleccionadas tiene factura emitida');
+        if (!descargarPdf(fs, `Facturas ${nombreMes(mesSel)}`)) showToast('El navegador ha bloqueado la ventana: permite las ventanas emergentes para descargar el PDF');
+        return null;
+    };
+    const abrirFacturaDe = (x) => { setClienteAbierto(null); if (x.g) prepararFactura(x.g); else if (x.factura) setAbierta(x.factura.id); };
+
     return (
         <>
             <Page>
                 <PageHeader
                     title="Facturación"
                     count={pendientes.length}
-                    subtitle="Las horas validadas de cada mes y los servicios hechos (selección, formación...) se convierten en la factura al cliente. Aquí se emite, se envía y se sigue el cobro."
-                    actions={<>
-                        <Button icon={BriefcaseBusiness} onClick={() => abrirServicio(filtroCliente)}>Añadir servicio a facturar</Button>
-                        <Button variant="primary" icon={FilePlus2} onClick={() => setNuevaFactura({ cliente: filtroCliente || '' })}>Nueva factura</Button>
-                    </>}
+                    subtitle="Cada mes, una factura por cliente con sus horas validadas y los servicios hechos (selección, formación...). Aquí se prepara, se emite, se envía y se sigue el cobro."
+                    actions={<Button variant="primary" icon={FilePlus2} onClick={() => setNuevaFactura({ cliente: '' })}>Nueva factura</Button>}
                 />
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <KpiTile label="Por facturar" tone="accent" value={porFacturar.filter(g => !g.borrador).length} hint="Meses con horas o servicios sin factura" onClick={() => document.getElementById('por-facturar')?.scrollIntoView({ behavior: 'smooth' })} />
-                    <KpiTile label="En borrador" value={facturas.filter(x => x.estado === 'borrador').length} hint="Por revisar y emitir" active={filtroEstado === 'borrador'} onClick={() => setFiltroEstado('borrador')} />
-                    <KpiTile label="Pendiente de cobro" tone="info" value={euros(suma(pendientes))} hint={`${pendientes.length} ${pendientes.length === 1 ? 'factura' : 'facturas'}`} active={filtroEstado === 'pendientes'} onClick={() => setFiltroEstado('pendientes')} />
-                    <KpiTile label="Vencidas" tone="danger" value={euros(suma(vencidas))} hint={`${vencidas.length} ${vencidas.length === 1 ? 'factura' : 'facturas'}`} active={filtroEstado === 'vencida'} onClick={() => setFiltroEstado('vencida')} />
-                </div>
+                <Tabs
+                    tabs={[
+                        { id: 'mes', label: 'Facturar el mes', icon: CalendarDays, count: delMes.filter(x => x.estado.id !== 'facturada').length },
+                        { id: 'facturas', label: 'Facturas', icon: Receipt, count: lista.length },
+                    ]}
+                    active={pestana}
+                    onChange={(id) => { setPestana(id); setSeleccion([]); }}
+                />
 
-                {/* FILTROS: los mismos que en Horas e incidencias, para «Por facturar» y para las facturas */}
-                <Card className="p-3">
-                    <div className="flex flex-wrap items-end gap-3">
-                        <label className="flex flex-col gap-1 min-w-[200px] flex-1 sm:flex-none sm:w-64">
-                            {etiqueta('Buscar')}
-                            <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Número, cliente, petición o puesto..." />
-                        </label>
-                        {veVariasSucursales && (
-                            <label className="flex flex-col gap-1 min-w-[200px] flex-1 sm:flex-none">
-                                {etiqueta('Sucursal')}
-                                <Select value={filtroSucursal} onChange={(e) => { const v = e.target.value; setFiltroSucursal(v); if (filtroCliente && v && sucursalDe(filtroCliente) !== v) { setFiltroCliente(''); setFiltroPeticion(''); } }} aria-label="Sucursal">
-                                    <option value="">Todas las sucursales</option>
-                                    {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                {pestana === 'mes' && <>
+                    {/* FILTROS DEL MES */}
+                    <Card className="p-3">
+                        <div className="flex flex-wrap items-end gap-3">
+                            <label className="flex flex-col gap-1">
+                                {etiqueta('Mes', <CalendarDays className="w-3.5 h-3.5 text-slate-400" />)}
+                                <Select value={mesSel} onChange={(e) => cambiarMes(e.target.value)} aria-label="Mes">
+                                    {mesesConDatos.map(m => <option key={m} value={m}>{mayus(nombreMes(m))}</option>)}
                                 </Select>
                             </label>
-                        )}
-                        <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
-                            {etiqueta('Cliente', <Building2 className="w-3.5 h-3.5 text-slate-400" />)}
-                            <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
-                                <option value="">Todos los clientes</option>
-                                {Object.entries(CLIENTES).filter(([id]) => enSucursal(id)).map(([id, c]) => { const n = facturas.filter(x => x.cliente === id).length; return <option key={id} value={id}>{c.nombre} · {n} {n === 1 ? 'factura' : 'facturas'}</option>; })}
-                            </Select>
-                        </label>
-                        {filtroCliente && (
-                            <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
-                                {etiqueta('Petición')}
-                                <Select value={filtroPeticion} onChange={(e) => setFiltroPeticion(e.target.value)} aria-label="Petición">
-                                    <option value="">Todas las peticiones del cliente</option>
-                                    {Object.entries(PETICIONES).filter(([, p]) => p.cliente === filtroCliente).map(([id, p]) => <option key={id} value={id}>{id} · {p.puesto}</option>)}
+                            <label className="flex flex-col gap-1 min-w-[200px] flex-1 sm:flex-none sm:w-72">
+                                {etiqueta('Buscar cliente')}
+                                <SearchInput value={buscarMes} onChange={(v) => { setBuscarMes(v); setPagina(0); }} placeholder="Nombre o CIF..." />
+                            </label>
+                            {veVariasSucursales && (
+                                <label className="flex flex-col gap-1">
+                                    {etiqueta('Sucursal')}
+                                    <Select value={filtroSucursal} onChange={(e) => { setFiltroSucursal(e.target.value); setPagina(0); setSeleccion([]); }} aria-label="Sucursal">
+                                        <option value="">Todas las sucursales</option>
+                                        {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                                    </Select>
+                                </label>
+                            )}
+                            <label className="flex flex-col gap-1">
+                                {etiqueta('Estado')}
+                                <Select value={estadoMes} onChange={(e) => { setEstadoMes(e.target.value); setPagina(0); }} aria-label="Estado del mes">
+                                    <option value="pendientes">Pendientes de facturar</option>
+                                    <option value="lista">Listas para facturar</option>
+                                    <option value="esperando">Esperando horas</option>
+                                    <option value="borrador">En borrador</option>
+                                    <option value="facturada">Ya facturadas</option>
+                                    <option value="todos">Todos los clientes del mes</option>
                                 </Select>
                             </label>
-                        )}
-                        <label className="flex flex-col gap-1">
-                            {etiqueta('Fecha de emisión', <CalendarDays className="w-3.5 h-3.5 text-slate-400" />)}
-                            <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Periodo">
-                                {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.texto}</option>)}
-                            </Select>
-                        </label>
-                        {periodo === 'fechas' && <>
-                            <label className="flex flex-col gap-1">{etiqueta('Desde')}<TextInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="w-auto!" /></label>
-                            <label className="flex flex-col gap-1">{etiqueta('Hasta')}<TextInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="w-auto!" /></label>
-                        </>}
-                        <label className="flex flex-col gap-1">
-                            {etiqueta('Estado')}
-                            <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} aria-label="Estado">
-                                <option value="">Todos los estados</option>
-                                <option value="borrador">Borrador</option>
-                                <option value="pendientes">Pendientes de cobro (todas)</option>
-                                <option value="vencida">Vencidas</option>
-                                <option value="cobrada">Cobradas</option>
-                                <option value="anulada">Anuladas</option>
-                                <option value="rectificativa">Rectificativas</option>
-                            </Select>
-                        </label>
-                        {hayFiltros && <Button size="sm" variant="ghost" icon={X} onClick={limpiar}>Limpiar</Button>}
+                        </div>
+                    </Card>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <KpiTile label="Listas para facturar" tone="success" value={cuentaMes('lista')} hint="Horas validadas, sin factura" active={estadoMes === 'lista'} onClick={() => { setEstadoMes('lista'); setPagina(0); }} />
+                        <KpiTile label="Esperando horas" tone="warning" value={cuentaMes('esperando')} hint="Faltan partes por validar" active={estadoMes === 'esperando'} onClick={() => { setEstadoMes('esperando'); setPagina(0); }} />
+                        <KpiTile label="En borrador" value={cuentaMes('borrador')} hint="Por revisar y emitir" active={estadoMes === 'borrador'} onClick={() => { setEstadoMes('borrador'); setPagina(0); }} />
+                        <KpiTile label="Ya facturadas" tone="info" value={cuentaMes('facturada')} hint={`De ${delMes.length} clientes con actividad`} active={estadoMes === 'facturada'} onClick={() => { setEstadoMes('facturada'); setPagina(0); }} />
                     </div>
-                    <p className="mt-2 text-[11px] text-slate-500">{rangoDesde > '0000-01-01' ? `Del ${fechaES(rangoDesde)}` : 'Desde el principio'}{rangoHasta < '9999-12-31' ? ` al ${fechaES(rangoHasta)}` : ''}. Los borradores cuentan por el mes que facturan.</p>
-                </Card>
 
-                {/* POR SUCURSAL: facturado, pendiente y por facturar de cada una (con los filtros de fechas y cliente) */}
-                {veVariasSucursales && !filtroSucursal && (
+                    {/* ACCIONES EN BLOQUE */}
+                    {seleccion.length > 0 ? (
+                        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs">
+                            <span className="font-medium text-indigo-900 mr-1">{filasSeleccionadas.length} {filasSeleccionadas.length === 1 ? 'cliente seleccionado' : 'clientes seleccionados'}</span>
+                            <Button size="sm" icon={Receipt} onClick={prepararVarios}>Preparar borradores</Button>
+                            <Button size="sm" variant="primary" icon={FileCheck2} onClick={emitirVarios}>Emitir facturas</Button>
+                            <Button size="sm" icon={Send} onClick={enviarVarios}>Enviar por correo</Button>
+                            <Button size="sm" icon={Printer} onClick={pdfVarios}>PDF</Button>
+                            <Button size="sm" icon={FileSpreadsheet} onClick={() => {
+                                descargarCsv(`facturar_${mesSel}.csv`, ['Cliente', 'CIF', 'Sucursal', 'Mes', 'Peticiones', 'Horas', 'Servicios', 'Importe servicios', 'Base imponible', 'Estado'],
+                                    filasSeleccionadas.map(x => [CLIENTES[x.cliente].nombre, CLIENTES[x.cliente].cif, sucursal(sucursalDe(x.cliente)).nombre, nombreMes(mesSel), x.peticiones, numExcel(x.horas), x.nServicios, numExcel(x.importeServicios), numExcel(x.base), x.estado.texto]));
+                                showToast(`Excel con ${filasSeleccionadas.length} clientes descargado`);
+                            }}>Excel</Button>
+                            <Button size="sm" variant="ghost" icon={X} onClick={() => setSeleccion([])}>Quitar selección</Button>
+                        </div>
+                    ) : cuentaMes('lista') > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                            <span>Marca los clientes para preparar, emitir o enviar sus facturas de una vez.</span>
+                            <button type="button" className="font-medium text-indigo-700 hover:underline" onClick={() => setSeleccion(filasMes.filter(x => x.estado.id === 'lista').map(x => x.cliente))}>
+                                Seleccionar las {filasMes.filter(x => x.estado.id === 'lista').length} listas para facturar
+                            </button>
+                        </div>
+                    )}
+
+                    {/* UNA FILA POR CLIENTE */}
                     <Card className="overflow-hidden">
-                        <div className="px-4 py-2.5 border-b border-slate-200 text-xs font-semibold text-slate-900">Facturación por sucursal</div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs">
                                 <thead>
                                     <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
-                                        <th className="py-2 px-3 font-medium">Sucursal</th>
-                                        <th className="py-2 px-3 font-medium text-right">Facturas</th>
-                                        <th className="py-2 px-3 font-medium text-right">Facturado</th>
-                                        <th className="py-2 px-3 font-medium text-right">Pendiente de cobro</th>
-                                        <th className="py-2 px-3 font-medium text-right">Vencido</th>
-                                        <th className="py-2 px-3 font-medium text-right">Por facturar (base)</th>
+                                        <th className="py-2 pl-3 pr-1 w-8">
+                                            <input type="checkbox" aria-label="Seleccionar los de esta página" className="accent-indigo-600"
+                                                checked={filasPagina.length > 0 && filasPagina.every(x => seleccion.includes(x.cliente))}
+                                                onChange={(e) => setSeleccion(sel => (e.target.checked ? [...new Set([...sel, ...filasPagina.map(x => x.cliente)])] : sel.filter(c => !filasPagina.some(x => x.cliente === c))))} />
+                                        </th>
+                                        {[['cliente', 'Cliente', ''], ['horas', 'Horas', 'text-right'], ['servicios', 'Servicios', 'text-right'], ['base', 'Base', 'text-right'], ['estado', 'Estado', '']].map(([campo, texto, al]) => (
+                                            <th key={campo} className={`py-2 px-3 font-medium ${al}`}>
+                                                {campo === 'servicios' ? texto : (
+                                                    <button type="button" onClick={() => ordenarPor(campo)} className={`inline-flex items-center gap-1 hover:text-slate-800 ${orden.campo === campo ? 'text-slate-800' : ''}`}>
+                                                        {texto}<ArrowUpDown className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </th>
+                                        ))}
+                                        <th className="py-2 px-3" aria-label="Acciones"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(su => {
-                                        const fs = lista.filter(x => sucursalDe(x.cliente) === su.id && x.estado !== 'borrador' && !x.anulada);
-                                        const pf = porFacturarFiltrado.filter(g => sucursalDe(g.cliente) === su.id);
-                                        const pendiente = fs.filter(x => PENDIENTES_COBRO.includes(estadoDe(x).id)).reduce((s, x) => s + totalesDe(x).pendiente, 0);
-                                        const vencido = fs.filter(x => estadoDe(x).id === 'vencida').reduce((s, x) => s + totalesDe(x).pendiente, 0);
-                                        const porFacturarBase = pf.reduce((s, g) => s + baseGrupo(g), 0);
+                                    {filasPagina.length === 0 && (
+                                        <tr><td colSpan={7} className="py-8 text-center text-slate-500">{delMes.length ? 'Ningún cliente con estos filtros.' : `No hay horas ni servicios en ${nombreMes(mesSel)}.`}</td></tr>
+                                    )}
+                                    {filasPagina.map(x => {
+                                        const c = CLIENTES[x.cliente];
+                                        const marcada = seleccion.includes(x.cliente);
                                         return (
-                                            <tr key={su.id} onClick={() => setFiltroSucursal(su.id)} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer" title={`Ver solo ${su.nombre}`}>
-                                                <td className="py-2.5 px-3 font-medium text-slate-900">{su.nombre}</td>
-                                                <td className="py-2.5 px-3 text-right text-slate-700">{fs.length}</td>
-                                                <td className="py-2.5 px-3 text-right text-slate-900 whitespace-nowrap">{euros(fs.reduce((s, x) => s + totalesDe(x).total, 0))}</td>
-                                                <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap">{euros(pendiente)}</td>
-                                                <td className={`py-2.5 px-3 text-right whitespace-nowrap ${vencido ? 'text-rose-700' : 'text-slate-400'}`}>{euros(vencido)}</td>
-                                                <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap">{euros(porFacturarBase)}</td>
+                                            <tr key={x.cliente} onClick={() => { setClienteAbierto(x.cliente); setPestanaCliente('mes'); }} className={`border-b border-slate-100 last:border-0 cursor-pointer ${marcada ? 'bg-indigo-50/60' : 'hover:bg-slate-50'}`}>
+                                                <td className="py-2.5 pl-3 pr-1" onClick={(ev) => ev.stopPropagation()}>
+                                                    <input type="checkbox" aria-label={`Seleccionar ${c.nombre}`} className="accent-indigo-600" checked={marcada} onChange={() => marcar(x.cliente)} />
+                                                </td>
+                                                <td className="py-2.5 px-3">
+                                                    <span className="block font-medium text-slate-900">{c.nombre}</span>
+                                                    <span className="text-[11px] text-slate-500">{c.cif}{veVariasSucursales ? ` · ${sucursal(sucursalDe(x.cliente)).corto}` : ''}{x.peticiones ? ` · ${x.peticiones} ${x.peticiones === 1 ? 'petición' : 'peticiones'}` : ''}</span>
+                                                </td>
+                                                <td className="py-2.5 px-3 text-right whitespace-nowrap text-slate-700">{x.horas ? `${num(x.horas)} h` : <span className="text-slate-300">—</span>}</td>
+                                                <td className="py-2.5 px-3 text-right whitespace-nowrap text-slate-700">{x.nServicios ? <>{x.nServicios} · {euros(x.importeServicios)}</> : <span className="text-slate-300">—</span>}</td>
+                                                <td className="py-2.5 px-3 text-right whitespace-nowrap font-medium text-slate-900">{euros(x.base)}</td>
+                                                <td className="py-2.5 px-3"><Badge tone={x.estado.tono} dot>{x.estado.texto}</Badge></td>
+                                                <td className="py-1.5 px-3 text-right whitespace-nowrap" onClick={(ev) => ev.stopPropagation()}>
+                                                    <span className="relative inline-flex items-center gap-1">
+                                                        {x.estado.id === 'lista' && <Button size="sm" variant="primary" onClick={() => prepararFactura(x.g)}>Preparar factura</Button>}
+                                                        {x.estado.id === 'borrador' && <Button size="sm" onClick={() => prepararFactura(x.g)}>Ver borrador</Button>}
+                                                        {x.estado.id === 'facturada' && x.factura && <Button size="sm" variant="ghost" onClick={() => setAbierta(x.factura.id)}>Ver factura</Button>}
+                                                        <IconButton icon={MoreHorizontal} title="Más acciones" onClick={() => setMenuFila(menuFila === x.cliente ? null : x.cliente)} />
+                                                        {menuFila === x.cliente && <>
+                                                            <span className="fixed inset-0 z-20" onClick={() => setMenuFila(null)} />
+                                                            <span className="absolute right-0 top-full z-30 mt-1 w-56 rounded-lg border border-slate-200 bg-white shadow-lg py-1 text-left block">
+                                                                {[
+                                                                    [Building2, 'Abrir el cliente', () => { setClienteAbierto(x.cliente); setPestanaCliente('mes'); }],
+                                                                    [BriefcaseBusiness, 'Añadir servicio a facturar', () => { setClienteAbierto(x.cliente); setPestanaCliente('mes'); abrirServicio(x.cliente); }],
+                                                                    ...(x.g ? [[Receipt, x.g.borrador ? 'Ver borrador' : 'Preparar factura', () => prepararFactura(x.g)]] : []),
+                                                                    ...(x.estado.id === 'esperando' ? [[ArrowUpRight, 'Ir a Horas e incidencias', () => { window.location.hash = '#/horas'; }]] : []),
+                                                                    [Receipt, 'Ver sus facturas', () => { setClienteAbierto(x.cliente); setPestanaCliente('facturas'); }],
+                                                                    [FilePlus2, 'Nueva factura a mano', () => setNuevaFactura({ cliente: x.cliente })],
+                                                                ].map(([Icono, texto, accion]) => (
+                                                                    <button key={texto} type="button" onClick={() => { setMenuFila(null); accion(); }} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-slate-800">
+                                                                        <Icono className="w-3.5 h-3.5 text-slate-400" />{texto}
+                                                                    </button>
+                                                                ))}
+                                                            </span>
+                                                        </>}
+                                                    </span>
+                                                </td>
                                             </tr>
                                         );
                                     })}
                                 </tbody>
                             </table>
                         </div>
-                        <p className="px-4 py-2 text-[11px] text-slate-500 border-t border-slate-100">Con las fechas y el cliente elegidos. Pulsa una sucursal para ver solo sus facturas.</p>
-                    </Card>
-                )}
-
-                {/* POR FACTURAR */}
-                <div id="por-facturar" className="space-y-2">
-                    <SectionTitle>Por facturar</SectionTitle>
-                    {porFacturarFiltrado.length === 0 ? (
-                        <Card className="p-4 text-xs text-slate-500">{porFacturar.length ? 'No hay horas por facturar con estos filtros.' : 'No hay horas pendientes de facturar.'}</Card>
-                    ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            {porFacturarFiltrado.map(g => {
-                                const cliente = CLIENTES[g.cliente];
-                                const listo = g.horas.every(h => h.listo);
-                                const faltan = g.horas.reduce((s, h) => s + (h.partesPendientes || 0), 0);
-                                const total = g.horas.reduce((s, h) => s + Object.values(h.horas).reduce((a, b) => a + b, 0), 0);
-                                const soloServicios = g.horas.length === 0;
-                                return (
-                                    <Card key={`${g.cliente}|${g.mes}`} className="p-4 space-y-3">
-                                        <div className="flex flex-wrap items-start justify-between gap-2">
-                                            <div>
-                                                <div className="text-sm font-medium text-slate-900">{cliente.nombre}</div>
-                                                <div className="text-[11px] text-slate-500">{mayus(nombreMes(g.mes))}{g.horas.length > 0 && ` · ${g.horas.map(h => `${h.petId} (${PETICIONES[h.petId].puesto.toLowerCase()})`).join(', ')}`}</div>
-                                            </div>
-                                            <Badge tone={g.borrador ? 'neutral' : listo ? 'success' : 'warning'} dot>{g.borrador ? 'En borrador' : soloServicios ? 'Servicios' : listo ? 'Horas validadas' : 'Esperando horas'}</Badge>
-                                        </div>
-                                        {g.servicios.length > 0 && (
-                                            <ul className="space-y-1 text-xs">
-                                                {g.servicios.map(x => (
-                                                    <li key={x.id} className="flex items-start justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5">
-                                                        <span className="flex items-start gap-1.5 min-w-0"><BriefcaseBusiness className="w-3.5 h-3.5 text-indigo-500 mt-0.5 shrink-0" /><span className="min-w-0"><span className="text-slate-800">{servicioDe(x.servicio).nombre}</span><span className="block text-[11px] text-slate-500 truncate">{x.descripcion} · {fechaES(x.fecha)}</span></span></span>
-                                                        <span className="text-slate-900 whitespace-nowrap">{euros(importeServicio(x))}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                        <div className="text-xs text-slate-700">
-                                            {g.horas.length > 0 && <>{num(total)} h{g.servicios.length > 0 && ` + ${g.servicios.length} ${g.servicios.length === 1 ? 'servicio' : 'servicios'}`} · </>}{euros(baseGrupo(g))} de base{g.horas.length > 0 ? ' con las tarifas del presupuesto' : ''}
-                                            {!listo && <span className="block text-amber-700 mt-0.5">Faltan {faltan} partes por validar en Horas e incidencias. Puedes preparar el borrador, pero no emitirlo.</span>}
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <Button size="sm" variant={listo || g.borrador ? 'primary' : 'secondary'} icon={Receipt} onClick={() => prepararFactura(g)}>
-                                                {g.borrador ? 'Ver borrador' : listo ? 'Preparar factura' : 'Preparar borrador'}
-                                            </Button>
-                                            {!listo && <Button size="sm" variant="ghost" icon={ArrowUpRight} onClick={() => { window.location.hash = '#/horas'; }}>Horas e incidencias</Button>}
-                                        </div>
-                                    </Card>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                {/* SERVICIOS REGISTRADOS: los hechos, con en qué factura están */}
-                {(() => {
-                    const lista = servicios.filter(x => enSucursal(x.cliente) && (!filtroCliente || x.cliente === filtroCliente)).sort((a, b) => b.fecha.localeCompare(a.fecha));
-                    return (
-                        <div className="space-y-2">
-                            <SectionTitle actions={<Button size="sm" icon={Plus} onClick={() => abrirServicio(filtroCliente)}>Añadir servicio a facturar</Button>}>Servicios (además de las horas)</SectionTitle>
-                            {lista.length === 0 ? <Card className="p-4 text-xs text-slate-500">No hay servicios registrados con estos filtros.</Card> : (
-                                <Card className="overflow-x-auto">
-                                    <table className="w-full text-left text-xs">
-                                        <thead>
-                                            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
-                                                <th className="py-2 px-3 font-medium">Fecha</th>
-                                                <th className="py-2 px-3 font-medium">Cliente</th>
-                                                <th className="py-2 px-3 font-medium">Servicio</th>
-                                                <th className="py-2 px-3 font-medium text-right">Importe</th>
-                                                <th className="py-2 px-3 font-medium">Factura</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {lista.map(x => {
-                                                const fx = facturaDeServicio(x);
-                                                return (
-                                                    <tr key={x.id} className="border-b border-slate-100 last:border-0">
-                                                        <td className="py-2 px-3 whitespace-nowrap text-slate-700">{fechaES(x.fecha)}</td>
-                                                        <td className="py-2 px-3 text-slate-800">{CLIENTES[x.cliente].nombre}</td>
-                                                        <td className="py-2 px-3"><span className="text-slate-900">{servicioDe(x.servicio).nombre}</span><span className="block text-[11px] text-slate-500">{x.descripcion}{x.referencia ? ` · ${x.referencia}` : ''}{x.salario != null ? ` · ${num(x.porcentaje)} % de ${euros(x.salario)}` : ` · ${num(x.cantidad)} × ${euros(x.precio)}`}</span></td>
-                                                        <td className="py-2 px-3 text-right whitespace-nowrap text-slate-900">{euros(importeServicio(x))}</td>
-                                                        <td className="py-2 px-3 whitespace-nowrap">
-                                                            {!fx ? <Badge tone="warning" dot>Por facturar</Badge>
-                                                                : fx.estado === 'borrador' ? <button type="button" onClick={() => setAbierta(fx.id)}><Badge tone="neutral" dot>En borrador</Badge></button>
-                                                                    : <button type="button" onClick={() => setAbierta(fx.id)} className="text-indigo-700 hover:underline">Facturado en {fx.numero}</button>}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </Card>
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-t border-slate-100 text-[11px] text-slate-500">
+                            <span>
+                                {filasMes.length ? `${paginaActual * POR_PAGINA + 1}–${Math.min(filasMes.length, (paginaActual + 1) * POR_PAGINA)} de ${filasMes.length} clientes` : '0 clientes'}
+                                {' · '}Base de los filtrados: <b className="text-slate-700">{euros(filasMes.reduce((t, x) => t + x.base, 0))}</b>
+                            </span>
+                            {paginas > 1 && (
+                                <span className="flex items-center gap-1">
+                                    <IconButton icon={ChevronLeft} title="Página anterior" onClick={() => setPagina(Math.max(0, paginaActual - 1))} disabled={paginaActual === 0} />
+                                    <span>Página {paginaActual + 1} de {paginas}</span>
+                                    <IconButton icon={ChevronRight} title="Página siguiente" onClick={() => setPagina(Math.min(paginas - 1, paginaActual + 1))} disabled={paginaActual >= paginas - 1} />
+                                </span>
                             )}
                         </div>
-                    );
-                })()}
+                    </Card>
+                    <Notice tone="neutral" icon={Info}>Pulsa un cliente para ver sus horas y servicios del mes, añadir un servicio a su factura o ver sus facturas. Las tarifas son las del presupuesto aceptado de cada petición.</Notice>
+                </>}
 
-                {/* FACTURAS, agrupadas por cliente */}
-                <SectionTitle actions={
-                    <span className="relative">
-                        <Button size="sm" icon={Download} disabled={!emitidasLista.length} onClick={() => setMenuExportar(m => !m)}>Descargar ({emitidasLista.length})</Button>
-                        {menuExportar && (
-                            <span className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-slate-200 bg-white shadow-lg py-1 text-xs block">
-                                <button type="button" onClick={exportarFacturas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2"><FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="block font-medium text-slate-900">Excel: una fila por factura</span><span className="text-slate-500">Número, fechas, cliente, sucursal, base, IVA, total y cobro</span></span></button>
-                                <button type="button" onClick={exportarPersonas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2"><FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="block font-medium text-slate-900">Excel: líneas y horas por persona</span><span className="text-slate-500">Una fila por persona y concepto, con su importe</span></span></button>
-                                <button type="button" onClick={pdfFiltradas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2 border-t border-slate-100"><Printer className="w-4 h-4 text-indigo-600 shrink-0" /><span><span className="block font-medium text-slate-900">PDF de todas</span><span className="text-slate-500">Las facturas emitidas de la lista, una por página</span></span></button>
-                            </span>
-                        )}
-                    </span>
-                }>Facturas</SectionTitle>
-                <p className="-mt-2 text-[11px] text-slate-500">Se descargan las facturas emitidas que se ven con los filtros de arriba, por ejemplo las de un mes para la gestoría o la contabilidad.</p>
-                {lista.length === 0 ? (
-                    <Card><EmptyState icon={Receipt} title="No hay facturas con estos filtros" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} /></Card>
-                ) : Object.keys(CLIENTES).filter(c => lista.some(x => x.cliente === c)).map(c => {
-                    const delCliente = lista.filter(x => x.cliente === c);
-                    const plegado = plegados.includes(c);
-                    const totalCliente = delCliente.filter(x => x.estado !== 'borrador' && !x.anulada).reduce((s, x) => s + totalesDe(x).total, 0);
-                    const pendienteCliente = delCliente.filter(x => PENDIENTES_COBRO.includes(estadoDe(x).id)).reduce((s, x) => s + totalesDe(x).pendiente, 0);
-                    const vencidasCliente = delCliente.filter(x => estadoDe(x).id === 'vencida').length;
-                    return (
-                        <Card key={c} className="overflow-hidden">
-                            <button
-                                type="button"
-                                onClick={() => setPlegados(prev => (prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]))}
-                                aria-expanded={!plegado}
-                                className={`w-full flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-left hover:bg-slate-50 ${plegado ? '' : 'border-b border-slate-200'}`}
-                            >
-                                <span className="flex items-center gap-2 min-w-0">
-                                    <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${plegado ? '-rotate-90' : ''}`} />
-                                    <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
-                                    <span className="text-sm font-semibold text-slate-900">{CLIENTES[c].nombre}</span>
-                                    {veVariasSucursales && <Badge tone="neutral">{sucursal(sucursalDe(c)).corto}</Badge>}
+                {pestana === 'facturas' && <>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                        <KpiTile label="En borrador" value={deSucursal.filter(x => x.estado === 'borrador').length} hint="Por revisar y emitir" active={filtroEstado === 'borrador'} onClick={() => setFiltroEstado('borrador')} />
+                        <KpiTile label="Pendiente de cobro" tone="info" value={euros(suma(pendientes))} hint={`${pendientes.length} ${pendientes.length === 1 ? 'factura' : 'facturas'}`} active={filtroEstado === 'pendientes'} onClick={() => setFiltroEstado('pendientes')} />
+                        <KpiTile label="Vencidas" tone="danger" value={euros(suma(vencidas))} hint={`${vencidas.length} ${vencidas.length === 1 ? 'factura' : 'facturas'}`} active={filtroEstado === 'vencida'} onClick={() => setFiltroEstado('vencida')} />
+                    </div>
+
+                    {/* FILTROS DE LAS FACTURAS */}
+                    <Card className="p-3">
+                        <div className="flex flex-wrap items-end gap-3">
+                            <label className="flex flex-col gap-1 min-w-[200px] flex-1 sm:flex-none sm:w-64">
+                                {etiqueta('Buscar')}
+                                <SearchInput value={busqueda} onChange={(v) => { setBusqueda(v); setPaginaFact(0); }} placeholder="Número, cliente, petición o puesto..." />
+                            </label>
+                            {veVariasSucursales && (
+                                <label className="flex flex-col gap-1">
+                                    {etiqueta('Sucursal')}
+                                    <Select value={filtroSucursal} onChange={(e) => { const v = e.target.value; setFiltroSucursal(v); setPaginaFact(0); if (filtroCliente && v && sucursalDe(filtroCliente) !== v) { setFiltroCliente(''); setFiltroPeticion(''); } }} aria-label="Sucursal">
+                                        <option value="">Todas las sucursales</option>
+                                        {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                                    </Select>
+                                </label>
+                            )}
+                            <div className="flex flex-col gap-1 min-w-[240px] flex-1 sm:flex-none sm:w-72">
+                                {etiqueta('Cliente', <Building2 className="w-3.5 h-3.5 text-slate-400" />)}
+                                <BuscadorCliente valor={filtroCliente} onChange={(v) => { setFiltroCliente(v); setFiltroPeticion(''); setPaginaFact(0); }} ids={Object.keys(CLIENTES).filter(id => enSucursal(id))} sucursalDe={sucursalDe} vacio="Todos los clientes" />
+                            </div>
+                            {filtroCliente && (
+                                <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
+                                    {etiqueta('Petición')}
+                                    <Select value={filtroPeticion} onChange={(e) => setFiltroPeticion(e.target.value)} aria-label="Petición">
+                                        <option value="">Todas las peticiones del cliente</option>
+                                        {Object.entries(PETICIONES).filter(([, p]) => p.cliente === filtroCliente).map(([id, p]) => <option key={id} value={id}>{id} · {p.puesto}</option>)}
+                                    </Select>
+                                </label>
+                            )}
+                            <label className="flex flex-col gap-1">
+                                {etiqueta('Fecha de emisión', <CalendarDays className="w-3.5 h-3.5 text-slate-400" />)}
+                                <Select value={periodo} onChange={(e) => { setPeriodo(e.target.value); setPaginaFact(0); }} aria-label="Periodo">
+                                    {PERIODOS.map(p => <option key={p.id} value={p.id}>{p.texto}</option>)}
+                                </Select>
+                            </label>
+                            {periodo === 'fechas' && <>
+                                <label className="flex flex-col gap-1">{etiqueta('Desde')}<TextInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="w-auto!" /></label>
+                                <label className="flex flex-col gap-1">{etiqueta('Hasta')}<TextInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="w-auto!" /></label>
+                            </>}
+                            <label className="flex flex-col gap-1">
+                                {etiqueta('Estado')}
+                                <Select value={filtroEstado} onChange={(e) => { setFiltroEstado(e.target.value); setPaginaFact(0); }} aria-label="Estado">
+                                    <option value="">Todos los estados</option>
+                                    <option value="borrador">Borrador</option>
+                                    <option value="pendientes">Pendientes de cobro (todas)</option>
+                                    <option value="vencida">Vencidas</option>
+                                    <option value="cobrada">Cobradas</option>
+                                    <option value="anulada">Anuladas</option>
+                                    <option value="rectificativa">Rectificativas</option>
+                                </Select>
+                            </label>
+                            {hayFiltros && <Button size="sm" variant="ghost" icon={X} onClick={() => { limpiar(); setPaginaFact(0); }}>Limpiar</Button>}
+                        </div>
+                        <p className="mt-2 text-[11px] text-slate-500">{rangoDesde > '0000-01-01' ? `Del ${fechaES(rangoDesde)}` : 'Desde el principio'}{rangoHasta < '9999-12-31' ? ` al ${fechaES(rangoHasta)}` : ''}. Los borradores cuentan por el mes que facturan.</p>
+                    </Card>
+
+                    {/* POR SUCURSAL */}
+                    {veVariasSucursales && !filtroSucursal && (
+                        <Card className="overflow-hidden">
+                            <div className="px-4 py-2.5 border-b border-slate-200 text-xs font-semibold text-slate-900">Facturación por sucursal</div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                            <th className="py-2 px-3 font-medium">Sucursal</th>
+                                            <th className="py-2 px-3 font-medium text-right">Facturas</th>
+                                            <th className="py-2 px-3 font-medium text-right">Facturado</th>
+                                            <th className="py-2 px-3 font-medium text-right">Pendiente de cobro</th>
+                                            <th className="py-2 px-3 font-medium text-right">Vencido</th>
+                                            <th className="py-2 px-3 font-medium text-right">Por facturar (base)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(su => {
+                                            const fs = lista.filter(x => sucursalDe(x.cliente) === su.id && x.estado !== 'borrador' && !x.anulada);
+                                            const pf = porFacturarFiltrado.filter(g => sucursalDe(g.cliente) === su.id);
+                                            const pendiente = fs.filter(x => PENDIENTES_COBRO.includes(estadoDe(x).id)).reduce((t, x) => t + totalesDe(x).pendiente, 0);
+                                            const vencido = fs.filter(x => estadoDe(x).id === 'vencida').reduce((t, x) => t + totalesDe(x).pendiente, 0);
+                                            return (
+                                                <tr key={su.id} onClick={() => setFiltroSucursal(su.id)} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer" title={`Ver solo ${su.nombre}`}>
+                                                    <td className="py-2.5 px-3 font-medium text-slate-900">{su.nombre}</td>
+                                                    <td className="py-2.5 px-3 text-right text-slate-700">{fs.length}</td>
+                                                    <td className="py-2.5 px-3 text-right text-slate-900 whitespace-nowrap">{euros(fs.reduce((t, x) => t + totalesDe(x).total, 0))}</td>
+                                                    <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap">{euros(pendiente)}</td>
+                                                    <td className={`py-2.5 px-3 text-right whitespace-nowrap ${vencido ? 'text-rose-700' : 'text-slate-400'}`}>{euros(vencido)}</td>
+                                                    <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap">{euros(pf.reduce((t, g) => t + baseGrupo(g), 0))}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p className="px-4 py-2 text-[11px] text-slate-500 border-t border-slate-100">Con las fechas y el cliente elegidos. Pulsa una sucursal para ver solo sus facturas.</p>
+                        </Card>
+                    )}
+
+                    {/* LISTA DE FACTURAS */}
+                    <SectionTitle actions={
+                        <span className="relative">
+                            <Button size="sm" icon={Download} disabled={!emitidasLista.length} onClick={() => setMenuExportar(m => !m)}>Descargar ({emitidasLista.length})</Button>
+                            {menuExportar && (
+                                <span className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-slate-200 bg-white shadow-lg py-1 text-xs block">
+                                    <button type="button" onClick={exportarFacturas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2"><FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="block font-medium text-slate-900">Excel: una fila por factura</span><span className="text-slate-500">Número, fechas, cliente, sucursal, base, IVA, total y cobro</span></span></button>
+                                    <button type="button" onClick={exportarPersonas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2"><FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="block font-medium text-slate-900">Excel: líneas y horas por persona</span><span className="text-slate-500">Una fila por persona y concepto, con su importe</span></span></button>
+                                    <button type="button" onClick={pdfFiltradas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2 border-t border-slate-100"><Printer className="w-4 h-4 text-indigo-600 shrink-0" /><span><span className="block font-medium text-slate-900">PDF de todas</span><span className="text-slate-500">Las facturas emitidas de la lista, una por página</span></span></button>
                                 </span>
-                                <span className="text-xs text-slate-500">
-                                    {delCliente.length} {delCliente.length === 1 ? 'factura' : 'facturas'} · {euros(totalCliente)} facturado · {euros(pendienteCliente)} pendiente
-                                    {vencidasCliente > 0 && <span className="text-rose-700"> · {vencidasCliente} {vencidasCliente === 1 ? 'vencida' : 'vencidas'}</span>}
-                                </span>
-                            </button>
-                            {!plegado && (
+                            )}
+                        </span>
+                    }>Facturas</SectionTitle>
+                    <p className="-mt-2 text-[11px] text-slate-500">Se descargan las facturas emitidas que se ven con los filtros de arriba, por ejemplo las de un mes para la gestoría o la contabilidad.</p>
+                    {lista.length === 0 ? (
+                        <Card><EmptyState icon={Receipt} title="No hay facturas con estos filtros" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} /></Card>
+                    ) : (() => {
+                        const paginasF = Math.ceil(lista.length / POR_PAGINA);
+                        const pf = Math.min(paginaFact, paginasF - 1);
+                        return (
+                            <Card className="overflow-hidden">
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-xs">
                                         <thead>
                                             <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
                                                 <th className="py-2 px-3 font-medium">Número</th>
-                                                <th className="py-2 px-3 font-medium">Periodo y peticiones</th>
+                                                <th className="py-2 px-3 font-medium">Cliente</th>
+                                                <th className="py-2 px-3 font-medium">Periodo</th>
                                                 <th className="py-2 px-3 font-medium">Emisión</th>
                                                 <th className="py-2 px-3 font-medium">Vencimiento</th>
                                                 <th className="py-2 px-3 font-medium text-right">Total</th>
@@ -757,18 +979,18 @@ export default function FacturacionView() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {delCliente.map(x => {
+                                            {lista.slice(pf * POR_PAGINA, (pf + 1) * POR_PAGINA).map(x => {
                                                 const tt = totalesDe(x);
                                                 const e = estadoDe(x);
                                                 const d = x.vencimiento ? diasEntre(hoyIso(), x.vencimiento) : null;
-                                                const pets = peticionesDe(x);
                                                 return (
                                                     <tr key={x.id} onClick={() => setAbierta(x.id)} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer">
                                                         <td className="py-2.5 px-3 whitespace-nowrap font-medium text-slate-900">{x.numero || <span className="text-slate-500">Borrador</span>}</td>
                                                         <td className="py-2.5 px-3">
-                                                            <span className="block text-slate-800">{/^\d{4}-\d{2}$/.test(x.periodo) ? mayus(nombreMes(x.periodo)) : x.periodo}{x.rectifica ? ` · rectifica ${x.rectifica}` : ''}</span>
-                                                            <span className="text-[11px] text-slate-500">{pets.length ? pets.map(p => `${p} · ${PETICIONES[p].puesto}`).join(', ') : 'Sin petición (líneas manuales)'}</span>
+                                                            <button type="button" onClick={(ev) => { ev.stopPropagation(); setClienteAbierto(x.cliente); setPestanaCliente('facturas'); }} className="text-left text-slate-800 hover:text-indigo-700 hover:underline">{CLIENTES[x.cliente].nombre}</button>
+                                                            {veVariasSucursales && <span className="block text-[11px] text-slate-500">{sucursal(sucursalDe(x.cliente)).corto}</span>}
                                                         </td>
+                                                        <td className="py-2.5 px-3 text-slate-700">{/^\d{4}-\d{2}$/.test(x.periodo) ? mayus(nombreMes(x.periodo)) : x.periodo}{x.rectifica ? <span className="block text-[11px] text-slate-500">rectifica {x.rectifica}</span> : ''}</td>
                                                         <td className="py-2.5 px-3 whitespace-nowrap text-slate-700">{fechaES(x.emision)}</td>
                                                         <td className="py-2.5 px-3 whitespace-nowrap">
                                                             <div className="text-slate-700">{x.rectifica ? '—' : fechaES(x.vencimiento)}</div>
@@ -784,12 +1006,148 @@ export default function FacturacionView() {
                                         </tbody>
                                     </table>
                                 </div>
-                            )}
-                        </Card>
-                    );
-                })}
-                <Notice tone="neutral" icon={Info}>Las tarifas son las del presupuesto aceptado de cada petición. El coste y el margen solo se ven en Presupuestos.</Notice>
+                                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-t border-slate-100 text-[11px] text-slate-500">
+                                    <span>{pf * POR_PAGINA + 1}–{Math.min(lista.length, (pf + 1) * POR_PAGINA)} de {lista.length} facturas</span>
+                                    {paginasF > 1 && (
+                                        <span className="flex items-center gap-1">
+                                            <IconButton icon={ChevronLeft} title="Página anterior" onClick={() => setPaginaFact(Math.max(0, pf - 1))} disabled={pf === 0} />
+                                            <span>Página {pf + 1} de {paginasF}</span>
+                                            <IconButton icon={ChevronRight} title="Página siguiente" onClick={() => setPaginaFact(Math.min(paginasF - 1, pf + 1))} disabled={pf >= paginasF - 1} />
+                                        </span>
+                                    )}
+                                </div>
+                            </Card>
+                        );
+                    })()}
+                </>}
             </Page>
+
+            {/* FICHA DE FACTURACIÓN DEL CLIENTE: su mes, sus facturas y sus datos */}
+            {clienteAbierto && !f && (() => {
+                const c = CLIENTES[clienteAbierto];
+                const x = filaDe(clienteAbierto, mesSel);
+                const hs = horas.filter(h => PETICIONES[h.petId].cliente === clienteAbierto && h.mes === mesSel);
+                const svs = servicios.filter(s => s.cliente === clienteAbierto && s.fecha.slice(0, 7) === mesSel);
+                const otrosMeses = porFacturar.filter(g => g.cliente === clienteAbierto && g.mes !== mesSel);
+                const susFacturas = facturas.filter(fx => fx.cliente === clienteAbierto).sort((a, b) => (b.emision || '9999').localeCompare(a.emision || '9999'));
+                const pendienteCobro = susFacturas.filter(fx => PENDIENTES_COBRO.includes(estadoDe(fx).id)).reduce((t, fx) => t + totalesDe(fx).pendiente, 0);
+                return (
+                    <Drawer
+                        title={c.nombre}
+                        subtitle={`${c.cif}${veVariasSucursales ? ` · ${sucursal(sucursalDe(clienteAbierto)).nombre}` : ''} · ${c.email}`}
+                        leading={<Building2 className="w-5 h-5 text-slate-400" />}
+                        status={x && <Badge tone={x.estado.tono} dot>{mayus(nombreMes(mesSel))}: {x.estado.texto.toLowerCase()}</Badge>}
+                        onClose={() => setClienteAbierto(null)}
+                        width="max-w-2xl"
+                        toolbar={<Tabs className="px-5" active={pestanaCliente} onChange={setPestanaCliente} tabs={[
+                            { id: 'mes', label: mayus(nombreMes(mesSel)), icon: CalendarDays },
+                            { id: 'facturas', label: 'Facturas', icon: Receipt, count: susFacturas.length },
+                            { id: 'datos', label: 'Datos de facturación', icon: Building2 },
+                        ]} />}
+                    >
+                        <div className="p-5 space-y-4 text-xs">
+                            {pestanaCliente === 'mes' && <>
+                                {otrosMeses.length > 0 && (
+                                    <Notice tone="warning" icon={AlertTriangle}>
+                                        También tiene por facturar: {otrosMeses.map((g, i) => <React.Fragment key={g.mes}>{i > 0 && ', '}<button type="button" className="font-medium underline" onClick={() => cambiarMes(g.mes)}>{nombreMes(g.mes)}</button></React.Fragment>)}.
+                                    </Notice>
+                                )}
+                                <div>
+                                    <SectionTitle>Horas del mes</SectionTitle>
+                                    {hs.length === 0 ? <p className="text-slate-500">Sin horas en {nombreMes(mesSel)}.</p> : (
+                                        <ul className="mt-2 divide-y divide-slate-100 rounded-lg border border-slate-200">
+                                            {hs.map(h => {
+                                                const total = Object.values(h.horas).reduce((a, b) => a + b, 0);
+                                                const base = lineasDesdeHoras(h).reduce((t, l) => t + redondear(l.cantidad * l.precio), 0);
+                                                return (
+                                                    <li key={h.petId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
+                                                        <span>
+                                                            <span className="block text-slate-900">{h.petId} · {PETICIONES[h.petId].puesto}</span>
+                                                            <span className="text-[11px] text-slate-500">{num(total)} h a {euros(PETICIONES[h.petId].tarifa)}/h (presupuesto {PETICIONES[h.petId].presupuesto})</span>
+                                                        </span>
+                                                        <span className="text-right">
+                                                            <span className="block text-slate-900">{euros(base)}</span>
+                                                            {h.listo ? <Badge tone="success" dot>Validadas</Badge> : <Badge tone="warning" dot>Faltan {h.partesPendientes} partes</Badge>}
+                                                        </span>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                                <div>
+                                    <SectionTitle actions={<Button size="sm" icon={Plus} onClick={() => abrirServicio(clienteAbierto)}>Añadir servicio</Button>}>Servicios del mes</SectionTitle>
+                                    {svs.length === 0 ? <p className="text-slate-500">Ninguno. Selección, formación, reconocimientos... se añaden aquí y entran en la factura del mes.</p> : (
+                                        <ul className="mt-2 divide-y divide-slate-100 rounded-lg border border-slate-200">
+                                            {svs.map(s => {
+                                                const fx = facturaDeServicio(s);
+                                                return (
+                                                    <li key={s.id} className="flex items-start justify-between gap-2 px-3 py-2.5">
+                                                        <span className="flex items-start gap-1.5 min-w-0"><BriefcaseBusiness className="w-3.5 h-3.5 text-indigo-500 mt-0.5 shrink-0" />
+                                                            <span className="min-w-0"><span className="block text-slate-900">{servicioDe(s.servicio).nombre}</span><span className="text-[11px] text-slate-500">{s.descripcion} · {fechaES(s.fecha)}{s.salario != null ? ` · ${num(s.porcentaje)} % de ${euros(s.salario)}` : ` · ${num(s.cantidad)} × ${euros(s.precio)}`}</span></span>
+                                                        </span>
+                                                        <span className="text-right whitespace-nowrap">
+                                                            <span className="block text-slate-900">{euros(importeServicio(s))}</span>
+                                                            <span className="text-[11px] text-slate-500">{!fx ? 'Por facturar' : fx.numero ? `En ${fx.numero}` : 'En el borrador'}</span>
+                                                        </span>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                                <div className="rounded-lg bg-slate-50 px-3 py-3 flex flex-wrap items-center justify-between gap-2">
+                                    <span>
+                                        <span className="block text-[11px] text-slate-500">Base de la factura de {nombreMes(mesSel)}</span>
+                                        <span className="text-sm font-semibold text-slate-900">{euros(x ? x.base : 0)}</span>
+                                    </span>
+                                    <span className="flex flex-wrap gap-2">
+                                        {x?.g && <Button size="sm" variant={x.estado.id === 'esperando' ? 'secondary' : 'primary'} icon={Receipt} onClick={() => abrirFacturaDe(x)}>{x.g.borrador ? 'Ver borrador' : x.estado.id === 'esperando' ? 'Preparar borrador' : 'Preparar factura'}</Button>}
+                                        {!x?.g && x?.factura && <Button size="sm" icon={Eye} onClick={() => abrirFacturaDe(x)}>Ver {x.factura.numero}</Button>}
+                                        <Button size="sm" variant="ghost" icon={FilePlus2} onClick={() => setNuevaFactura({ cliente: clienteAbierto })}>Nueva factura</Button>
+                                    </span>
+                                </div>
+                                {x?.estado.id === 'esperando' && <p className="text-amber-700">Faltan partes por validar en Horas e incidencias. Puedes preparar el borrador, pero no emitirlo.</p>}
+                            </>}
+
+                            {pestanaCliente === 'facturas' && (
+                                susFacturas.length === 0 ? <p className="text-slate-500">Todavía no tiene facturas.</p> : <>
+                                    <p className="text-slate-600">{susFacturas.length} {susFacturas.length === 1 ? 'factura' : 'facturas'} · {euros(pendienteCobro)} pendiente de cobro</p>
+                                    <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                                        {susFacturas.map(fx => {
+                                            const e = estadoDe(fx);
+                                            return (
+                                                <li key={fx.id}>
+                                                    <button type="button" onClick={() => { setClienteAbierto(null); setAbierta(fx.id); }} className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-slate-50">
+                                                        <span>
+                                                            <span className="block font-medium text-slate-900">{fx.numero || 'Borrador'}</span>
+                                                            <span className="text-[11px] text-slate-500">{/^\d{4}-\d{2}$/.test(fx.periodo) ? mayus(nombreMes(fx.periodo)) : fx.periodo}{fx.emision ? ` · emitida el ${fechaES(fx.emision)}` : ''}</span>
+                                                        </span>
+                                                        <span className="flex items-center gap-2">
+                                                            <span className="text-slate-900">{euros(totalesDe(fx).total)}</span>
+                                                            <Badge tone={e.tono} dot>{e.texto}</Badge>
+                                                        </span>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </>
+                            )}
+
+                            {pestanaCliente === 'datos' && <>
+                                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                                    {[['Razón social', c.nombre], ['CIF', c.cif], ['Dirección', c.direccion], ['Correo de facturación', c.email], ['Forma de pago', c.pago], ['Días fijos de pago', c.diasFijos.length ? c.diasFijos.join(' y ') : 'No'], ['IVA', `${c.iva} %`], ['Detalle de las facturas de horas', c.detalle === 'persona' ? 'Por persona' : 'Por concepto']].map(([k, v]) => (
+                                        <div key={k}><dt className="text-[11px] text-slate-500">{k}</dt><dd className="text-slate-900">{v}</dd></div>
+                                    ))}
+                                </dl>
+                                {c.fichaIncompleta && <Notice tone="warning" icon={AlertTriangle}>{c.fichaIncompleta}</Notice>}
+                                <Button size="sm" icon={ArrowUpRight} onClick={() => { window.location.hash = '#/empresas'; }}>Cambiarlos en la ficha de Empresas</Button>
+                            </>}
+                        </div>
+                    </Drawer>
+                );
+            })()}
 
             {/* FICHA DE LA FACTURA */}
             {f && (() => {
@@ -891,7 +1249,7 @@ export default function FacturacionView() {
                                                     <td className="py-2 px-3 text-right whitespace-nowrap">{num(l.cantidad)} {l.unidad}</td>
                                                     <td className="py-2 px-3 text-right whitespace-nowrap">{euros(l.precio)}</td>
                                                     <td className="py-2 px-3 text-right whitespace-nowrap text-slate-900">{euros(redondear(l.cantidad * l.precio))}</td>
-                                                    {borrador && <td className="py-1 px-2 text-right">{(l.manual || l.servicio) && <IconButton icon={Trash2} title={l.servicio ? 'Quitar de esta factura (el servicio vuelve a «Por facturar»)' : 'Quitar línea'} onClick={() => setLineaAEliminar(l)} />}</td>}
+                                                    {borrador && <td className="py-1 px-2 text-right">{(l.manual || l.servicio) && <IconButton icon={Trash2} title={l.servicio ? 'Quitar de esta factura (el servicio vuelve a quedar pendiente de facturar)' : 'Quitar línea'} onClick={() => setLineaAEliminar(l)} />}</td>}
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -1065,17 +1423,16 @@ export default function FacturacionView() {
                 const cambiar = (k, v) => setNuevoServicio(x => ({ ...x, [k]: v }));
                 const valido = n.cliente && n.fecha && importe > 0;
                 return (
-                    <Modal title={n.enFactura ? 'Añadir servicio a esta factura' : 'Añadir servicio a facturar'} subtitle="Selección, formación, reconocimientos... Sale en «Por facturar» con las horas del cliente de ese mes" onClose={() => setNuevoServicio(null)} size="max-w-lg"
+                    <Modal title={n.enFactura ? 'Añadir servicio a esta factura' : 'Añadir servicio a facturar'} subtitle="Selección, formación, reconocimientos... Entra en la factura del cliente de ese mes, con sus horas" onClose={() => setNuevoServicio(null)} size="max-w-lg"
                         footer={<>
                             <Button onClick={() => setNuevoServicio(null)}>Cancelar</Button>
                             <Button variant="primary" icon={CheckCircle2} disabled={!valido} onClick={guardarServicio}>{n.enFactura ? 'Añadir a la factura' : 'Registrar servicio'}</Button>
                         </>}>
                         <div className="space-y-3 text-xs">
                             <Field label="Cliente">
-                                <Select value={n.cliente} disabled={!!n.enFactura} onChange={(e) => cambiar('cliente', e.target.value)} className="w-full">
-                                    <option value="">Elige el cliente…</option>
-                                    {Object.entries(CLIENTES).filter(([id]) => SUCURSALES_USUARIO.includes(sucursalDe(id))).map(([id, c]) => <option key={id} value={id}>{c.nombre}</option>)}
-                                </Select>
+                                {n.enFactura ? <div className="text-slate-900">{CLIENTES[n.cliente].nombre}</div> : (
+                                    <BuscadorCliente valor={n.cliente} onChange={(v) => cambiar('cliente', v)} ids={Object.keys(CLIENTES).filter(id => SUCURSALES_USUARIO.includes(sucursalDe(id)))} destacados={porFacturar.map(g => g.cliente)} sucursalDe={sucursalDe} />
+                                )}
                             </Field>
                             <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] gap-3">
                                 <Field label="Servicio">
@@ -1102,7 +1459,7 @@ export default function FacturacionView() {
                                 <span className="text-slate-600">{FORMAS_COBRO[sv.cobro]?.texto}{pct && n.salario ? ` · ${num(Number(n.porcentaje) || 0)} % de ${euros(Number(n.salario) || 0)}` : ''}</span>
                                 <span className="text-sm font-medium text-slate-900">{euros(importe)} <span className="text-[11px] font-normal text-slate-500">sin IVA</span></span>
                             </div>
-                            {!n.enFactura && n.cliente && <p className="text-[11px] text-slate-500">Saldrá en «Por facturar» de {CLIENTES[n.cliente].nombre}, {nombreMes(n.fecha.slice(0, 7))}, junto a sus horas si las hay.</p>}
+                            {!n.enFactura && n.cliente && <p className="text-[11px] text-slate-500">Entra en la factura de {nombreMes(n.fecha.slice(0, 7))} de {CLIENTES[n.cliente].nombre}, junto a sus horas si las hay.</p>}
                         </div>
                     </Modal>
                 );
@@ -1117,10 +1474,7 @@ export default function FacturacionView() {
                     </>}>
                     <div className="space-y-3 text-xs">
                         <Field label="Cliente">
-                            <Select value={nuevaFactura.cliente} onChange={(e) => setNuevaFactura({ cliente: e.target.value })} className="w-full">
-                                <option value="">Elige el cliente…</option>
-                                {Object.entries(CLIENTES).filter(([id]) => SUCURSALES_USUARIO.includes(sucursalDe(id))).map(([id, c]) => <option key={id} value={id}>{c.nombre}</option>)}
-                            </Select>
+                            <BuscadorCliente valor={nuevaFactura.cliente} onChange={(v) => setNuevaFactura({ cliente: v })} ids={Object.keys(CLIENTES).filter(id => SUCURSALES_USUARIO.includes(sucursalDe(id)))} destacados={porFacturar.map(g => g.cliente)} sucursalDe={sucursalDe} />
                         </Field>
                         <p className="text-slate-500">Después añade servicios del catálogo o líneas libres, y emítela como las demás.</p>
                     </div>
@@ -1159,9 +1513,9 @@ export default function FacturacionView() {
                 <Confirmar title="Descartar el borrador" confirmLabel="Descartar" onClose={() => setDescartar(false)} onConfirm={() => {
                     setFacturas(prev => prev.filter(x => x.id !== f.id));
                     setDescartar(false); setAbierta(null);
-                    showToast('Borrador descartado. Las horas vuelven a «Por facturar».');
+                    showToast('Borrador descartado. Las horas y los servicios vuelven a quedar pendientes de facturar.');
                 }}>
-                    Las horas vuelven a «Por facturar». No se ha emitido ninguna factura, así que no hace falta rectificativa.
+                    Las horas y los servicios vuelven a quedar pendientes de facturar. No se ha emitido ninguna factura, así que no hace falta rectificativa.
                 </Confirmar>
             )}
 

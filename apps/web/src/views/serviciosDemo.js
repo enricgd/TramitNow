@@ -1,5 +1,5 @@
 // Servicios que factura la ETT además de las horas (Mi ETT → Facturación). Cada servicio que se hace se registra
-// en Facturación («Añadir servicio a facturar») y aparece en «Por facturar» con las horas de ese cliente y mes.
+// en la ficha de facturación del cliente («Añadir servicio») y entra en su factura del mes, con sus horas.
 export const FORMAS_COBRO = {
     porcentaje: { texto: '% del salario bruto anual', unidad: 'proceso' },
     persona: { texto: 'Por persona', unidad: 'persona' },
