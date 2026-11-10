@@ -77,6 +77,7 @@ billing: {
   riskLimit: '30.000 € (Pendiente scoring Coface)',
   specialVat: false,
   fixedPayDays: 'Día 10 y 25',
+  facturaDetalle: 'concepto',
   isComplete: false
 },
 activity: [
@@ -169,7 +170,7 @@ contacts: [
 centers: [
   { id: 'cent-401', name: 'Palau de Congressos BCN', address: 'Av. Diagonal 661', postalCode: '08028', city: 'Barcelona', country: 'España', notes: 'Acceso puerta de proveedores c/ Martí i Franquès' }
 ],
-billing: { isComplete: false },
+billing: { isComplete: false, facturaDetalle: 'persona' },
 activity: []
       }
     ];
@@ -1386,6 +1387,17 @@ return companies.filter(c => {
                         className="w-full bg-slate-100 border border-slate-200 rounded px-3 py-1.5 text-slate-400 font-mono"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-500 text-[11px] font-semibold">Cómo quiere las facturas de horas</label>
+                    <div className="mt-1">
+                      <Select value={currentCompany.billing.facturaDetalle || 'concepto'} onChange={(e) => actualizarFacturacion('facturaDetalle', e.target.value)} className="w-full" aria-label="Cómo quiere las facturas de horas">
+                        <option value="concepto">Por concepto: una línea por tipo de hora, con anexo de horas e importe por persona</option>
+                        <option value="persona">Por persona: una línea por persona y tipo de hora</option>
+                      </Select>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400">Es lo que sale al preparar cada factura en Facturación; allí se puede cambiar en una factura concreta.</p>
                   </div>
 
                   <div>

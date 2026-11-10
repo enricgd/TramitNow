@@ -24,11 +24,13 @@ const CLIENTES = {
         direccion: 'Polígono Industrial Artunduaga, Pabellón 14, 48970 Basauri (Bizkaia)',
         iva: 21, retencion: 0, pago: 'Transferencia a 60 días', diasPago: 60, diasFijos: [10, 25],
         email: 'facturacion@translog-norte.es', fichaIncompleta: 'Falta el IBAN y la evaluación de riesgo.',
+        detalle: 'concepto', // cómo quiere las facturas de horas (ficha de Empresas → Facturación)
     },
     hosteleria: {
         nombre: 'Hostelería & Eventos Premium BCN, S.L.', cif: 'B-99887766', direccion: 'Passeig de Gràcia 112, 4º, 08008 Barcelona',
         iva: 21, retencion: 0, pago: 'Transferencia a 30 días', diasPago: 30, diasFijos: [],
         email: 'facturacion@premiumeventsbcn.cat',
+        detalle: 'persona',
     },
 };
 // Tarifa por hora del presupuesto aceptado; los recargos son los del presupuesto (EXTRAS_DEFECTO)
@@ -275,8 +277,8 @@ export default function FacturacionView() {
         if (g.borrador) { setAbierta(g.borrador); return; }
         const id = `borrador-${Date.now()}`;
         setFacturas(prev => [...prev, {
-            id, numero: null, cliente: g.cliente, periodo: g.mes, emision: null, vencimiento: null, estado: 'borrador',
-            lineas: g.horas.flatMap(lineasDesdeHoras), cobros: [], historial: [{ fecha: hoyIso(), texto: 'Borrador preparado con las horas de Horas e incidencias' }],
+            id, numero: null, cliente: g.cliente, periodo: g.mes, emision: null, vencimiento: null, estado: 'borrador', detalle: CLIENTES[g.cliente].detalle,
+            lineas: g.horas.flatMap(lineasDesdeHoras), cobros: [], historial: [{ fecha: hoyIso(), texto: `Borrador preparado con las horas de Horas e incidencias, ${CLIENTES[g.cliente].detalle === 'persona' ? 'por persona' : 'por concepto'} como quiere el cliente` }],
         }]);
         setAbierta(id);
     };
@@ -300,12 +302,12 @@ export default function FacturacionView() {
         setSiguiente(s => ({ ...s, R: s.R + 1 }));
         const nuevas = [{
             id: numero, numero, cliente: f.cliente, periodo: f.periodo, emision: hoyIso(), vencimiento: hoyIso(), estado: 'emitida', rectifica: f.numero,
-            motivo: rectificar.motivo, lineas: f.lineas.map(l => ({ ...l, cantidad: -l.cantidad })), cobros: [],
+            motivo: rectificar.motivo, detalle: f.detalle, lineas: f.lineas.map(l => ({ ...l, cantidad: -l.cantidad })), cobros: [],
             historial: [{ fecha: hoyIso(), texto: `Rectificativa de ${f.numero}: ${rectificar.motivo.toLowerCase()}${rectificar.nota ? `. ${rectificar.nota}` : ''}` }],
         }];
         if (rectificar.nueva) {
             nuevas.push({
-                id: `borrador-${Date.now()}`, numero: null, cliente: f.cliente, periodo: f.periodo, emision: null, vencimiento: null, estado: 'borrador',
+                id: `borrador-${Date.now()}`, numero: null, cliente: f.cliente, periodo: f.periodo, emision: null, vencimiento: null, estado: 'borrador', detalle: f.detalle,
                 lineas: f.lineas.map(l => ({ ...l })), cobros: [], historial: [{ fecha: hoyIso(), texto: `Borrador para sustituir a ${f.numero}` }],
             });
         }
@@ -572,6 +574,7 @@ export default function FacturacionView() {
                                             })}
                                         </span>
                                         : <Badge tone="neutral">{f.detalle === 'persona' ? 'Líneas por persona' : 'Líneas por concepto'}</Badge>)}
+                                    {borrador && personasDe(f).length > 0 && (f.detalle === 'persona' ? 'persona' : 'concepto') !== (cliente.detalle || 'concepto') && <span className="text-[11px] text-amber-700">El cliente las quiere {cliente.detalle === 'persona' ? 'por persona' : 'por concepto'}</span>}
                                     {borrador && <Button size="sm" icon={Plus} onClick={() => setLinea({ concepto: '', cantidad: 1, precio: '' })}>Añadir línea</Button>}
                                 </span>}>Líneas</SectionTitle>
                                 <div className="overflow-x-auto rounded-lg border border-slate-200">
@@ -613,7 +616,7 @@ export default function FacturacionView() {
                             {personasDe(f).length > 0 && (() => {
                                 const filas = personasDe(f);
                                 const usados = CONCEPTOS.filter(c => filas.some(p => p.horas[c.id]));
-                                const importe = (p) => redondear(usados.reduce((s, c) => s + (p.horas[c.id] || 0) * redondear(PETICIONES[p.petId].tarifa * c.recargo), 0));
+                                const importe = (p) => redondear(usados.reduce((s, c) => s + redondear((p.horas[c.id] || 0) * redondear(PETICIONES[p.petId].tarifa * c.recargo)), 0));
                                 const conDiferencia = filas.filter(p => p.validadas);
                                 return (
                                     <div className="space-y-2">
@@ -730,18 +733,25 @@ export default function FacturacionView() {
                                 <div className="flex justify-between border-t border-slate-300 pt-1 text-sm text-slate-900"><dt>Total</dt><dd>{euros(t.total)}</dd></div>
                             </dl>
                             {!f.rectifica && <div className="text-slate-600">Forma de pago: {cliente.pago.toLowerCase()} a {ETT.iban}. Vencimiento: {fechaES(f.vencimiento || vencimientoDe(cliente, hoyIso()))}.</div>}
-                            {f.detalle !== 'persona' && personasDe(f).length > 0 && (() => {
+                            {/* Importe de cada persona: en el PDF, como anexo (por concepto) o como resumen (por persona) */}
+                            {personasDe(f).length > 0 && (() => {
                                 const filas = personasDe(f);
                                 const usados = CONCEPTOS.filter(c => filas.some(p => p.horas[c.id]));
+                                const importe = (p) => redondear(usados.reduce((s, c) => s + redondear((p.horas[c.id] || 0) * redondear(PETICIONES[p.petId].tarifa * c.recargo)), 0));
+                                const totalH = (p) => usados.reduce((s, c) => s + (p.horas[c.id] || 0), 0);
                                 return (
                                     <div className="border-t border-slate-200 pt-4 space-y-2">
-                                        <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Anexo: horas por persona</div>
+                                        <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">{f.detalle === 'persona' ? 'Resumen por persona' : 'Anexo: horas e importe por persona'}</div>
                                         <div className="overflow-x-auto">
-                                            <table className="w-full min-w-[420px] text-left">
-                                                <thead><tr className="border-b border-slate-300 text-[11px] text-slate-500"><th className="py-1.5 font-medium">Persona</th>{usados.map(c => <th key={c.id} className="py-1.5 pl-3 font-medium text-right">{mayus(c.texto.replace('horas ', ''))}</th>)}</tr></thead>
-                                                <tbody>{filas.map(p => <tr key={`${p.petId}-${p.nombre}`} className="border-b border-slate-100"><td className="py-1 pr-2">{p.nombre}</td>{usados.map(c => <td key={c.id} className="py-1 pl-3 text-right">{p.horas[c.id] ? num(p.horas[c.id]) : '—'}</td>)}</tr>)}</tbody>
+                                            <table className="w-full min-w-[520px] text-left">
+                                                <thead><tr className="border-b border-slate-300 text-[11px] text-slate-500"><th className="py-1.5 font-medium">Persona</th>{usados.map(c => <th key={c.id} className="py-1.5 pl-3 font-medium text-right">{mayus(c.texto.replace('horas ', ''))}</th>)}<th className="py-1.5 pl-3 font-medium text-right">Total h</th><th className="py-1.5 pl-3 font-medium text-right">Importe</th></tr></thead>
+                                                <tbody>
+                                                    {filas.map(p => <tr key={`${p.petId}-${p.mes}-${p.nombre}`} className="border-b border-slate-100"><td className="py-1 pr-2">{p.nombre}</td>{usados.map(c => <td key={c.id} className="py-1 pl-3 text-right">{p.horas[c.id] ? num(p.horas[c.id]) : '—'}</td>)}<td className="py-1 pl-3 text-right">{num(totalH(p))}</td><td className="py-1 pl-3 text-right whitespace-nowrap">{euros(importe(p))}</td></tr>)}
+                                                    <tr className="text-slate-900"><td className="py-1.5 pr-2">{filas.length} personas</td>{usados.map(c => <td key={c.id} className="py-1.5 pl-3 text-right">{num(redondear(filas.reduce((s, p) => s + (p.horas[c.id] || 0), 0)))}</td>)}<td className="py-1.5 pl-3 text-right">{num(redondear(filas.reduce((s, p) => s + totalH(p), 0)))}</td><td className="py-1.5 pl-3 text-right whitespace-nowrap">{euros(redondear(filas.reduce((s, p) => s + importe(p), 0)))}</td></tr>
+                                                </tbody>
                                             </table>
                                         </div>
+                                        <p className="text-[11px] text-slate-500">Importes sin IVA, a la tarifa por hora de cada concepto.</p>
                                     </div>
                                 );
                             })()}
