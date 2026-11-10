@@ -3,12 +3,13 @@
 import React, { useState, useMemo } from 'react';
 import {
     Receipt, Building2, Send, CheckCircle2, AlertTriangle, Info, X, Plus, Trash2, Eye, FileCheck2, Wallet,
-    ArrowUpRight, Clock, Undo2, BellRing, FileMinus2, CalendarDays, ChevronDown
+    ArrowUpRight, Clock, Undo2, BellRing, FileMinus2, CalendarDays, ChevronDown, Download, FileSpreadsheet, Printer
 } from 'lucide-react';
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, SearchInput,
     Select, Field, TextInput, Modal, Drawer, Confirmar
 } from '../ui';
+import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
 
 // ==========================================
 // DATOS DE EJEMPLO (los mismos clientes, peticiones y horas que en Peticiones y Horas e incidencias)
@@ -197,6 +198,62 @@ INITIAL_FACTURAS[1].cobros = [{ fecha: '2026-10-10', importe: totalesDe(INITIAL_
 INITIAL_FACTURAS[1].historial.push({ fecha: '2026-10-10', texto: 'Cobrada' });
 const PRIMER_NUMERO = 108;
 
+// ==========================================
+// DESCARGAS: PDF de la factura (ventana imprimible: «Guardar como PDF») y Excel (CSV con ; que abre Excel)
+// ==========================================
+const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const htmlFactura = (f) => {
+    const cliente = CLIENTES[f.cliente];
+    const t = totalesDe(f);
+    const filas = personasDe(f);
+    const usados = CONCEPTOS.filter(c => filas.some(p => p.horas[c.id]));
+    const importe = (p) => redondear(usados.reduce((s, c) => s + redondear((p.horas[c.id] || 0) * redondear(PETICIONES[p.petId].tarifa * c.recargo)), 0));
+    const anexo = filas.length ? `
+        <h3>${f.detalle === 'persona' ? 'Resumen por persona' : 'Anexo: horas e importe por persona'}</h3>
+        <table><thead><tr><th>Persona</th>${usados.map(c => `<th class="n">${esc(mayus(c.texto.replace('horas ', '')))}</th>`).join('')}<th class="n">Total h</th><th class="n">Importe</th></tr></thead><tbody>
+        ${filas.map(p => `<tr><td>${esc(p.nombre)}</td>${usados.map(c => `<td class="n">${p.horas[c.id] ? num(p.horas[c.id]) : '—'}</td>`).join('')}<td class="n">${num(usados.reduce((s, c) => s + (p.horas[c.id] || 0), 0))}</td><td class="n">${euros(importe(p))}</td></tr>`).join('')}
+        <tr class="tot"><td>${filas.length} personas</td>${usados.map(c => `<td class="n">${num(redondear(filas.reduce((s, p) => s + (p.horas[c.id] || 0), 0)))}</td>`).join('')}<td class="n">${num(redondear(filas.reduce((s, p) => s + usados.reduce((x, c) => x + (p.horas[c.id] || 0), 0), 0)))}</td><td class="n">${euros(redondear(filas.reduce((s, p) => s + importe(p), 0)))}</td></tr>
+        </tbody></table><p class="nota">Importes sin IVA, a la tarifa por hora de cada concepto.</p>` : '';
+    return `<section class="factura">
+        <div class="cab"><div><b>${esc(ETT.nombre)}</b><br>CIF ${esc(ETT.cif)} · ${esc(ETT.direccion)}<br>Empresa de trabajo temporal autorizada n.º ${esc(ETT.autorizacion)}</div>
+        <div class="d"><span class="num">${f.rectifica ? 'Factura rectificativa' : 'Factura'} ${esc(f.numero || '(borrador)')}</span><br>Fecha: ${fechaES(f.emision || hoyIso())}${f.rectifica ? `<br>Rectifica: ${esc(f.rectifica)}` : ''}</div></div>
+        <div class="cli"><small>Cliente</small><br><b>${esc(cliente.nombre)}</b> · CIF ${esc(cliente.cif)}<br>${esc(cliente.direccion)}</div>
+        <table><thead><tr><th>Concepto</th><th class="n">Cantidad</th><th class="n">Precio</th><th class="n">Importe</th></tr></thead><tbody>
+        ${lineasDe(f).map(l => `<tr><td>${esc(l.concepto)}</td><td class="n">${num(l.cantidad)} ${esc(l.unidad)}</td><td class="n">${euros(l.precio)}</td><td class="n">${euros(redondear(l.cantidad * l.precio))}</td></tr>`).join('')}
+        </tbody></table>
+        <table class="totales"><tr><td>Base imponible</td><td class="n">${euros(t.base)}</td></tr><tr><td>IVA ${cliente.iva} %</td><td class="n">${euros(t.iva)}</td></tr>${cliente.retencion ? `<tr><td>Retención ${cliente.retencion} %</td><td class="n">−${euros(t.retencion)}</td></tr>` : ''}<tr class="tot"><td>Total</td><td class="n">${euros(t.total)}</td></tr></table>
+        ${f.rectifica ? '' : `<p>Forma de pago: ${esc(cliente.pago.toLowerCase())} a ${esc(ETT.iban)}. Vencimiento: ${fechaES(f.vencimiento || vencimientoDe(cliente, hoyIso()))}.</p>`}
+        ${anexo}
+    </section>`;
+};
+// Abre las facturas en una ventana para guardarlas como PDF (una por página)
+const descargarPdf = (lista, titulo) => {
+    const w = window.open('', '_blank');
+    if (!w) return false;
+    w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>
+        body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;color:#1e293b;margin:24px}
+        .factura{page-break-after:always;max-width:800px;margin:0 auto 40px}.factura:last-child{page-break-after:auto}
+        .cab{display:flex;justify-content:space-between;gap:24px;margin-bottom:16px}.d{text-align:right}.num{font-size:16px}
+        .cli{background:#f1f5f9;padding:10px;border-radius:6px;margin-bottom:16px}small,.nota{color:#64748b}
+        table{width:100%;border-collapse:collapse;margin:8px 0}th{text-align:left;font-weight:500;color:#64748b;border-bottom:1px solid #94a3b8;padding:4px}
+        td{border-bottom:1px solid #e2e8f0;padding:4px}.n{text-align:right;white-space:nowrap}.tot td{font-weight:600;border-bottom:0}
+        .totales{width:260px;margin-left:auto}h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px}
+        @media print{body{margin:0}}</style></head><body>${lista.map(htmlFactura).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`);
+    w.document.close();
+    return true;
+};
+// Excel: CSV con punto y coma, coma decimal y BOM para que Excel lo abra bien en español
+const numExcel = (n) => String(redondear(n)).replace('.', ',');
+const descargarCsv = (nombre, cabecera, filas) => {
+    const celda = (v) => { const t = String(v ?? ''); return /[;"\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const texto = [cabecera, ...filas].map(fila => fila.map(celda).join(';')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff' + texto], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 export default function FacturacionView() {
     const [facturas, setFacturas] = useState(INITIAL_FACTURAS);
     const [horas, setHoras] = useState(HORAS_INICIALES);
@@ -205,6 +262,8 @@ export default function FacturacionView() {
     const [filtroEstado, setFiltroEstado] = useState('');
     const [filtroCliente, setFiltroCliente] = useState('');
     const [filtroPeticion, setFiltroPeticion] = useState('');
+    const [filtroSucursal, setFiltroSucursal] = useState(''); // solo para quien ve más de una sucursal
+    const [menuExportar, setMenuExportar] = useState(false);
     const [periodo, setPeriodo] = useState('anio');
     const [desde, setDesde] = useState('');
     const [hasta, setHasta] = useState('');
@@ -243,8 +302,12 @@ export default function FacturacionView() {
         return Object.values(grupos).sort((a, b) => b.mes.localeCompare(a.mes));
     }, [horas, facturas]);
     const [rangoDesde, rangoHasta] = rangoDe(periodo, desde, hasta);
+    // Sucursal: la del cliente (en real, la de la petición o la factura). Solo las que ve el usuario.
+    const sucursalDe = (clienteId) => sucursalDeCliente(CLIENTES[clienteId].nombre);
+    const enSucursal = (clienteId) => SUCURSALES_USUARIO.includes(sucursalDe(clienteId)) && (!filtroSucursal || sucursalDe(clienteId) === filtroSucursal);
     const textoPeticion = (petId) => `${petId} ${PETICIONES[petId].puesto}`;
     const porFacturarFiltrado = porFacturar
+        .filter(g => enSucursal(g.cliente))
         .filter(g => !filtroCliente || g.cliente === filtroCliente)
         .filter(g => !filtroPeticion || g.horas.some(h => h.petId === filtroPeticion))
         .filter(g => `${g.mes}-01` <= rangoHasta && finDeMes(g.mes) >= rangoDesde)
@@ -259,19 +322,50 @@ export default function FacturacionView() {
                 if (filtroEstado === 'pendientes') return PENDIENTES_COBRO.includes(e);
                 return e === filtroEstado;
             })
+            .filter(f => enSucursal(f.cliente))
             .filter(f => !filtroCliente || f.cliente === filtroCliente)
             .filter(f => !filtroPeticion || peticionesDe(f).includes(filtroPeticion))
             .filter(f => fechaFiltro(f) >= rangoDesde && fechaFiltro(f) <= rangoHasta)
             .filter(f => !q || normalizar([f.numero || 'borrador', CLIENTES[f.cliente].nombre, f.periodo, /^\d{4}-\d{2}$/.test(f.periodo) ? nombreMes(f.periodo) : '', ...peticionesDe(f).map(textoPeticion), ...f.lineas.map(l => l.concepto)].join(' ')).includes(normalizar(q)))
             .sort((a, b) => (a.estado === 'borrador' ? -1 : b.estado === 'borrador' ? 1 : b.emision.localeCompare(a.emision)));
-    }, [facturas, busqueda, filtroEstado, filtroCliente, filtroPeticion, rangoDesde, rangoHasta]);
-    const pendientes = facturas.filter(f => PENDIENTES_COBRO.includes(estadoDe(f).id));
-    const vencidas = facturas.filter(f => estadoDe(f).id === 'vencida');
+    }, [facturas, busqueda, filtroEstado, filtroCliente, filtroPeticion, filtroSucursal, rangoDesde, rangoHasta]);
+    const deSucursal = facturas.filter(f => enSucursal(f.cliente));
+    const pendientes = deSucursal.filter(f => PENDIENTES_COBRO.includes(estadoDe(f).id));
+    const vencidas = deSucursal.filter(f => estadoDe(f).id === 'vencida');
     const suma = (l) => l.reduce((s, f) => s + totalesDe(f).pendiente, 0);
-    const hayFiltros = busqueda || filtroEstado || filtroCliente || filtroPeticion || periodo !== 'anio';
-    const limpiar = () => { setBusqueda(''); setFiltroEstado(''); setFiltroCliente(''); setFiltroPeticion(''); setPeriodo('anio'); setDesde(''); setHasta(''); };
+    const hayFiltros = busqueda || filtroEstado || filtroCliente || filtroPeticion || filtroSucursal || periodo !== 'anio';
+    const limpiar = () => { setBusqueda(''); setFiltroEstado(''); setFiltroCliente(''); setFiltroPeticion(''); setFiltroSucursal(''); setPeriodo('anio'); setDesde(''); setHasta(''); };
     const etiqueta = (texto, icono) => <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600">{icono}{texto}</span>;
     const f = facturas.find(x => x.id === abierta);
+    const emitidasLista = lista.filter(x => x.estado !== 'borrador');
+    const exportarFacturas = () => {
+        descargarCsv(`facturas_${hoyIso()}.csv`,
+            ['Número', 'Tipo', 'Rectifica', 'Fecha de emisión', 'Vencimiento', 'Cliente', 'CIF', 'Sucursal', 'Periodo', 'Peticiones', 'Base imponible', 'IVA %', 'IVA', 'Retención', 'Total', 'Cobrado', 'Pendiente', 'Estado', 'Líneas'],
+            emitidasLista.map(x => { const t = totalesDe(x); const c = CLIENTES[x.cliente]; return [x.numero, x.rectifica ? 'Rectificativa' : 'Factura', x.rectifica || '', fechaES(x.emision), x.rectifica ? '' : fechaES(x.vencimiento), c.nombre, c.cif, sucursal(sucursalDe(x.cliente)).nombre, /^\d{4}-\d{2}$/.test(x.periodo) ? nombreMes(x.periodo) : x.periodo, peticionesDe(x).join(', '), numExcel(t.base), c.iva, numExcel(t.iva), numExcel(t.retencion), numExcel(t.total), numExcel(t.cobrado), numExcel(t.pendiente), estadoDe(x).texto, x.detalle === 'persona' ? 'Por persona' : 'Por concepto']; }));
+        setMenuExportar(false);
+        showToast(`Excel con ${emitidasLista.length} facturas descargado`);
+    };
+    const exportarPersonas = () => {
+        const filas = emitidasLista.flatMap(x => {
+            const c = CLIENTES[x.cliente];
+            const personas = personasDe(x);
+            if (!personas.length) return x.lineas.map(l => [x.numero, fechaES(x.emision), c.nombre, sucursal(sucursalDe(x.cliente)).nombre, '', '', l.concepto, numExcel(l.cantidad), l.unidad, numExcel(l.precio), numExcel(l.cantidad * l.precio)]);
+            return personas.flatMap(p => CONCEPTOS.filter(k => p.horas[k.id]).map(k => {
+                const precio = redondear(PETICIONES[p.petId].tarifa * k.recargo);
+                return [x.numero, fechaES(x.emision), c.nombre, sucursal(sucursalDe(x.cliente)).nombre, p.petId, p.nombre, `${mayus(k.texto)} · ${nombreMes(p.mes)}`, numExcel(p.horas[k.id]), 'h', numExcel(precio), numExcel(p.horas[k.id] * precio)];
+            }));
+        });
+        descargarCsv(`facturas_horas_por_persona_${hoyIso()}.csv`, ['Número', 'Fecha de emisión', 'Cliente', 'Sucursal', 'Petición', 'Persona', 'Concepto', 'Cantidad', 'Unidad', 'Precio', 'Importe'], filas);
+        setMenuExportar(false);
+        showToast(`Excel con ${filas.length} líneas descargado`);
+    };
+    const pdfFiltradas = () => {
+        setMenuExportar(false);
+        if (!descargarPdf(emitidasLista, `Facturas ${hoyIso()}`)) showToast('El navegador ha bloqueado la ventana: permite las ventanas emergentes para descargar el PDF');
+    };
+    const pdfFactura = (x) => {
+        if (!descargarPdf([x], x.numero || 'Borrador')) showToast('El navegador ha bloqueado la ventana: permite las ventanas emergentes para descargar el PDF');
+    };
 
     const prepararFactura = (g) => {
         if (g.borrador) { setAbierta(g.borrador); return; }
@@ -340,11 +434,20 @@ export default function FacturacionView() {
                             {etiqueta('Buscar')}
                             <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Número, cliente, petición o puesto..." />
                         </label>
+                        {veVariasSucursales && (
+                            <label className="flex flex-col gap-1 min-w-[200px] flex-1 sm:flex-none">
+                                {etiqueta('Sucursal')}
+                                <Select value={filtroSucursal} onChange={(e) => { const v = e.target.value; setFiltroSucursal(v); if (filtroCliente && v && sucursalDe(filtroCliente) !== v) { setFiltroCliente(''); setFiltroPeticion(''); } }} aria-label="Sucursal">
+                                    <option value="">Todas las sucursales</option>
+                                    {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                                </Select>
+                            </label>
+                        )}
                         <label className="flex flex-col gap-1 min-w-[220px] flex-1 sm:flex-none">
                             {etiqueta('Cliente', <Building2 className="w-3.5 h-3.5 text-slate-400" />)}
                             <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroPeticion(''); }} aria-label="Cliente">
                                 <option value="">Todos los clientes</option>
-                                {Object.entries(CLIENTES).map(([id, c]) => { const n = facturas.filter(x => x.cliente === id).length; return <option key={id} value={id}>{c.nombre} · {n} {n === 1 ? 'factura' : 'facturas'}</option>; })}
+                                {Object.entries(CLIENTES).filter(([id]) => enSucursal(id)).map(([id, c]) => { const n = facturas.filter(x => x.cliente === id).length; return <option key={id} value={id}>{c.nombre} · {n} {n === 1 ? 'factura' : 'facturas'}</option>; })}
                             </Select>
                         </label>
                         {filtroCliente && (
@@ -382,6 +485,47 @@ export default function FacturacionView() {
                     </div>
                     <p className="mt-2 text-[11px] text-slate-500">{rangoDesde > '0000-01-01' ? `Del ${fechaES(rangoDesde)}` : 'Desde el principio'}{rangoHasta < '9999-12-31' ? ` al ${fechaES(rangoHasta)}` : ''}. Los borradores cuentan por el mes que facturan.</p>
                 </Card>
+
+                {/* POR SUCURSAL: facturado, pendiente y por facturar de cada una (con los filtros de fechas y cliente) */}
+                {veVariasSucursales && !filtroSucursal && (
+                    <Card className="overflow-hidden">
+                        <div className="px-4 py-2.5 border-b border-slate-200 text-xs font-semibold text-slate-900">Facturación por sucursal</div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                                <thead>
+                                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                                        <th className="py-2 px-3 font-medium">Sucursal</th>
+                                        <th className="py-2 px-3 font-medium text-right">Facturas</th>
+                                        <th className="py-2 px-3 font-medium text-right">Facturado</th>
+                                        <th className="py-2 px-3 font-medium text-right">Pendiente de cobro</th>
+                                        <th className="py-2 px-3 font-medium text-right">Vencido</th>
+                                        <th className="py-2 px-3 font-medium text-right">Por facturar (base)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(su => {
+                                        const fs = lista.filter(x => sucursalDe(x.cliente) === su.id && x.estado !== 'borrador' && !x.anulada);
+                                        const pf = porFacturarFiltrado.filter(g => sucursalDe(g.cliente) === su.id);
+                                        const pendiente = fs.filter(x => PENDIENTES_COBRO.includes(estadoDe(x).id)).reduce((s, x) => s + totalesDe(x).pendiente, 0);
+                                        const vencido = fs.filter(x => estadoDe(x).id === 'vencida').reduce((s, x) => s + totalesDe(x).pendiente, 0);
+                                        const porFacturarBase = pf.reduce((s, g) => s + g.horas.flatMap(lineasDesdeHoras).reduce((a, l) => a + redondear(l.cantidad * l.precio), 0), 0);
+                                        return (
+                                            <tr key={su.id} onClick={() => setFiltroSucursal(su.id)} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer" title={`Ver solo ${su.nombre}`}>
+                                                <td className="py-2.5 px-3 font-medium text-slate-900">{su.nombre}</td>
+                                                <td className="py-2.5 px-3 text-right text-slate-700">{fs.length}</td>
+                                                <td className="py-2.5 px-3 text-right text-slate-900 whitespace-nowrap">{euros(fs.reduce((s, x) => s + totalesDe(x).total, 0))}</td>
+                                                <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap">{euros(pendiente)}</td>
+                                                <td className={`py-2.5 px-3 text-right whitespace-nowrap ${vencido ? 'text-rose-700' : 'text-slate-400'}`}>{euros(vencido)}</td>
+                                                <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap">{euros(porFacturarBase)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p className="px-4 py-2 text-[11px] text-slate-500 border-t border-slate-100">Con las fechas y el cliente elegidos. Pulsa una sucursal para ver solo sus facturas.</p>
+                    </Card>
+                )}
 
                 {/* POR FACTURAR */}
                 <div id="por-facturar" className="space-y-2">
@@ -422,7 +566,19 @@ export default function FacturacionView() {
                 </div>
 
                 {/* FACTURAS, agrupadas por cliente */}
-                <SectionTitle>Facturas</SectionTitle>
+                <SectionTitle actions={
+                    <span className="relative">
+                        <Button size="sm" icon={Download} disabled={!emitidasLista.length} onClick={() => setMenuExportar(m => !m)}>Descargar ({emitidasLista.length})</Button>
+                        {menuExportar && (
+                            <span className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-slate-200 bg-white shadow-lg py-1 text-xs block">
+                                <button type="button" onClick={exportarFacturas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2"><FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="block font-medium text-slate-900">Excel: una fila por factura</span><span className="text-slate-500">Número, fechas, cliente, sucursal, base, IVA, total y cobro</span></span></button>
+                                <button type="button" onClick={exportarPersonas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2"><FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="block font-medium text-slate-900">Excel: líneas y horas por persona</span><span className="text-slate-500">Una fila por persona y concepto, con su importe</span></span></button>
+                                <button type="button" onClick={pdfFiltradas} className="w-full text-left px-3 py-2 hover:bg-slate-50 flex gap-2 border-t border-slate-100"><Printer className="w-4 h-4 text-indigo-600 shrink-0" /><span><span className="block font-medium text-slate-900">PDF de todas</span><span className="text-slate-500">Las facturas emitidas de la lista, una por página</span></span></button>
+                            </span>
+                        )}
+                    </span>
+                }>Facturas</SectionTitle>
+                <p className="-mt-2 text-[11px] text-slate-500">Se descargan las facturas emitidas que se ven con los filtros de arriba, por ejemplo las de un mes para la gestoría o la contabilidad.</p>
                 {lista.length === 0 ? (
                     <Card><EmptyState icon={Receipt} title="No hay facturas con estos filtros" action={hayFiltros && <Button onClick={limpiar}>Limpiar filtros</Button>} /></Card>
                 ) : Object.keys(CLIENTES).filter(c => lista.some(x => x.cliente === c)).map(c => {
@@ -443,6 +599,7 @@ export default function FacturacionView() {
                                     <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${plegado ? '-rotate-90' : ''}`} />
                                     <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
                                     <span className="text-sm font-semibold text-slate-900">{CLIENTES[c].nombre}</span>
+                                    {veVariasSucursales && <Badge tone="neutral">{sucursal(sucursalDe(c)).corto}</Badge>}
                                 </span>
                                 <span className="text-xs text-slate-500">
                                     {delCliente.length} {delCliente.length === 1 ? 'factura' : 'facturas'} · {euros(totalCliente)} facturado · {euros(pendienteCliente)} pendiente
@@ -461,6 +618,7 @@ export default function FacturacionView() {
                                                 <th className="py-2 px-3 font-medium text-right">Total</th>
                                                 <th className="py-2 px-3 font-medium text-right">Pendiente</th>
                                                 <th className="py-2 px-3 font-medium">Estado</th>
+                                                <th className="py-2 px-2" aria-label="Descargar"></th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -484,6 +642,7 @@ export default function FacturacionView() {
                                                         <td className="py-2.5 px-3 text-right whitespace-nowrap text-slate-900">{euros(tt.total)}</td>
                                                         <td className="py-2.5 px-3 text-right whitespace-nowrap text-slate-700">{PENDIENTES_COBRO.includes(e.id) ? euros(tt.pendiente) : <span className="text-slate-300">—</span>}</td>
                                                         <td className="py-2.5 px-3"><Badge tone={e.tono} dot>{e.texto}</Badge></td>
+                                                        <td className="py-1 px-2 text-right" onClick={(ev) => ev.stopPropagation()}>{x.estado !== 'borrador' && <IconButton icon={Download} title={`Descargar ${x.numero} en PDF`} onClick={() => pdfFactura(x)} />}</td>
                                                     </tr>
                                                 );
                                             })}
@@ -520,6 +679,7 @@ export default function FacturacionView() {
                             {borrador && <Button variant="ghost" icon={Trash2} className="mr-auto text-rose-600!" onClick={() => setDescartar(true)}>Descartar borrador</Button>}
                             {!borrador && !f.rectifica && !f.anulada && <Button variant="ghost" icon={FileMinus2} className="mr-auto" onClick={() => setRectificar({ motivo: MOTIVOS_RECTIFICACION[0], nota: '', nueva: true })}>Rectificar</Button>}
                             <Button icon={Eye} onClick={() => setPrevia(true)}>Vista previa</Button>
+                            {!borrador && <Button icon={Download} onClick={() => pdfFactura(f)}>Descargar PDF</Button>}
                             {borrador && <Button variant="primary" icon={FileCheck2} disabled={!horasListas || !f.lineas.length} title={horasListas ? undefined : 'Faltan horas por validar'} onClick={emitir}>Emitir factura</Button>}
                             {f.estado === 'emitida' && !f.rectifica && <Button variant="primary" icon={Send} onClick={() => actualizar(f.id, { estado: 'enviada' }, `Factura ${f.numero} enviada a ${cliente.email}`)}>Enviar al cliente</Button>}
                             {f.rectifica && f.estado === 'emitida' && <Button variant="primary" icon={Send} onClick={() => actualizar(f.id, { estado: 'enviada' }, `Rectificativa ${f.numero} enviada a ${cliente.email}`)}>Enviar al cliente</Button>}
@@ -702,7 +862,7 @@ export default function FacturacionView() {
                 const cliente = CLIENTES[f.cliente];
                 const t = totalesDe(f);
                 return (
-                    <Modal title="Vista previa" subtitle="Así la recibe el cliente" onClose={() => setPrevia(false)} size="max-w-3xl" footer={<Button onClick={() => setPrevia(false)}>Cerrar</Button>}>
+                    <Modal title="Vista previa" subtitle="Así la recibe el cliente" onClose={() => setPrevia(false)} size="max-w-3xl" footer={<>{f.estado !== 'borrador' && <Button icon={Download} onClick={() => pdfFactura(f)}>Descargar PDF</Button>}<Button onClick={() => setPrevia(false)}>Cerrar</Button></>}>
                         <div className="rounded-lg border border-slate-200 p-4 sm:p-6 space-y-5 text-xs text-slate-800 bg-white">
                             <div className="flex flex-wrap justify-between gap-4">
                                 <div>
