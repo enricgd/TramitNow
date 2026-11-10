@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-10
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 4033cb8
 - **Cómo verlo**: `npm --prefix apps/web run dev` → Horas e incidencias → «Sucursal», en Partes semanales y en Cierre del mes.
 
 ## Resumen
