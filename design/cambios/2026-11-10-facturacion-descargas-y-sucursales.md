@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-10
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 617a5c5
 - **Cómo verlo**: `npm --prefix apps/web run dev` → Facturación.
   - Botón «Descargar (n)» encima de las facturas.
   - Icono de descarga en cada factura.
