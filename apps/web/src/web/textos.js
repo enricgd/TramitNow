@@ -50,7 +50,7 @@ export const TEXTOS = {
             titulo: 'Tu ETT, también para tus clientes y tu personal',
             texto: 'Dos portales con el logo y el nombre de tu ETT, en tu propia dirección. Todo lo que hacen llega directamente a TramitNow.',
             trabajador: { titulo: 'Portal del trabajador', texto: 'Desde el móvil, sin contraseñas: entra con su DNI y un código por SMS.', puntos: ['Firma su contrato', 'Descarga sus nóminas', 'Consulta sus horas', 'Avisa si no puede ir a trabajar'] },
-            empresa: { titulo: 'Área de empresas', texto: 'Cada contacto del cliente, con los permisos que tú le das.', puntos: ['Valida los partes de horas', 'Firma los CPD', 'Pide personal', 'Descarga sus facturas'] },
+            empresa: { titulo: 'Área de empresas', texto: 'Cada contacto del cliente, con los permisos que tú le das.', puntos: ['Valida los partes de horas', 'Firma los CPD', 'Ve a su personal en misión', 'Descarga sus facturas'] },
         },
         ventajas: {
             etiqueta: 'Por qué TramitNow',

@@ -98,7 +98,7 @@ const initialTemplates = [
 const initialPortales = {
     subdominio: 'ettglobal',
     bienvenida: {
-        empresa: { activo: true, asunto: 'Tu acceso al Área de empresas de {ett}', texto: 'Hola, {nombre}:\n\nTe hemos dado acceso al Área de empresas de {ett} para {empresa}. Desde allí puedes pedir personal, validar los partes de horas, firmar los CPD y descargar las facturas, según tus permisos.\n\nElige tu contraseña aquí: {enlace}' },
+        empresa: { activo: true, asunto: 'Tu acceso al Área de empresas de {ett}', texto: 'Hola, {nombre}:\n\nTe hemos dado acceso al Área de empresas de {ett} para {empresa}. Desde allí puedes ver a tu personal en misión, validar los partes de horas, firmar los CPD y descargar las facturas, según tus permisos.\n\nElige tu contraseña aquí: {enlace}' },
         candidato: { activo: true, asunto: 'Bienvenida a {ett}', texto: 'Hola, {nombre}:\n\nGracias por inscribirte. Desde tu área personal puedes subir tus documentos, seguir tus candidaturas y firmar tu contrato.\n\nEntra aquí: {enlace}' },
     },
 };
@@ -1037,7 +1037,7 @@ export default function FichaEttView() {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                                     {[
-                                        { titulo: 'Área de empresas', boton: 'Ver el Área de empresas', ruta: 'empresas', demo: '/empresas.html', icono: Building2, acceso: 'Correo y contraseña. El acceso y los permisos de cada contacto se dan en Empresas → Contactos.', texto: 'Pedir personal, ver al personal en misión, validar las horas, firmar los CPD y descargar presupuestos y facturas.' },
+                                        { titulo: 'Área de empresas', boton: 'Ver el Área de empresas', ruta: 'empresas', demo: '/empresas.html', icono: Building2, acceso: 'Correo y contraseña. El acceso y los permisos de cada contacto se dan en Empresas → Contactos.', texto: 'Ver al personal en misión, validar las horas, firmar los CPD y descargar presupuestos y facturas.' },
                                         { titulo: 'Portal del trabajador', boton: 'Ver el portal del trabajador', ruta: 'trabajadores', demo: '/trabajadores.html', icono: Users, acceso: 'DNI o NIE y código por SMS, sin contraseña.', texto: 'Para quien trabaja o ha trabajado con la ETT: contratos, nóminas, horas, avisos de ausencia, prevención y sus datos y documentos.' },
                                     ].map(p => (
                                         <div key={p.ruta} className="rounded-lg border border-slate-200 p-3 space-y-1">

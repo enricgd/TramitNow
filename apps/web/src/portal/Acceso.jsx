@@ -17,7 +17,7 @@ const TEXTOS = {
     empresa: {
         etiqueta: 'Área de empresas',
         titulo: <>Tu personal, sus horas<br />y tus facturas, al día.</>,
-        texto: 'Pide personal, valida los partes de horas y firma los documentos de cada misión.',
+        texto: 'Consulta tu personal en misión, valida los partes de horas y firma los documentos de cada misión.',
         ruta: 'empresas',
     },
 };

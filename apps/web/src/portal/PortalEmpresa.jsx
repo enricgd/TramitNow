@@ -8,7 +8,7 @@ import {
     AlertTriangle, Info, Download, Send, X, ChevronDown, ShieldCheck, Upload, CalendarClock, MessageSquareWarning, Plus, Check, KeyRound,
 } from 'lucide-react';
 import { Button, Badge, Card, SectionTitle, Notice, Field, TextInput, Select, Modal, KpiTile, Interruptor } from '../ui';
-import { PERMISOS_PORTAL } from './permisosEmpresa';
+import { PERMISOS_PORTAL, FASE_1, permisoVisible } from './permisosEmpresa';
 import { REPRESENTANTE_ETT } from '../views/ettDemo';
 
 // ==========================================
@@ -201,7 +201,8 @@ const TIPOS_INCIDENCIA = ['No se ha presentado', 'Ha llegado tarde', 'Se ha ido 
 export default function PortalEmpresa({ usuario: usuarioInicial, onSalir, onCambiarUsuario }) {
     const usuario = usuarioInicial;
     const cliente = CLIENTES[usuario.cliente];
-    const puede = (permiso) => !permiso || usuario.permisos.includes(permiso);
+    // Lo oculto en la fase 1 no se ve aunque el contacto tenga el permiso
+    const puede = (permiso) => !permiso || (permisoVisible(permiso) && usuario.permisos.includes(permiso));
     const menu = MENU.filter(m => puede(m.permiso));
 
     const [seccion, setSeccion] = useState('inicio');
@@ -247,7 +248,9 @@ export default function PortalEmpresa({ usuario: usuarioInicial, onSalir, onCamb
         ...(puede('documentos') && cpdsPendientes.length ? [{ id: 'cpd', icono: FileSignature, tono: 'warning', titulo: `Firma ${cpdsPendientes.length} contrato${cpdsPendientes.length > 1 ? 's' : ''} de puesta a disposición (CPD)`, texto: 'Sin el CPD firmado, la persona no puede empezar.', accion: 'Firmar', onClick: () => ir('documentos') }] : []),
         ...(puede('documentos') ? riesgosPendientes.map(r => ({ id: `riesgo-${r.puesto}`, icono: ShieldCheck, tono: 'warning', titulo: `Envía la evaluación de riesgos del puesto de ${r.puesto.toLowerCase()}`, texto: 'La necesitamos para informar a la persona antes de que empiece.', accion: 'Enviar', onClick: () => setSubir(r) })) : []),
         ...(puede('facturas') ? vencidas.map(f => ({ id: f.numero, icono: Receipt, tono: 'danger', titulo: `Factura ${f.numero} vencida`, texto: `${euros(f.total)} · venció el ${fechaES(f.vence)}`, accion: 'Ver', onClick: () => ir('facturas') })) : []),
-        ...(puede('personal') ? terminanPronto.map(p => ({ id: `fin-${p.id}`, icono: CalendarClock, tono: 'info', titulo: `${p.nombre} termina el ${fechaES(p.fin)}`, texto: `${petDe(p.petId).puesto} · ¿La necesitas más tiempo?`, accion: 'Pedir prórroga', onClick: () => setAccion({ tipo: 'prorroga', persona: p, fecha: sumar(p.fin, 30), texto: '' }) })) : []),
+        ...(puede('personal') ? terminanPronto.map(p => ({ id: `fin-${p.id}`, icono: CalendarClock, tono: 'info', titulo: `${p.nombre} termina el ${fechaES(p.fin)}`, ...(FASE_1.prorrogaYTerminar
+            ? { texto: `${petDe(p.petId).puesto} · ¿La necesitas más tiempo?`, accion: 'Pedir prórroga', onClick: () => setAccion({ tipo: 'prorroga', persona: p, fecha: sumar(p.fin, 30), texto: '' }) }
+            : { texto: `${petDe(p.petId).puesto} · Si la necesitas más tiempo, díselo a ${cliente.contactoEtt.nombre}.`, accion: 'Ver', onClick: () => ir('personal') }) })) : []),
     ];
 
     // Acciones
@@ -352,7 +355,7 @@ export default function PortalEmpresa({ usuario: usuarioInicial, onSalir, onCamb
                     </div>
                     <div className="space-y-4">
                         {tarjetaContacto()}
-                        {usuario.permisos.length < PERMISOS_PORTAL.length && (
+                        {usuario.permisos.filter(permisoVisible).length < PERMISOS_PORTAL.length && (
                             <p className="text-xs text-slate-500 px-1">Ves las secciones de tus permisos. Si necesitas otra, pídesela a {cliente.contactoEtt.nombre}.</p>
                         )}
                     </div>
@@ -440,8 +443,10 @@ export default function PortalEmpresa({ usuario: usuarioInicial, onSalir, onCamb
                                     <span className="w-32"><Badge tone={ESTADO_PERSONA[e][1]} dot>{ESTADO_PERSONA[e][0]}</Badge>{e === 'baja' && <span className="block text-xs text-slate-500 mt-0.5">Desde el {ddmm(BAJAS[p.id])}</span>}</span>
                                     {e !== 'terminada' && (
                                         <span className="flex flex-wrap gap-1.5">
-                                            <Button size="sm" onClick={() => setAccion({ tipo: 'prorroga', persona: p, fecha: sumar(p.fin, 30), texto: '' })}>Prórroga</Button>
-                                            <Button size="sm" onClick={() => setAccion({ tipo: 'terminar', persona: p, fecha: sumar(hoyIso(), 7), texto: '' })}>Terminar antes</Button>
+                                            {FASE_1.prorrogaYTerminar && <>
+                                                <Button size="sm" onClick={() => setAccion({ tipo: 'prorroga', persona: p, fecha: sumar(p.fin, 30), texto: '' })}>Prórroga</Button>
+                                                <Button size="sm" onClick={() => setAccion({ tipo: 'terminar', persona: p, fecha: sumar(hoyIso(), 7), texto: '' })}>Terminar antes</Button>
+                                            </>}
                                             {e !== 'empieza' && <Button size="sm" icon={MessageSquareWarning} onClick={() => setAccion({ tipo: 'incidencia', persona: p, fecha: hoyIso(), motivo: TIPOS_INCIDENCIA[0], texto: '' })}>Incidencia</Button>}
                                         </span>
                                     )}
@@ -561,7 +566,7 @@ export default function PortalEmpresa({ usuario: usuarioInicial, onSalir, onCamb
                             <div className="flex items-center gap-3"><span className="text-slate-700">{euros(p.importe)}</span><Button size="sm" icon={Download} onClick={() => aviso(`${p.id} descargado (demo)`)}>Descargar</Button></div>
                         </Card>
                     ))}
-                    <p className="text-xs text-slate-500">Las tarifas por hora de cada puesto son las de estos presupuestos. Si necesitas otro puesto, pídelo en «Pedir personal» y te enviaremos un presupuesto.</p>
+                    <p className="text-xs text-slate-500">Las tarifas por hora de cada puesto son las de estos presupuestos. Si necesitas otro puesto, {FASE_1.pedirPersonal ? 'pídelo en «Pedir personal»' : `pídeselo a ${cliente.contactoEtt.nombre}`} y te enviaremos un presupuesto.</p>
                 </div>
                 <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
