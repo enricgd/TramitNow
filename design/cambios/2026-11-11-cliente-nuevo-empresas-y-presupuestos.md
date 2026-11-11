@@ -63,4 +63,4 @@ la empresa dada de alta desde el presupuesto no aparece en la lista de Empresas;
 
 ## Dudas y pendientes
 
-- ¿Hay que **bloquear «Crear peticiones»** mientras la ficha de la empresa esté incompleta, o basta con el aviso? En la demo solo avisa.
+- **Decidido con el diseñador (2026-11-11)**: «Crear peticiones» **no se bloquea** aunque la ficha de la empresa esté incompleta. Solo se avisa. Los datos que falten se piden en el paso que los necesita (contratos, facturación).
