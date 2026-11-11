@@ -11,6 +11,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
     } from 'lucide-react';
 import { Page, PageHeader, Card, KpiTile, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Segmented, Tabs, CAMPO, Modal, Drawer, Confirmar, Notice, EmptyState } from '../ui';
 import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
+import { CLAVE_PRESUPUESTO_EMPRESA, recogerTraspaso } from './traspasos';
 
     // ==========================================
     // CATÁLOGOS ESTRUCTURADOS CON "OTRO / PERSONALIZADO"
@@ -961,6 +962,36 @@ return p.posiciones.every(pos => pos.tarifaHoraOfertada > 0 && pos.salarioBaseAn
         setPestanaActiva('empresa');
         setVistaActual('detalle');
       };
+
+      // Desde la ficha de una empresa («Crear presupuesto»): presupuesto nuevo con la empresa y su contacto ya puestos
+      useEffect(() => {
+        const t = recogerTraspaso(CLAVE_PRESUPUESTO_EMPRESA);
+        if (!t) return;
+        let e = EMPRESAS_CLIENTE.find(x => x.nombre === t.nombre || (t.cif && x.cif === t.cif));
+        if (!e) {
+          // Empresa recién dada de alta en Empresas: en real ya estaría en la API
+          e = { id: `comp-${Date.now()}`, nombre: t.nombre, cif: t.cif || '', sector: t.sector || '', ciudad: t.ciudad || '', convenio: '', comercial: t.comercial || '',
+            contactos: t.contacto ? [t.contacto] : [] };
+          EMPRESAS_CLIENTE.push(e);
+        } else if (t.contacto && !e.contactos.some(x => x.nombre === t.contacto.nombre)) {
+          e.contactos.push(t.contacto); // el contacto destinatario de la ficha de Empresas
+        }
+        const c = e.contactos.find(x => t.contacto && x.nombre === t.contacto.nombre) || e.contactos[0];
+        const nuevo = {
+          ...presupuestoVacio(listado),
+          empresaId: e.id, cliente: e.nombre, cif: e.cif, sector: e.sector, ciudad: e.ciudad, convenioEmpresa: e.convenio,
+          contacto: c ? `${c.nombre}${c.cargo ? ` (${c.cargo})` : ''}` : '', emailContacto: c?.email || '', telefonoContacto: c?.telefono || '',
+          comercial: COMERCIALES.includes(t.comercial) ? t.comercial : e.comercial,
+        };
+        setPresupuesto(nuevo);
+        setFormularioPresupuesto(JSON.parse(JSON.stringify(nuevo)));
+        setModoEdicion(true);
+        setEsNuevo(true);
+        setHayCambiosSinGuardar(false);
+        setPestanaActiva('empresa');
+        setVistaActual('detalle');
+        mostrarToast(`Presupuesto nuevo para ${e.nombre}: revisa el contacto y sigue con los puestos`, 'exito');
+      }, []);
 
       const ajustarConceptoPuesto = (posId, conceptoId, cambio) => {
         setFormularioPresupuesto(prev => ({
@@ -3537,7 +3568,20 @@ return datosActivos.posiciones.map(pos => ({
     function PestanaEmpresa({ datos, editable, onCambiar, onEditar }) {
       const [busqueda, setBusqueda] = useState('');
       const [abierto, setAbierto] = useState(false);
+      const [alta, setAlta] = useState(null); // empresa nueva: datos mínimos para presupuestar
       const empresa = EMPRESAS_CLIENTE.find(e => e.id === datos.empresaId);
+      const altaValida = alta && alta.nombre.trim() && alta.cif.trim() && alta.contacto.trim() && /\S+@\S+\.\S+/.test(alta.email);
+      const darDeAlta = () => {
+        // En real: alta en Empresas por la API, en estado «Borrador inicial», con este contacto como destinatario de presupuestos
+        const e = {
+          id: `comp-${Date.now()}`, nombre: alta.nombre.trim(), cif: alta.cif.trim().toUpperCase(), sector: alta.sector.trim(), ciudad: alta.ciudad.trim(),
+          convenio: alta.convenio, comercial: datos.comercial || '', nueva: true,
+          contactos: [{ nombre: alta.contacto.trim(), cargo: alta.cargo.trim(), email: alta.email.trim(), telefono: alta.telefono.trim() }],
+        };
+        EMPRESAS_CLIENTE.push(e);
+        setAlta(null);
+        elegir(e);
+      };
       const sugerencias = busqueda.trim().length < 2 ? [] : EMPRESAS_CLIENTE.filter(e => sinAcentos(`${e.nombre} ${e.cif} ${e.sector}`).includes(sinAcentos(busqueda.trim())));
 
       const elegir = (e) => {
@@ -3587,9 +3631,16 @@ return datosActivos.posiciones.map(pos => ({
               {abierto && busqueda.trim().length >= 2 && (
                 <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden text-xs">
                   {sugerencias.length === 0 ? (
-                    <div className="px-3 py-3 text-slate-500 flex items-center justify-between gap-2">
+                    <div className="px-3 py-3 text-slate-500 flex flex-wrap items-center justify-between gap-2">
                       <span>No hay ninguna empresa con «{busqueda}».</span>
-                      <a href="#/empresas" className="font-medium text-indigo-600 hover:underline">Dar de alta en Empresas</a>
+                      <button
+                        type="button"
+                        onMouseDown={(ev) => ev.preventDefault()}
+                        onClick={() => { setAlta({ nombre: busqueda.trim(), cif: '', sector: '', ciudad: '', convenio: '', contacto: '', cargo: '', email: '', telefono: '' }); setBusqueda(''); setAbierto(false); }}
+                        className="inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline"
+                      >
+                        <Plus className="w-3.5 h-3.5" />Darla de alta aquí
+                      </button>
                     </div>
                   ) : (
                     sugerencias.map(e => (
@@ -3612,6 +3663,49 @@ return datosActivos.posiciones.map(pos => ({
                 </div>
               )}
             </div>
+          )}
+
+          {alta && (
+            <div className="max-w-2xl rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 space-y-3 text-xs">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Empresa nueva</div>
+                <p className="text-slate-500">Lo mínimo para presupuestar. Queda dada de alta en Empresas como borrador; el resto de la ficha (centros, facturación, documentos) se completa allí antes de crear peticiones.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[['nombre', 'Razón social *', 'sm:col-span-2'], ['cif', 'CIF *', ''], ['sector', 'Sector o actividad', ''], ['ciudad', 'Población (provincia)', 'sm:col-span-2']].map(([k, t, cls]) => (
+                  <label key={k} className={`flex flex-col gap-1 ${cls}`}>
+                    <span className="text-[11px] font-medium text-slate-600">{t}</span>
+                    <input type="text" value={alta[k]} onChange={(e) => setAlta(a => ({ ...a, [k]: e.target.value }))} className={`${CAMPO} w-full`} />
+                  </label>
+                ))}
+                <label className="flex flex-col gap-1 sm:col-span-2">
+                  <span className="text-[11px] font-medium text-slate-600">Convenio de su actividad</span>
+                  <Select value={alta.convenio} onChange={(e) => setAlta(a => ({ ...a, convenio: e.target.value }))} className="w-full">
+                    <option value="">Sin decidir (se elige en cada puesto)</option>
+                    {CATALOGOS.convenios.filter(c => c.id !== 'otro').map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  </Select>
+                </label>
+              </div>
+              <div className="text-[11px] font-medium text-slate-600 pt-1">Contacto que recibe el presupuesto</div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[['contacto', 'Nombre y apellidos *'], ['cargo', 'Cargo'], ['email', 'Email *'], ['telefono', 'Teléfono']].map(([k, t]) => (
+                  <label key={k} className="flex flex-col gap-1">
+                    <span className="text-[11px] font-medium text-slate-600">{t}</span>
+                    <input type={k === 'email' ? 'email' : 'text'} value={alta[k]} onChange={(e) => setAlta(a => ({ ...a, [k]: e.target.value }))} className={`${CAMPO} w-full`} />
+                  </label>
+                ))}
+              </div>
+              <div className="flex flex-wrap justify-end gap-2 pt-1">
+                <Button size="sm" onClick={() => setAlta(null)}>Cancelar</Button>
+                <Button size="sm" variant="primary" icon={Check} disabled={!altaValida} onClick={darDeAlta}>Dar de alta y usarla</Button>
+              </div>
+            </div>
+          )}
+
+          {empresa?.nueva && (
+            <Notice tone="info" icon={Info}>
+              Empresa dada de alta desde este presupuesto, con los datos mínimos. Antes de crear peticiones, completa su ficha en <a href="#/empresas" className="font-medium underline">Empresas</a> (centros de trabajo, datos de facturación y documentación).
+            </Notice>
           )}
 
           {!datos.cliente ? (

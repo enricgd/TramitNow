@@ -11,6 +11,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Page, PageHeader, Card, EmptyState, Notice, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Tabs, Modal, Drawer, Confirmar, Interruptor } from '../ui';
 import { PERMISOS_PORTAL, permisosPorRoles } from '../portal/permisosEmpresa';
 import { CLAVE_SERVICIO_PENDIENTE } from './serviciosDemo';
+import { CLAVE_PRESUPUESTO_EMPRESA, dejarTraspaso } from './traspasos';
 
     // DATOS DEMO INICIALES
     const INITIAL_COMPANIES = [
@@ -260,6 +261,18 @@ hasUnsavedChanges: false
       const currentCompany = useMemo(() => {
 return companies.find(c => c.id === selectedCompanyId) || companies[0];
       }, [companies, selectedCompanyId]);
+
+      // Abre Presupuestos con un presupuesto nuevo para esta empresa (contacto destinatario y comercial incluidos)
+      const crearPresupuesto = () => {
+        const c = currentCompany.contacts.find(x => x.isQuoteRecipient) || currentCompany.contacts.find(x => x.isMain) || currentCompany.contacts[0];
+        dejarTraspaso(CLAVE_PRESUPUESTO_EMPRESA, {
+          nombre: currentCompany.name, cif: currentCompany.cif, sector: currentCompany.sector,
+          ciudad: currentCompany.province ? `${currentCompany.city} (${currentCompany.province})` : (currentCompany.city || ''),
+          comercial: (currentCompany.owner || '').replace(/\s*\(.*\)$/, ''),
+          contacto: c ? { nombre: c.name, cargo: c.role || '', email: c.email || '', telefono: c.phone || '' } : null,
+        });
+        window.location.hash = '#/presupuestos';
+      };
 
       // Toast helper
       const actualizarEmpresa = (cambio) => setCompanies(prev => prev.map(c => (c.id === currentCompany.id ? cambio(c) : c)));
@@ -597,7 +610,9 @@ return companies.filter(c => {
                       { label: 'Operativa', ok: company.readiness.operations },
                       { label: 'Factura', ok: company.readiness.billing },
                     ];
-                    return (
+                    
+
+return (
                       <tr
                         key={company.id}
                         className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer"
@@ -690,7 +705,7 @@ return companies.filter(c => {
               <Button icon={Edit3} onClick={() => setDrawerState({ isOpen: true, type: 'edit-company', data: currentCompany, hasUnsavedChanges: false })}>
                 Editar ficha
               </Button>
-              <Button variant="primary" icon={FileCheck} onClick={() => showToast(`Iniciando presupuesto para ${currentCompany.name}...`)}>
+              <Button variant="primary" icon={FileCheck} onClick={crearPresupuesto}>
                 Crear presupuesto
               </Button>
             </>
@@ -757,7 +772,7 @@ return companies.filter(c => {
                       </p>
                       <div className="pt-1">
                         <button
-                          onClick={() => showToast(`Iniciando presupuesto para ${currentCompany.name}...`)}
+                          onClick={crearPresupuesto}
                           className="text-xs font-semibold text-emerald-700 hover:text-indigo-900 flex items-center gap-1 underline"
                         >
                           Crear presupuesto comercial ahora →
@@ -931,7 +946,7 @@ return companies.filter(c => {
 
                   <div className="space-y-2 pt-1">
                     <button
-                      onClick={() => showToast(`Creando propuesta comercial para ${currentCompany.name}`)}
+                      onClick={crearPresupuesto}
                       className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded text-xs transition flex items-center justify-center gap-1.5"
                     >
                       <FileCheck className="w-3.5 h-3.5" />
