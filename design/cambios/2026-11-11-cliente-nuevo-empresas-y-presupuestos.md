@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-11
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, 803cc05
 - **Cómo verlo**: `npm --prefix apps/web run dev`.
   - Empresas → abrir una empresa → «Crear presupuesto».
   - Presupuestos → «Nuevo presupuesto» → escribir una empresa que no existe → «Darla de alta aquí».
