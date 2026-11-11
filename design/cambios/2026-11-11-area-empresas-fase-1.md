@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-11
 - **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
-- **Rama y commits**: `design`, (pendiente)
+- **Rama y commits**: `design`, cfb1ee7
 - **Cómo verlo**: `npm --prefix apps/web run dev`.
   - http://localhost:5173/empresas.html → entrar como Marta → menú y «Personal en misión».
   - ERP → Empresas → Trans-Logística → Contactos → permisos del Área de empresas.
