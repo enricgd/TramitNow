@@ -125,7 +125,7 @@ export default function WebPerk() {
             <div className="bg-[#0E2238] text-slate-300 text-xs">
                 <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-2">
                     <span>Demo · web corporativa, versión estilo Perk · en real: tramitnow.com</span>
-                    <span className="flex gap-4"><a href="/web.html" className="text-sky-300 hover:text-white">Versión 1</a><a href="/web3.html" className="text-sky-300 hover:text-white">Versión 3 (mezcla)</a><a href="/" className="text-sky-300 hover:text-white">ERP</a></span>
+                    <span className="flex gap-4"><a href="/web.html" className="text-sky-300 hover:text-white">Versión 1</a><a href="/web3.html" className="text-sky-300 hover:text-white">Versión 3 (mezcla)</a><a href="/web4.html" className="text-sky-300 hover:text-white">Versión 4</a><a href="/" className="text-sky-300 hover:text-white">ERP</a></span>
                 </div>
             </div>
 

@@ -289,7 +289,7 @@ export default function WebCorporativa() {
             <div className="bg-slate-900 text-slate-300 text-xs">
                 <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-2">
                     <span>Demo · web corporativa · en real: tramitnow.com</span>
-                    <span className="flex gap-4"><a href="/web2.html" className="text-indigo-300 hover:text-white">Versión 2 (Perk)</a><a href="/web3.html" className="text-indigo-300 hover:text-white">Versión 3 (mezcla)</a><a href="/" className="text-indigo-300 hover:text-white">Ir a la demo del ERP</a></span>
+                    <span className="flex gap-4"><a href="/web2.html" className="text-indigo-300 hover:text-white">Versión 2 (Perk)</a><a href="/web3.html" className="text-indigo-300 hover:text-white">Versión 3 (mezcla)</a><a href="/web4.html" className="text-indigo-300 hover:text-white">Versión 4</a><a href="/" className="text-indigo-300 hover:text-white">Ir a la demo del ERP</a></span>
                 </div>
             </div>
 
