@@ -76,15 +76,14 @@ export const clients = crudRoutes({
   filters: {
     status: ClientStatus.optional(),
     companyId: z.guid().optional(),
-    branchId: z.guid().optional(),
     blocked: z.stringbool().optional(),
   },
   where: (tx, q) => [
     ...(q.companyId ? [tx`company_id = ${q.companyId}`] : []),
-    ...(q.branchId ? [tx`branch_id = ${q.branchId}`] : []),
     ...(q.blocked !== undefined ? [tx`blocked = ${q.blocked}`] : []),
   ],
   orderBy: 'legal_name, code',
+  branchColumn: 'branch_id',
 });
 
 // ---------------------------------------------------------------------------
@@ -129,11 +128,9 @@ export const clientCenters = crudRoutes({
   permission: 'clients.manage',
   hasStatus: false,
   search: ['code', 'name', 'ccc'],
-  filters: { clientId: z.guid().optional(), branchId: z.guid().optional() },
-  where: (tx, q) => [
-    ...(q.clientId ? [tx`client_id = ${q.clientId}`] : []),
-    ...(q.branchId ? [tx`branch_id = ${q.branchId}`] : []),
-  ],
+  filters: { clientId: z.guid().optional() },
+  where: (tx, q) => (q.clientId ? [tx`client_id = ${q.clientId}`] : []),
+  branchColumn: 'branch_id',
 });
 
 // ---------------------------------------------------------------------------
