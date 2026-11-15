@@ -11,6 +11,7 @@ import { requireAuth } from './lib/auth.js';
 import type { AppEnv } from './lib/context.js';
 import type { Sql } from './lib/db.js';
 import { ApiError, errorBody, handleError } from './lib/errors.js';
+import { activity } from './routes/activity.js';
 import { addresses } from './routes/addresses.js';
 import { branches } from './routes/branches.js';
 import { catalogItems, catalogTypes } from './routes/catalog-items.js';
@@ -78,6 +79,7 @@ export function createApp(options: { sql: Sql; config: Pick<Config, 'jwtSecret' 
   app.route('/v1', clientBilling);
   app.route('/v1', clientCenters);
   app.route('/v1', clientContacts);
+  app.route('/v1', activity);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
     type: 'http',
