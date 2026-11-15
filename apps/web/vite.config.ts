@@ -14,7 +14,22 @@ const commit = (() => {
   }
 })();
 
-export default defineConfig({
+// Páginas que se compilan: el ERP (index.html), los dos portales (trabajadores y empresas) y la web corporativa en
+// cuatro versiones para comparar (web.html, web2.html estilo Perk, web3.html la mezcla y web4.html).
+// La compilación del NAS (`npm run build`) solo lleva el ERP: los portales y la web aún son solo de ejemplo.
+// La de ejemplo (`npm run build:ejemplo`) las lleva todas.
+const page = (file: string) => fileURLToPath(new URL(`./${file}`, import.meta.url));
+const PAGES = {
+  erp: page('index.html'),
+  trabajadores: page('trabajadores.html'),
+  empresas: page('empresas.html'),
+  web: page('web.html'),
+  web2: page('web2.html'),
+  web3: page('web3.html'),
+  web4: page('web4.html'),
+};
+
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   server: {
     // Supabase Auth local (db/local/reset.sh) y apps/api local (`npm run dev` en apps/api), para
@@ -27,19 +42,9 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(`${pkg.version}-${commit}`),
   },
-  // Siete páginas: el ERP (index.html), los dos portales (trabajadores y empresas) y la web corporativa en cuatro
-  // versiones para comparar (web.html, web2.html estilo Perk, web3.html la mezcla y web4.html con las nuevas referencias).
   build: {
     rollupOptions: {
-      input: {
-        erp: fileURLToPath(new URL('./index.html', import.meta.url)),
-        trabajadores: fileURLToPath(new URL('./trabajadores.html', import.meta.url)),
-        empresas: fileURLToPath(new URL('./empresas.html', import.meta.url)),
-        web: fileURLToPath(new URL('./web.html', import.meta.url)),
-        web2: fileURLToPath(new URL('./web2.html', import.meta.url)),
-        web3: fileURLToPath(new URL('./web3.html', import.meta.url)),
-        web4: fileURLToPath(new URL('./web4.html', import.meta.url)),
-      },
+      input: mode === 'ejemplo' ? PAGES : { erp: PAGES.erp },
     },
   },
-});
+}));
