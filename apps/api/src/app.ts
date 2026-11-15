@@ -10,6 +10,7 @@ import type { Config } from './config.js';
 import { requireAuth } from './lib/auth.js';
 import type { AppEnv } from './lib/context.js';
 import type { Sql } from './lib/db.js';
+import { Storage } from './lib/storage.js';
 import { ApiError, errorBody, handleError } from './lib/errors.js';
 import { activity } from './routes/activity.js';
 import { addresses } from './routes/addresses.js';
@@ -18,6 +19,7 @@ import { catalogItems, catalogTypes } from './routes/catalog-items.js';
 import { catalogs } from './routes/catalogs.js';
 import { clientBilling, clientCenters, clientContacts, clients } from './routes/clients.js';
 import { companies } from './routes/companies.js';
+import { documents } from './routes/documents.js';
 import { health } from './routes/health.js';
 import { collectiveAgreements, contractTypes, payrollConcepts, professionalCategories } from './routes/labor-catalogs.js';
 import { me } from './routes/me.js';
@@ -29,8 +31,13 @@ z.config(z.locales.es());
 
 export const API_VERSION = '0.1.0';
 
-export function createApp(options: { sql: Sql; config: Pick<Config, 'jwtSecret' | 'jwtAudience' | 'corsOrigins'>; log?: boolean }) {
+export function createApp(options: {
+  sql: Sql;
+  config: Pick<Config, 'jwtSecret' | 'jwtAudience' | 'corsOrigins' | 'storage'>;
+  log?: boolean;
+}) {
   const { sql, config } = options;
+  const storage = config.storage ? new Storage(config.storage) : undefined;
   const app = new OpenAPIHono<AppEnv>();
 
   app.onError(handleError);
@@ -56,6 +63,7 @@ export function createApp(options: { sql: Sql; config: Pick<Config, 'jwtSecret' 
   );
   app.use(async (c, next) => {
     c.set('sql', sql);
+    c.set('storage', storage);
     await next();
   });
 
@@ -79,6 +87,7 @@ export function createApp(options: { sql: Sql; config: Pick<Config, 'jwtSecret' 
   app.route('/v1', clientBilling);
   app.route('/v1', clientCenters);
   app.route('/v1', clientContacts);
+  app.route('/v1', documents);
   app.route('/v1', activity);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {

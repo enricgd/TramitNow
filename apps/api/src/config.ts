@@ -1,5 +1,7 @@
 // Configuración desde variables de entorno. Falla al arrancar si falta algo obligatorio.
 
+import type { StorageConfig } from './lib/storage.js';
+
 export interface Config {
   /** Conexión como tramitnow_api (nunca postgres ni service_role). */
   databaseUrl: string;
@@ -12,6 +14,8 @@ export interface Config {
   port: number;
   /** Máximo de conexiones del pool de Postgres. */
   dbPoolMax: number;
+  /** Supabase Storage (documentos). Sin él, las rutas de ficheros responden 503. */
+  storage?: StorageConfig;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -39,5 +43,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       .filter(Boolean),
     port: Number(env.PORT || 3000),
     dbPoolMax: Number(env.DB_POOL_MAX || 10),
+    storage: loadStorageConfig(env),
   };
+}
+
+function loadStorageConfig(env: NodeJS.ProcessEnv): StorageConfig | undefined {
+  const url = env.STORAGE_URL;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url && !serviceKey) return undefined;
+  if (!url || !serviceKey) throw new Error('Para los documentos hacen falta STORAGE_URL y SUPABASE_SERVICE_ROLE_KEY');
+  const trim = (value: string) => value.replace(/\/+$/, '');
+  return { url: trim(url), publicUrl: trim(env.STORAGE_PUBLIC_URL || url), serviceKey };
 }
