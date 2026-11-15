@@ -24,28 +24,14 @@ import {
   LifeBuoy,
   Activity,
   ChevronRight,
+  RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
 import { ROLE_LABELS } from './auth/session';
 import type { CurrentUser } from './App';
+import { useAvisos, useBusqueda, useEttActiva, type Aviso, type Resultado, type TipoAviso, type TipoResultado } from './cabecera/useCabecera';
 
-// Datos de ejemplo del buscador. Cuando haya backend, la búsqueda irá a apps/api a través de un repositorio.
-type TipoResultado = 'peticion' | 'candidato' | 'cliente' | 'presupuesto';
-type Resultado = { id: string; tipo: TipoResultado; titulo: string; detalle: string; estado?: string; ruta?: string };
-
-const INITIAL_BUSQUEDA: Resultado[] = [
-  { id: 'p1', tipo: 'peticion', titulo: 'PET-2026-0049 · Operario/a de almacén · turno de tarde', detalle: 'Trans-Logística Ibérica Norte, S.L. · 0/3 cubiertas', estado: 'En selección', ruta: 'peticiones' },
-  { id: 'p2', tipo: 'peticion', titulo: 'PET-2026-0047 · Camarero/a de barra · turno de noche', detalle: 'Hostelería & Eventos Premium BCN, S.L. · 0/3 cubiertas', estado: 'Nueva', ruta: 'peticiones' },
-  { id: 'p3', tipo: 'peticion', titulo: 'PET-2026-0048 · Operario/a de almacén · turno de mañana', detalle: 'Trans-Logística Ibérica Norte, S.L. · 5/5 cubiertas', estado: 'Cubierta', ruta: 'peticiones' },
-  { id: 'c1', tipo: 'candidato', titulo: 'Mamadou Diallo', detalle: 'NIE X0000000T · Operario/a de almacén · PET-2026-0048', estado: 'Bloqueado', ruta: 'laboral' },
-  { id: 'c2', tipo: 'candidato', titulo: 'Unai García Zabaleta', detalle: 'DNI 00000131Q · Carretillero/a · PET-2026-0050', estado: 'En incorporación', ruta: 'laboral' },
-  { id: 'c3', tipo: 'candidato', titulo: 'Ainhoa Larrazabal Urkijo', detalle: 'DNI 00000127N · Operario/a de almacén · PET-2026-0048', estado: 'En incorporación', ruta: 'laboral' },
-  { id: 'c4', tipo: 'candidato', titulo: 'Iker Agirrebeitia Mendia', detalle: 'DNI 00000130S · Operario/a de almacén · PET-2026-0048', estado: 'En incorporación', ruta: 'laboral' },
-  { id: 'e1', tipo: 'cliente', titulo: 'Trans-Logística Ibérica Norte, S.L.', detalle: 'CIF B-87654321 · Basauri (Bizkaia) · 2 peticiones en selección' },
-  { id: 'e2', tipo: 'cliente', titulo: 'Hostelería & Eventos Premium BCN, S.L.', detalle: 'CIF B-99887766 · Barcelona · 1 petición en curso y 3 por empezar' },
-  { id: 'b1', tipo: 'presupuesto', titulo: 'PRE-2026-0042 v1 · Campaña logística otoño HUB central', detalle: 'Trans-Logística Ibérica Norte, S.L. · 105.792,00 €', estado: 'Aceptado' },
-  { id: 'b2', tipo: 'presupuesto', titulo: 'PRE-2026-0045 v1 · Operarios/as soldadura y mecanizado metal 24/7', detalle: 'Manufacturas Metálicas del Henares, S.A. · 64.512,00 €', estado: 'Enviado' },
-];
+// Los datos (ETT, sucursal, usuario, buscador y avisos) llegan de cabecera/useCabecera.ts.
 
 const GRUPOS: { tipo: TipoResultado; titulo: string; icon: LucideIcon }[] = [
   { tipo: 'peticion', titulo: 'Peticiones', icon: Inbox },
@@ -53,8 +39,6 @@ const GRUPOS: { tipo: TipoResultado; titulo: string; icon: LucideIcon }[] = [
   { tipo: 'cliente', titulo: 'Empresas', icon: Building2 },
   { tipo: 'presupuesto', titulo: 'Presupuestos', icon: Calculator },
 ];
-
-const BUSQUEDAS_RECIENTES = ['PET-2026-0048', 'Mendoza', 'Distribuciones Cantábrico'];
 
 // Mismos colores que el resto de la app: emerald = correcto, amber = pendiente, blue = informativo.
 const ESTADO_COLOR: Record<string, string> = {
@@ -68,17 +52,6 @@ const ESTADO_COLOR: Record<string, string> = {
   Aceptado: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Enviado: 'bg-amber-50 text-amber-700 border-amber-200',
 };
-
-type TipoAviso = 'urgente' | 'pendiente' | 'correcto' | 'info';
-type Aviso = { id: string; tipo: TipoAviso; titulo: string; texto: string; hace: string; leido: boolean; ruta?: string };
-
-const INITIAL_AVISOS: Aviso[] = [
-  { id: 'a1', tipo: 'urgente', titulo: 'NIE caducado: Mamadou Diallo', texto: 'Bloquea el contrato en PET-2026-0048. Pide el documento renovado.', hace: 'Hace 10 min', leido: false, ruta: 'laboral' },
-  { id: 'a2', tipo: 'pendiente', titulo: '3 CPD pendientes de firma de la empresa', texto: 'PET-2026-0048 y PET-2026-0050', hace: 'Hace 1 h', leido: false, ruta: 'laboral' },
-  { id: 'a3', tipo: 'correcto', titulo: 'Presupuesto PRE-2026-0042 aceptado', texto: 'Trans-Logística Ibérica Norte, S.L. Ya se han creado sus 3 peticiones.', hace: 'Hace 3 h', leido: false, ruta: 'peticiones' },
-  { id: 'a4', tipo: 'info', titulo: '12 candidaturas nuevas desde portales', texto: 'PET-2026-0049 · Operario/a de almacén · turno de tarde', hace: 'Ayer', leido: true, ruta: 'peticiones' },
-  { id: 'a5', tipo: 'info', titulo: 'Mantenimiento programado', texto: 'Domingo de 02:00 a 04:00. La app no estará disponible.', hace: 'Hace 2 días', leido: true },
-];
 
 const AVISO_ESTILO: Record<TipoAviso, { icon: LucideIcon; color: string }> = {
   urgente: { icon: AlertTriangle, color: 'bg-rose-50 text-rose-600' },
@@ -121,8 +94,10 @@ function useCerrarAlSalir(ref: RefObject<HTMLElement | null>, abierto: boolean, 
   }, [ref, abierto, cerrar]);
 }
 
-// La ETT y la sucursal siguen siendo de ejemplo hasta que apps/api dé los datos de la ETT activa.
+// ETT activa, sucursal y usuario de la sesión (/v1/me). `user` (del token) se usa mientras carga.
 export default function Header({ user, onSignOut }: { user: CurrentUser; onSignOut: () => void }) {
+  const sesion = useEttActiva();
+  const usuario = sesion.usuario ?? { nombre: user.name, rol: ROLE_LABELS[user.role] ?? user.role, email: user.email };
   const [buscadorMovil, setBuscadorMovil] = useState(false);
   const [atajos, setAtajos] = useState(false);
 
@@ -143,11 +118,7 @@ export default function Header({ user, onSignOut }: { user: CurrentUser; onSignO
           <img src="/logo-tramitnow.svg" alt="TramitNow" className="h-6 w-auto" />
         </a>
 
-        <div className="hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-lg min-w-0">
-          <div className="w-5 h-5 rounded bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">EG</div>
-          <div className="text-xs font-medium text-slate-700 truncate">ETT Global Servicios Temporales, S.L.</div>
-          <span className="text-[10px] bg-slate-200 text-slate-600 px-1 rounded shrink-0">Delegación Norte</span>
-        </div>
+        <EttActiva sesion={sesion} />
       </div>
 
       <div className="flex items-center gap-1">
@@ -160,11 +131,11 @@ export default function Header({ user, onSignOut }: { user: CurrentUser; onSignO
 
         <div className="flex items-center gap-2 pl-2">
           <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-semibold">
-            {initials(user.name)}
+            {initials(usuario.nombre)}
           </div>
-          <div className="hidden lg:block text-left leading-tight" title={user.email}>
-            <div className="text-xs font-semibold text-slate-800">{user.name}</div>
-            <div className="text-[10px] text-slate-400">{ROLE_LABELS[user.role] ?? user.role}</div>
+          <div className="hidden lg:block text-left leading-tight" title={usuario.email}>
+            <div className="text-xs font-semibold text-slate-800">{usuario.nombre}</div>
+            <div className="text-[10px] text-slate-400">{usuario.rol}</div>
           </div>
           <BotonIcono titulo="Cerrar sesión" onClick={onSignOut}>
             <LogOut className="w-4 h-4" />
@@ -175,6 +146,78 @@ export default function Header({ user, onSignOut }: { user: CurrentUser; onSignO
       {atajos && <VentanaAtajos onCerrar={() => setAtajos(false)} />}
     </header>
   );
+}
+
+const SELECTOR_SIN_FLECHA = 'appearance-none bg-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/20 rounded';
+
+// ETT activa y sucursal. Con varias ETT o varias sucursales, cada una es un selector.
+function EttActiva({ sesion }: { sesion: ReturnType<typeof useEttActiva> }) {
+  const caja = 'hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-lg min-w-0';
+
+  if (sesion.cargando && !sesion.ett) {
+    return (
+      <div className={`${caja} animate-pulse`} aria-label="Cargando la ETT">
+        <div className="w-5 h-5 rounded bg-slate-200 shrink-0" />
+        <div className="h-2.5 w-48 rounded bg-slate-200" />
+      </div>
+    );
+  }
+
+  if (!sesion.ett) {
+    return (
+      <button type="button" onClick={sesion.reintentar} title={sesion.error} className={`${caja} text-xs text-amber-700 hover:bg-amber-50`}>
+        <AlertTriangle className="w-4 h-4 shrink-0" />
+        <span className="truncate">No se ha podido cargar la ETT</span>
+        <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+      </button>
+    );
+  }
+
+  const { ett, etts, sucursales } = sesion;
+  return (
+    <div className={caja}>
+      <div className="w-5 h-5 rounded bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">{ett.siglas}</div>
+      {etts.length > 1 ? (
+        <select
+          aria-label="ETT activa"
+          value={sesion.ettId}
+          onChange={(e) => sesion.cambiarEtt(e.target.value)}
+          className={`${SELECTOR_SIN_FLECHA} text-xs font-medium text-slate-700 truncate min-w-0 max-w-72`}
+        >
+          {etts.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.nombre}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <div className="text-xs font-medium text-slate-700 truncate">{ett.nombre}</div>
+      )}
+      {sucursales.length > 1 ? (
+        <select
+          aria-label="Sucursal"
+          title="Sucursal con la que trabajas"
+          value={sesion.sucursal ?? ''}
+          onChange={(e) => sesion.cambiarSucursal(e.target.value || null)}
+          className={`${SELECTOR_SIN_FLECHA} text-[10px] bg-slate-200 text-slate-600 px-1 shrink-0 max-w-40 hover:bg-slate-300`}
+        >
+          <option value="">Todas las sucursales</option>
+          {sucursales.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.nombre}
+            </option>
+          ))}
+        </select>
+      ) : (
+        sucursales[0] && <span className="text-[10px] bg-slate-200 text-slate-600 px-1 rounded shrink-0">{sucursales[0].nombre}</span>
+      )}
+    </div>
+  );
+}
+
+// Pie de los desplegables cuando los datos aún son de ejemplo (sin ruta en apps/api).
+function NotaEjemplo({ children }: { children: ReactNode }) {
+  return <div className="px-4 py-1.5 border-t border-amber-100 bg-amber-50 text-[11px] text-amber-700">{children}</div>;
 }
 
 function BotonIcono({
@@ -229,13 +272,13 @@ function Resaltado({ texto, busqueda }: { texto: string; busqueda: string }) {
 function Buscador({ movil, onCerrarMovil }: { movil: boolean; onCerrarMovil: () => void }) {
   const [texto, setTexto] = useState('');
   const [abierto, setAbierto] = useState(false);
-  // Resultados junto a la búsqueda que los produjo: mientras no coincida con lo escrito, se está cargando.
-  const [respuesta, setRespuesta] = useState<{ busqueda: string; resultados: Resultado[] }>({ busqueda: '', resultados: [] });
   const [marcado, setMarcado] = useState(0);
   const caja = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLInputElement>(null);
 
   const busqueda = texto.trim();
+  // Resultados junto a la búsqueda que los produjo: mientras no coincida con lo escrito, se está cargando.
+  const { respuesta, recientes, error, deEjemplo } = useBusqueda(busqueda);
   const buscando = busqueda.length >= 2;
   const cargando = buscando && respuesta.busqueda !== busqueda;
   const resultados = respuesta.resultados;
@@ -264,15 +307,7 @@ function Buscador({ movil, onCerrarMovil }: { movil: boolean; onCerrarMovil: () 
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => {
-    if (!buscando) return;
-    const t = setTimeout(() => {
-      const q = normalizar(busqueda);
-      setRespuesta({ busqueda, resultados: INITIAL_BUSQUEDA.filter((r) => normalizar(`${r.titulo} ${r.detalle}`).includes(q)) });
-      setMarcado(0);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [busqueda, buscando]);
+  useEffect(() => setMarcado(0), [respuesta]);
 
   // Como mucho 3 por grupo, en el orden de GRUPOS; la lista plana sirve para moverse con las flechas.
   const grupos = useMemo(
@@ -361,15 +396,15 @@ function Buscador({ movil, onCerrarMovil }: { movil: boolean; onCerrarMovil: () 
           }`}
         >
           <div className="max-h-[70vh] overflow-y-auto">
-            {!buscando && <SinBusqueda onElegir={(t) => setTexto(t)} />}
+            {!buscando && <SinBusqueda recientes={recientes} onElegir={(t) => setTexto(t)} />}
 
             {buscando && cargando && resultados.length === 0 && <ResultadosCargando />}
 
             {buscando && !cargando && lista.length === 0 && (
               <div className="px-4 py-8 text-center">
                 <SearchX className="w-8 h-8 text-slate-300 mx-auto" />
-                <div className="mt-2 text-sm font-medium text-slate-700">Sin resultados para «{busqueda}»</div>
-                <div className="mt-1 text-slate-500">Prueba con el número de petición, el NIF o parte del nombre.</div>
+                <div className="mt-2 text-sm font-medium text-slate-700">{error ? 'No se ha podido buscar' : `Sin resultados para «${busqueda}»`}</div>
+                <div className="mt-1 text-slate-500">{error ?? 'Prueba con el número de petición, el NIF o parte del nombre.'}</div>
               </div>
             )}
 
@@ -405,6 +440,7 @@ function Buscador({ movil, onCerrarMovil }: { movil: boolean; onCerrarMovil: () 
             )}
           </div>
 
+          {deEjemplo && <NotaEjemplo>Resultados de ejemplo: la búsqueda en tus datos llegará más adelante.</NotaEjemplo>}
           <div className="hidden md:flex items-center gap-3 px-3 py-2 border-t border-slate-100 bg-slate-50 text-[11px] text-slate-500">
             <span className="flex items-center gap-1">
               <Tecla>↑</Tecla>
@@ -423,11 +459,11 @@ function Buscador({ movil, onCerrarMovil }: { movil: boolean; onCerrarMovil: () 
   );
 }
 
-function SinBusqueda({ onElegir }: { onElegir: (texto: string) => void }) {
+function SinBusqueda({ recientes, onElegir }: { recientes: string[]; onElegir: (texto: string) => void }) {
   return (
     <div className="py-2">
-      <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Búsquedas recientes</div>
-      {BUSQUEDAS_RECIENTES.map((t) => (
+      {recientes.length > 0 && <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Búsquedas recientes</div>}
+      {recientes.map((t) => (
         <button
           key={t}
           type="button"
@@ -507,7 +543,7 @@ function FilaResultado({
 
 function MenuAvisos() {
   const [abierto, setAbierto] = useState(false);
-  const [avisos, setAvisos] = useState(INITIAL_AVISOS);
+  const { avisos, marcarLeido, marcarTodos, deEjemplo } = useAvisos();
   const [soloSinLeer, setSoloSinLeer] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
   useCerrarAlSalir(caja, abierto, () => setAbierto(false));
@@ -516,7 +552,7 @@ function MenuAvisos() {
   const visibles = soloSinLeer ? avisos.filter((a) => !a.leido) : avisos;
 
   const abrir = (a: Aviso) => {
-    setAvisos((lista) => lista.map((x) => (x.id === a.id ? { ...x, leido: true } : x)));
+    marcarLeido(a.id);
     if (a.ruta) {
       window.location.hash = `#/${a.ruta}`;
       setAbierto(false);
@@ -541,7 +577,7 @@ function MenuAvisos() {
             <button
               type="button"
               disabled={sinLeer === 0}
-              onClick={() => setAvisos((lista) => lista.map((a) => ({ ...a, leido: true })))}
+              onClick={marcarTodos}
               className="flex items-center gap-1 font-medium text-indigo-600 hover:underline disabled:text-slate-300 disabled:no-underline"
             >
               <CheckCheck className="w-3.5 h-3.5" /> Marcar todo como leído
@@ -597,6 +633,7 @@ function MenuAvisos() {
             })}
           </div>
 
+          {deEjemplo && <NotaEjemplo>Avisos de ejemplo: los de tu ETT llegarán más adelante.</NotaEjemplo>}
           <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 bg-slate-50">
             <button type="button" className="font-medium text-indigo-600 hover:underline">
               Ver todos los avisos
