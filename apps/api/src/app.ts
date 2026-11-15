@@ -13,6 +13,7 @@ import type { Sql } from './lib/db.js';
 import { ApiError, errorBody, handleError } from './lib/errors.js';
 import { addresses } from './routes/addresses.js';
 import { branches } from './routes/branches.js';
+import { catalogItems, catalogTypes } from './routes/catalog-items.js';
 import { catalogs } from './routes/catalogs.js';
 import { clientBilling, clientCenters, clientContacts, clients } from './routes/clients.js';
 import { companies } from './routes/companies.js';
@@ -66,6 +67,8 @@ export function createApp(options: { sql: Sql; config: Pick<Config, 'jwtSecret' 
   app.route('/v1', roles);
   app.route('/v1', memberships);
   app.route('/v1', catalogs);
+  app.route('/v1', catalogTypes);
+  app.route('/v1', catalogItems);
   app.route('/v1', addresses);
   app.route('/v1', collectiveAgreements);
   app.route('/v1', professionalCategories);

@@ -71,6 +71,7 @@ export function errorBody(code: ErrorCode, message: string, details?: Validation
 const uniqueMessages: Record<string, string> = {
   clients_tenant_company_tax_id_uniq: 'Ya existe un cliente con ese NIF en la sociedad',
   client_contacts_main_uniq: 'El cliente ya tiene un contacto principal',
+  catalog_items_tenant_catalog_name_uniq: 'Ya existe un valor con ese nombre en esta tabla maestra',
 };
 
 /** Traduce los errores de Postgres que puede provocar el cliente; el resto son errores internos. */
