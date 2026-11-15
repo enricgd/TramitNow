@@ -31,8 +31,10 @@ Después se añade la entrada `view: CandidatosView` en `NAV` (`src/App.tsx`).
 `src/Login.tsx` (de `design/login.html`) inicia sesión con Supabase Auth (`@supabase/supabase-js`, solo
 para Auth). `src/Root.tsx` muestra el login sin sesión y la app con ella; si el token no trae `tenant_id`
 (el usuario no pertenece a ninguna ETT activa) cierra la sesión y lo avisa. `src/auth/session.ts` lee
-los claims del hook (`tenant_id`, `app_role`, `branch_ids`). La cabecera muestra el usuario y su rol;
-la ETT, la sucursal y las pantallas siguen con datos de ejemplo.
+los claims del hook (`tenant_id`, `app_role`, `branch_ids`). Con sesión, `src/sesion.tsx` (`SesionProvider`,
+`useSesion()`) carga `/v1/me` una vez para toda la app: la cabecera muestra la ETT activa, el usuario, su rol
+y, si ve varias sucursales, el selector de sucursal (se recuerda en el navegador; las listas aún no filtran por
+ella). Con varias ETT, el nombre de la ETT es un selector que llama a `changeTenant` y recarga.
 
 - En local, `npm run dev` es el **modo demo**: entra sin login con un usuario ficticio y no necesita Supabase.
 - Para probar el login en local: `sh db/local/reset.sh` levanta Postgres + Auth con un usuario demo (ver
@@ -63,8 +65,53 @@ reload();
   En el NAS, `VITE_API_URL` en `.env.production.local`.
 - Cuando la API gane una ruta, se añade al contrato y a las dos implementaciones.
 
-Pendiente: conectar la cabecera (ETT y sucursal de `/v1/me`) y "Mi ETT" (sociedad, sucursales, usuarios y roles)
-a los repositorios; las pantallas aún usan los datos de ejemplo que llevan dentro.
+Conectadas: la cabecera (`src/cabecera/useCabecera.ts`) y Mi ETT (`src/views/mi-ett/useMiEtt.ts`). El resto de
+pantallas aún usan los datos de ejemplo que llevan dentro.
+
+#### Conectar una pantalla
+
+El diseñador sigue editando las vistas (`src/views/*View.jsx`, `Header.tsx`) en la rama `design`. Para que
+sus cambios y los nuestros no choquen, **la vista solo pinta** y todo lo de datos va aparte:
+
+1. **Un hook por pantalla** en su carpeta: `src/views/<pantalla>/use<Pantalla>.ts` (por ejemplo
+   `src/views/mi-ett/useMiEtt.ts`). Carga con `useData` y guarda con `repos`; traduce de la forma de la API
+   (`tipos.ts`, en inglés) a la que ya usa la vista (sus nombres de campo, sus textos) y al revés. La vista
+   recibe datos y funciones (`guardarSucursal(id, valores)`, `desactivarSucursal(id)`...), nunca `repos`.
+2. **En la vista, lo mínimo**: cambiar los `useState(INITIAL_...)` por el hook, los `setX(...)` de guardar
+   por la función del hook y añadir los estados. No reescribir el JSX ni cambiar nombres de campo: si la
+   vista usa `company.cif`, el hook da `cif`. Las funciones del hook lanzan `ApiError`; la vista lo muestra con
+   `mensajeError(e)` (en Mi ETT, con su `guardar(accion, mensajeOk)`, que avisa y devuelve si ha ido bien).
+3. **Los datos de ejemplo de la vista pasan a `memoria.ts`**, en los repositorios que ya existen (sociedades,
+   sucursales, usuarios...) o, si la API aún no los tiene, en un repositorio «pendiente de API» (abajo).
+4. **Estados**, con los componentes de `src/ui/Estados.tsx`: `CargandoPagina` la primera vez (al recargar
+   tras guardar se siguen viendo los datos), `ErrorCarga` con «Reintentar», el vacío de la pantalla (por
+   ejemplo, ETT sin sociedades) y `Proximamente` para lo que aún no tiene API.
+5. **Probar en los dos modos**: `npm run dev` (en la pestaña de red del navegador no debe haber peticiones a
+   `/v1` ni a `/auth`) y `npm run dev:real` con `apps/api` y la base local.
+
+#### Pendiente de API
+
+Lo que una pantalla ya enseña y `apps/api` aún no tiene se añade igualmente al contrato (`repositorios.ts`,
+con sus tipos al final de `tipos.ts`, en una forma provisional), con su implementación en memoria. Contra la
+API hay dos opciones, según lo que tenga sentido en real:
+
+- **Mostrarlo como «Disponible próximamente»**: `api.ts` rechaza con `ApiError` `no_disponible` (501) y la
+  pantalla pinta `Proximamente` en su lugar. Es lo que hace Mi ETT con `ettSettings` (datos legales de la
+  ETT, facturación, CCC, servicios, plantillas, portales, actividad, invitaciones, responsables de sucursal y
+  email y departamento de los usuarios). Es lo normal cuando son datos de la propia ETT: unos de ejemplo
+  mezclados con los reales llevarían a error.
+- **Seguir con los datos de ejemplo, avisando**: los datos de ejemplo van en un fichero aparte que importan
+  las dos implementaciones (no en `memoria.ts`, que no entra en la compilación del NAS) y el repositorio
+  lleva `sample: true` para que la pantalla avise. Es lo que hacen el buscador (`search`) y los avisos
+  (`notifications`) de la cabecera, con `src/data/ejemploCabecera.ts`.
+
+Cuando llega la ruta, se cambia la implementación de `api.ts` (y la forma en `tipos.ts`, si hace falta): la
+pantalla no se toca.
+
+Lo que en Mi ETT sigue sin API, de momento: alta e invitación de usuarios y cambio de su rol o sus sucursales
+(la API solo los lista), el email de los usuarios (está en `auth.users`), la matriz de permisos (fija en la
+vista), el logotipo (Storage), la exportación a PDF y el registro de actividad. Las sucursales dadas de baja
+no se ven (la lista solo muestra las activas) y los CCC se asocian a la sucursal por su nombre.
 
 ## api
 
