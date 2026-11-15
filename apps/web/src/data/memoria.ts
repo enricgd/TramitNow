@@ -1,6 +1,9 @@
 // Repositorios en memoria con datos de ejemplo, para el modo demo (`npm run dev`, ver src/modo.ts).
 // Se comportan como la API (paginación, filtros, errores) para que las pantallas funcionen igual en los dos
 // modos. Los cambios duran hasta recargar la página. Todo es ficticio: nunca datos reales.
+import { REPRESENTANTE_ETT, AUTORIZACION_ETT } from '../views/ettDemo';
+import { SERVICIOS_INICIALES } from '../views/serviciosDemo';
+import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import type { CatalogRepository, Repositories } from './repositorios';
 import {
   ApiError,
@@ -12,6 +15,7 @@ import {
   type ClientContact,
   type CollectiveAgreement,
   type Company,
+  type EttSettings,
   type ContractKey,
   type ContractType,
   type Membership,
@@ -38,11 +42,29 @@ const companies: Company[] = [
     status: 'active',
     taxIdTypeId: null,
     taxId: 'B00000000',
-    phone: '+34 900 000 000',
+    phone: '+34 944 000 000',
     fax: null,
     email: 'central@ettglobal.example',
     website: 'https://www.ettglobal.example',
     smsSenderName: 'ETT Global',
+    workerCommunicationsCcEmail: null,
+    addressId: null,
+    postalAddressId: null,
+    ...stamp,
+  },
+  {
+    id: id(11),
+    code: 'EGA',
+    name: 'ETT Global Servicios Auxiliares, S.L.',
+    companyType: 'services',
+    status: 'active',
+    taxIdTypeId: null,
+    taxId: 'B00000001',
+    phone: '+34 944 000 010',
+    fax: null,
+    email: 'auxiliares@ettglobal.example',
+    website: null,
+    smsSenderName: null,
     workerCommunicationsCcEmail: null,
     addressId: null,
     postalAddressId: null,
@@ -63,10 +85,10 @@ const branch = (n: number, code: string, name: string, phone: string, email: str
   ...stamp,
 });
 
+// Las de Mi ETT y del resto de pantallas (src/views/sucursalesDemo.js).
 const branches: Branch[] = [
-  branch(20, 'SUC-01', 'Sucursal Barcelona (Central)', '+34 900 000 001', 'barcelona@ettglobal.example', true),
-  branch(21, 'SUC-02', 'Sucursal Girona', '+34 900 000 002', 'girona@ettglobal.example'),
-  branch(22, 'SUC-03', 'Sucursal Lleida', '+34 900 000 003', 'lleida@ettglobal.example'),
+  branch(20, 'DEL-NORTE', 'Delegación Norte (Bilbao)', '+34 944 000 000', 'norte@ettglobal.example', true),
+  branch(21, 'SUC-BCN', 'Sucursal Barcelona', '+34 930 000 000', 'barcelona@ettglobal.example'),
 ];
 
 const role = (n: number, code: string, name: string, scope: Role['scope'], permissions: string[]): Role => ({
@@ -93,6 +115,7 @@ const roles: Role[] = [
   role(34, 'comercial', 'Comercial', 'branch', ['module.comercial', 'addresses.write']),
 ];
 
+// El usuario de la membresía n es id(n + 100).
 const member = (n: number, fullName: string, roleCode: string, branchIds: string[], status: Membership['status'] = 'active'): Membership => {
   const r = roles.find((x) => x.code === roleCode)!;
   return {
@@ -108,15 +131,20 @@ const member = (n: number, fullName: string, roleCode: string, branchIds: string
   };
 };
 
+// El equipo de Mi ETT: las mismas personas que firman, seleccionan y venden en el resto de pantallas.
 const memberships: Membership[] = [
-  member(40, 'Usuario Demo', 'admin', []),
-  member(41, 'Ana López', 'admin', []),
-  member(42, 'Marta Sánchez', 'comercial', [id(20)]),
-  member(43, 'Laura García', 'director_zona', [id(20), id(21)]),
-  member(44, 'Marc Soler', 'seleccion', [id(21)]),
-  member(45, 'Elena Ramos', 'laboral', []),
-  member(46, 'Carlos Benítez', 'seleccion', [id(22)], 'inactive'),
+  member(150, 'Usuario Demo', 'admin', []),
+  member(151, 'Begoña Arrieta Lasa', 'admin', []),
+  member(152, 'Ane Uriarte', 'director_zona', [id(20)]),
+  member(153, 'Nuria Castells', 'director_zona', [id(21)]),
+  member(154, 'Jon Ibarra', 'seleccion', [id(20)]),
+  member(155, 'Ana Gómez', 'seleccion', [id(20)]),
+  member(156, 'Elena Navarro', 'comercial', [id(20)]),
+  member(157, 'Carlos Mendoza', 'comercial', [id(20)]),
+  member(158, 'Laura Vidal', 'comercial', [id(21)]),
+  member(159, 'Lucía Santos', 'admin', []),
 ];
+const DEMO_USER_ID = id(250);
 
 const permissions = [
   ['module.administracion', 'administracion', 'Acceso al módulo de administración de la ETT'],
@@ -137,6 +165,7 @@ const permissions = [
 const communities = [
   { code: '09', name: 'Cataluña' },
   { code: '13', name: 'Comunidad de Madrid' },
+  { code: '16', name: 'País Vasco' },
 ];
 const provinces = [
   { code: '08', name: 'Barcelona', autonomousCommunityCode: '09' },
@@ -144,11 +173,12 @@ const provinces = [
   { code: '25', name: 'Lleida', autonomousCommunityCode: '09' },
   { code: '28', name: 'Madrid', autonomousCommunityCode: '13' },
   { code: '43', name: 'Tarragona', autonomousCommunityCode: '09' },
+  { code: '48', name: 'Bizkaia', autonomousCommunityCode: '16' },
 ];
 const municipalities = [
   ['08019', '3', 'Barcelona'], ['08101', '7', "Hospitalet de Llobregat, L'"], ['08279', '8', 'Terrassa'],
   ['17079', '2', 'Girona'], ['25120', '7', 'Lleida'], ['28005', '3', 'Alcalá de Henares'], ['28079', '6', 'Madrid'],
-  ['43148', '2', 'Tarragona'],
+  ['43148', '2', 'Tarragona'], ['48015', '7', 'Basauri'], ['48020', '9', 'Bilbao'],
 ].map(([code, checkDigit, name]) => ({ code, provinceCode: code.slice(0, 2), checkDigit, name, active: true }));
 const countries = [
   ['AD', 'AND', '020', 'Andorra', false, false], ['ES', 'ESP', '724', 'España', true, true],
@@ -171,12 +201,17 @@ const contractKeys: ContractKey[] = [
 
 const addresses: Address[] = [
   {
-    id: id(50), streetType: 'Paseo', street: 'de Gràcia', number: '45', door: 'Planta 4ª', postalCode: '08007',
+    id: id(50), streetType: 'C/', street: 'Ejemplo', number: '1', door: '3ª planta', postalCode: '48001',
+    city: null, municipalityCode: '48020', provinceCode: '48', countryCode: 'ES', geoZoneId: null, ...stamp,
+  },
+  {
+    id: id(51), streetType: 'C/', street: 'Ejemplo', number: '20', door: 'local 2', postalCode: '08001',
     city: null, municipalityCode: '08019', provinceCode: '08', countryCode: 'ES', geoZoneId: null, ...stamp,
   },
 ];
 companies[0].addressId = id(50);
 branches[0].addressId = id(50);
+branches[1].addressId = id(51);
 
 // Catálogos laborales de la ETT
 const agreements: CollectiveAgreement[] = [
@@ -217,7 +252,7 @@ const concepts: PayrollConcept[] = [
 
 // Clientes: los de design/empresas.html (ficticios), con NIF de ejemplo.
 const client = (n: number, code: string, legalName: string, taxId: string, branchId: string, status: Client['status'], activity: string): Client => ({
-  id: id(n), companyId: id(10), branchId, code, legalName, tradeName: null, taxIdType: 'nif', taxId, ownerUserId: id(142),
+  id: id(n), companyId: id(10), branchId, code, legalName, tradeName: null, taxIdType: 'nif', taxId, ownerUserId: id(256),
   clientTypeId: null, businessGroupId: null, activity, startDate: status === 'prospect' ? null : '2024-03-01', status,
   blocked: false, blockedReason: null, addressId: null, phone: null, fax: null, email: null, website: null,
   onlineCpdPricePrinting: false, observations: null, ...stamp,
@@ -225,8 +260,8 @@ const client = (n: number, code: string, legalName: string, taxId: string, branc
 const clients: Client[] = [
   client(100, 'CLI-001', 'Trans-Logística Ibérica Norte, S.L.', 'B00000101', id(20), 'active', 'Transporte y almacenaje'),
   client(101, 'CLI-002', 'Manufacturas Metálicas del Henares, S.A.', 'A00000102', id(20), 'active', 'Fabricación de productos metálicos'),
-  client(102, 'CLI-003', 'Mediterránea Agrícola y Envasado, S.L.', 'B00000103', id(22), 'active', 'Manipulado y envasado de fruta'),
-  client(103, 'CLI-004', 'Hostelería & Eventos Premium BCN, S.L.', 'B00000104', id(20), 'prospect', 'Hostelería y eventos'),
+  client(102, 'CLI-003', 'Mediterránea Agrícola y Envasado, S.L.', 'B00000103', id(21), 'active', 'Manipulado y envasado de fruta'),
+  client(103, 'CLI-004', 'Hostelería & Eventos Premium BCN, S.L.', 'B00000104', id(21), 'prospect', 'Hostelería y eventos'),
 ];
 const center = (n: number, clientId: string, branchId: string, code: string, name: string, ccc: string | null, cnaeCode: string): ClientCenter => ({
   id: id(n), clientId, branchId, code, name, taxId: null, ccc, isSelfEmployedCcc: false, cnaeCode, ssRegimeCode: null,
@@ -236,9 +271,9 @@ const center = (n: number, clientId: string, branchId: string, code: string, nam
 });
 const centers: ClientCenter[] = [
   center(110, id(100), id(20), 'CT-01', 'Plataforma logística Zona Franca', '08000000001', '5210'),
-  center(111, id(100), id(21), 'CT-02', 'Almacén Girona', '17000000002', '5210'),
+  center(111, id(100), id(21), 'CT-02', 'Almacén El Prat', '08000000002', '5210'),
   center(112, id(101), id(20), 'CT-01', 'Planta de estampación', '08000000003', '2550'),
-  center(113, id(102), id(22), 'CT-01', 'Central hortofrutícola', '25000000004', '1039'),
+  center(113, id(102), id(21), 'CT-01', 'Central hortofrutícola', '25000000004', '1039'),
 ];
 const contact = (n: number, clientId: string, centerId: string | null, name: string, position: string, roles: ClientContact['roles'], extra: Partial<ClientContact> = {}): ClientContact => ({
   id: id(n), clientId, centerId, name, position, department: null, phone: '+34 900 000 100', mobile: null,
@@ -274,6 +309,101 @@ const billingResult = (billing: ClientBilling) =>
       ? [`El plazo de pago supera los ${LEGAL_MAX_PAYMENT_DAYS} días que permite la Ley 3/2004 entre empresas`]
       : [],
   });
+
+// Lo de Mi ETT que aún no tiene API (los datos de ejemplo que tenía FichaEttView.jsx, con la misma forma).
+const ettSettings: EttSettings = {
+  legal: {
+    nombreComercial: TENANT.tradeName,
+    formaJuridica: 'Sociedad Limitada (S.L.)',
+    autorizacion: AUTORIZACION_ETT,
+    fechaAutorizacion: '2019-03-12',
+    cnae: '7820 · Actividades de las empresas de trabajo temporal',
+    convenio: 'Convenio colectivo estatal de empresas de trabajo temporal',
+    registroMercantil: 'Registro Mercantil de Bizkaia',
+    tomo: '0000',
+    folio: '00',
+    hoja: 'BI-00000',
+    representante: REPRESENTANTE_ETT.nombre,
+    representanteDni: REPRESENTANTE_ETT.dni,
+    representanteCargo: REPRESENTANTE_ETT.cargo,
+    mutua: 'Mutua colaboradora con la Seguridad Social de ejemplo',
+    servicioPrevencion: 'Servicio de prevención ajeno de ejemplo',
+    // Garantía financiera obligatoria de las ETT: se actualiza cada año
+    garantiaTipo: 'Aval bancario',
+    garantiaEntidad: 'Entidad bancaria de ejemplo',
+    garantiaImporte: '185.000 €',
+    garantiaVence: '2026-12-08',
+    // Certificado digital de empresa y Sistema RED
+    redAutorizacion: '00000',
+    certificadoCaduca: '2026-12-20',
+  },
+  // Las mismas series que en Facturación
+  billing: {
+    billingSeries: 'F2026-',
+    invoicePrefix: 'R2026-',
+    proximaFactura: 108,
+    proximaRectificativa: 4,
+    vatRate: '21%',
+    withholdingRate: '0%',
+    iban: 'ES00 0000 0000 0000 0000 0000',
+    swiftBic: 'XXXXESXXXXX',
+    paymentMethod: 'Transferencia bancaria',
+    customPaymentMethod: '',
+    paymentTerms: '30 días fecha factura',
+    currency: 'EUR (€)',
+    adminEmail: 'administracion@ettglobal.example',
+    billingAddressSameAsFiscal: true,
+    billingBranchMode: 'centralized',
+  },
+  // Códigos de cuenta de cotización (CCC): uno por provincia y por tipo de personal
+  contributionAccounts: [
+    { id: 'ccc-1', numero: '48 0000001 01', provincia: 'Bizkaia', tipo: 'Personas en misión', sucursal: 'Delegación Norte (Bilbao)' },
+    { id: 'ccc-2', numero: '48 0000002 02', provincia: 'Bizkaia', tipo: 'Personal de estructura', sucursal: 'Delegación Norte (Bilbao)' },
+    { id: 'ccc-3', numero: '08 0000003 03', provincia: 'Barcelona', tipo: 'Personas en misión', sucursal: 'Sucursal Barcelona' },
+  ],
+  services: structuredClone(SERVICIOS_INICIALES),
+  templates: [
+    { id: 'tpl-1', name: 'Presupuesto comercial estándar 2026', category: 'Presupuestos', scope: 'Global (Todas)', status: 'active', format: 'PDF + Interactivo', updated: '12 Ene 2026' },
+    { id: 'tpl-2', name: 'Factura ordinaria (series F y R)', category: 'Facturación', scope: 'Global (Todas)', status: 'active', format: 'PDF / XML Facturae', updated: '02 Feb 2026' },
+    { id: 'tpl-3', name: 'Presupuesto de hostelería y eventos', category: 'Presupuestos', scope: 'Sucursal Barcelona', status: 'incomplete', format: 'PDF', updated: '15 Sep 2026' },
+    { id: 'tpl-4', name: 'Contrato de puesta a disposición (CPD)', category: 'Laboral / Legal', scope: 'Global (Todas)', status: 'active', format: 'PDF firmable', updated: '10 Feb 2026' },
+  ],
+  // Portales propios de la ETT: subdominio y correos de bienvenida
+  portals: {
+    subdominio: 'ettglobal',
+    bienvenida: {
+      empresa: { activo: true, asunto: 'Tu acceso al Área de empresas de {ett}', texto: 'Hola, {nombre}:\n\nTe hemos dado acceso al Área de empresas de {ett} para {empresa}. Desde allí puedes ver a tu personal en misión, validar los partes de horas, firmar los CPD y descargar las facturas, según tus permisos.\n\nElige tu contraseña aquí: {enlace}' },
+      candidato: { activo: true, asunto: 'Bienvenida a {ett}', texto: 'Hola, {nombre}:\n\nGracias por inscribirte. Desde tu área personal puedes subir tus documentos, seguir tus candidaturas y firmar tu contrato.\n\nEntra aquí: {enlace}' },
+    },
+  },
+  activity: [
+    { id: 'act-1', timestamp: 'Hoy, 10:45', user: 'Begoña Arrieta Lasa', action: 'Añadió el CCC de personas en misión de Barcelona', type: 'fiscal' },
+    { id: 'act-2', timestamp: '02 Oct, 16:30', user: 'Lucía Santos', action: 'Emitió la factura F2026-0101 (septiembre, Trans-Logística)', type: 'billing' },
+    { id: 'act-3', timestamp: '15 Sep, 11:20', user: 'Begoña Arrieta Lasa', action: 'Abrió la Sucursal Barcelona (responsable: Nuria Castells)', type: 'branch' },
+    { id: 'act-4', timestamp: '08 Ene, 09:15', user: 'Begoña Arrieta Lasa', action: 'Renovó la garantía financiera hasta el 08/12/2026', type: 'fiscal' },
+    { id: 'act-5', timestamp: '02 Ene, 08:00', user: 'Lucía Santos', action: 'Activó las series de 2026: F2026- y R2026-', type: 'billing' },
+  ],
+  branchManagers: { [id(20)]: 'Ane Uriarte', [id(21)]: 'Nuria Castells' },
+  users: Object.fromEntries(
+    (
+      [
+        [150, 'demo@example.com', 'Dirección', 'Ahora'],
+        [151, 'begona.arrieta@ettglobal.example', 'Dirección', 'Hace 15 min'],
+        [152, 'ane.uriarte@ettglobal.example', 'Operaciones', 'Hoy 08:45'],
+        [153, 'nuria.castells@ettglobal.example', 'Operaciones', 'Hoy 09:10'],
+        [154, 'jon.ibarra@ettglobal.example', 'Selección', 'Hoy 10:02'],
+        [155, 'ana.gomez@ettglobal.example', 'Selección', 'Ayer 18:20'],
+        [156, 'elena.navarro@ettglobal.example', 'Comercial', 'Hoy 09:30'],
+        [157, 'carlos.mendoza@ettglobal.example', 'Comercial', 'Hace 2 días'],
+        [158, 'laura.vidal@ettglobal.example', 'Comercial', 'Hoy 11:05'],
+        [159, 'lucia.santos@ettglobal.example', 'Administración', 'Hoy 10:12'],
+      ] as const
+    ).map(([n, email, departamento, ultimoAcceso]) => [id(n), { email, departamento, ultimoAcceso }]),
+  ),
+  invitations: [
+    { id: 'inv-1', name: 'Marcos Rubio', email: 'marcos.rubio@ettglobal.example', roleId: id(31), branchId: null, createdAt: NOW },
+  ],
+};
 
 // Un poco de espera, para que se vean los estados de carga como con la API.
 const delay = <T>(value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(structuredClone(value)), 150));
@@ -337,7 +467,7 @@ export function memoryRepositories(): Repositories {
     session: {
       me: () =>
         delay({
-          user: { id: id(140), email: 'demo@example.com', fullName: 'Usuario Demo', phone: null, status: 'active', mustChangePassword: false },
+          user: { id: DEMO_USER_ID, email: 'demo@example.com', fullName: 'Usuario Demo', phone: null, status: 'active', mustChangePassword: false },
           isSuperadmin: false,
           activeTenant: TENANT,
           role: { id: id(30), code: 'admin', name: 'Administrador', scope: 'tenant' },
@@ -552,6 +682,12 @@ export function memoryRepositories(): Repositories {
       list: (q = {}) =>
         page(memberships.filter((m) => (!q.status || m.status === q.status) && (!q.roleId || m.role.id === q.roleId)), q),
       get: async (membershipId) => delay(find(memberships, membershipId)),
+    },
+    search: sampleSearch(false),
+    notifications: sampleNotifications(false),
+    ettSettings: {
+      get: () => delay(ettSettings),
+      update: async (data) => delay(Object.assign(ettSettings, structuredClone(data))),
     },
   };
 }

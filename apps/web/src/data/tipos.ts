@@ -336,3 +336,106 @@ export type ClientBilling = Stamped & {
 export type ClientBillingInput = Partial<Omit<ClientBilling, keyof Stamped | 'clientId'>>;
 /** `warnings`: avisos que no impiden guardar (p. ej. plazo de pago por encima del legal). */
 export type ClientBillingResult = { billing: ClientBilling; warnings: string[] };
+
+// ---------------------------------------------------------------------------
+// Pendiente de API. Lo que las pantallas ya usan y apps/api aún no tiene: de momento solo hay datos de
+// ejemplo (memoria.ts). La forma es provisional; cuando llegue la ruta, se ajusta aquí y en las dos
+// implementaciones. Ver "Pendiente de API" en apps/README.md.
+// ---------------------------------------------------------------------------
+
+/** Buscador global de la cabecera (fase 12 del plan). */
+export type SearchResultType = 'request' | 'candidate' | 'client' | 'quote';
+export type SearchResult = {
+  id: string;
+  type: SearchResultType;
+  title: string;
+  detail: string;
+  /** Estado tal como se muestra («En selección», «Aceptado»...). */
+  status: string | null;
+  /** Pantalla de la app (#/ruta) que lo abre; null si aún no hay. */
+  route: string | null;
+};
+
+/** Avisos del usuario (campana de la cabecera). */
+export type NotificationKind = 'urgent' | 'pending' | 'success' | 'info';
+export type AppNotification = {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  text: string;
+  createdAt: string;
+  read: boolean;
+  route: string | null;
+};
+
+/** Datos legales de la ETT (Ley 14/1994) que no están en la sociedad. Forma de Mi ETT. */
+export type EttLegalData = {
+  nombreComercial: string;
+  formaJuridica: string;
+  autorizacion: string;
+  fechaAutorizacion: string;
+  cnae: string;
+  convenio: string;
+  registroMercantil: string;
+  tomo: string;
+  folio: string;
+  hoja: string;
+  /** Representante legal: firma contratos y CPD. */
+  representante: string;
+  representanteDni: string;
+  representanteCargo: string;
+  mutua: string;
+  servicioPrevencion: string;
+  garantiaTipo: string;
+  garantiaEntidad: string;
+  garantiaImporte: string;
+  garantiaVence: string;
+  redAutorizacion: string;
+  certificadoCaduca: string;
+};
+
+/** Facturación emisora de la ETT (series, IVA, IBAN...). Forma de Mi ETT. */
+export type EttBillingSettings = {
+  billingSeries: string;
+  invoicePrefix: string;
+  proximaFactura: number;
+  proximaRectificativa: number;
+  vatRate: string;
+  withholdingRate: string;
+  iban: string;
+  swiftBic: string;
+  paymentMethod: string;
+  customPaymentMethod: string;
+  paymentTerms: string;
+  currency: string;
+  adminEmail: string;
+  billingAddressSameAsFiscal: boolean;
+  billingBranchMode: 'centralized' | 'per_branch';
+};
+
+/** Código de cuenta de cotización. `sucursal` es el nombre de la sucursal. */
+export type EttContributionAccount = { id: string; numero: string; provincia: string; tipo: string; sucursal: string };
+export type EttService = { id: string; nombre: string; cobro: string; valor: number; unidad: string; activo: boolean };
+export type EttTemplate = { id: string; name: string; category: string; scope: string; status: 'active' | 'incomplete'; format: string; updated: string };
+export type EttWelcomeEmail = { activo: boolean; asunto: string; texto: string };
+export type EttPortals = { subdominio: string; bienvenida: { empresa: EttWelcomeEmail; candidato: EttWelcomeEmail } };
+export type EttActivity = { id: string; timestamp: string; user: string; action: string; type: string };
+/** Datos del usuario que la API aún no devuelve (el email está en auth.users). */
+export type EttUserExtra = { email: string; departamento: string; ultimoAcceso: string };
+export type EttInvitation = { id: string; name: string; email: string; roleId: string; branchId: string | null; createdAt: string };
+
+/** Todo lo de Mi ETT que aún no tiene ruta en apps/api. */
+export type EttSettings = {
+  legal: EttLegalData;
+  billing: EttBillingSettings;
+  contributionAccounts: EttContributionAccount[];
+  services: EttService[];
+  templates: EttTemplate[];
+  portals: EttPortals;
+  activity: EttActivity[];
+  /** Responsable de cada sucursal, por id de sucursal. */
+  branchManagers: Record<string, string>;
+  /** Por id de membresía. */
+  users: Record<string, EttUserExtra>;
+  invitations: EttInvitation[];
+};

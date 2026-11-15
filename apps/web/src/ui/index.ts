@@ -5,3 +5,4 @@ export { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, type
 export { Tabs, Segmented, type Tab } from './Tabs';
 export { Drawer, Modal, Confirmar } from './Overlay';
 export { SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, CAMPO } from './Fields';
+export { CargandoPagina, ErrorCarga, Proximamente } from './Estados';
