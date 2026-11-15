@@ -232,6 +232,13 @@ Antes, las migraciones de `db/` aplicadas (`db/README.md`, "Aplicar en el NAS", 
 sh infra/nas/deploy-api.sh
 ```
 
+**Documentos (desde noviembre de 2026).** La API firma las URL de Supabase Storage con la `SERVICE_ROLE_KEY` del
+`.env` (variables `STORAGE_URL`, `STORAGE_PUBLIC_URL` y `SUPABASE_SERVICE_ROLE_KEY` del servicio `api` en
+`docker-compose.override.yml`). La primera vez: aplicar las migraciones (la de documentos crea el bucket privado
+`documents`, así que Storage tiene que estar en marcha), llevar el override nuevo al NAS, `sudo sh setup.sh
+--regenerate` y volver a desplegar la API. Sin esas variables la API arranca igual, pero las rutas de ficheros
+responden `503 servicio_no_disponible`.
+
 Si se activan algún día las claves asimétricas de Supabase Auth (`JWT_KEYS`, ES256), la API tendrá que
 verificar con el JWKS en vez de con `JWT_SECRET`.
 
