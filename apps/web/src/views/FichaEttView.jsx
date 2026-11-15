@@ -132,7 +132,7 @@ export default function FichaEttView() {
                         status={
                             <>
                                 {company.autorizacion && <Badge tone="success" icon={CheckCircle2}>ETT autorizada n.º {company.autorizacion}</Badge>}
-                                <Badge tone={avisos.length ? 'warning' : 'success'}>{avisos.length ? `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}` : 'Todo en regla'}</Badge>
+                                <Badge tone={avisos.length ? 'warning' : 'success'}>{avisos.length ? `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}` : hayAjustes ? 'Todo en regla' : 'Sin avisos'}</Badge>
                             </>
                         }
                         subtitle={
@@ -162,10 +162,10 @@ export default function FichaEttView() {
                         tabs={[
                             { id: 'resumen', label: 'Resumen' },
                             { id: 'fiscal', label: 'Datos fiscales' },
-                            { id: 'facturacion', label: 'Facturación', alert: !company.iban },
+                            { id: 'facturacion', label: 'Facturación', alert: hayAjustes && !company.iban },
                             { id: 'sucursales', label: 'Sucursales', count: branches.length },
                             { id: 'usuarios', label: 'Usuarios y roles', count: users.length },
-                            { id: 'plantillas', label: 'Plantillas', count: templates.length },
+                            { id: 'plantillas', label: 'Plantillas', count: hayAjustes ? templates.length : undefined },
                             { id: 'portales', label: 'Portales' },
                             { id: 'actividad', label: 'Actividad' },
                         ]}
@@ -193,7 +193,7 @@ export default function FichaEttView() {
                                         ))}
                                     </ul>
                                 </Card>
-                            ) : <Notice tone="success" icon={CheckCircle2}>Todo en regla: datos fiscales, CCC, garantía, certificado, facturación y usuarios.</Notice>}
+                            ) : <Notice tone="success" icon={CheckCircle2}>{hayAjustes ? 'Todo en regla: datos fiscales, CCC, garantía, certificado, facturación y usuarios.' : 'Sin avisos en la sociedad, las sucursales y los usuarios. Los CCC, la garantía y el certificado se revisarán cuando estén disponibles.'}</Notice>}
 
                             {/* OVERVIEW STATUS CARDS */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -201,7 +201,7 @@ export default function FichaEttView() {
                                     title="Datos Fiscales"
                                     status={avisos.some(a => a.tab === 'fiscal') ? 'Revisar' : 'Completos'}
                                     statusColor={avisos.some(a => a.tab === 'fiscal') ? 'amber' : 'emerald'}
-                                    subtitle={`CIF, autorización, ${ccc.length} CCC, garantía`}
+                                    subtitle={hayAjustes ? `CIF, autorización, ${ccc.length} CCC, garantía` : 'CIF, dirección y contacto'}
                                     icon={Building2}
                                     onClick={() => setActiveTab('fiscal')}
                                 />
@@ -266,12 +266,12 @@ export default function FichaEttView() {
                                         </div>
                                         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                                             <span className="text-slate-400 font-medium block">Sede Central y Domicilio Fiscal</span>
-                                            <span className="text-slate-800 font-semibold block mt-0.5">{company.address}</span>
+                                            <span className="text-slate-800 font-semibold block mt-0.5">{company.address || <span className="text-slate-400 italic font-normal">Sin dirección</span>}</span>
                                             <span className="text-slate-500 block">{[company.postalCode, company.city].filter(Boolean).join(' - ')}{company.province && ` (${company.province})`}</span>
                                         </div>
                                         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                                             <span className="text-slate-400 font-medium block">Contacto General de la ETT</span>
-                                            <span className="text-slate-800 font-medium block mt-0.5">{company.phone}</span>
+                                            <span className="text-slate-800 font-medium block mt-0.5">{company.phone || <span className="text-slate-400 italic font-normal">Sin teléfono</span>}</span>
                                             <span className="text-indigo-600 font-medium block">{company.email}</span>
                                         </div>
                                         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">

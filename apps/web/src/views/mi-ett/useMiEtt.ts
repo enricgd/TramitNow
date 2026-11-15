@@ -106,6 +106,13 @@ type DireccionVista = { address: string; postalCode: string; city: string; provi
 let provinciasCache: Promise<Province[]> | undefined;
 const provincias = () => (provinciasCache ??= repos.catalogs.provinces().catch((e) => ((provinciasCache = undefined), Promise.reject(e))));
 
+// Los nombres de municipio no cambian: se piden una vez por sesión.
+const municipios = new Map<string, Promise<string | undefined>>();
+const nombreMunicipio = (r: Repositories, code: string) => {
+  if (!municipios.has(code)) municipios.set(code, r.catalogs.municipality(code).then((m) => m.name, () => (municipios.delete(code), undefined)));
+  return municipios.get(code)!;
+};
+
 function textoCalle(a: Address) {
   const calle = [a.streetType, a.street].filter(Boolean).join(' ');
   return `${calle}${a.number ? ` ${a.number}` : ''}${a.door ? `, ${a.door}` : ''}`;
@@ -113,11 +120,11 @@ function textoCalle(a: Address) {
 
 async function direccionVista(r: Repositories, a: Address | undefined, todas: Province[]): Promise<DireccionVista> {
   if (!a) return { address: '', postalCode: '', city: '', province: '', country: '' };
-  const municipio = a.municipalityCode ? await r.catalogs.municipality(a.municipalityCode).catch(() => undefined) : undefined;
+  const municipio = a.municipalityCode ? await nombreMunicipio(r, a.municipalityCode) : undefined;
   return {
     address: textoCalle(a),
     postalCode: a.postalCode ?? '',
-    city: municipio?.name ?? a.city ?? '',
+    city: municipio ?? a.city ?? '',
     province: todas.find((p) => p.code === a.provinceCode)?.name ?? '',
     country: a.countryCode === 'ES' ? 'España' : a.countryCode,
   };
@@ -162,6 +169,11 @@ async function guardarDireccion(actual: Address | undefined, d: Omit<DireccionVi
     return actual.id;
   }
   return (await repos.addresses.create(data)).id;
+}
+
+/** Si se ha creado una dirección para un registro que luego no se ha podido guardar, se borra. */
+async function quitarDireccionNueva(nueva: string | null | undefined, anterior: string | null | undefined) {
+  if (nueva && nueva !== anterior) await repos.addresses.remove(nueva).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -301,7 +313,9 @@ export function useMiEtt() {
 
   const users: UsuarioVista[] = useMemo(() => {
     if (!data?.miembros) return [];
-    const alcance = (contexts: { branchId: string | null }[]): [string, ValorSucursal] => {
+    // Un rol de alcance «tenant» (administrador, laboral) ve todas las sucursales aunque no tenga contextos.
+    const alcance = (contexts: { branchId: string | null }[], scope: Membership['role']['scope']): [string, ValorSucursal] => {
+      if (scope === 'tenant') return ['Todas', '*'];
       if (contexts.length === 0) return ['Sin asignar', ''];
       if (contexts.some((c) => c.branchId === null)) return ['Todas', '*'];
       const ids = contexts.map((c) => c.branchId!);
@@ -310,7 +324,7 @@ export function useMiEtt() {
     };
     const miembros = data.miembros.map((m): UsuarioVista => {
       const extra = ajustes?.users[m.id];
-      const [branch, branchValue] = alcance(m.contexts);
+      const [branch, branchValue] = alcance(m.contexts, m.role.scope);
       return {
         id: m.id,
         name: m.fullName,
@@ -406,7 +420,12 @@ export function useMiEtt() {
           if (addressId !== sociedad.addressId) cambios.addressId = addressId;
         }
       }
-      if (Object.keys(cambios).length) await repos.companies.update(sociedad.id, cambios);
+      if (Object.keys(cambios).length) {
+        await repos.companies.update(sociedad.id, cambios).catch(async (e) => {
+          await quitarDireccionNueva(cambios.addressId, sociedad.addressId);
+          throw e;
+        });
+      }
 
       if (ajustes) {
         const legal = { ...ajustes.legal };
@@ -453,9 +472,13 @@ export function useMiEtt() {
         ...(valores.isHeadquarters ? { isDefault: true } : {}),
         ...(addressId !== (actual?.addressId ?? null) ? { addressId } : {}),
       };
-      const guardada = actual
-        ? await repos.branches.update(actual.id, campos)
-        : await repos.branches.create({ ...campos, companyId: String(valores.companyId || sociedad?.id) });
+      const guardada = await (actual
+        ? repos.branches.update(actual.id, campos)
+        : repos.branches.create({ ...campos, companyId: String(valores.companyId || sociedad?.id) })
+      ).catch(async (e) => {
+        await quitarDireccionNueva(addressId, actual?.addressId);
+        throw e;
+      });
 
       if (ajustes && 'manager' in valores) {
         await repos.ettSettings.update({ branchManagers: { ...ajustes.branchManagers, [guardada.id]: texto('manager') } });
