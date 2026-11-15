@@ -169,7 +169,8 @@ describe('documentos', () => {
   });
 
   it('borrar elimina la fila y el fichero, y deja rastro en el historial', async () => {
-    const [{ path }] = await adminSql<{ path: string }[]>`select storage_path as path from public.documents where id = ${docId}`;
+    const [row] = await adminSql<{ path: string }[]>`select storage_path as path from public.documents where id = ${docId}`;
+    const path = row!.path;
     const res = await call('DELETE', `/v1/documents/${docId}`, { token: admin });
     expect(res.status).toBe(204);
     expect((await call('GET', `/v1/documents/${docId}`, { token: admin })).status).toBe(404);
