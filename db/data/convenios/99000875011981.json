@@ -1,0 +1,3381 @@
+{
+  "agreement": {
+    "regcon": "99000875011981",
+    "name": "Convenio colectivo estatal de industrias cárnicas",
+    "scope": "estatal",
+    "territory": null,
+    "cnae": [
+      "10"
+    ],
+    "validFrom": "2024-01-01",
+    "validTo": "2025-12-31"
+  },
+  "publications": [
+    {
+      "id": "p1",
+      "bulletin": "BOE",
+      "date": "2025-07-07",
+      "number": "BOE-A-2025-13965",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-13965",
+      "type": "texto_inicial"
+    },
+    {
+      "id": "p2",
+      "bulletin": "BOE",
+      "date": "2026-02-16",
+      "number": "BOE-A-2026-3593",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2026-3593",
+      "type": "revision_salarial"
+    }
+  ],
+  "versions": [
+    {
+      "publication": "p1",
+      "effectiveFrom": "2024-01-01",
+      "effectiveTo": "2024-12-31",
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Técnico titulado superior",
+          "group": "Personal Técnico",
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Técnico titulado medio",
+          "group": "Personal Técnico",
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Jefe Administrativo",
+          "group": "Personal Administrativo",
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Oficial de primera administrativo",
+          "group": "Personal Administrativo",
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Oficial de segunda administrativo",
+          "group": "Personal Administrativo",
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Auxiliar administrativo",
+          "group": "Personal Administrativo",
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Subalterno",
+          "group": "Personal Subalterno",
+          "level": "7"
+        },
+        {
+          "code": "N8",
+          "name": "Encargados",
+          "group": "Personal Obrero",
+          "level": "8"
+        },
+        {
+          "code": "N9",
+          "name": "Conductor mecánico",
+          "group": "Personal Obrero",
+          "level": "9"
+        },
+        {
+          "code": "N10",
+          "name": "Oficial de primera obrero, Conductor-Repartidor y Carretillero",
+          "group": "Personal Obrero",
+          "level": "10"
+        },
+        {
+          "code": "N11",
+          "name": "Oficial de segunda",
+          "group": "Personal Obrero",
+          "level": "11"
+        },
+        {
+          "code": "N12",
+          "name": "Ayudantes",
+          "group": "Personal Obrero",
+          "level": "12"
+        },
+        {
+          "code": "N13",
+          "name": "Peones",
+          "group": "Personal Obrero",
+          "level": "13"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 30694.02,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N1",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 2192.43,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N1",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 73.081,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N1",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 17.44,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N1",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 73.081,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N1",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 26.16,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N1",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 1.014,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N1",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N1",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 3.399,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 26353.32,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1882.38,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 62.746,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 14.973,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 62.746,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 22.46,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.805,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N2",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.918,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 23639.86,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1688.561,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 56.285,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 13.432,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 56.285,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 20.148,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.729,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N3",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.618,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21918.12,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1565.58,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 52.186,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.453,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 52.186,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.68,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.693,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N4",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.427,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21187.32,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1513.38,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 50.446,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.038,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 50.446,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.057,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.674,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N5",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.346,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 19873.14,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1419.51,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 47.317,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.292,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 47.317,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 16.937,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.674,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N6",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.2,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 19198.62,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1371.33,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 45.711,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 10.908,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 45.711,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 16.362,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.653,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N7",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.126,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 22008.012,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 51.662,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N8",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.505,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N8",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 51.662,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N8",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.749,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N8",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.693,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N8",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N8",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.403,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21139.398,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 49.623,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N9",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.011,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N9",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 49.623,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N9",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.009,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N9",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.674,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N9",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N9",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.308,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 20819.046,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 48.871,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N10",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.829,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N10",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 48.871,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N10",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 17.737,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N10",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.674,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N10",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N10",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.273,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N11",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 20517.438,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N11",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 48.163,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N11",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.658,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N11",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 48.163,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N11",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 17.48,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N11",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.674,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N11",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N11",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.24,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N12",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 19910.814,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N12",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 46.739,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N12",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.313,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N12",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 46.739,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N12",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 16.963,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N12",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.674,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N12",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N12",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.174,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N13",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 19272.666,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N13",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 45.241,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N13",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 10.95,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N13",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 45.241,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N13",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 16.419,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N13",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.653,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N13",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": "N13",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.104,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla definitiva de salarios para 2024», BOE núm. 162 de 07/07/2025, pág. 90484"
+        },
+        {
+          "category": null,
+          "concept": "complemento_vacaciones_dia_natural",
+          "label": "Complemento o bolsa de vacaciones por día natural (anexo 4.2.a)",
+          "amount": 9.961,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 4.2.a), pág. 90483"
+        },
+        {
+          "category": null,
+          "concept": "complemento_vacaciones_dia_laborable",
+          "label": "Complemento o bolsa de vacaciones por día laborable, módulo de 22 días (anexo 4.2.a)",
+          "amount": 13.59,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 4.2.a), pág. 90483"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1760,
+        "vacationDays": 30,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Jornada anual de trabajo efectivo: anexo 2.1 (1.760 h en 2024; 1.748 h desde el 1/1/2025), pág. 90481. Vacaciones: anexo 4.1, «treinta días naturales o veintidós laborables», pág. 90483. Pagas extra de junio y diciembre según los importes del anexo 5 más la antigüedad consolidada de treinta días (anexo 15, pág. 90487); el salario anual de la tabla las incluye. Hora extra = 1,75 x módulo (anexo 3). Nocturnidad = salario base x 0,31 / 6,666 h (anexo 7). El personal obrero (niveles 8 a 13) no tiene salario mensual en la tabla: cobra por día."
+      }
+    },
+    {
+      "publication": "p1",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "provisional": true,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Técnico titulado superior",
+          "group": "Personal Técnico",
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Técnico titulado medio",
+          "group": "Personal Técnico",
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Jefe Administrativo",
+          "group": "Personal Administrativo",
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Oficial de primera administrativo",
+          "group": "Personal Administrativo",
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Oficial de segunda administrativo",
+          "group": "Personal Administrativo",
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Auxiliar administrativo",
+          "group": "Personal Administrativo",
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Subalterno",
+          "group": "Personal Subalterno",
+          "level": "7"
+        },
+        {
+          "code": "N8",
+          "name": "Encargados",
+          "group": "Personal Obrero",
+          "level": "8"
+        },
+        {
+          "code": "N9",
+          "name": "Conductor mecánico",
+          "group": "Personal Obrero",
+          "level": "9"
+        },
+        {
+          "code": "N10",
+          "name": "Oficial de primera obrero, Conductor-Repartidor y Carretillero",
+          "group": "Personal Obrero",
+          "level": "10"
+        },
+        {
+          "code": "N11",
+          "name": "Oficial de segunda",
+          "group": "Personal Obrero",
+          "level": "11"
+        },
+        {
+          "code": "N12",
+          "name": "Ayudantes",
+          "group": "Personal Obrero",
+          "level": "12"
+        },
+        {
+          "code": "N13",
+          "name": "Peones",
+          "group": "Personal Obrero",
+          "level": "13"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 31614.66,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 2258.19,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 75.273,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 18.086,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 75.273,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 27.129,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 1.044,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 3.501,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 27143.76,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1938.84,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 64.628,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 15.528,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 64.628,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 23.293,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.829,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 3.006,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 24349.08,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1739.22,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 57.974,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 13.93,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 57.974,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 20.895,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.751,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.696,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 22575.84,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1612.56,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 53.752,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.915,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 53.752,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 19.373,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.714,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.5,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21822.78,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1558.77,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 51.959,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.484,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 51.959,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.727,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.416,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 20469.54,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1462.11,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 48.737,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.71,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 48.737,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 17.565,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.266,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 19774.44,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1412.46,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 47.082,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.313,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 47.082,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 16.969,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.673,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.19,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 22615.1,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 53.212,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.938,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 53.212,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 19.445,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.714,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.475,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21722.6,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 51.112,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.427,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 51.112,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.677,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.377,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21393.225,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 50.337,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.239,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 50.337,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.394,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.341,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21083.4,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 49.608,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.061,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 49.608,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.128,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.307,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 20459.925,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 48.141,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.705,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 48.141,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 17.592,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.239,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 19804.15,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 46.598,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.33,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 46.598,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 17.028,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.673,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.167,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», BOE núm. 162 de 07/07/2025, pág. 90485"
+        },
+        {
+          "category": null,
+          "concept": "complemento_vacaciones_dia_natural",
+          "label": "Complemento o bolsa de vacaciones por día natural (anexo 4.2.a)",
+          "amount": 10.26,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 4.2.a), pág. 90483"
+        },
+        {
+          "category": null,
+          "concept": "complemento_vacaciones_dia_laborable",
+          "label": "Complemento o bolsa de vacaciones por día laborable, módulo de 22 días (anexo 4.2.a)",
+          "amount": 13.998,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 4.2.a), pág. 90483"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1748,
+        "vacationDays": 30,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Jornada anual de trabajo efectivo: anexo 2.1 (1.760 h en 2024; 1.748 h desde el 1/1/2025), pág. 90481. Vacaciones: anexo 4.1, «treinta días naturales o veintidós laborables», pág. 90483. Pagas extra de junio y diciembre según los importes del anexo 5 más la antigüedad consolidada de treinta días (anexo 15, pág. 90487); el salario anual de la tabla las incluye. Hora extra = 1,75 x módulo (anexo 3). Nocturnidad = salario base x 0,31 / 6,666 h (anexo 7). El personal obrero (niveles 8 a 13) no tiene salario mensual en la tabla: cobra por día."
+      }
+    },
+    {
+      "publication": "p2",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Técnico titulado superior",
+          "group": "Personal Técnico",
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Técnico titulado medio",
+          "group": "Personal Técnico",
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Jefe Administrativo",
+          "group": "Personal Administrativo",
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Oficial de primera administrativo",
+          "group": "Personal Administrativo",
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Oficial de segunda administrativo",
+          "group": "Personal Administrativo",
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Auxiliar administrativo",
+          "group": "Personal Administrativo",
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Subalterno",
+          "group": "Personal Subalterno",
+          "level": "7"
+        },
+        {
+          "code": "N8",
+          "name": "Encargados",
+          "group": "Personal Obrero",
+          "level": "8"
+        },
+        {
+          "code": "N9",
+          "name": "Conductor mecánico",
+          "group": "Personal Obrero",
+          "level": "9"
+        },
+        {
+          "code": "N10",
+          "name": "Oficial de primera obrero, Conductor-Repartidor y Carretillero",
+          "group": "Personal Obrero",
+          "level": "10"
+        },
+        {
+          "code": "N11",
+          "name": "Oficial de segunda",
+          "group": "Personal Obrero",
+          "level": "11"
+        },
+        {
+          "code": "N12",
+          "name": "Ayudantes",
+          "group": "Personal Obrero",
+          "level": "12"
+        },
+        {
+          "code": "N13",
+          "name": "Peones",
+          "group": "Personal Obrero",
+          "level": "13"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 31614.66,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 2258.19,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 75.273,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 18.086,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 75.273,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 27.129,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 1.044,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N1",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 3.501,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 27143.76,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1938.84,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 64.628,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 15.528,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 64.628,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 23.293,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.829,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N2",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 3.006,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 24349.08,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1739.22,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 57.974,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 13.93,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 57.974,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 20.895,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.751,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N3",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.696,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 22575.84,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1612.56,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 53.752,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.915,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 53.752,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 19.373,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.714,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N4",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.5,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21822.78,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1558.77,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 51.959,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.484,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 51.959,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.727,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N5",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.416,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 20469.54,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1462.11,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 48.737,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.71,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 48.737,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 17.565,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N6",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.266,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 19774.44,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base_mensual",
+          "label": "Salario mensual",
+          "amount": 1412.46,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 47.082,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.313,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 47.082,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 16.969,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.673,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N7",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.19,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 22615.1,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 53.212,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.938,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 53.212,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 19.445,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.714,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N8",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.475,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21722.6,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 51.112,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.427,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 51.112,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.677,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N9",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.377,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21393.225,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 50.337,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.239,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 50.337,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.394,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N10",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.341,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 21083.4,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 49.608,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 12.061,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 49.608,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 18.128,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N11",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.307,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 20459.925,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 48.141,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.705,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 48.141,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 17.592,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.694,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N12",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.239,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "salario_base",
+          "label": "Salario anual",
+          "amount": 19804.15,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "salario_base_diario",
+          "label": "Base diario",
+          "amount": 46.598,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "valor_hora_descuento",
+          "label": "Valor hora Dto. (importe para descontar horas de ausencia, anexo 14)",
+          "amount": 11.33,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "retribucion_vacaciones_dia",
+          "label": "Retrib. Vacs. salario/día",
+          "amount": 46.598,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "hora_extra",
+          "label": "Valor hora extra",
+          "amount": 17.028,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "plus_penosidad",
+          "label": "Plus penosidad (artículo 57) a/b",
+          "amount": 0.673,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "plus_penosidad_ruido",
+          "label": "Plus penosidad (artículo 57) c",
+          "amount": 0.1,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": "N13",
+          "concept": "nocturnidad",
+          "label": "Plus nocturnidad",
+          "amount": 2.167,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-3593 (acuerdo primero: las tablas provisionales de 2025 pasan a definitivas, pág. 24466); importes de BOE-A-2025-13965, anexo 5, «Tabla provisional de salarios para 2025», pág. 90485"
+        },
+        {
+          "category": null,
+          "concept": "complemento_vacaciones_dia_natural",
+          "label": "Complemento o bolsa de vacaciones por día natural (anexo 4.2.a)",
+          "amount": 10.26,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 4.2.a), pág. 90483; definitivo por BOE-A-2026-3593"
+        },
+        {
+          "category": null,
+          "concept": "complemento_vacaciones_dia_laborable",
+          "label": "Complemento o bolsa de vacaciones por día laborable, módulo de 22 días (anexo 4.2.a)",
+          "amount": 13.998,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-13965, anexo 4.2.a), pág. 90483; definitivo por BOE-A-2026-3593"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1748,
+        "vacationDays": 30,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Jornada anual de trabajo efectivo: anexo 2.1 (1.760 h en 2024; 1.748 h desde el 1/1/2025), pág. 90481. Vacaciones: anexo 4.1, «treinta días naturales o veintidós laborables», pág. 90483. Pagas extra de junio y diciembre según los importes del anexo 5 más la antigüedad consolidada de treinta días (anexo 15, pág. 90487); el salario anual de la tabla las incluye. Hora extra = 1,75 x módulo (anexo 3). Nocturnidad = salario base x 0,31 / 6,666 h (anexo 7). El personal obrero (niveles 8 a 13) no tiene salario mensual en la tabla: cobra por día."
+      }
+    }
+  ],
+  "pendingReview": [
+    "La versión 2025 aparece dos veces a propósito: provisional (p1, BOE 7/7/2025) y definitiva (p2, BOE 16/2/2026). La comisión paritaria declaró definitivas las tablas provisionales sin cambiar importes (IPC de diciembre de 2025 del 2,9 %, por debajo del 3 % que activaba la cláusula del anexo 16.2). El cargador debe tratar la definitiva como sustituta de la provisional.",
+    "Convenio vencido el 31/12/2025 y vigente hasta que se firme otro (art. 4). No hay tablas de 2026 en el BOE a 16/11/2026: la versión de 2025 se deja abierta (effectiveTo null).",
+    "Fila «Oficial de primera obrero, Conductor-Repartidor y Carretillero» (nivel 10) de la tabla de 2024: el BOE (HTML y PDF) trae una celda suelta «0,000» además de los nueve importes de la fila. Se ha ignorado; los nueve importes coinciden con los de las demás filas en orden y fórmula. Confirmar contra el PDF.",
+    "En la tabla de 2025 el nivel 7 aparece como «T» en el BOE (errata evidente por 7). Se ha cargado como nivel 7.",
+    "Los niveles de la tabla de 2025 y los del art. 27 no coinciden del todo: el art. 27 agrupa más categorías en cada nivel (p. ej. nivel 6 = auxiliar administrativo, auxiliar de organización, telefonista y almacenero). Las categorías se han creado con el nombre de la fila de la tabla; la equivalencia completa del art. 27 (pág. 90447) no cabe en el formato actual.",
+    "El grupo profesional de cada categoría se ha deducido de los arts. 15 a 19 (Técnico, Administrativo, Obrero, Subalterno); la tabla no lo indica.",
+    "Pagas extra: el anexo 15 remite «a los importes que para cada categoría se establecen en el anexo número 5», que no tiene una columna de paga extra. No se ha calculado su importe (no se inventa). Comprobado con la tabla: en los niveles 1 a 7 el salario anual es el mensual x 14; en los niveles 8 a 13 es el diario x (días del año + 60), 426 en 2024 y 425 en 2025, lo que sugiere 30 días de salario por paga extra, pero el convenio no lo dice expresamente.",
+    "No cargados por no encajar en las unidades del formato: precio punto prima (0,155 € en 2024 y 0,160 € en 2025, anexo 1), dietas (anexo 9: comida, cena, cama y desayuno, dieta internacional) y el máximo del promedio de prima en vacaciones (anexo 4.2.b).",
+    "Antigüedad: solo la consolidada a 31/12/1994, que sube un 3 % en 2024 y otro 3 % en 2025 (anexo 8). Es un importe personal; no está en el catálogo.",
+    "CNAE: se ha puesto la división 10 (industria de la alimentación); el ámbito funcional (art. 2) incluye mataderos, salas de despiece, elaborados y otras actividades cárnicas. Afinar si el catálogo usa subclases."
+  ]
+}
