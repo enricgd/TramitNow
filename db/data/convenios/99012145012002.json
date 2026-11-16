@@ -1,0 +1,2207 @@
+{
+  "agreement": {
+    "regcon": "99012145012002",
+    "name": "III Convenio colectivo de ámbito estatal del sector de contact center (antes telemarketing)",
+    "scope": "estatal",
+    "territory": null,
+    "cnae": [
+      "82"
+    ],
+    "validFrom": "2020-01-01",
+    "validTo": "2026-12-31"
+  },
+  "publications": [
+    {
+      "id": "p1",
+      "bulletin": "BOE",
+      "date": "2023-06-09",
+      "number": "BOE-A-2023-13741",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2023-13741",
+      "type": "texto_inicial"
+    },
+    {
+      "id": "p2",
+      "bulletin": "BOE",
+      "date": "2025-05-02",
+      "number": "BOE-A-2025-8781",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-8781",
+      "type": "revision_salarial"
+    },
+    {
+      "id": "p3",
+      "bulletin": "BOE",
+      "date": "2026-03-06",
+      "number": "BOE-A-2026-5300",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2026-5300",
+      "type": "revision_salarial"
+    },
+    {
+      "id": "p4",
+      "bulletin": "BOE",
+      "date": "2024-02-22",
+      "number": "BOE-A-2024-3432",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-3432",
+      "type": "sentencia"
+    },
+    {
+      "id": "p5",
+      "bulletin": "BOE",
+      "date": "2026-08-10",
+      "number": "BOE-A-2026-17492",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2026-17492",
+      "type": "sentencia"
+    }
+  ],
+  "versions": [
+    {
+      "publication": "p1",
+      "effectiveFrom": "2022-01-01",
+      "effectiveTo": "2022-12-31",
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Directivo",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Jefes Dpto. o Áreas",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Jefes Proyecto, Analistas Funcionales",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Titulados Superiores, Analistas, Técnicos Sistema A",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Titulados Medios, Técnicos Sistema B, Analista Programador, Programador Senior, Jefe Administración, Responsable Servicios",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Programador Junior, Técnico Administrativo, Supervisor A",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Supervisor B",
+          "group": null,
+          "level": "7"
+        },
+        {
+          "code": "N8",
+          "name": "Ayudante Sistemas,Oficial Administrativo, Coordinador, Formador, Agente Calidad (Quality)",
+          "group": null,
+          "level": "8"
+        },
+        {
+          "code": "N9",
+          "name": "Gestor Telefónico",
+          "group": null,
+          "level": "9"
+        },
+        {
+          "code": "N10",
+          "name": "Teleoperador / Operador Especialista",
+          "group": null,
+          "level": "10"
+        },
+        {
+          "code": "N11",
+          "name": "Auxiliar Administrativo, Teleoperador / Operador / Oficial Oficios Propios",
+          "group": null,
+          "level": "11"
+        },
+        {
+          "code": "N12",
+          "name": "Auxiliar Oficios Propios",
+          "group": null,
+          "level": "12"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 36889.27,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 33430.63,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 28824.64,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 24218.64,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 21337.83,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 18201.13,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 17375.68,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 16508.94,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 15931.14,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 15064.43,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N11",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 14490.0,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N12",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 14490.0,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 47.47,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 100.66,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 16.34,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 45.33,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 96.08,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 15.62,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 43.05,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 91.29,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 14.84,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 41.52,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 88.08,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 14.31,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 39.29,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 83.3,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 13.54,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N11",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 37.56,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N11",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 79.61,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N11",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 12.95,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "plus_idioma",
+          "label": "Plus de idioma (mensual, jornada completa)",
+          "amount": 115.56,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus de nocturnidad (hora)",
+          "amount": 1.74,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "plus_transporte",
+          "label": "Plus de transporte (día)",
+          "amount": 5.79,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_30h_o_mas",
+          "label": "Gastos trabajo a distancia, jornada 30 o más horas (por día trabajado a distancia)",
+          "amount": 1.18,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_menos_30h",
+          "label": "Gastos trabajo a distancia, jornada menos de 30 horas (por día trabajado a distancia)",
+          "amount": 0.93,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2022 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1764,
+        "vacationDays": 32,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Jornada: art. 22, 1.764 horas anuales y 39 semanales de trabajo efectivo (1.597 h para empresas que paguen menos que este convenio). Vacaciones: art. 29, treinta y dos días naturales. El salario base anual incluye las dos pagas extraordinarias de junio y Navidad (art. 47). Hora extra (art. 51): hora tipo = salario base anual / jornada anual, con recargo del 25 % (diurna), 60 % (nocturna o festiva diurna) u 80 % (festiva nocturna). Los recargos de festivos y domingos se refieren a jornadas de 8 horas (nota del anexo II)."
+      }
+    },
+    {
+      "publication": "p1",
+      "effectiveFrom": "2023-01-01",
+      "effectiveTo": "2023-12-31",
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Directivo",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Jefes Dpto. o Áreas",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Jefes Proyecto, Analistas Funcionales",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Titulados Superiores, Analistas, Técnicos Sistema A",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Titulados Medios, Técnicos Sistema B, Analista Programador, Programador Senior, Jefe Administración, Responsable Servicios",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Programador Junior, Técnico Administrativo, Supervisor A",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Supervisor B",
+          "group": null,
+          "level": "7"
+        },
+        {
+          "code": "N8",
+          "name": "Ayudante Sistemas,Oficial Administrativo, Coordinador, Formador, Agente Calidad (Quality)",
+          "group": null,
+          "level": "8"
+        },
+        {
+          "code": "N9",
+          "name": "Gestor Telefónico",
+          "group": null,
+          "level": "9"
+        },
+        {
+          "code": "N10",
+          "name": "Teleoperador / Operador Especialista",
+          "group": null,
+          "level": "10"
+        },
+        {
+          "code": "N11",
+          "name": "Auxiliar Administrativo, Teleoperador / Operador / Oficial Oficios Propios",
+          "group": null,
+          "level": "11"
+        },
+        {
+          "code": "N12",
+          "name": "Auxiliar Oficios Propios",
+          "group": null,
+          "level": "12"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 38180.4,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 34600.71,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 29833.5,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 25066.29,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 22084.65,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 18838.17,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 17983.83,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 17086.76,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 16488.73,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 15591.68,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N11",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 15120.0,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N12",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 15120.0,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 49.13,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 104.19,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 16.91,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 46.92,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 99.44,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 16.16,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 44.55,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 94.48,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 15.36,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 42.98,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 91.16,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 14.82,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 40.66,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 86.21,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 14.01,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N11",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 39.19,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N11",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 83.07,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N11",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 13.51,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "plus_idioma",
+          "label": "Plus de idioma (mensual, jornada completa)",
+          "amount": 119.6,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus de nocturnidad (hora)",
+          "amount": 1.8,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "plus_transporte",
+          "label": "Plus de transporte (día)",
+          "amount": 5.99,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_30h_o_mas",
+          "label": "Gastos trabajo a distancia, jornada 30 o más horas (por día trabajado a distancia)",
+          "amount": 1.22,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_menos_30h",
+          "label": "Gastos trabajo a distancia, jornada menos de 30 horas (por día trabajado a distancia)",
+          "amount": 0.96,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2023 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1764,
+        "vacationDays": 32,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Jornada: art. 22, 1.764 horas anuales y 39 semanales de trabajo efectivo (1.597 h para empresas que paguen menos que este convenio). Vacaciones: art. 29, treinta y dos días naturales. El salario base anual incluye las dos pagas extraordinarias de junio y Navidad (art. 47). Hora extra (art. 51): hora tipo = salario base anual / jornada anual, con recargo del 25 % (diurna), 60 % (nocturna o festiva diurna) u 80 % (festiva nocturna). Los recargos de festivos y domingos se refieren a jornadas de 8 horas (nota del anexo II)."
+      }
+    },
+    {
+      "publication": "p1",
+      "effectiveFrom": "2024-01-01",
+      "effectiveTo": "2024-12-31",
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Directivo",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Jefes Dpto. o Áreas",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Jefes Proyecto, Analistas Funcionales",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Titulados Superiores, Analistas, Técnicos Sistema A",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Titulados Medios, Técnicos Sistema B, Analista Programador, Programador Senior, Jefe Administración, Responsable Servicios",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Programador Junior, Técnico Administrativo, Supervisor A",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Supervisor B",
+          "group": null,
+          "level": "7"
+        },
+        {
+          "code": "N8",
+          "name": "Ayudante Sistemas,Oficial Administrativo, Coordinador, Formador, Agente Calidad (Quality)",
+          "group": null,
+          "level": "8"
+        },
+        {
+          "code": "N9",
+          "name": "Gestor Telefónico",
+          "group": null,
+          "level": "9"
+        },
+        {
+          "code": "N10",
+          "name": "Teleoperador / Operador Especialista",
+          "group": null,
+          "level": "10"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 39325.81,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 35638.73,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 30728.5,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 25818.28,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 22747.19,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 19403.31,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 18523.35,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 17599.36,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 16983.4,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 16059.43,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo I «Tabla Salario base 2022, 2023 y 2024», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 50.6,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 107.31,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 17.42,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 48.33,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 102.43,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 16.65,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 45.89,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 97.32,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 15.82,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 44.27,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 93.9,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 15.26,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo",
+          "label": "Recargo festivos normales (jornada de 8 horas)",
+          "amount": 41.88,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos normales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo_especial",
+          "label": "Recargo festivos especiales (jornada de 8 horas)",
+          "amount": 88.8,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo festivos especiales», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82518"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 14.43,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, «Recargo domingo», columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "plus_idioma",
+          "label": "Plus de idioma (mensual, jornada completa)",
+          "amount": 123.19,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus de nocturnidad (hora)",
+          "amount": 1.85,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2023-13741, anexo II, columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "plus_transporte",
+          "label": "Plus de transporte (día)",
+          "amount": 6.17,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_30h_o_mas",
+          "label": "Gastos trabajo a distancia, jornada 30 o más horas (por día trabajado a distancia)",
+          "amount": 1.26,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_menos_30h",
+          "label": "Gastos trabajo a distancia, jornada menos de 30 horas (por día trabajado a distancia)",
+          "amount": 0.99,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2023-13741, anexo II, columna «2024 – Euros», BOE núm. 137 de 09/06/2023, pág. 82519"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1764,
+        "vacationDays": 32,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Jornada: art. 22, 1.764 horas anuales y 39 semanales de trabajo efectivo (1.597 h para empresas que paguen menos que este convenio). Vacaciones: art. 29, treinta y dos días naturales. El salario base anual incluye las dos pagas extraordinarias de junio y Navidad (art. 47). Hora extra (art. 51): hora tipo = salario base anual / jornada anual, con recargo del 25 % (diurna), 60 % (nocturna o festiva diurna) u 80 % (festiva nocturna). Los recargos de festivos y domingos se refieren a jornadas de 8 horas (nota del anexo II)."
+      }
+    },
+    {
+      "publication": "p2",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": "2025-12-31",
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Directivo",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Jefes Dpto. o Áreas",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Jefes Proyecto, Analistas Funcionales",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Titulados Superiores, Analistas, Técnicos Sistema A",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Titulados Medios, Técnicos Sistema B, Analista Programador, Programador Senior, Jefe Administración, Responsable Servicios",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Programador Junior, Técnico Administrativo, Supervisor A",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Supervisor B",
+          "group": null,
+          "level": "7"
+        },
+        {
+          "code": "N8",
+          "name": "Ayudante Sistemas,Oficial Administrativo, Coordinador, Formador, Agente Calidad (Quality)",
+          "group": null,
+          "level": "8"
+        },
+        {
+          "code": "N9",
+          "name": "Gestor Telefónico",
+          "group": null,
+          "level": "9"
+        },
+        {
+          "code": "N10",
+          "name": "Teleoperador/a u Operador/a (incluye los antiguos niveles 11 y 12 y el Personal de Oficios Propios)",
+          "group": null,
+          "level": "10"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 40426.93,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N1",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 105.51,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N1",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 223.56,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N1",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 36.38,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 36636.61,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N2",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 95.62,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N2",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 202.6,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N2",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 32.97,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 31588.9,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N3",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 82.45,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N3",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 174.69,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N3",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 28.43,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59757"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 26541.19,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N4",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 69.28,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N4",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 146.78,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N4",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 23.89,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 23384.11,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N5",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 61.03,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N5",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 129.31,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N5",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 21.04,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 19946.6,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 52.02,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 110.31,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 17.91,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 19042.0,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 49.68,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 105.3,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 17.12,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 18092.14,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 47.17,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 100.04,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 16.26,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 17458.94,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 45.51,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 96.53,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 15.69,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 16576.0,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 43.05,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 91.29,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 14.83,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": null,
+          "concept": "plus_idioma",
+          "label": "Plus de idioma (mensual)",
+          "amount": 126.64,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus de nocturnidad (hora)",
+          "amount": 1.9,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": null,
+          "concept": "plus_transporte",
+          "label": "Plus de transporte (día)",
+          "amount": 6.34,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_30h_o_mas",
+          "label": "Gastos de trabajo a distancia, jornada de 30 horas o más (por día trabajado a distancia)",
+          "amount": 1.3,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_menos_30h",
+          "label": "Gastos de trabajo a distancia, jornada de menos de 30 horas (por día trabajado a distancia)",
+          "amount": 1.02,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2025-8781, tabla de 2025 del acta de la comisión paritaria, BOE pág. 59758"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1764,
+        "vacationDays": 32,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Jornada: art. 22, 1.764 horas anuales y 39 semanales de trabajo efectivo (1.597 h para empresas que paguen menos que este convenio). Vacaciones: art. 29, treinta y dos días naturales. El salario base anual incluye las dos pagas extraordinarias de junio y Navidad (art. 47). Hora extra (art. 51): hora tipo = salario base anual / jornada anual, con recargo del 25 % (diurna), 60 % (nocturna o festiva diurna) u 80 % (festiva nocturna). Los recargos de festivos y domingos se refieren a jornadas de 8 horas (nota del anexo II)."
+      }
+    },
+    {
+      "publication": "p3",
+      "effectiveFrom": "2026-01-01",
+      "effectiveTo": null,
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Directivo",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Jefes Dpto. o Áreas",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Jefes Proyecto, Analistas Funcionales",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Titulados Superiores, Analistas, Técnicos Sistema A",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Titulados Medios, Técnicos Sistema B, Analista Programador, Programador Senior, Jefe Administración, Responsable Servicios",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Programador Junior, Técnico Administrativo, Supervisor A",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Supervisor B",
+          "group": null,
+          "level": "7"
+        },
+        {
+          "code": "N8",
+          "name": "Ayudante Sistemas,Oficial Administrativo, Coordinador, Formador, Agente Calidad (Quality)",
+          "group": null,
+          "level": "8"
+        },
+        {
+          "code": "N9",
+          "name": "Gestor Telefónico",
+          "group": null,
+          "level": "9"
+        },
+        {
+          "code": "N10",
+          "name": "Teleoperador/a u Operador/a (incluye los antiguos niveles 11 y 12 y el Personal de Oficios Propios)",
+          "group": null,
+          "level": "10"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 41801.45,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N1",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 109.1,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N1",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 231.16,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N1",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 37.62,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 37882.25,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N2",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 98.87,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N2",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 209.49,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N2",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 34.09,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 32662.92,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N3",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 85.25,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N3",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 180.63,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N3",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 29.4,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 27443.59,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N4",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 71.64,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N4",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 151.77,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N4",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 24.7,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 24179.17,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N5",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 63.11,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N5",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 133.71,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N5",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 21.76,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 20624.78,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 53.79,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 114.06,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N6",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 18.52,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 19689.43,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 51.37,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 108.88,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N7",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 17.7,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N8",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 18707.27,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 48.77,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 103.44,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N8",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 16.81,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N9",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 18052.54,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 47.06,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 99.81,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N9",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 16.22,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N10",
+          "concept": "salario_base",
+          "label": "Salario base (anual, incluye las dos pagas extraordinarias)",
+          "amount": 17139.58,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo",
+          "label": "Festivo normal (jornada de 8 horas)",
+          "amount": 44.51,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_festivo_especial",
+          "label": "Festivo especial (jornada de 8 horas)",
+          "amount": 94.39,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": "N10",
+          "concept": "recargo_domingo",
+          "label": "Recargo domingo (jornada de 8 horas)",
+          "amount": 15.33,
+          "unit": "dia",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": null,
+          "concept": "plus_idioma",
+          "label": "Plus de idioma (mensual)",
+          "amount": 130.95,
+          "unit": "mes",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus de nocturnidad (hora)",
+          "amount": 1.96,
+          "unit": "hora",
+          "salarial": true,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": null,
+          "concept": "plus_transporte",
+          "label": "Plus de transporte (día)",
+          "amount": 6.56,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_30h_o_mas",
+          "label": "Gastos de trabajo a distancia, jornada de 30 horas o más (por día trabajado a distancia)",
+          "amount": 1.34,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": null,
+          "concept": "teletrabajo_menos_30h",
+          "label": "Gastos de trabajo a distancia, jornada de menos de 30 horas (por día trabajado a distancia)",
+          "amount": 1.05,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33613"
+        },
+        {
+          "category": null,
+          "concept": "dieta_una_comida",
+          "label": "Dieta: una comida sin pernocta",
+          "amount": 17.96,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33614"
+        },
+        {
+          "category": null,
+          "concept": "dieta_dos_comidas",
+          "label": "Dieta: dos comidas sin pernocta",
+          "amount": 31.65,
+          "unit": "dia",
+          "salarial": false,
+          "source": "BOE-A-2026-5300, tabla de 2026 del acta de la comisión paritaria, BOE pág. 33614"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1764,
+        "vacationDays": 32,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Jornada: art. 22, 1.764 horas anuales y 39 semanales de trabajo efectivo (1.597 h para empresas que paguen menos que este convenio). Vacaciones: art. 29, treinta y dos días naturales. El salario base anual incluye las dos pagas extraordinarias de junio y Navidad (art. 47). Hora extra (art. 51): hora tipo = salario base anual / jornada anual, con recargo del 25 % (diurna), 60 % (nocturna o festiva diurna) u 80 % (festiva nocturna). Los recargos de festivos y domingos se refieren a jornadas de 8 horas (nota del anexo II)."
+      }
+    }
+  ],
+  "pendingReview": [
+    "validFrom 2020-01-01: el convenio entra en vigor a su firma pero retrotrae sus efectos económicos al 1/1/2020 (art. 5). Vence el 31/12/2026 y se prorroga tácitamente; denunciado, mantiene su contenido normativo (art. 6).",
+    "No hay tablas de 2020 y 2021 en el texto (incremento 0 % esos años, art. 45). No se han creado versiones para esos años.",
+    "Anexo II (2022-2024): los recargos de festivos y domingos solo vienen para los niveles 6 a 11; para el resto la nota dice que «serán calculados mediante operación idéntica». No se han calculado (no se inventa). En las tablas de 2025 y 2026 sí vienen todos los niveles 1 a 10.",
+    "Niveles 11 y 12: desaparecen desde el 1/1/2024 y se integran en el nivel 10 (art. 45 y disposición transitoria segunda). En la tabla de 2024 las celdas de los niveles 11 y 12 están vacías; las versiones 2024-2026 solo tienen los niveles 1 a 10.",
+    "Nombre de las categorías: el de la fila del anexo I; para el nivel 10 en 2025 y 2026 se usa la denominación del art. 45 («Teleoperador/a u Operador/a»), porque las actas solo dan el número de nivel. La lista de puestos por nivel (art. 41 y disposición transitoria segunda) no cabe en el formato actual. Los niveles mezclan grupos profesionales (A a E), así que group es null.",
+    "Tabla de 2025: es la segunda versión del acta (31/3/2025), con el nivel 10 subido a 16.576 € por el SMI de 2025 (RD 87/2025). La primera (16.509,09 €) nunca se publicó como tabla; no se ha cargado.",
+    "Tabla de 2026: el acta dice «una vez publicado el IPC real del año 2026», que por contexto es el de 2025 (errata del acta). Incremento del 3,4 %.",
+    "Dietas y kilometraje: el art. 54 fija 16,41 € (una comida), 28,91 € (dos comidas) y 0,21 €/km, que «deberán ser incrementados conforme al resto de subidas», sin decir el año de esos importes ni publicar los actualizados hasta 2026. Solo se han cargado las dietas de 2026 (acta de p3); el kilometraje de 2026 (0,24 €/km) no se ha cargado porque el formato no tiene unidad «km».",
+    "Publicaciones p4 y p5: sentencias de la Audiencia Nacional sobre el art. 30.1 (permisos); no cambian importes y se listan para el historial. No se ha incluido la modificación del art. 27 (consolidación de jornada, BOE-A-2025-22414, 5/11/2025) porque el formato no tiene un tipo de publicación «modificacion»; tampoco cambia importes.",
+    "Plus de idioma, nocturnidad, transporte, teletrabajo y dietas son iguales para todos los niveles: se han cargado con category null (ver README).",
+    "CNAE: se ha puesto la división 82 (actividades administrativas y servicios auxiliares; los centros de llamadas son la clase 82.20). Afinar si el catálogo usa subclases."
+  ]
+}

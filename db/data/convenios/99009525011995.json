@@ -1,0 +1,611 @@
+{
+  "agreement": {
+    "regcon": "99009525011995",
+    "name": "VI Convenio colectivo estatal de empresas de trabajo temporal",
+    "scope": "estatal",
+    "territory": null,
+    "cnae": [
+      "78"
+    ],
+    "validFrom": "2011-01-01",
+    "validTo": "2020-12-31"
+  },
+  "publications": [
+    {
+      "id": "p1",
+      "bulletin": "BOE",
+      "date": "2018-12-28",
+      "number": "BOE-A-2018-17954",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2018-17954",
+      "type": "texto_inicial"
+    },
+    {
+      "id": "p2",
+      "bulletin": "BOE",
+      "date": "2019-03-29",
+      "number": "BOE-A-2019-4622",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2019-4622",
+      "type": "correccion_errores"
+    },
+    {
+      "id": "p3",
+      "bulletin": "BOE",
+      "date": "2025-05-17",
+      "number": "BOE-A-2025-9798",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-9798",
+      "type": "sentencia"
+    }
+  ],
+  "versions": [
+    {
+      "publication": "p2",
+      "effectiveFrom": "2018-01-01",
+      "effectiveTo": "2018-12-31",
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Nivel profesional 1",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Nivel profesional 2",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Nivel profesional 3",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Nivel profesional 4",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Nivel profesional 5",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Nivel profesional 6",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Nivel profesional 7",
+          "group": null,
+          "level": "7"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 11774.17,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2018», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 12571.59,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2018», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 13653.14,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2018», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 14343.11,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2018», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 16108.41,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2018», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 18425.92,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2018», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 19308.57,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2018», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus por trabajo nocturno: 25 por 100 del salario base de Convenio (trabajo entre las 22 y las 6 horas)",
+          "amount": 25.0,
+          "unit": "porcentaje",
+          "salarial": true,
+          "source": "BOE-A-2018-17954, art. 27.4 y art. 34.1, págs. 129598 y 129600"
+        },
+        {
+          "category": null,
+          "concept": "hora_extra",
+          "label": "Horas extraordinarias del personal de estructura: incremento del 10 por 100 sobre la hora ordinaria",
+          "amount": 10.0,
+          "unit": "porcentaje",
+          "salarial": true,
+          "source": "BOE-A-2018-17954, art. 33.2, pág. 129600"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1752,
+        "vacationDays": 30,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Solo personal de estructura de la ETT. Jornada: art. 32.1 (1.752 horas). Vacaciones: art. 41.1 (treinta días naturales). Dos gratificaciones extraordinarias del 100 % del salario base mensual (art. 29), incluidas en el importe anual de la tabla; la tabla puede abonarse en 12 o 14 mensualidades a elección de la empresa (anexo). Al personal puesto a disposición se le aplica la retribución, jornada, horas extra y nocturnidad del convenio de la empresa usuaria (arts. 31, 32.2, 33.3 y 34.2). Fuente: BOE-A-2018-17954, págs. 129598-129606."
+      }
+    },
+    {
+      "publication": "p2",
+      "effectiveFrom": "2019-01-01",
+      "effectiveTo": "2019-12-31",
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Nivel profesional 1",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Nivel profesional 2",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Nivel profesional 3",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Nivel profesional 4",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Nivel profesional 5",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Nivel profesional 6",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Nivel profesional 7",
+          "group": null,
+          "level": "7"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 12515.94,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2019», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 13048.05,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2019», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 14062.73,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2019», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 14773.4,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2019», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 16591.66,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2019», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 18978.69,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2019», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 19887.83,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «2019», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus por trabajo nocturno: 25 por 100 del salario base de Convenio (trabajo entre las 22 y las 6 horas)",
+          "amount": 25.0,
+          "unit": "porcentaje",
+          "salarial": true,
+          "source": "BOE-A-2018-17954, art. 27.4 y art. 34.1, págs. 129598 y 129600"
+        },
+        {
+          "category": null,
+          "concept": "hora_extra",
+          "label": "Horas extraordinarias del personal de estructura: incremento del 10 por 100 sobre la hora ordinaria",
+          "amount": 10.0,
+          "unit": "porcentaje",
+          "salarial": true,
+          "source": "BOE-A-2018-17954, art. 33.2, pág. 129600"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1752,
+        "vacationDays": 30,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Solo personal de estructura de la ETT. Jornada: art. 32.1 (1.752 horas). Vacaciones: art. 41.1 (treinta días naturales). Dos gratificaciones extraordinarias del 100 % del salario base mensual (art. 29), incluidas en el importe anual de la tabla; la tabla puede abonarse en 12 o 14 mensualidades a elección de la empresa (anexo). Al personal puesto a disposición se le aplica la retribución, jornada, horas extra y nocturnidad del convenio de la empresa usuaria (arts. 31, 32.2, 33.3 y 34.2). Fuente: BOE-A-2018-17954, págs. 129598-129606."
+      }
+    },
+    {
+      "publication": "p2",
+      "effectiveFrom": "2020-01-01",
+      "effectiveTo": "2020-11-30",
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Nivel profesional 1",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Nivel profesional 2",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Nivel profesional 3",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Nivel profesional 4",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Nivel profesional 5",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Nivel profesional 6",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Nivel profesional 7",
+          "group": null,
+          "level": "7"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 13258.14,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/01/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 13524.31,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/01/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 14379.14,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/01/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 15105.8,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/01/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 16964.98,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/01/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 19405.72,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/01/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 20335.3,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/01/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus por trabajo nocturno: 25 por 100 del salario base de Convenio (trabajo entre las 22 y las 6 horas)",
+          "amount": 25.0,
+          "unit": "porcentaje",
+          "salarial": true,
+          "source": "BOE-A-2018-17954, art. 27.4 y art. 34.1, págs. 129598 y 129600"
+        },
+        {
+          "category": null,
+          "concept": "hora_extra",
+          "label": "Horas extraordinarias del personal de estructura: incremento del 10 por 100 sobre la hora ordinaria",
+          "amount": 10.0,
+          "unit": "porcentaje",
+          "salarial": true,
+          "source": "BOE-A-2018-17954, art. 33.2, pág. 129600"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1752,
+        "vacationDays": 30,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Solo personal de estructura de la ETT. Jornada: art. 32.1 (1.752 horas). Vacaciones: art. 41.1 (treinta días naturales). Dos gratificaciones extraordinarias del 100 % del salario base mensual (art. 29), incluidas en el importe anual de la tabla; la tabla puede abonarse en 12 o 14 mensualidades a elección de la empresa (anexo). Al personal puesto a disposición se le aplica la retribución, jornada, horas extra y nocturnidad del convenio de la empresa usuaria (arts. 31, 32.2, 33.3 y 34.2). Fuente: BOE-A-2018-17954, págs. 129598-129606."
+      }
+    },
+    {
+      "publication": "p2",
+      "effectiveFrom": "2020-12-01",
+      "effectiveTo": null,
+      "provisional": false,
+      "categories": [
+        {
+          "code": "N1",
+          "name": "Nivel profesional 1",
+          "group": null,
+          "level": "1"
+        },
+        {
+          "code": "N2",
+          "name": "Nivel profesional 2",
+          "group": null,
+          "level": "2"
+        },
+        {
+          "code": "N3",
+          "name": "Nivel profesional 3",
+          "group": null,
+          "level": "3"
+        },
+        {
+          "code": "N4",
+          "name": "Nivel profesional 4",
+          "group": null,
+          "level": "4"
+        },
+        {
+          "code": "N5",
+          "name": "Nivel profesional 5",
+          "group": null,
+          "level": "5"
+        },
+        {
+          "code": "N6",
+          "name": "Nivel profesional 6",
+          "group": null,
+          "level": "6"
+        },
+        {
+          "code": "N7",
+          "name": "Nivel profesional 7",
+          "group": null,
+          "level": "7"
+        }
+      ],
+      "salaryItems": [
+        {
+          "category": "N1",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 14000.0,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/12/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N2",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 14000.0,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/12/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N3",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 14415.09,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/12/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N4",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 15143.56,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/12/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N5",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 17007.39,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/12/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N6",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 19454.23,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/12/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": "N7",
+          "concept": "salario_base",
+          "label": "Salario base de Convenio (cómputo anual, incluye las dos gratificaciones extraordinarias y vacaciones)",
+          "amount": 20386.14,
+          "unit": "anio",
+          "salarial": true,
+          "source": "BOE-A-2019-4622, Anexo «Tabla salarial del personal de estructura por niveles profesionales» (corregido y definitivo), columna «01/12/2020», BOE núm. 76 de 29/03/2019, pág. 32498"
+        },
+        {
+          "category": null,
+          "concept": "nocturnidad",
+          "label": "Plus por trabajo nocturno: 25 por 100 del salario base de Convenio (trabajo entre las 22 y las 6 horas)",
+          "amount": 25.0,
+          "unit": "porcentaje",
+          "salarial": true,
+          "source": "BOE-A-2018-17954, art. 27.4 y art. 34.1, págs. 129598 y 129600"
+        },
+        {
+          "category": null,
+          "concept": "hora_extra",
+          "label": "Horas extraordinarias del personal de estructura: incremento del 10 por 100 sobre la hora ordinaria",
+          "amount": 10.0,
+          "unit": "porcentaje",
+          "salarial": true,
+          "source": "BOE-A-2018-17954, art. 33.2, pág. 129600"
+        }
+      ],
+      "conditions": {
+        "annualHours": 1752,
+        "vacationDays": 30,
+        "vacationDaysType": "naturales",
+        "extraPayments": 2,
+        "notes": "Solo personal de estructura de la ETT. Jornada: art. 32.1 (1.752 horas). Vacaciones: art. 41.1 (treinta días naturales). Dos gratificaciones extraordinarias del 100 % del salario base mensual (art. 29), incluidas en el importe anual de la tabla; la tabla puede abonarse en 12 o 14 mensualidades a elección de la empresa (anexo). Al personal puesto a disposición se le aplica la retribución, jornada, horas extra y nocturnidad del convenio de la empresa usuaria (arts. 31, 32.2, 33.3 y 34.2). Fuente: BOE-A-2018-17954, págs. 129598-129606."
+      }
+    }
+  ],
+  "pendingReview": [
+    "Vigencia: el art. 5.1 dice literalmente «desde el 1 de enero de 2011 hasta el 31 de diciembre de 2020» (BOE-A-2018-17954, pág. 129585) y así lo recoge también el análisis del BOE. Se ha copiado tal cual; conviene confirmar si es una errata del convenio (las tablas son de 2018-2020).",
+    "No consta en el BOE ninguna tabla posterior a la de 1/12/2020 ni un VII Convenio (comprobado en las «referencias posteriores» del BOE y en su buscador a 16/11/2026). El convenio está en prórroga/ultraactividad (art. 5.2-5.4) y la última versión se deja abierta (effectiveTo null).",
+    "Los importes de 2020 (14.000 € en los niveles 1 y 2) están por debajo del SMI vigente en 2026: en la práctica se paga el SMI. El catálogo no lo calcula; hay que tratarlo en la lógica de nóminas.",
+    "La tabla de la publicación inicial (p1, pág. 129616) tenía un error en 2020 para los niveles 3 a 7 (aplicaba 2,5 % en vez de 2,25 %); la corrigió el acta de p2. Todas las versiones salen de la tabla corregida de p2. Los importes de 2018 y 2019 son iguales en las dos publicaciones.",
+    "La columna «Vigente» de la tabla (importes anteriores a 2018) no se ha cargado como versión: no indica a qué periodo corresponde.",
+    "Nivel profesional 0 (alta dirección) no tiene importe en la tabla: no se ha creado categoría.",
+    "Bono guardería (art. 43 corregido por p2): 408,85 €/año por hijo menor de 3 años con requisitos, revisable con el IPC en 2019 y 2020. Los importes revisados no se publicaron en el BOE; no se ha cargado.",
+    "La tabla dice «Grupo» en la cabecera, pero el texto del convenio llama «nivel profesional» a esos números; los grupos funcionales (Técnicos, Empleados, Operarios) son otra dimensión sin importes propios."
+  ]
+}
