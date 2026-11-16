@@ -23,6 +23,8 @@ export const errorCodes = [
   'referencia_invalida',
   'error_interno',
   'servicio_no_disponible',
+  'salario_bajo_convenio',
+  'requiere_aprobacion',
 ] as const;
 export type ErrorCode = (typeof errorCodes)[number];
 
@@ -93,12 +95,15 @@ const checkMessages: Record<string, string> = {
  * Errores de reglas de negocio lanzados por nuestros triggers con un SQLSTATE propio: el mensaje está escrito en
  * español para el usuario y se devuelve tal cual, con ese estado HTTP y código.
  *   TN409 conflicto · TN422 validación · TNUSE en uso (no se puede eliminar) · TNRET conservación obligatoria
+ *   TNSAL salario por debajo del convenio (presupuestos) · TNAPR margen bajo el mínimo sin aprobar (presupuestos)
  */
 const businessRuleStatus = {
   TN409: [409, 'conflicto'],
   TN422: [422, 'validacion'],
   TNUSE: [409, 'en_uso'],
   TNRET: [409, 'conservacion_obligatoria'],
+  TNSAL: [422, 'salario_bajo_convenio'],
+  TNAPR: [409, 'requiere_aprobacion'],
 } as const;
 
 /** Traduce los errores de Postgres que puede provocar el cliente; el resto son errores internos. */
