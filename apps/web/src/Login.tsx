@@ -1,14 +1,43 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import type { EmailOtpType } from '@supabase/supabase-js';
 import { supabase, authConfigError } from './auth/session';
+import { DEMO } from './modo';
 
 // Pantalla de acceso, a partir de design/login.html.
 // mode "recovery": se llega desde el enlace del correo de "recordar contraseña".
-type Mode = 'login' | 'forgot' | 'recovery';
+// mode "invite": se llega desde el enlace de invitación (/verify?token=...&type=invite) que da Mi ETT al dar de
+// alta a un usuario. Se comprueba el enlace con Supabase Auth y la persona elige su contraseña.
+type Mode = 'login' | 'forgot' | 'recovery' | 'invite';
 
-export default function Login({ initialMode = 'login', message }: { initialMode?: Mode; message?: string }) {
+export type Invitacion = { token: string; type: EmailOtpType };
+
+/** La invitación del enlace, si la página es /verify?token=...&type=invite. */
+export function leerInvitacion(): Invitacion | null {
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get('token');
+  if (!url.pathname.endsWith('/verify') || !token) return null;
+  const type = url.searchParams.get('type');
+  return { token, type: type === 'magiclink' || type === 'signup' || type === 'email' ? type : 'invite' };
+}
+
+export default function Login({
+  initialMode = 'login',
+  message,
+  invitacion,
+  onInvitacionAceptada,
+}: {
+  initialMode?: Mode;
+  message?: string;
+  invitacion?: Invitacion;
+  /** Ya tiene sesión y contraseña: se pasa a la aplicación. */
+  onInvitacionAceptada?: () => void;
+}) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [repeat, setRepeat] = useState('');
+  // El enlace de invitación solo vale una vez: si ya se ha comprobado, un segundo intento solo cambia la contraseña.
+  const [verified, setVerified] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(
     authConfigError ? { kind: 'error', text: authConfigError } : message ? { kind: 'error', text: message } : null,
@@ -36,6 +65,36 @@ export default function Login({ initialMode = 'login', message }: { initialMode?
                 : 'No se ha podido iniciar sesión. Inténtalo de nuevo en unos minutos.',
           });
         }
+      } else if (mode === 'invite') {
+        if (password !== repeat) {
+          setNotice({ kind: 'error', text: 'Las dos contraseñas no coinciden.' });
+          return;
+        }
+        // En la demo no hay cuentas: se entra directamente.
+        if (DEMO) return onInvitacionAceptada?.();
+        if (!verified && invitacion) {
+          const { error } = await supabase.auth.verifyOtp({ token_hash: invitacion.token, type: invitacion.type });
+          if (error) {
+            setNotice({
+              kind: 'error',
+              text: 'El enlace de invitación no es válido o ya se ha usado o ha caducado. Pide a quien te dio de alta que genere uno nuevo desde Mi ETT.',
+            });
+            return;
+          }
+          setVerified(true);
+        }
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) {
+          setNotice({
+            kind: 'error',
+            text:
+              error.code === 'weak_password'
+                ? 'La contraseña es demasiado débil. Usa al menos 8 caracteres.'
+                : 'No se ha podido guardar la contraseña. Inténtalo de nuevo.',
+          });
+          return;
+        }
+        onInvitacionAceptada?.();
       } else if (mode === 'forgot') {
         // Misma respuesta exista o no el correo, para no revelar qué usuarios hay.
         await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
@@ -70,7 +129,13 @@ export default function Login({ initialMode = 'login', message }: { initialMode?
       submit: 'Enviar instrucciones',
     },
     recovery: { title: 'Nueva contraseña', intro: 'Elige la contraseña con la que entrarás a partir de ahora.', submit: 'Guardar contraseña' },
+    invite: {
+      title: 'Te damos la bienvenida',
+      intro: 'Te han dado de alta en TramitNow. Elige la contraseña con la que entrarás a partir de ahora, junto con tu correo electrónico.',
+      submit: 'Guardar contraseña y entrar',
+    },
   }[mode];
+  const nueva = mode === 'recovery' || mode === 'invite';
 
   return (
     <div className="min-h-screen grid place-items-center bg-[#f2f6fa] p-3.5 sm:p-7 text-[#172b43]">
@@ -102,7 +167,7 @@ export default function Login({ initialMode = 'login', message }: { initialMode?
             <p className="mb-8 text-[#6b7b8d] text-sm leading-[1.55]">{texts.intro}</p>
 
             <form onSubmit={onSubmit}>
-              {mode !== 'recovery' && (
+              {!nueva && (
                 <Field label="Usuario o correo electrónico" htmlFor="email">
                   <input
                     id="email"
@@ -121,12 +186,26 @@ export default function Login({ initialMode = 'login', message }: { initialMode?
                   <input
                     id="password"
                     type="password"
-                    autoComplete={mode === 'recovery' ? 'new-password' : 'current-password'}
-                    placeholder={mode === 'recovery' ? 'Mínimo 8 caracteres' : 'Introduce tu contraseña'}
-                    minLength={mode === 'recovery' ? 8 : undefined}
+                    autoComplete={nueva ? 'new-password' : 'current-password'}
+                    placeholder={nueva ? 'Mínimo 8 caracteres' : 'Introduce tu contraseña'}
+                    minLength={nueva ? 8 : undefined}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className={inputClass}
+                  />
+                </Field>
+              )}
+              {mode === 'invite' && (
+                <Field label="Repite la contraseña" htmlFor="repeat">
+                  <input
+                    id="repeat"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                    value={repeat}
+                    onChange={(e) => setRepeat(e.target.value)}
                     className={inputClass}
                   />
                 </Field>
@@ -165,6 +244,13 @@ export default function Login({ initialMode = 'login', message }: { initialMode?
               <LockIcon /> Tu sesión está protegida
             </div>
 
+            {mode === 'invite' && (
+              <div className="mt-5 text-[13px]">
+                <a href="/" className={linkClass}>
+                  ¿Ya tienes contraseña? Inicia sesión
+                </a>
+              </div>
+            )}
             {mode === 'forgot' && (
               <div className="mt-5 text-[13px]">
                 <a href="#login" onClick={(e) => (e.preventDefault(), switchTo('login'))} className={linkClass}>

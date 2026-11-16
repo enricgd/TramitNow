@@ -44,6 +44,26 @@ import type {
   CollectiveAgreement,
   CollectiveAgreementQuery,
   EttSettings,
+  BillableService,
+  BillableServiceCreate,
+  BillableServiceInput,
+  BillableServiceQuery,
+  CompanyBillingSettings,
+  CompanyBillingSettingsInput,
+  CompanyLegalInput,
+  CompanyLegalResult,
+  ContributionAccount,
+  ContributionAccountCreate,
+  ContributionAccountInput,
+  ContributionAccountQuery,
+  MembershipCreate,
+  MembershipCreated,
+  MembershipUpdate,
+  NumberSeries,
+  NumberSeriesCreate,
+  NumberSeriesInput,
+  NumberSeriesQuery,
+  TenantSettings,
   ContractKey,
   ContractType,
   ContractTypeQuery,
@@ -176,10 +196,54 @@ export interface Repositories {
     /** URL temporal para ver o descargar el fichero (null si en la demo no hay fichero). */
     downloadUrl(id: string): Promise<string | null>;
   };
-  /** Usuarios de la ETT (solo lectura: el alta e invitación llegarán a la API más adelante). */
+  /** Usuarios de la ETT: alta con invitación, rol, estado y alcance. Requiere `users.manage`. */
   memberships: {
     list(query?: MembershipQuery): Promise<Page<Membership>>;
     get(id: string): Promise<Membership>;
+    /** Da de alta e invita. 409 si ya es de esta ETT; 503 si la API no tiene Auth configurado. */
+    create(data: MembershipCreate): Promise<MembershipCreated>;
+    /** 409 si alguien intenta cambiar su propio rol o bloquearse. */
+    update(id: string, data: MembershipUpdate): Promise<Membership>;
+    /** Enlace nuevo para quien aún no la ha aceptado (409 si ya entró). */
+    resendInvitation(id: string): Promise<{ inviteUrl: string | null }>;
+    /** Quita a quien no ha aceptado la invitación (409 si ya entró: entonces se bloquea). */
+    revokeInvitation(id: string): Promise<void>;
+  };
+
+  // Mi ETT: datos de cada sociedad y de la ETT. Leer, cualquier miembro; escribir, `tenant.manage`.
+  /** Datos legales de una sociedad. `save` crea o actualiza solo los campos enviados. */
+  companyLegal: {
+    get(companyId: string): Promise<CompanyLegalResult>;
+    save(companyId: string, data: CompanyLegalInput): Promise<CompanyLegalResult>;
+  };
+  /** Facturación de una sociedad (IBAN, forma de pago, IVA...). */
+  companyBilling: {
+    get(companyId: string): Promise<CompanyBillingSettings>;
+    save(companyId: string, data: CompanyBillingSettingsInput): Promise<CompanyBillingSettings>;
+  };
+  /** Series de numeración (presupuestos, peticiones, facturas y rectificativas). */
+  numberSeries: {
+    list(query?: NumberSeriesQuery): Promise<NumberSeries[]>;
+    create(data: NumberSeriesCreate): Promise<NumberSeries>;
+    update(id: string, data: NumberSeriesInput): Promise<NumberSeries>;
+  };
+  /** Códigos de cuenta de cotización. 422 si las cifras de control no cuadran. */
+  contributionAccounts: {
+    list(query?: ContributionAccountQuery): Promise<Page<ContributionAccount>>;
+    create(data: ContributionAccountCreate): Promise<ContributionAccount>;
+    update(id: string, data: ContributionAccountInput): Promise<ContributionAccount>;
+    remove(id: string): Promise<void>;
+  };
+  /** Servicios que factura la ETT además de las horas. */
+  billableServices: {
+    list(query?: BillableServiceQuery): Promise<Page<BillableService>>;
+    create(data: BillableServiceCreate): Promise<BillableService>;
+    update(id: string, data: BillableServiceInput): Promise<BillableService>;
+  };
+  /** Ajustes de presupuestos de la ETT. */
+  tenantSettings: {
+    get(): Promise<TenantSettings>;
+    update(data: Partial<TenantSettings>): Promise<TenantSettings>;
   };
 
   // -------------------------------------------------------------------------
@@ -200,9 +264,9 @@ export interface Repositories {
     markAllRead(): Promise<void>;
   };
   /**
-   * Lo que Mi ETT necesita y apps/api aún no tiene (datos legales, facturación, CCC, servicios, plantillas,
-   * portales, actividad, invitaciones). Contra la API lanza ApiError `no_disponible` (501): la pantalla lo
-   * muestra como «Disponible próximamente».
+   * Lo que Mi ETT necesita y apps/api aún no tiene (plantillas, portales, historial y responsable de cada
+   * sucursal). Contra la API lanza ApiError `no_disponible` (501): la pantalla lo muestra como «Disponible
+   * próximamente».
    */
   ettSettings: {
     get(): Promise<EttSettings>;

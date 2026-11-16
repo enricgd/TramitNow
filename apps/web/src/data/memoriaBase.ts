@@ -36,5 +36,5 @@ export function checkUniqueCode<T extends { id: string; code: string }>(items: T
   }
 }
 
-export const touch = <T extends { updatedAt: string }>(item: T, data: object) =>
+export const touch = <T extends { updatedAt: string | null }>(item: T, data: object) =>
   Object.assign(item, data, { updatedAt: new Date().toISOString() });

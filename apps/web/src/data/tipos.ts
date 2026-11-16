@@ -20,6 +20,8 @@ export type Me = {
     mustChangePassword: boolean;
   };
   isSuperadmin: boolean;
+  /** Del equipo de contenidos de TramitNOW (catálogo global de convenios). */
+  isContentEditor: boolean;
   activeTenant: TenantSummary | null;
   role: { id: string; code: string; name: string; scope: RoleScope } | null;
   permissions: string[];
@@ -85,6 +87,14 @@ export type Membership = {
   id: string;
   userId: string;
   fullName: string;
+  email: string | null;
+  /** Último acceso; null si nunca ha entrado. */
+  lastSignInAt: string | null;
+  department: string | null;
+  /** Invitado y aún sin aceptar (nunca ha entrado). */
+  invitationPending: boolean;
+  invitedAt: string | null;
+  invitedBy: string | null;
   status: UserStatus;
   role: { id: string; code: string; name: string; scope: RoleScope };
   /** Alcance: sociedades y sucursales. branchId null es toda la sociedad. */
@@ -482,76 +492,160 @@ export type AppNotification = {
   route: string | null;
 };
 
-/** Datos legales de la ETT (Ley 14/1994) que no están en la sociedad. Forma de Mi ETT. */
-export type EttLegalData = {
-  nombreComercial: string;
-  formaJuridica: string;
-  autorizacion: string;
-  fechaAutorizacion: string;
-  cnae: string;
-  convenio: string;
-  registroMercantil: string;
-  tomo: string;
-  folio: string;
-  hoja: string;
-  /** Representante legal: firma contratos y CPD. */
-  representante: string;
-  representanteDni: string;
-  representanteCargo: string;
-  mutua: string;
-  servicioPrevencion: string;
-  garantiaTipo: string;
-  garantiaEntidad: string;
-  garantiaImporte: string;
-  garantiaVence: string;
-  redAutorizacion: string;
-  certificadoCaduca: string;
-};
+// ---------------------------------------------------------------------------
+// Mi ETT (apps/api/src/routes/mi-ett.ts): datos legales y facturación de cada sociedad, series, CCC, servicios
+// que factura la ETT y ajustes de presupuestos.
+// ---------------------------------------------------------------------------
 
-/** Facturación emisora de la ETT (series, IVA, IBAN...). Forma de Mi ETT. */
-export type EttBillingSettings = {
-  billingSeries: string;
-  invoicePrefix: string;
-  proximaFactura: number;
-  proximaRectificativa: number;
-  vatRate: string;
-  withholdingRate: string;
-  iban: string;
-  swiftBic: string;
-  paymentMethod: string;
-  customPaymentMethod: string;
-  paymentTerms: string;
+export type GuaranteeType = 'bank_guarantee' | 'surety_insurance' | 'cash_deposit' | 'other';
+export type IdDocumentType = 'dni' | 'nie' | 'passport';
+
+/** Datos legales de una sociedad (Ley 14/1994). Del certificado digital, solo metadatos. Fechas 'AAAA-MM-DD'. */
+export type CompanyLegal = {
+  id: string | null;
+  companyId: string;
+  tradeName: string | null;
+  legalForm: string | null;
+  /** Clase CNAE de 4 cifras. */
+  cnaeCode: string | null;
+  /** Convenio del personal de estructura (/v1/collective-agreements). */
+  staffAgreementId: string | null;
+  ettAuthorizationNumber: string | null;
+  ettAuthorizationDate: string | null;
+  ettAuthorizationScope: 'state' | 'regional' | null;
+  /** Obligatorio si la autorización es autonómica. */
+  ettAuthorizationCommunityCode: string | null;
+  commercialRegistry: string | null;
+  registryVolume: string | null;
+  registryFolio: string | null;
+  registrySheet: string | null;
+  registryEntry: string | null;
+  legalRepName: string | null;
+  legalRepIdType: IdDocumentType | null;
+  legalRepIdNumber: string | null;
+  legalRepPosition: string | null;
+  mutualInsurer: string | null;
+  preventionService: string | null;
+  redAuthorization: string | null;
+  guaranteeType: GuaranteeType | null;
+  guaranteeEntity: string | null;
+  guaranteeAmount: number | null;
+  guaranteeExpiresOn: string | null;
+  certificateHolder: string | null;
+  certificateIssuer: string | null;
+  certificateExpiresOn: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+export type CompanyLegalInput = Partial<Omit<CompanyLegal, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>>;
+/** `warnings`: garantía o certificado vencidos o a 60 días o menos. */
+export type CompanyLegalResult = { legal: CompanyLegal; warnings: string[] };
+
+/** Con qué factura una sociedad. Las series van aparte (NumberSeries). */
+export type CompanyBillingSettings = {
+  id: string | null;
+  companyId: string;
+  iban: string | null;
+  swiftBic: string | null;
+  /** Tabla maestra `payment_method`. */
+  paymentMethodId: string | null;
+  paymentTerms: string | null;
+  vatRate: number;
+  withholdingRate: number;
   currency: string;
-  adminEmail: string;
-  billingAddressSameAsFiscal: boolean;
-  billingBranchMode: 'centralized' | 'per_branch';
+  billingEmail: string | null;
+  /** null: la dirección fiscal de la sociedad. */
+  billingAddressId: string | null;
+  branchMode: 'centralized' | 'per_branch';
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+export type CompanyBillingSettingsInput = Partial<Omit<CompanyBillingSettings, 'id' | 'companyId' | 'createdAt' | 'updatedAt'>>;
+
+export type DocumentKind = 'quote' | 'request' | 'invoice' | 'credit_note';
+export type NumberSeries = {
+  id: string;
+  documentKind: DocumentKind;
+  companyId: string | null;
+  branchId: string | null;
+  year: number;
+  prefix: string;
+  padding: number;
+  /** Último número usado (0: ninguno). */
+  lastNumber: number;
+  nextNumber: number;
+  /** Por ejemplo, 'FAC2026-00108'. */
+  nextFormatted: string;
+  updatedAt: string;
+};
+export type NumberSeriesQuery = { documentKind?: DocumentKind; year?: number; companyId?: string };
+/** `nextNumber` nunca hacia atrás (409). */
+export type NumberSeriesInput = Partial<Pick<NumberSeries, 'prefix' | 'padding' | 'nextNumber'>>;
+export type NumberSeriesCreate = NumberSeriesInput & Pick<NumberSeries, 'documentKind' | 'year'> & { companyId?: string | null; branchId?: string | null };
+
+/** Código de cuenta de cotización: 11 cifras (provincia, número y control). */
+export type ContributionAccount = Stamped & {
+  companyId: string;
+  branchId: string | null;
+  code: string;
+  /** Las 2 primeras cifras del código (solo lectura). */
+  provinceCode: string;
+  staffType: 'mission' | 'structure';
+  status: Status;
+};
+export type ContributionAccountInput = Partial<Pick<ContributionAccount, 'companyId' | 'branchId' | 'code' | 'staffType' | 'status'>>;
+export type ContributionAccountCreate = ContributionAccountInput & Pick<ContributionAccount, 'companyId' | 'code' | 'staffType'>;
+export type ContributionAccountQuery = PageQuery & { companyId?: string; branchId?: string; staffType?: ContributionAccount['staffType']; status?: Status };
+
+/** Servicio que factura la ETT además de las horas (selección, formación PRL...). */
+export type BillableService = Stamped & {
+  code: string;
+  name: string;
+  chargeMode: 'percentage' | 'per_person' | 'per_unit' | 'fixed';
+  /** Porcentaje o precio por defecto. */
+  defaultValue: number;
+  unit: string;
+  status: Status;
+};
+export type BillableServiceInput = Partial<Omit<BillableService, 'id' | 'createdAt' | 'updatedAt'>>;
+export type BillableServiceCreate = BillableServiceInput & Pick<BillableService, 'code' | 'name' | 'chargeMode' | 'unit'>;
+export type BillableServiceQuery = PageQuery & { status?: Status; q?: string };
+
+/** Ajustes de presupuestos de la ETT. */
+export type TenantSettings = {
+  /** Margen mínimo en %; null: sin mínimo. */
+  quoteMinMarginPercent: number | null;
+  /** Días sin respuesta para avisar (15 por defecto). */
+  quoteNoResponseDays: number;
 };
 
-/** Código de cuenta de cotización. `sucursal` es el nombre de la sucursal. */
-export type EttContributionAccount = { id: string; numero: string; provincia: string; tipo: string; sucursal: string };
-export type EttService = { id: string; nombre: string; cobro: string; valor: number; unidad: string; activo: boolean };
+/** Para dar de alta un usuario: el alcance es la lista de sociedades y sucursales (branchId null: toda la sociedad). */
+export type MembershipContextInput = { companyId: string; branchId?: string | null; isDefault?: boolean };
+export type MembershipCreate = { email: string; fullName: string; roleId: string; department?: string | null; contexts: MembershipContextInput[] };
+/** `contexts` sustituye todo el alcance. */
+export type MembershipUpdate = { roleId?: string; status?: UserStatus; department?: string | null; contexts?: MembershipContextInput[] };
+/**
+ * `inviteUrl`: el enlace para enviarlo a mano (aún no hay correo saliente); null si ya tenía cuenta.
+ * `existingUser`: ya tenía cuenta en TramitNOW y entra con su contraseña de siempre.
+ */
+export type MembershipCreated = { membership: Membership; inviteUrl: string | null; existingUser: boolean };
+
+// ---------------------------------------------------------------------------
+// Mi ETT sin API todavía: plantillas, portales, historial y responsable de cada sucursal.
+// ---------------------------------------------------------------------------
+
 export type EttTemplate = { id: string; name: string; category: string; scope: string; status: 'active' | 'incomplete'; format: string; updated: string };
 export type EttWelcomeEmail = { activo: boolean; asunto: string; texto: string };
 export type EttPortals = { subdominio: string; bienvenida: { empresa: EttWelcomeEmail; candidato: EttWelcomeEmail } };
 export type EttActivity = { id: string; timestamp: string; user: string; action: string; type: string };
-/** Datos del usuario que la API aún no devuelve (el email está en auth.users). */
-export type EttUserExtra = { email: string; departamento: string; ultimoAcceso: string };
-export type EttInvitation = { id: string; name: string; email: string; roleId: string; branchId: string | null; createdAt: string };
 
-/** Todo lo de Mi ETT que aún no tiene ruta en apps/api. */
+/** Lo de Mi ETT que aún no tiene ruta en apps/api. Contra la API, `no_disponible`. */
 export type EttSettings = {
-  legal: EttLegalData;
-  billing: EttBillingSettings;
-  contributionAccounts: EttContributionAccount[];
-  services: EttService[];
   templates: EttTemplate[];
   portals: EttPortals;
   activity: EttActivity[];
   /** Responsable de cada sucursal, por id de sucursal. */
   branchManagers: Record<string, string>;
-  /** Por id de membresía. */
-  users: Record<string, EttUserExtra>;
-  invitations: EttInvitation[];
 };
 
 /**
