@@ -13,6 +13,8 @@
 --   super    d0..01  superadmin (platform_admins), sin membresías; ETT activa B
 --   blocked  e0..01  admin en A con el perfil bloqueado
 --   nobody   f0..01  sin membresías
+--   cont1    90..01  equipo de contenidos (convenios globales), sin membresías
+--   cont2    90..02  equipo de contenidos, sin membresías
 
 insert into public.tenants (id, code, legal_name) values
   ('10000000-0000-0000-0000-00000000000a', 'ETT-A', 'ETT Ficticia A, S.L.'),
@@ -43,10 +45,16 @@ insert into auth.users (id, email, raw_user_meta_data) values
   ('c0000000-0000-0000-0000-000000000001', 'multi@example.test', '{"full_name": "Multi ETT"}'),
   ('d0000000-0000-0000-0000-000000000001', 'super@example.test', '{"full_name": "Superadmin"}'),
   ('e0000000-0000-0000-0000-000000000001', 'bloqueado@example.test', '{"full_name": "Bloqueado"}'),
-  ('f0000000-0000-0000-0000-000000000001', 'nadie@example.test', '{"full_name": "Sin ETT"}');
+  ('f0000000-0000-0000-0000-000000000001', 'nadie@example.test', '{"full_name": "Sin ETT"}'),
+  ('90000000-0000-0000-0000-000000000001', 'contenidos.1@example.test', '{"full_name": "Contenidos Uno"}'),
+  ('90000000-0000-0000-0000-000000000002', 'contenidos.2@example.test', '{"full_name": "Contenidos Dos"}');
 
 insert into public.platform_admins (user_id, note) values
   ('d0000000-0000-0000-0000-000000000001', 'superadmin de prueba');
+
+insert into public.platform_content_editors (user_id, note) values
+  ('90000000-0000-0000-0000-000000000001', 'equipo de contenidos de prueba'),
+  ('90000000-0000-0000-0000-000000000002', 'equipo de contenidos de prueba');
 
 insert into public.memberships (tenant_id, user_id, role_id)
 select v.tenant_id::uuid, v.user_id::uuid, r.id

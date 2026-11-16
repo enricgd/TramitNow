@@ -27,6 +27,8 @@ export const USER = {
   super: 'd0000000-0000-0000-0000-000000000001',
   blocked: 'e0000000-0000-0000-0000-000000000001',
   nobody: 'f0000000-0000-0000-0000-000000000001',
+  content1: '90000000-0000-0000-0000-000000000001',
+  content2: '90000000-0000-0000-0000-000000000002',
 } as const;
 
 export const secret = process.env.SUPABASE_JWT_SECRET!;
@@ -47,6 +49,12 @@ export const app = createApp({
       url: process.env.STORAGE_URL!,
       publicUrl: process.env.STORAGE_URL!,
       serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    },
+    authAdmin: {
+      url: process.env.AUTH_URL!,
+      serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      redirectUrl: 'http://localhost:5173/',
+      sendsEmail: false,
     },
   },
   log: false,

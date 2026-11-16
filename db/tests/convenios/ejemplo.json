@@ -1,0 +1,64 @@
+{
+  "agreement": {
+    "regcon": "99999999999901",
+    "name": "Convenio ficticio de pruebas de logística de Bizkaia",
+    "scope": "provincial",
+    "territory": "48",
+    "cnae": ["52", "4941"],
+    "validFrom": "2025-01-01",
+    "validTo": "2027-12-31"
+  },
+  "publications": [
+    {
+      "id": "p1",
+      "bulletin": "BOB",
+      "date": "2025-03-10",
+      "number": "BOB-PRUEBA-2025-0001",
+      "url": "https://example.test/boletin/2025-0001.pdf",
+      "type": "texto_inicial"
+    },
+    {
+      "id": "p2",
+      "bulletin": "BOB",
+      "date": "2026-02-02",
+      "number": "BOB-PRUEBA-2026-0002",
+      "url": "https://example.test/boletin/2026-0002.pdf",
+      "type": "revision_salarial"
+    }
+  ],
+  "versions": [
+    {
+      "publication": "p1",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": "2025-12-31",
+      "provisional": false,
+      "categories": [
+        { "code": "G1-N1", "name": "Mozo de almacén (ficticio)", "group": "Grupo 1", "level": "Nivel 1" },
+        { "code": "G2-N1", "name": "Carretillero (ficticio)", "group": "Grupo 2", "level": "Nivel 1" }
+      ],
+      "salaryItems": [
+        { "category": "G1-N1", "concept": "salario_base", "label": "Salario base", "amount": 1500.00, "unit": "mes", "salarial": true, "source": "Tabla I, pág. 3" },
+        { "category": "G2-N1", "concept": "salario_base", "label": "Salario base", "amount": 1620.50, "unit": "mes", "salarial": true, "source": "Tabla I, pág. 3" },
+        { "category": null, "concept": "plus_transporte", "label": "Plus de transporte", "amount": 3.25, "unit": "dia", "salarial": false, "source": "Art. 20" },
+        { "category": null, "concept": "nocturnidad", "label": "Plus de nocturnidad", "amount": 25, "unit": "porcentaje", "salarial": true, "source": "Art. 22" }
+      ],
+      "conditions": { "annualHours": 1752, "vacationDays": 30, "vacationDaysType": "naturales", "extraPayments": 2, "notes": "Datos inventados para los tests", "seniority": "trienios del 3 %" }
+    },
+    {
+      "publication": "p2",
+      "effectiveFrom": "2026-01-01",
+      "effectiveTo": null,
+      "provisional": true,
+      "categories": [
+        { "code": "G1-N1", "name": "Mozo de almacén (ficticio)", "group": "Grupo 1", "level": "Nivel 1" },
+        { "code": "G2-N1", "name": "Carretillero (ficticio)", "group": "Grupo 2", "level": "Nivel 1" }
+      ],
+      "salaryItems": [
+        { "category": "G1-N1", "concept": "salario_base", "label": "Salario base", "amount": 1545.00, "unit": "mes", "salarial": true, "source": "Anexo, pág. 1" },
+        { "category": "G2-N1", "concept": "salario_base", "label": "Salario base", "amount": 1669.12, "unit": "mes", "salarial": true, "source": "Anexo, pág. 1" }
+      ],
+      "conditions": { "annualHours": 1750, "vacationDays": 30, "vacationDaysType": "naturales", "extraPayments": 2 }
+    }
+  ],
+  "pendingReview": ["Confirmar si el plus de transporte se paga en vacaciones (ficticio)"]
+}

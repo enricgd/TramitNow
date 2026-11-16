@@ -141,7 +141,10 @@ select results_eq(
 -- ---------------------------------------------------------------------------
 reset role;
 select pg_temp.login('d0000000-0000-0000-0000-000000000001');
-select is((select count(distinct tenant_id)::int from public.collective_agreements), 2, 'el superadmin ve los convenios de todas las ETT');
+-- Solo las ETT de prueba: la base local puede tener más datos (la ETT DEMO).
+select is((select count(distinct tenant_id)::int from public.collective_agreements
+           where tenant_id in ('10000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-00000000000b')),
+          2, 'el superadmin ve los convenios de todas las ETT');
 
 reset role;
 select pg_temp.login('b0000000-0000-0000-0000-000000000001');

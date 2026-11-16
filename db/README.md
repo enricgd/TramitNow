@@ -348,7 +348,8 @@ devuelve `(series_id, number, formatted)`, p. ej. `PRE2026-00001`.
   nóminas)? Y qué pasa al cumplirse el plazo: hoy no se borran nunca. Eliminar un documento que se ha enseñado en el
   portal del cliente. Se mantienen los criterios actuales hasta que se decida (fase 2, decisión 6).
 - **Historial**: cuánto tiempo se guarda y si los nombres de contactos borrados deben quedar en los resúmenes (RGPD).
-- **Series**: si las facturas van por sociedad o por sucursal, el formato del número y si se dan de alta a mano.
+- **Series**: si las facturas van por sociedad o por sucursal y el formato del número. (Desde la fase 3 la ETT las da de
+  alta y las ajusta con `tenant.manage`.)
 - Ficheros subidos pero nunca registrados (paso 3 sin hacer): habrá que limpiarlos con un proceso programado.
 
 ## Fase 2: empresas
@@ -393,6 +394,111 @@ En clientes, centros, contactos y documentos, «eliminar» pone `deleted_at`:
 
 Pendiente de decidir: cuánto tiempo se guarda lo eliminado y cuándo se purga de verdad (filas y ficheros de Storage),
 y quién puede purgar. Hoy no se purga nada.
+
+## Fase 3: convenios globales y Mi ETT
+
+Migraciones `20261116000500_global_agreements.sql` y `..._000600_mi_ett.sql`; tests `tests/16_convenios_globales.sql`
+y `tests/17_mi_ett.sql` y, en `apps/api`, `test/convenios` y `test/mi-ett`. Propuesta de los convenios:
+`docs/convenios-globales.md` (fases 0 y 1).
+
+### Convenios globales
+
+Los carga TramitNOW (con IA o a mano) y los revisa el **equipo de contenidos**, un rol de plataforma nuevo:
+`platform_content_editors` (como `platform_admins`, se escribe por SQL). No es una membresía: no ve datos de ninguna ETT,
+y el superadmin no es del equipo por serlo (ni ve borradores ni escribe en el catálogo). `/v1/me` → `isContentEditor`.
+
+| Tabla (global, sin `tenant_id`) | Qué |
+|---|---|
+| `agreements` | REGCON (único), nombre, ámbito (`estatal`, `autonomico`, `provincial`, `empresa`), comunidad o provincia, `cnae_codes` (sección, división, grupo o clase CNAE-2009), vigencia, convenio al que sustituye |
+| `agreement_publications` | Boletín, fecha, número (único por convenio), enlace y tipo (`texto_inicial`, `revision_salarial`, `tablas_provisionales`, `correccion_errores`, `sentencia`, `anulacion`) |
+| `agreement_versions` | Efectos desde/hasta, provisional, publicación de origen, estado, `pending_review`, quién extrajo, revisó, publicó y retiró, y cuándo |
+| `agreement_categories` / `agreement_salary_items` / `agreement_conditions` | Contenido de cada versión: categorías (código, nombre, grupo, nivel); importes por categoría (o para todas) y concepto, con unidad (`hora`, `dia`, `mes`, `anio`, `porcentaje`), salarial o no y fuente; jornada anual, vacaciones, pagas y `extra` (jsonb) para lo demás |
+
+Los valores de ámbito, tipo, unidad, concepto y estado van en español porque son el formato de carga.
+
+**Estados**: `borrador` → `en_revision` → `publicada` → `retirada` (y `en_revision` → `borrador` para devolverla). Lo
+garantiza un trigger (`TN409`/`TN422`):
+
+- **Revisión a cuatro ojos**: no se publica sin `reviewed_by`, ni lo revisa quien la extrajo (`extracted_by`); la
+  revisión y la publicación son dos pasos, y nadie marca la revisión en nombre de otro.
+- **Lo publicado no cambia**: una versión publicada solo pasa a retirada (con motivo); sus categorías, importes y
+  condiciones y la publicación de la que sale quedan fijos, y no se borra. Para corregirla se carga otra versión.
+- Cambiar el contenido de una versión en revisión quita la revisión hecha.
+- Borrar lo publicado solo es posible como `postgres` con `set local tramitnow.purge_agreements = 'on'`
+  (mantenimiento y tests), nunca desde la API.
+
+**Lectura**: cualquier autenticado ve las versiones publicadas y retiradas (sus documentos pueden haberlas usado), su
+contenido, su publicación y el convenio. Escritura: solo el equipo de contenidos (RLS).
+
+**Convenio de la ETT**: `collective_agreements.global_agreement_id` → `agreements` (uno por ETT). Solo se enlaza un
+convenio con algo publicado (`TN422`). Si está vacío, el convenio es propio de la ETT (p. ej. de empresa). Las tablas
+de seguimiento por ETT de la propuesta (`tenant_agreement_settings`, `tenant_agreement_versions`,
+`tenant_salary_overrides`) y `professional_categories.agreement_category_id` llegarán con los presupuestos (fase 4),
+que es lo primero que las usa.
+
+#### Cargar convenios
+
+```bash
+PSQL="docker exec -i tramitnow-db-local psql -U postgres -d postgres" sh db/scripts/cargar-convenios.sh
+```
+
+Carga `db/data/convenios/*.json` (o los ficheros que se le pasen) con `private.load_agreement_file()`, cada fichero en
+su transacción: si tiene un error, no se carga nada de él (mensaje con el REGCON y el dato) y se sigue con el resto.
+**Idempotente**: el convenio se busca por REGCON, cada publicación por su número y cada versión por (publicación,
+efectos desde); lo que no ha cambiado no se toca; una versión en borrador o revisión que ha cambiado se rehace y vuelve a
+`en_revision` sin revisión; lo publicado nunca se modifica (sale un `AVISO`: hay que cargarlo como versión nueva). Cada
+versión cargada queda **en revisión**. `EXTRAIDO_POR=email` (opcional) indica quién del equipo preparó los ficheros:
+esa persona no podrá revisarlos. Sin él, la extracción queda como automática y la revisa cualquiera del equipo.
+
+En el NAS, igual que `migrate.sh` (con `db/data/convenios/` copiado):
+`sudo env PSQL="docker exec -i supabase-db psql -U postgres -d postgres" sh db/scripts/cargar-convenios.sh`.
+
+Formato de `db/data/convenios/<regcon>.json` (fichero de ejemplo inventado: `tests/convenios/ejemplo.json`):
+
+```json
+{
+  "agreement": { "regcon": "14 dígitos", "name": "...", "scope": "estatal|autonomico|provincial|empresa",
+                 "territory": null, "cnae": ["78"], "validFrom": "AAAA-MM-DD", "validTo": null },
+  "publications": [ { "id": "p1", "bulletin": "BOE", "date": "AAAA-MM-DD", "number": "BOE-A-AAAA-NNNNN",
+                      "url": "https://www.boe.es/...", "type": "texto_inicial" } ],
+  "versions": [ {
+    "publication": "p1", "effectiveFrom": "AAAA-MM-DD", "effectiveTo": null, "provisional": false,
+    "categories": [ { "code": "G1-N1", "name": "...", "group": "...", "level": "..." } ],
+    "salaryItems": [ { "category": "G1-N1", "concept": "salario_base", "label": "...", "amount": 1234.56,
+                       "unit": "mes", "salarial": true, "source": "tabla y página" } ],
+    "conditions": { "annualHours": 1752, "vacationDays": 30, "vacationDaysType": "naturales", "extraPayments": 2, "notes": "..." }
+  } ],
+  "pendingReview": [ "lo que el extractor no tiene seguro" ]
+}
+```
+
+Precisiones sobre el formato (no lo cambian):
+
+- `territory`: código INE de **comunidad** si es autonómico y de **provincia** si es provincial o de empresa (los dos
+  son de 2 cifras: lo decide `scope`). Estatal, sin territorio. Autonómico y provincial lo exigen.
+- `cnae`: letra de sección o 2 a 4 cifras (sin punto: `"7820"`).
+- `salaryItems[].category`: `null` o ausente = vale para todas las categorías; si se indica, tiene que estar en
+  `categories` de la misma versión. `concept`, en minúsculas y con guiones bajos; `amount`, número; `salarial`, por
+  defecto `true`.
+- `publications[].number` es la clave de la publicación (única por convenio); `id` solo enlaza las versiones del mismo
+  fichero.
+- Lo que venga en `conditions` además de los campos de arriba se guarda en `extra` (p. ej. antigüedad).
+- `pendingReview` se copia a cada versión cargada del fichero.
+
+### Mi ETT
+
+| Qué | Cómo |
+|---|---|
+| Datos legales de cada sociedad | `company_legal_profiles` (1:1): nombre comercial, forma jurídica, CNAE (4 cifras), convenio del personal de estructura, autorización de ETT (número, fecha, ámbito estatal o autonómico con su comunidad), registro mercantil (registro, tomo, folio, hoja, inscripción), representante legal (nombre, tipo y número de documento, cargo), mutua, servicio de prevención, autorización RED, garantía financiera (tipo, entidad, importe, vencimiento) y del certificado digital **solo metadatos** (titular, emisor, caducidad): nunca el fichero ni la contraseña |
+| Facturación de cada sociedad | `company_billing_settings` (1:1): IBAN, BIC, forma de pago (tabla maestra), condiciones, IVA (21 por defecto), retención, moneda, email de facturación, dirección de facturación (NULL = la fiscal) y si se factura centralizado o por sucursal |
+| Series | `number_series` admite `credit_note` (rectificativas, prefijo REC). `tenant.manage` crea series y cambia prefijo, cifras y por dónde siguen (para venir de otro programa), **nunca hacia atrás** (`TN409`) ni de clase, ámbito o año |
+| CCC | `contribution_accounts`: sociedad, sucursal opcional, código de 11 cifras con control `(provincia+número) mod 97` (`private.valid_ccc`), provincia generada de las 2 primeras cifras, tipo `mission`/`structure` |
+| Servicios que factura | `billable_services`: código, nombre, cobro (`percentage`, `per_person`, `per_unit`, `fixed`), valor por defecto y unidad. Cada ETT (existentes y nuevas) empieza con selección, formación PRL, reconocimiento médico, gestión de nóminas y desplazamientos, a 0 |
+| Ajustes de presupuestos | `tenants.quote_min_margin_percent` (NULL = sin mínimo) y `quote_no_response_days` (15). Se usan en la fase 4 |
+| Usuarios | `memberships.department`, `invited_at`, `invited_by`. La API invita con la service_role de Auth; lee email, último acceso e invitación pendiente con `private.membership_auth_info()` y busca cuentas por email con `private.find_auth_user()` (las dos solo con `users.manage`). Al revocar, `private.invited_user_removable()` dice si se puede borrar también la cuenta |
+
+Leer: cualquier miembro de la ETT (el representante, la autorización y el IBAN salen en CPD, contratos y facturas).
+Escribir: `tenant.manage`.
 
 ## Probar en local
 
@@ -493,6 +599,14 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 6. Comprueba que el hook funciona: inicia sesión y decodifica el `access_token` (debe traer `tenant_id`,
    `app_role` y `branch_ids`).
 
+7. Convenios globales (desde la fase 3): con `db/data/convenios/` copiado al NAS (como en el paso 2, añadiendo `data`),
+   carga los ficheros con `cargar-convenios.sh` (ver "Cargar convenios"). Para dar de alta a alguien del equipo de
+   contenidos (con su usuario ya creado en Auth):
+
+   ```bash
+   sudo docker exec -it supabase-db psql -U postgres -d postgres -c "insert into public.platform_content_editors (user_id, note) select id, 'equipo de contenidos' from auth.users where email = 'CORREO'"
+   ```
+
 ### ETT de demostración y primer usuario
 
 1. En Supabase Studio (`http://192.168.2.8:8000`): Authentication > Add user > Create new user, con
@@ -523,6 +637,11 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 - `companies.prevention_config_id` y `prevention_configurations` quedan para cuando se rediseñe esa pantalla.
 
 ## Pendiente
+
+- Fase 3: el margen mínimo, ¿solo en %, o también en €/h? (hoy %). Plazo máximo entre el boletín y la publicación en
+  TramitNOW, y quién del equipo de contenidos extrae y quién revisa. Avisos de vencimiento de la garantía y del
+  certificado (hoy solo los devuelve la API al leer los datos legales). Historial de Mi ETT (datos legales, facturación,
+  usuarios) en `activity_log`.
 
 - Resto de tablas del modelo (ofertas, peticiones, candidatos, trabajadores, comunicaciones, importaciones),
   siguiendo las reglas de arriba, con su historial (`private.log_activity`) y sus documentos (`documents`).
