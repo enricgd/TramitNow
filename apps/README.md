@@ -60,13 +60,17 @@ reload();
 - `memoria.ts`: datos de ejemplo en memoria para el **modo demo** (`npm run dev`, el del diseñador): sin login,
   sin API y sin base de datos. Se comporta como la API (filtros, paginación, errores) y no entra en la
   compilación para el NAS. Si una pantalla necesita datos de ejemplo nuevos, van aquí, no dentro de la vista.
+  Las pantallas grandes tienen su fichero (`memoriaEmpresas.ts`) y las ayudas comunes están en `memoriaBase.ts`.
+  **Nada en el nivel superior de estos ficheros puede tener efectos** (`push`, contadores, llamadas que cambien
+  estado, `Date.now()`): `vite.config.ts` los marca sin efectos para que la compilación del NAS los descarte.
 - `api.ts`: contra `apps/api` con el token de la sesión. Con `npm run dev:real`, Vite reenvía `/v1` a la API
   local (en otra terminal, `cd apps/api && npm run dev`; sus valores locales en `apps/api/.env.example`).
   En el NAS, `VITE_API_URL` en `.env.production.local`.
 - Cuando la API gane una ruta, se añade al contrato y a las dos implementaciones.
 
-Conectadas: la cabecera (`src/cabecera/useCabecera.ts`) y Mi ETT (`src/views/mi-ett/useMiEtt.ts`). El resto de
-pantallas aún usan los datos de ejemplo que llevan dentro.
+Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`) y Empresas
+(`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**). El
+resto de pantallas aún usan los datos de ejemplo que llevan dentro.
 
 #### Conectar una pantalla
 
@@ -89,6 +93,30 @@ sus cambios y los nuestros no choquen, **la vista solo pinta** y todo lo de dato
 5. **Probar en los dos modos**: `npm run dev` (en la pestaña de red del navegador no debe haber peticiones a
    `/v1` ni a `/auth`) y `npm run dev:real` con `apps/api` y la base local.
 
+Lo que añadió Empresas, para copiarlo en las siguientes:
+
+- **Lista grande**: búsqueda, sucursal de la cabecera (`useSesion().sucursal` → `?branchId=`) y página
+  (`limit`, `offset`) van al servidor; la búsqueda espera a que se deje de escribir. Los filtros que la API aún
+  no tiene se aplican a la página cargada y la vista lo dice («N de M en esta página»).
+- **Eliminar es una baja lógica**: la confirmación (`Confirmar` con `recuperable`) dice dónde se recupera; un
+  filtro o botón «Eliminados» lista lo eliminado con «Recuperar» (`src/views/empresas/Eliminados.tsx`). Si ya
+  se ha usado, la API responde 409 `en_uso`: la vista enseña el motivo y ofrece la alternativa (suspender,
+  desactivar, dar de baja). Los documentos de conservación obligatoria no se ofrecen para eliminar.
+- **Tablas maestras en los desplegables**: `SelectConAlta` con los nombres de `catalogItems`; «+ Añadir» crea
+  la opción en la API (`catalogos.anadirOpcion`) y el hook traduce nombre ↔ id al guardar.
+- **Campos nuevos antes que la API**: si el contrato añade campos que la API local aún no tiene, la API rechaza
+  el cuerpo entero («Llaves desconocidas»). El hook envía esos campos solo con valor (`sinCamposNuevosVacios`),
+  y `mensajeError` convierte ese error en «Disponible próximamente: la API aún no admite …».
+- **Ayudas comunes** de los hooks (errores, fechas, direcciones de texto libre ↔ códigos oficiales) en
+  `src/views/comun/datos.ts`.
+
+#### Documentos en local
+
+Para subir y ver documentos con `npm run dev:real`, el navegador tiene que llegar a Storage, que en local
+(`127.0.0.1:54325`) no responde a CORS. Vite reenvía `/storage/v1` a Storage: pon en `apps/api/.env`
+`STORAGE_PUBLIC_URL=http://localhost:5173/storage/v1` y la API firmará las URL por ahí. La subida la hace el
+repositorio (`documents.upload`: URL firmada, `PUT` del fichero y registro), nunca la vista.
+
 #### Pendiente de API
 
 Lo que una pantalla ya enseña y `apps/api` aún no tiene se añade igualmente al contrato (`repositorios.ts`,
@@ -107,6 +135,11 @@ API hay dos opciones, según lo que tenga sentido en real:
 
 Cuando llega la ruta, se cambia la implementación de `api.ts` (y la forma en `tipos.ts`, si hace falta): la
 pantalla no se toca.
+
+Lo que en Empresas sigue sin API, de momento: el acceso de los contactos al Área de empresas
+(`portalAccess`, «Disponible próximamente») y el régimen de IVA del cliente (`vatRegimeId`, fuera del contrato
+de la fase 2). La lista pide contactos, centros y facturación de cada fila para la preparación y el contacto
+principal; con un resumen en `GET /v1/clients` bastaría una petición.
 
 Lo que en Mi ETT sigue sin API, de momento: alta e invitación de usuarios y cambio de su rol o sus sucursales
 (la API solo los lista), el email de los usuarios (está en `auth.users`), la matriz de permisos (fija en la

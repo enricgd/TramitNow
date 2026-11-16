@@ -764,8 +764,8 @@ return (
           {/* TAB 3: CONTACTOS */}
           {activeTab === 'contactos' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="min-w-[14rem] flex-1">
                   <h3 className="text-sm font-semibold text-slate-900">Directorio de contactos de la empresa</h3>
                   <p className="text-xs text-slate-500">
                     Solo se exige nombre y teléfono/email. No pedimos DNI.
@@ -944,8 +944,8 @@ return (
           {/* TAB 4: CENTROS */}
           {activeTab === 'centros' && (
             <div className="space-y-4">
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-[14rem] flex-1">
                   <h3 className="text-sm font-semibold text-slate-900">Centros de trabajo / naves operativas</h3>
                   <p className="text-xs text-slate-500">
                     Requeridos únicamente para <strong>Peticiones Operativas</strong> (asignar trabajadores al centro y turno).
