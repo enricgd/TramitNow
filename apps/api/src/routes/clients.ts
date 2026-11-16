@@ -1,6 +1,9 @@
-// Clientes de la ETT activa (db/README.md, "Módulo 2"): empresas cliente, centros de trabajo, contactos y
+// Clientes de la ETT activa (db/README.md, "Módulo 2" y "Fase 2"): empresas cliente, centros de trabajo, contactos y
 // facturación. Leer clientes, centros y contactos: cualquier miembro. Escribir: clients.manage en la sucursal
 // del cliente (o del centro); las RLS lo comprueban. Facturación: clients.billing.manage, también para leer.
+//
+// Eliminar clientes, centros y contactos es una baja lógica recuperable (`?deleted=true` y `POST /{id}/restore`);
+// lo que ya se ha usado no se elimina (409 `en_uso`): se desactiva (clientes, centros) o se suspende (contactos).
 
 import { createRoute, z } from '@hono/zod-openapi';
 import { withTenant } from '../lib/context.js';
@@ -19,6 +22,8 @@ import {
 } from '../lib/openapi.js';
 
 const base = { id: z.guid(), createdAt: Timestamp, updatedAt: Timestamp };
+/** Solo en las listas con `?deleted=true`; null en lo activo. */
+const deletedAt = Timestamp.nullable().openapi({ description: 'Cuándo se eliminó (null si está activo)' });
 const date = z.iso.date().nullable();
 /** NIF, CCC, documentos: sin espacios, puntos ni guiones y en mayúsculas. */
 const normalized = (max: number, pattern = /^[A-Z0-9]+$/, message = 'Solo letras y números') =>
@@ -45,6 +50,15 @@ const clientFields = {
   clientTypeId: z.guid().nullable(),
   businessGroupId: z.guid().nullable(),
   activity: nullableText(250),
+  sectorCode: z
+    .string()
+    .regex(/^([A-Z]|[0-9]{2})$/, 'Sección (letra) o división (2 dígitos) de la CNAE')
+    .nullable()
+    .openapi({ description: 'Sector: código CNAE-2009 de GET /v1/cnae', example: '52' }),
+  defaultAgreementId: z
+    .guid()
+    .nullable()
+    .openapi({ description: 'Convenio por defecto: lo heredan los centros sin convenio propio' }),
   startDate: date,
   status: ClientStatus,
   blocked: z.boolean(),
@@ -64,26 +78,39 @@ export const clients = crudRoutes({
   name: 'Client',
   tag: 'Clientes',
   names: { one: 'el cliente', many: 'los clientes' },
-  schema: z.object({ ...base, ...clientFields, startDate: z.string().nullable() }).openapi('Client'),
+  schema: z.object({ ...base, ...clientFields, startDate: z.string().nullable(), deletedAt }).openapi('Client'),
   fields: clientFields,
   required: ['companyId', 'branchId', 'code', 'legalName'],
   createDefaults: { status: ClientStatus.default('active'), taxIdType: clientFields.taxIdType.default('nif') },
   columns: `id, company_id, branch_id, code, legal_name, trade_name, tax_id_type, tax_id, owner_user_id, client_type_id,
-    business_group_id, activity, to_char(start_date, 'YYYY-MM-DD') as start_date, status, blocked, blocked_reason,
-    address_id, phone, fax, email, website, online_cpd_price_printing, observations, created_at, updated_at`,
+    business_group_id, activity, sector_code, default_agreement_id, to_char(start_date, 'YYYY-MM-DD') as start_date,
+    status, blocked, blocked_reason, address_id, phone, fax, email, website, online_cpd_price_printing, observations,
+    created_at, updated_at, deleted_at`,
   permission: 'clients.manage',
   search: ['code', 'legal_name', 'trade_name', 'tax_id'],
   filters: {
     status: ClientStatus.optional(),
     companyId: z.guid().optional(),
     blocked: z.stringbool().optional(),
+    sectorCode: z
+      .string()
+      .regex(/^([A-Z]|[0-9]{2})$/)
+      .optional()
+      .openapi({ description: 'Sector CNAE; una sección (letra) incluye sus divisiones' }),
   },
   where: (tx, q) => [
     ...(q.companyId ? [tx`company_id = ${q.companyId}`] : []),
     ...(q.blocked !== undefined ? [tx`blocked = ${q.blocked}`] : []),
+    ...(q.sectorCode
+      ? [
+          tx`(sector_code = ${q.sectorCode}
+              or sector_code in (select code from public.cnae_activities where parent_code = ${q.sectorCode}))`,
+        ]
+      : []),
   ],
   orderBy: 'legal_name, code',
   branchColumn: 'branch_id',
+  restorable: true,
 });
 
 // ---------------------------------------------------------------------------
@@ -99,11 +126,14 @@ const centerFields = {
   isSelfEmployedCcc: z.boolean(),
   cnaeCode: z.string().regex(/^[0-9]{4}$/, 'CNAE-2009 de 4 dígitos').nullable(),
   ssRegimeCode: z.string().regex(/^[0-9]{4}$/).nullable(),
-  blocked: z.boolean(),
+  blocked: z.boolean().openapi({ description: 'En pantalla, «Inactivo»' }),
   addressId: z.guid().nullable(),
   phone: nullableText(40),
   email: z.email().max(200).nullable(),
-  clientAgreementId: z.guid().nullable().openapi({ description: 'Convenio de la empresa usuaria' }),
+  clientAgreementId: z
+    .guid()
+    .nullable()
+    .openapi({ description: 'Convenio de la empresa usuaria en este centro; null: el del cliente (defaultAgreementId)' }),
   payrollAgreementId: z.guid().nullable(),
   grdaAgreementId: z.guid().nullable(),
   projectCode: nullableText(50),
@@ -119,24 +149,42 @@ export const clientCenters = crudRoutes({
   name: 'ClientCenter',
   tag: 'Clientes',
   names: { one: 'el centro de trabajo', many: 'los centros de trabajo' },
-  schema: z.object({ ...base, ...centerFields }).openapi('ClientCenter'),
+  schema: z
+    .object({
+      ...base,
+      ...centerFields,
+      effectiveClientAgreementId: z
+        .guid()
+        .nullable()
+        .openapi({ description: 'Solo lectura: clientAgreementId o, si es null, el convenio por defecto del cliente' }),
+      deletedAt,
+    })
+    .openapi('ClientCenter'),
   fields: centerFields,
   required: ['clientId', 'branchId', 'code', 'name'],
   columns: `id, client_id, branch_id, code, name, tax_id, ccc, is_self_employed_ccc, cnae_code, ss_regime_code, blocked,
     address_id, phone, email, client_agreement_id, payroll_agreement_id, grda_agreement_id, project_code, tc_company_id,
-    tc_branch_id, access_instructions, notes, created_at, updated_at`,
+    tc_branch_id, access_instructions, notes,
+    coalesce(client_agreement_id, (
+      select c.default_agreement_id from public.clients c
+      where c.tenant_id = client_centers.tenant_id and c.id = client_centers.client_id
+    )) as effective_client_agreement_id,
+    created_at, updated_at, deleted_at`,
   permission: 'clients.manage',
   hasStatus: false,
   search: ['code', 'name', 'ccc'],
   filters: { clientId: z.guid().optional() },
   where: (tx, q) => (q.clientId ? [tx`client_id = ${q.clientId}`] : []),
   branchColumn: 'branch_id',
+  restorable: true,
 });
 
 // ---------------------------------------------------------------------------
 // Contactos (datos personales: DNI/NIE solo de quien firma los CPD)
 // ---------------------------------------------------------------------------
-const ContactRole = z.enum(['commercial', 'requester', 'operations', 'billing', 'hr', 'prevention', 'management']);
+const ContactRole = z
+  .enum(['commercial', 'requester', 'operations', 'billing', 'hr', 'prevention', 'management', 'other'])
+  .openapi({ description: 'other: «Otro», con su texto en otherRole' });
 
 const contactFields = {
   clientId: z.guid(),
@@ -147,7 +195,10 @@ const contactFields = {
   phone: nullableText(40),
   mobile: nullableText(40),
   email: z.email().max(200).nullable(),
-  roles: z.array(ContactRole).max(7),
+  roles: z.array(ContactRole).max(8),
+  otherRole: nullableText(120).openapi({ description: 'Obligatorio con el rol other; si no, null' }),
+  validatesHours: z.boolean().openapi({ description: 'Valida las horas de los trabajadores en misión' }),
+  suspended: z.boolean().openapi({ description: 'Suspendido: no se usa, pero no se elimina (lo usado no se elimina)' }),
   isMain: z.boolean().openapi({ description: 'Contacto principal (uno por cliente)' }),
   isQuoteRecipient: z.boolean(),
   signsCpds: z.boolean(),
@@ -166,21 +217,32 @@ export const clientContacts = crudRoutes({
   name: 'ClientContact',
   tag: 'Clientes',
   names: { one: 'el contacto', many: 'los contactos' },
-  schema: z.object({ ...base, ...contactFields }).openapi('ClientContact'),
+  schema: z
+    .object({
+      ...base,
+      ...contactFields,
+      suspendedAt: Timestamp.nullable().openapi({ description: 'Solo lectura: cuándo se suspendió' }),
+      suspendedBy: z.guid().nullable().openapi({ description: 'Solo lectura: quién lo suspendió' }),
+      deletedAt,
+    })
+    .openapi('ClientContact'),
   fields: contactFields,
   required: ['clientId', 'name'],
-  columns: `id, client_id, center_id, name, position, department, phone, mobile, email, roles, is_main, is_quote_recipient,
-    signs_cpds, document_type, document_number, receives_digital_signature, send_collection_claims, invoice_send_type,
-    sort_order, notes, created_at, updated_at`,
+  columns: `id, client_id, center_id, name, position, department, phone, mobile, email, roles, other_role, validates_hours,
+    suspended, is_main, is_quote_recipient, signs_cpds, document_type, document_number, receives_digital_signature,
+    send_collection_claims, invoice_send_type, sort_order, notes, suspended_at, suspended_by, created_at, updated_at,
+    deleted_at`,
   permission: 'clients.manage',
   hasStatus: false,
   search: ['name', 'email', 'position'],
-  filters: { clientId: z.guid().optional(), centerId: z.guid().optional() },
+  filters: { clientId: z.guid().optional(), centerId: z.guid().optional(), suspended: z.stringbool().optional() },
   where: (tx, q) => [
     ...(q.clientId ? [tx`client_id = ${q.clientId}`] : []),
     ...(q.centerId ? [tx`center_id = ${q.centerId}`] : []),
+    ...(q.suspended !== undefined ? [tx`suspended = ${q.suspended}`] : []),
   ],
   orderBy: 'is_main desc, sort_order nulls last, name',
+  restorable: true,
 });
 
 // ---------------------------------------------------------------------------
@@ -193,7 +255,12 @@ const LEGAL_MAX_PAYMENT_DAYS = 60;
 const billingFields = {
   paymentMethodId: z.guid().nullable(),
   paymentTermDays: z.number().int().min(0).max(365).nullable(),
-  fixedPaymentDays: z.array(z.number().int().min(1).max(31)).min(1).max(3).nullable(),
+  fixedPaymentDays: z
+    .array(z.number().int().min(1).max(31))
+    .min(1)
+    .max(3)
+    .nullable()
+    .openapi({ description: 'Días fijos de pago (como mucho 3). 31 = último día del mes; si el mes no tiene ese día, su último día' }),
   iban: normalized(34, /^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/, 'IBAN no válido'),
   swiftBic: normalized(11, /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'BIC no válido'),
   b2bDirectDebit: z.boolean(),
@@ -216,6 +283,9 @@ const billingFields = {
   statisticalSectorId: z.guid().nullable(),
   offerMarginPercent: z.number().nullable(),
   offerCoefficient: z.number().nullable(),
+  invoiceLayout: z
+    .enum(['by_person', 'by_concept'])
+    .openapi({ description: 'Cómo se imprime la factura: por persona (por defecto) o por concepto' }),
 };
 
 const BillingSchema = z
@@ -234,7 +304,7 @@ const billingColumns = `id, client_id, payment_method_id, payment_term_days, fix
   generate_e_invoice, fixed_invoice_text, fixed_invoice_text_position, vat_special_cause_id, equivalence_surcharge,
   retention_type_id, risk_limit::float8 as risk_limit, risk_notes, accounting_account, supplier_reference, seller_user_id,
   statistical_sector_id, offer_margin_percent::float8 as offer_margin_percent, offer_coefficient::float8 as offer_coefficient,
-  created_at, updated_at`;
+  invoice_layout, created_at, updated_at`;
 
 function billingWarnings(billing: { paymentTermDays: number | null }): string[] {
   return billing.paymentTermDays !== null && billing.paymentTermDays > LEGAL_MAX_PAYMENT_DAYS

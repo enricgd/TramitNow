@@ -1,5 +1,5 @@
 // Documentos (/v1/documents) contra el Storage local de db/local: URL firmada de subida, subida directa a Storage,
-// registro, lista, validación, descarga y borrado (fila y fichero), con permisos de la ficha y conservación.
+// registro, lista, validación, descarga, eliminación recuperable y restauración, con permisos de la ficha y conservación.
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BRANCH, COMPANY, T, USER, adminSql, call, closeAll, tokenFor } from './helpers.js';
@@ -168,19 +168,36 @@ describe('documentos', () => {
     await setRole('seleccion');
   });
 
-  it('borrar elimina la fila y el fichero, y deja rastro en el historial', async () => {
+  it('eliminar es una baja lógica: el fichero se conserva, se lista con ?deleted=true y se restaura', async () => {
     const [row] = await adminSql<{ path: string }[]>`select storage_path as path from public.documents where id = ${docId}`;
     const path = row!.path;
     const res = await call('DELETE', `/v1/documents/${docId}`, { token: admin });
     expect(res.status).toBe(204);
     expect((await call('GET', `/v1/documents/${docId}`, { token: admin })).status).toBe(404);
+    expect((await call('GET', `/v1/documents/${docId}/download`, { token: admin })).status).toBe(404);
+    const active = await call('GET', `/v1/documents?entityType=client&entityId=${clientId}`, { token: admin });
+    expect(active.body.data.map((d: { id: string }) => d.id)).not.toContain(docId);
     const objects = await adminSql`select 1 from storage.objects where bucket_id = 'documents' and name = ${path}`;
-    expect(objects).toHaveLength(0);
+    expect(objects).toHaveLength(1);
+
+    const deleted = await call('GET', `/v1/documents?entityType=client&entityId=${clientId}&deleted=true`, { token: admin });
+    expect(deleted.body.data.map((d: { id: string }) => d.id)).toEqual([docId]);
+    expect(deleted.body.data[0].deletedAt).toBeTruthy();
+
+    expect((await call('POST', `/v1/documents/${docId}/restore`, { token: seleccion })).status).toBe(403);
+    const restored = await call('POST', `/v1/documents/${docId}/restore`, { token: admin });
+    expect(restored.status).toBe(200);
+    expect(restored.body).toMatchObject({ id: docId, deletedAt: null, name: 'CIF de la empresa' });
+    expect((await call('POST', `/v1/documents/${docId}/restore`, { token: admin })).status).toBe(404);
 
     const history = await call('GET', `/v1/activity?entityType=client&entityId=${clientId}`, { token: admin });
     const summaries = history.body.data.map((a: { summary: string }) => a.summary);
     expect(summaries).toEqual(
-      expect.arrayContaining(['Eliminación de documento «CIF de la empresa»', 'Validación de documento «CIF de la empresa»']),
+      expect.arrayContaining([
+        'Eliminación de documento «CIF de la empresa»',
+        'Restauración de documento «CIF de la empresa»',
+        'Validación de documento «CIF de la empresa»',
+      ]),
     );
   });
 
@@ -189,9 +206,11 @@ describe('documentos', () => {
     expect(contract.body.retentionRequired).toBe(true);
     const res = await call('DELETE', `/v1/documents/${contract.body.id}`, { token: admin });
     expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('conservacion_obligatoria');
     expect(res.body.error.message).toContain('conservación obligatoria');
     const toDeletable = await call('PATCH', `/v1/documents/${contract.body.id}`, { token: admin, body: { typeId: cifType } });
     expect(toDeletable.status).toBe(409);
+    expect(toDeletable.body.error.code).toBe('conservacion_obligatoria');
     expect((await call('GET', `/v1/documents/${contract.body.id}`, { token: admin })).status).toBe(200);
   });
 });
