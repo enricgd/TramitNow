@@ -242,8 +242,11 @@ responden `503 servicio_no_disponible`.
 **Invitar usuarios (desde la fase 3).** La API da de alta e invita usuarios en Supabase Auth con la misma
 `SERVICE_ROLE_KEY` (variables `AUTH_URL`, `INVITE_REDIRECT_URL` y `AUTH_SENDS_INVITES` del servicio `api` en
 `docker-compose.override.yml`). Llevar el override nuevo al NAS, `sudo sh setup.sh --regenerate` y volver a desplegar
-la API. Mientras no haya SMTP, la respuesta trae el enlace de invitación para enviarlo a mano. La URL de
-`INVITE_REDIRECT_URL` tiene que estar permitida en Auth (`SITE_URL` o la lista de redirecciones).
+la API. Mientras no haya SMTP, la respuesta trae el enlace de invitación para enviarlo a mano.
+`INVITE_REDIRECT_URL` es la web, acabada en `/`: en el NAS, `https://demo.<dominio>/` (el override lo pone como
+`https://demo.${DOMAIN}/`). La API no usa el `action_link` de Auth (apuntaría a `https://api.<dominio>/verify`): monta
+el enlace como `<INVITE_REDIRECT_URL>verify?token=<hashed_token>&type=invite`, y la página `/verify` de la web lo
+canjea con `verifyOtp`. Por eso no hace falta añadir esa URL a las redirecciones permitidas de Auth.
 
 Si se activan algún día las claves asimétricas de Supabase Auth (`JWT_KEYS`, ES256), la API tendrá que
 verificar con el JWKS en vez de con `JWT_SECRET`.

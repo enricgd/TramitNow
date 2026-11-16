@@ -641,7 +641,7 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 - Fase 3: el margen mínimo, ¿solo en %, o también en €/h? (hoy %). Plazo máximo entre el boletín y la publicación en
   TramitNOW, y quién del equipo de contenidos extrae y quién revisa. Avisos de vencimiento de la garantía y del
   certificado (hoy solo los devuelve la API al leer los datos legales). Historial de Mi ETT (datos legales, facturación,
-  usuarios) en `activity_log`. Página de la web que recibe el enlace de invitación (`INVITE_REDIRECT_URL`).
+  usuarios) en `activity_log`.
 
 - Resto de tablas del modelo (ofertas, peticiones, candidatos, trabajadores, comunicaciones, importaciones),
   siguiendo las reglas de arriba, con su historial (`private.log_activity`) y sus documentos (`documents`).

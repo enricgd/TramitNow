@@ -12,7 +12,7 @@ export interface AuthAdminConfig {
   url: string;
   /** service_role key del proyecto de Supabase. Secreto del servidor. */
   serviceKey: string;
-  /** Página de la web a la que vuelve el enlace de invitación (donde el usuario pone su contraseña). */
+  /** Web a la que lleva el enlace de invitación: `${redirectUrl}verify?token=…&type=invite` (página /verify de la web). */
   redirectUrl?: string;
   /** true cuando Auth tenga SMTP configurado: Auth envía el correo y la API no devuelve el enlace. */
   sendsEmail: boolean;
@@ -74,14 +74,27 @@ export class AuthAdmin {
       ...(redirect ? { redirect_to: redirect } : {}),
     });
     if (!res.ok) return this.fail(res, 'generar invitación');
-    const body = (await res.json()) as { id?: string; user?: { id: string }; action_link?: string; properties?: { action_link?: string } };
+    const body = (await res.json()) as { id?: string; user?: { id: string }; hashed_token?: string; properties?: { hashed_token?: string } };
     const userId = body.id ?? body.user?.id;
-    const url = body.action_link ?? body.properties?.action_link;
+    const token = body.hashed_token ?? body.properties?.hashed_token;
+    // El action_link apunta al host de Auth (en el NAS, https://api.<dominio>/verify), no a la web: el enlace se monta
+    // con el hashed_token sobre la página /verify de la web, que lo canjea con verifyOtp.
+    const url = token ? `${this.webBase()}verify?token=${encodeURIComponent(token)}&type=invite` : undefined;
     if (!userId || !url) {
       console.error('Auth: respuesta de generate_link inesperada', Object.keys(body));
       throw unavailable();
     }
     return { userId, url };
+  }
+
+  /** Web a la que lleva el enlace, acabada en «/». */
+  private webBase(): string {
+    const base = this.config.redirectUrl;
+    if (!base) {
+      console.error('Falta INVITE_REDIRECT_URL: no se puede montar el enlace de invitación');
+      throw unavailable();
+    }
+    return base.endsWith('/') ? base : `${base}/`;
   }
 
   /** Borra el usuario de Auth (su perfil y membresías caen en cascada). Si ya no existe, no hace nada. */

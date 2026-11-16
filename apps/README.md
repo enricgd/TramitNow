@@ -337,7 +337,8 @@ Variables: `STORAGE_URL` (desde la API), `STORAGE_PUBLIC_URL` (como lo ve el nav
 
 **Usuarios.** El alta e invitación usan Supabase Auth con la misma `service_role` (`src/lib/auth-admin.ts`):
 `AUTH_URL` (GoTrue desde la API: `http://127.0.0.1:9999` en local, `http://auth:9999` en el NAS),
-`INVITE_REDIRECT_URL` (página de la web a la que lleva el enlace) y `AUTH_SENDS_INVITES` (`true` cuando Auth tenga
+`INVITE_REDIRECT_URL` (la web, acabada en `/`: el enlace es `<INVITE_REDIRECT_URL>verify?token=<hashed_token>&type=invite`,
+que canjea la página `/verify` de la web) y `AUTH_SENDS_INVITES` (`true` cuando Auth tenga
 SMTP: lo envía Auth y la API devuelve `inviteUrl: null`). Sin `AUTH_URL`, esas rutas responden 503.
 
 Pendiente: edición de roles y borrado de sociedades y sucursales.

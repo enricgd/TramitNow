@@ -156,7 +156,7 @@ describe('usuarios', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.existingUser).toBe(false);
-    expect(res.body.inviteUrl).toContain('type=invite');
+    expect(res.body.inviteUrl).toMatch(/^http:\/\/localhost:5173\/verify\?token=[0-9a-f]+&type=invite$/);
     expect(res.body.membership).toMatchObject({
       email: invited,
       fullName: 'Persona Invitada',
@@ -173,7 +173,7 @@ describe('usuarios', () => {
 
     const resent = await call('POST', `/v1/memberships/${id}/resend-invitation`, { token: admin });
     expect(resent.status).toBe(200);
-    expect(resent.body.inviteUrl).toContain('type=invite');
+    expect(resent.body.inviteUrl).toMatch(/^http:\/\/localhost:5173\/verify\?token=[0-9a-f]+&type=invite$/);
 
     const edited = await call('PATCH', `/v1/memberships/${id}`, {
       token: admin,
