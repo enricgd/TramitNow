@@ -1006,7 +1006,11 @@ begin
     when v_action = 'restore' then 'Restauración de ' || private.activity_label(v_entity_type)
     when tg_op = 'DELETE' then 'Eliminación definitiva de ' || private.activity_label(v_entity_type)
     else 'Eliminación de ' || private.activity_label(v_entity_type)
-  end || case when v_entity_type = 'quote_version' then '' else coalesce(' «' || v_label || '»', '') end;
+  end || case
+    when v_entity_type = 'quote_version' then ''
+    when v_entity_type = 'quote' and v_action = 'update' and v_changes ? 'obsolete_reason' then ''
+    else coalesce(' «' || v_label || '»', '')
+  end;
 
   insert into public.activity_log (tenant_id, entity_type, entity_id, parent_type, parent_id, action, actor_user_id, summary, changes)
   values (

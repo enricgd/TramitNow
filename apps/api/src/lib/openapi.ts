@@ -22,8 +22,8 @@ const errorDescriptions = {
   401: 'Sin token o token no válido o caducado (`no_autenticado`)',
   403: 'Sin permiso, sin ETT activa o usuario bloqueado (`sin_permiso`, `sin_ett_activa`, `usuario_bloqueado`)',
   404: 'No existe o es de otra ETT (`no_encontrado`)',
-  409: 'Duplicado (`conflicto`)',
-  422: 'Referencia a un registro que no existe en la ETT (`referencia_invalida`) o regla no cumplida (`validacion`)',
+  409: 'Duplicado o estado que no lo permite (`conflicto`); presupuestos: margen bajo el mínimo sin aprobar (`requiere_aprobacion`)',
+  422: 'Referencia a un registro que no existe en la ETT (`referencia_invalida`) o regla no cumplida (`validacion`); presupuestos: salario por debajo del convenio (`salario_bajo_convenio`)',
   503: 'El almacén de documentos no responde o no está configurado (`servicio_no_disponible`)',
 } as const;
 

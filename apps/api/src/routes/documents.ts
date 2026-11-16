@@ -33,7 +33,7 @@ import { DOWNLOAD_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS, requireStorage } from
 export const ALLOWED_MIME_TYPES = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' } as const;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-const EntityType = z.enum(['client', 'client_center']).openapi({ description: 'Ficha del documento' });
+const EntityType = z.enum(['client', 'client_center', 'quote']).openapi({ description: 'Ficha del documento' });
 const DocumentStatus = z
   .enum(['pending', 'validated', 'draft'])
   .openapi({ description: 'pending: pendiente de validar (al subir); validated; draft: borrador' });
