@@ -26,6 +26,9 @@ const agreementFields = {
   validFrom: date,
   validTo: date,
   notes: z.string().max(4000).nullable(),
+  globalAgreementId: z.guid().nullable().openapi({
+    description: 'Convenio del catálogo global (GET /v1/agreements) del que salen sus datos; null: convenio propio. 422 si aún no tiene nada publicado',
+  }),
   status: Status,
 };
 
@@ -39,12 +42,17 @@ export const collectiveAgreements = crudRoutes({
   fields: agreementFields,
   required: ['code', 'name'],
   columns: `id, code, name, official_code, scope, autonomous_community_code, province_code,
-    to_char(valid_from, 'YYYY-MM-DD') as valid_from, to_char(valid_to, 'YYYY-MM-DD') as valid_to, notes, status, created_at, updated_at`,
+    to_char(valid_from, 'YYYY-MM-DD') as valid_from, to_char(valid_to, 'YYYY-MM-DD') as valid_to, notes, global_agreement_id, status, created_at, updated_at`,
   permission: PERMISSION,
   search: ['code', 'name', 'official_code'],
-  filters: { provinceCode: z.string().regex(/^[0-9]{2}$/).optional(), scope: AgreementScope.optional() },
+  filters: {
+    provinceCode: z.string().regex(/^[0-9]{2}$/).optional(),
+    scope: AgreementScope.optional(),
+    globalAgreementId: z.guid().optional(),
+  },
   where: (tx, q) => [
     ...(q.provinceCode ? [tx`province_code = ${q.provinceCode}`] : []),
+    ...(q.globalAgreementId ? [tx`global_agreement_id = ${q.globalAgreementId}`] : []),
     ...(q.scope ? [tx`scope = ${q.scope}`] : []),
   ],
 });

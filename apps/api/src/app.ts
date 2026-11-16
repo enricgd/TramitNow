@@ -13,6 +13,7 @@ import type { Sql } from './lib/db.js';
 import { Storage } from './lib/storage.js';
 import { ApiError, errorBody, handleError } from './lib/errors.js';
 import { activity } from './routes/activity.js';
+import { agreements } from './routes/agreements.js';
 import { addresses } from './routes/addresses.js';
 import { branches } from './routes/branches.js';
 import { catalogItems, catalogTypes } from './routes/catalog-items.js';
@@ -89,6 +90,7 @@ export function createApp(options: {
   app.route('/v1', clientContacts);
   app.route('/v1', documents);
   app.route('/v1', activity);
+  app.route('/v1', agreements);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
     type: 'http',
