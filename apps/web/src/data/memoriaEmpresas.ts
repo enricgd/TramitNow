@@ -2,6 +2,9 @@
 // CNAE, con los datos de ejemplo que tenía EmpresasView.jsx (design/empresas.html). Se comportan como la API:
 // baja lógica recuperable, 409 `en_uso` para lo ya usado, 409 `conservacion_obligatoria` para los documentos
 // que hay que conservar, y cada cambio deja su rastro en el historial. Todo es ficticio.
+//
+// El nivel superior de este fichero no tiene efectos (nada de push, contadores ni llamadas que cambien
+// estado): así la compilación del NAS, que no usa el modo demo, lo descarta entero.
 import { checkUniqueCode, delay, find, id, matches, newId, page, stamp, touch } from './memoriaBase';
 import type { Repositories } from './repositorios';
 import {
@@ -21,13 +24,12 @@ import {
 } from './tipos';
 
 const DEMO_USER = { id: id(250), name: 'Usuario Demo' };
-const hace = (dias: number, hora = '10:00') => `${new Date(Date.now() - dias * 86_400_000).toISOString().slice(0, 10)}T${hora}:00.000Z`;
 
 // ---------------------------------------------------------------------------
 // Catálogos: CNAE (una muestra; el completo está en la base de datos) y tablas maestras de la ETT
 // ---------------------------------------------------------------------------
 
-const cnae: Cnae[] = [
+const secciones: Cnae[] = [
   ['A', 'Agricultura, ganadería, silvicultura y pesca'],
   ['C', 'Industria manufacturera'],
   ['F', 'Construcción'],
@@ -37,8 +39,8 @@ const cnae: Cnae[] = [
   ['N', 'Actividades administrativas y servicios auxiliares'],
   ['Q', 'Actividades sanitarias y de servicios sociales'],
 ].map(([code, name]) => ({ code, name, level: 'section' as const, parentCode: null }));
-cnae.push(
-  ...[
+const cnae: Cnae[] = secciones.concat(
+  [
     ['01', 'A', 'Agricultura, ganadería, caza y servicios relacionados con las mismas'],
     ['10', 'C', 'Industria de la alimentación'],
     ['25', 'C', 'Fabricación de productos metálicos, excepto maquinaria y equipo'],
@@ -56,23 +58,22 @@ cnae.push(
   ].map(([code, parentCode, name]) => ({ code, name, level: 'division' as const, parentCode })),
 );
 
-let itemN = 300;
-const item = (type: CatalogItemType, name: string, retentionRequired = false): CatalogItem => ({
-  id: id(itemN++), type, code: null, name, parentId: null, metadata: null, status: 'active', retentionRequired, ...stamp,
+const item = (n: number, type: CatalogItemType, name: string, retentionRequired = false): CatalogItem => ({
+  id: id(n), type, code: null, name, parentId: null, metadata: null, status: 'active', retentionRequired, ...stamp,
 });
 // Los valores de ejemplo de las notas del diseño (formas de pago, IVA y tipos de documento, por confirmar).
 const catalogItems: CatalogItem[] = [
   ...['Transferencia a 30 días', 'Transferencia a 60 días', 'Recibo SEPA a 30 días', 'Recibo SEPA a 60 días', 'Confirming a 90 días', 'Al contado'].map(
-    (n) => item('payment_method', n),
+    (n, i) => item(300 + i, 'payment_method', n),
   ),
-  ...['Régimen general 21 %', 'Reducido 10 %', 'Exento', 'Inversión del sujeto pasivo', 'Recargo de equivalencia', 'IGIC (Canarias)'].map((n) =>
-    item('vat_regime', n),
+  ...['Régimen general 21 %', 'Reducido 10 %', 'Exento', 'Inversión del sujeto pasivo', 'Recargo de equivalencia', 'IGIC (Canarias)'].map((n, i) =>
+    item(310 + i, 'vat_regime', n),
   ),
   ...['Acuerdo de confidencialidad', 'CIF', 'Certificado de Hacienda', 'Certificado de la Seguridad Social', 'Escrituras', 'Mandato SEPA', 'Póliza de seguro'].map(
-    (n) => item('document_type', n),
+    (n, i) => item(320 + i, 'document_type', n),
   ),
   // Los contratos se conservan: no se pueden eliminar.
-  item('document_type', 'Contrato', true),
+  item(329, 'document_type', 'Contrato', true),
 ];
 const catalogId = (type: CatalogItemType, name: string) => catalogItems.find((i) => i.type === type && i.name === name)!.id;
 
@@ -110,25 +111,25 @@ const clients: Client[] = [
   client(100, {
     code: 'CLI-001', legalName: 'Trans-Logística Ibérica Norte, S.L.', tradeName: 'TransLog Norte', taxId: 'B00000101', branchId: NORTE,
     email: 'contacto@translog-norte.example', phone: '+34 944 000 101', addressId: id(52), sectorCode: '52', defaultAgreementId: id(62),
-    startDate: '2026-03-15', createdAt: '2026-03-15T09:00:00.000Z', updatedAt: hace(0, '08:30'),
+    startDate: '2026-03-15', createdAt: '2026-03-15T09:00:00.000Z', updatedAt: '2026-11-15T08:30:00.000Z',
     observations: 'Cliente con alta demanda en picos de campaña Black Friday y verano. Exige perfiles carretilleros con carnet vigente.',
   }),
   client(101, {
     code: 'CLI-002', legalName: 'Manufacturas Metálicas del Henares, S.A.', tradeName: 'MetalHenares', taxId: 'A00000102', taxIdType: 'nif',
     branchId: NORTE, ownerUserId: ELENA, email: 'info@metalhenares.example', phone: '+34 918 000 102', addressId: id(53), sectorCode: '25',
-    defaultAgreementId: id(63), startDate: '2026-01-20', createdAt: '2026-01-20T09:00:00.000Z', updatedAt: hace(1),
+    defaultAgreementId: id(63), startDate: '2026-01-20', createdAt: '2026-01-20T09:00:00.000Z', updatedAt: '2026-11-14T10:00:00.000Z',
     observations: 'Cliente consolidado. 4 centros activos y facturación mensual agrupada.',
   }),
   client(102, {
     code: 'CLI-003', legalName: 'Mediterránea Agrícola y Envasado, S.L.', tradeName: 'AgroMediterráneo', taxId: 'B00000103', branchId: BARCELONA,
     status: 'prospect', email: 'info@agromediterranea.example', phone: '+34 968 000 103', addressId: id(54), sectorCode: '01',
-    createdAt: '2026-04-05T09:00:00.000Z', updatedAt: hace(3),
+    createdAt: '2026-04-05T09:00:00.000Z', updatedAt: '2026-11-12T10:00:00.000Z',
     observations: 'Lead entrante feria Fruit Attraction. Pendiente validar contacto de contratación.',
   }),
   client(103, {
     code: 'CLI-004', legalName: 'Hostelería & Eventos Premium BCN, S.L.', tradeName: 'Premium Events BCN', taxId: 'B00000104', branchId: BARCELONA,
     ownerUserId: LAURA, email: 'rrhh@premiumeventsbcn.example', phone: '+34 932 000 104', addressId: id(55), sectorCode: '56',
-    defaultAgreementId: id(60), startDate: '2026-02-14', createdAt: '2026-02-14T09:00:00.000Z', updatedAt: hace(5),
+    defaultAgreementId: id(60), startDate: '2026-02-14', createdAt: '2026-02-14T09:00:00.000Z', updatedAt: '2026-11-10T10:00:00.000Z',
     observations: 'Requieren camareros con idiomas y protocolo para hoteles 5* GL.',
   }),
 ];
@@ -246,17 +247,23 @@ const portalAccess: Record<string, ContactPortalAccess> = {
 // Historial: como en la API, cada cambio deja una entrada con quién, cuándo y qué.
 // ---------------------------------------------------------------------------
 
-let activityN = 1;
-const activity: ActivityEntry[] = [];
-function log(entityType: ActivityEntityType, entityId: string, parent: string | null, action: ActivityEntry['action'], summary: string, occurredAt = new Date().toISOString(), actorName = DEMO_USER.name) {
-  activity.unshift({
-    id: String(activityN++), entityType, entityId, parentType: parent ? 'client' : null, parentId: parent, action,
-    actorUserId: actorName === DEMO_USER.name ? DEMO_USER.id : null, actorName, occurredAt, summary, changes: null,
-  });
+const entrada = (
+  n: number, entityType: ActivityEntityType, entityId: string, parent: string | null, action: ActivityEntry['action'], summary: string,
+  occurredAt: string, actorName: string,
+): ActivityEntry => ({
+  id: String(n), entityType, entityId, parentType: parent ? 'client' : null, parentId: parent, action,
+  actorUserId: actorName === DEMO_USER.name ? DEMO_USER.id : null, actorName, occurredAt, summary, changes: null,
+});
+// Lo último, primero (como la API).
+const activity: ActivityEntry[] = [
+  entrada(3, 'client', id(100), null, 'update', 'Presupuesto PRE-2026-0048 generado en borrador', '2026-04-12T11:30:00.000Z', 'Carlos Mendoza'),
+  entrada(2, 'client_contact', id(120), id(100), 'update', 'Contacto añadido y validado como destinatario de presupuestos', '2026-04-10T16:45:00.000Z', 'Carlos Mendoza'),
+  entrada(1, 'client', id(100), null, 'create', 'Alta rápida completada desde llamada comercial inicial', '2026-04-09T10:15:00.000Z', 'Carlos Mendoza'),
+];
+let activityN = 100;
+function log(entityType: ActivityEntityType, entityId: string, parent: string | null, action: ActivityEntry['action'], summary: string) {
+  activity.unshift(entrada(activityN++, entityType, entityId, parent, action, summary, new Date().toISOString(), DEMO_USER.name));
 }
-log('client', id(100), null, 'create', 'Alta rápida completada desde llamada comercial inicial', '2026-04-09T10:15:00.000Z', 'Carlos Mendoza');
-log('client_contact', id(120), id(100), 'update', 'Contacto añadido y validado como destinatario de presupuestos', '2026-04-10T16:45:00.000Z', 'Carlos Mendoza');
-log('client', id(100), null, 'update', 'Presupuesto PRE-2026-0048 generado en borrador', '2026-04-12T11:30:00.000Z', 'Carlos Mendoza');
 
 // ---------------------------------------------------------------------------
 // Repositorios
@@ -467,7 +474,7 @@ export function memoryClientRepositories(): Pick<
         if (catalogItems.some((i) => i.type === data.type && i.name.toLowerCase() === name.toLowerCase())) {
           throw new ApiError(409, 'conflicto', `Ya existe «${name}»`);
         }
-        const created: CatalogItem = { ...item(data.type, name), id: newId(), code: data.code ?? null };
+        const created: CatalogItem = { ...item(0, data.type, name), id: newId(), code: data.code ?? null };
         catalogItems.push(created);
         return delay(created);
       },

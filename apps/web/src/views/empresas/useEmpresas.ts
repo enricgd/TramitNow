@@ -86,6 +86,8 @@ export type FacturacionVista = {
   /** false si la API aún no tiene el régimen de IVA del cliente. */
   vatRegimeDisponible: boolean;
   facturaDetalle: 'concepto' | 'persona';
+  /** false si la API aún no tiene invoiceLayout (fase 2). */
+  facturaDetalleDisponible: boolean;
   tieneIban: boolean;
   riskLimit: string;
   isComplete: boolean;
@@ -146,6 +148,7 @@ export type EliminadoVista = { id: string; nombre: string; detalle: string; fech
 export type TipoElemento = 'empresa' | 'contacto' | 'centro' | 'documento';
 
 const POR_PAGINA = 20;
+const eliminado = (x: { deletedAt?: string | null }) => !!x.deletedAt;
 
 const ESTADOS: Record<Client['status'], [string, EmpresaVista['statusTone']]> = {
   prospect: ['Borrador · en captación', 'warning'],
@@ -326,6 +329,7 @@ function facturacionVista(b: ClientBilling | null, cat: Catalogos): FacturacionV
     vatRegime: nombre('vat_regime', b?.vatRegimeId),
     vatRegimeDisponible: !b || 'vatRegimeId' in b,
     facturaDetalle: DISENO_FACTURA[b?.invoiceLayout ?? 'by_concept'] ?? 'concepto',
+    facturaDetalleDisponible: !b || 'invoiceLayout' in b,
     tieneIban: !!b?.iban,
     riskLimit: b?.riskLimit ? euros(b.riskLimit) : '',
     isComplete: !!b?.paymentMethodId && !!b.iban,
@@ -442,6 +446,19 @@ async function cargarFila(r: Repositories, c: Client, ctx: Contexto): Promise<Em
 // Hook
 // ---------------------------------------------------------------------------
 
+/**
+ * Campos nuevos de la fase 2 (contrato con el backend). Mientras la API no los tenga, rechaza el cuerpo entero
+ * («Llaves desconocidas»): se envían solo si tienen valor o si el registro ya los trae.
+ */
+const CAMPOS_FASE_2 = ['sectorCode', 'defaultAgreementId', 'validatesHours', 'otherRole', 'suspended'] as const;
+function sinCamposNuevosVacios<T extends object>(datos: T, registro?: object): T {
+  const copia = { ...datos } as Record<string, unknown>;
+  for (const campo of CAMPOS_FASE_2) {
+    if (campo in copia && !copia[campo] && !(registro && campo in registro)) delete copia[campo];
+  }
+  return copia as T;
+}
+
 type Filtros = {
   busqueda: string;
   eliminadas: boolean;
@@ -528,7 +545,8 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
         limit: POR_PAGINA,
         offset: pagina * POR_PAGINA,
       });
-      return { total: p.pagination.total, empresas: await Promise.all(p.data.map((c) => cargarFila(r, c, ctx))) };
+      const filas = eliminadas ? p.data.filter(eliminado) : p.data;
+      return { total: eliminadas ? filas.length + p.pagination.offset : p.pagination.total, empresas: await Promise.all(filas.map((c) => cargarFila(r, c, ctx))) };
     },
     [listo, busqueda, sucursal, eliminadas, pagina, ctx],
   );
@@ -599,7 +617,7 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
     if (esEdicion && ficha) {
       const addressId = await guardarDireccion(ficha.address, dir);
       try {
-        await repos.clients.update(ficha.client.id, { ...datos, addressId });
+        await repos.clients.update(ficha.client.id, sinCamposNuevosVacios({ ...datos, addressId }, ficha.client));
       } catch (e) {
         await quitarDireccionNueva(addressId, ficha.client.addressId);
         throw e;
@@ -614,7 +632,7 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
       for (let intento = 0; ; intento++) {
         try {
           const creada = await repos.clients.create({
-            ...datos,
+            ...sinCamposNuevosVacios(datos),
             companyId: b.companyId,
             branchId: b.id,
             code: await siguienteCodigo(intento),
@@ -661,8 +679,9 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
     const anterior = d.isMain ? ficha.contactos.find((c) => c.isMain && c.id !== d.id) : undefined;
     if (anterior) await repos.clientContacts.update(anterior.id, { isMain: false });
     try {
-      if (d.id) await repos.clientContacts.update(d.id, datos);
-      else await repos.clientContacts.create({ ...datos, clientId: ficha.client.id });
+      const actual = ficha.contactos.find((c) => c.id === d.id);
+      if (d.id) await repos.clientContacts.update(d.id, sinCamposNuevosVacios(datos, actual));
+      else await repos.clientContacts.create({ ...sinCamposNuevosVacios(datos, ficha.contactos[0]), clientId: ficha.client.id });
     } catch (e) {
       if (anterior) await repos.clientContacts.update(anterior.id, { isMain: true }).catch(() => {});
       throw e;
@@ -724,21 +743,24 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
     recargar();
   };
 
-  /** Lo eliminado de la empresa abierta (contactos, centros o documentos). */
+  /**
+   * Lo eliminado de la empresa abierta (contactos, centros o documentos). Solo lo que trae deletedAt: una API
+   * sin bajas recuperables ignora ?deleted=true y devolvería los activos.
+   */
   const eliminados = async (tipo: 'contacto' | 'centro' | 'documento'): Promise<EliminadoVista[]> => {
     if (!ficha) return [];
     const id = ficha.client.id;
     const fecha = (x: { deletedAt?: string | null }) => (x.deletedAt ? `Eliminado el ${fechaCorta(x.deletedAt)}` : '');
     if (tipo === 'contacto') {
       const { data } = await repos.clientContacts.list({ clientId: id, deleted: true, limit: 200 });
-      return data.map((c) => ({ id: c.id, nombre: c.name, detalle: c.position ?? c.email ?? '', fecha: fecha(c) }));
+      return data.filter(eliminado).map((c) => ({ id: c.id, nombre: c.name, detalle: c.position ?? c.email ?? '', fecha: fecha(c) }));
     }
     if (tipo === 'centro') {
       const { data } = await repos.clientCenters.list({ clientId: id, deleted: true, limit: 200 });
-      return data.map((c) => ({ id: c.id, nombre: c.name, detalle: c.code, fecha: fecha(c) }));
+      return data.filter(eliminado).map((c) => ({ id: c.id, nombre: c.name, detalle: c.code, fecha: fecha(c) }));
     }
     const { data } = await repos.documents.list({ entityType: 'client', entityId: id, deleted: true, limit: 200 });
-    return data.map((d) => ({ id: d.id, nombre: d.name, detalle: d.typeName, fecha: fecha(d) }));
+    return data.filter(eliminado).map((d) => ({ id: d.id, nombre: d.name, detalle: d.typeName, fecha: fecha(d) }));
   };
 
   // --- Facturación ------------------------------------------------------------

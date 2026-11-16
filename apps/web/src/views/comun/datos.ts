@@ -5,6 +5,9 @@ import { ApiError, repos, type Address, type AddressInput, type Province, type R
 /** Texto para mostrar de un error de la API, con el detalle de los campos si lo hay. */
 export function mensajeError(e: unknown): string {
   if (e instanceof ApiError) {
+    // Un campo que la pantalla ya usa y la API todavía no tiene (la API rechaza las llaves que no conoce).
+    const desconocidas = e.details?.map((d) => d.message.match(/^Llaves? desconocidas?: (.+)$/)?.[1]).filter(Boolean);
+    if (desconocidas?.length) return `Disponible próximamente: la API aún no admite ${desconocidas.join(', ')}`;
     const campos = e.details?.map((d) => `${d.path}: ${d.message}`).join('; ');
     return campos ? `${e.message} (${campos})` : e.message;
   }
