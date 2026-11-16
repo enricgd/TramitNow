@@ -362,6 +362,8 @@ import { DEMO } from '../modo';
 
       // Revisión, propuesta, aceptar/rechazar, petición y versiones
       const [modalRevision, setModalRevision] = useState(false);
+      // La revisión la hace el servidor (la misma que al enviar); con cambios sin guardar, la de la pantalla.
+      const [revisionServidor, setRevisionServidor] = useState(null);
       const [modalPropuesta, setModalPropuesta] = useState(false);
       const [modalAceptar, setModalAceptar] = useState(null);
       const [modalRechazo, setModalRechazo] = useState(null);
@@ -377,9 +379,10 @@ import { DEMO } from '../modo';
 
       // Rol de usuario (Dirección con costes/márgenes, Comercial con datos sensibles ocultos/limitados)
       const [rolUsuario, setRolUsuario] = useState('direccion'); // 'direccion' | 'comercial'
-      // En real, el rol sale de los permisos: quien puede aprobar el margen (quotes.approve_margin) lo ve como dirección.
+      // En real, el rol sale de los permisos: quien ve costes y margen (quotes.view_costs) lo ve como dirección; aprobar
+      // el margen es quotes.approve_margin.
       const puedeAprobar = DEMO || !!pres.catalogos?.puedeAprobar;
-      useEffect(() => { if (!DEMO && pres.catalogos) setRolUsuario(pres.catalogos.puedeAprobar ? 'direccion' : 'comercial'); }, [pres.catalogos?.puedeAprobar]);
+      useEffect(() => { if (!DEMO && pres.catalogos) setRolUsuario(pres.catalogos.puedeVerCostes ? 'direccion' : 'comercial'); }, [pres.catalogos?.puedeVerCostes]);
 
       // Estado del presupuesto principal
       const [presupuesto, setPresupuesto] = useState(presupuestoVacio);
@@ -402,6 +405,14 @@ import { DEMO } from '../modo';
       const [modalConfirmarEliminarPosicion, setModalConfirmarEliminarPosicion] = useState(null);
       const [modalConfirmarConvenio, setModalConfirmarConvenio] = useState(null);
       const [modalNuevaVersionAbierto, setModalNuevaVersionAbierto] = useState(false);
+
+      useEffect(() => {
+        setRevisionServidor(null);
+        if (!modalRevision || !presupuesto._id || hayCambiosSinGuardar) return;
+        let vigente = true;
+        pres.revisar(presupuesto).then((r) => vigente && setRevisionServidor(r), () => {});
+        return () => { vigente = false; };
+      }, [modalRevision]);
 
       // Parámetros retributivos del puesto: salen de la tabla del convenio (convenio + categoría). Al abrir el panel solo
       // se lee la tabla (etiqueta «Del convenio» y mínimo); al cambiar convenio o categoría, se vuelven a cargar los
@@ -1967,7 +1978,7 @@ return datosActivos.posiciones.map(pos => ({
 
   {/* REVISIÓN ANTES DE ENVIAR */}
   {modalRevision && (() => {
-    const items = revisarPresupuesto(datosActivos);
+    const items = revisionServidor ?? revisarPresupuesto(datosActivos);
     const errores = items.filter(i => !i.ok && i.tipo === 'error');
     const necesitaAprobacion = items.some(i => !i.ok && i.tipo === 'aprobacion');
     const pendiente = datosActivos.aprobacion?.estado === 'pendiente';

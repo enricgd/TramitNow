@@ -741,6 +741,8 @@ export type QuoteVersion = {
   contactId: string | null;
   contactName: string | null;
   contactEmail: string | null;
+  contactPosition: string | null;
+  contactPhone: string | null;
   salesRepId: string | null;
   salesRepName: string | null;
   issueDate: string;
@@ -801,7 +803,16 @@ export type Quote = Pick<
   QuoteSummary,
   | 'id' | 'code' | 'companyId' | 'branchId' | 'clientId' | 'clientName' | 'clientAgreementId' | 'status' | 'versionNumber' | 'createdFromQuoteId'
   | 'createdFromCode' | 'replacedByQuoteId' | 'replacedByCode' | 'obsoleteAt' | 'obsoleteReason' | 'createdAt'
-> & { currentVersion: QuoteVersion; versions: QuoteVersionSummary[] };
+> & { clientTaxId: string | null; clientSectorCode: string | null; currentVersion: QuoteVersion; versions: QuoteVersionSummary[] };
+
+/** Revisión antes de enviar (GET /v1/quote-versions/{id}/review). `path`: el campo para «Corregir». */
+export type QuoteReview = {
+  ready: boolean;
+  needsApproval: boolean;
+  approvalStatus: QuoteApprovalStatus | null;
+  minMarginPercent: number | null;
+  checks: { code: string; path: string; ok: boolean; kind: 'error' | 'approval'; message: string }[];
+};
 export type QuoteCreate = QuoteVersionInput & { clientId?: string | null; branchId?: string | null };
 
 /** Fila del listado. */

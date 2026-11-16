@@ -123,9 +123,10 @@ export function usePresupuestos() {
       /** Margen mínimo que pide aprobación (null: sin mínimo) y días sin respuesta para avisar. */
       margenMinimo: c.ajustes.quoteMinMarginPercent,
       diasRecordatorio: c.ajustes.quoteNoResponseDays,
-      /** Permisos: crear, editar y enviar; aprobar el margen. */
+      /** Permisos: crear, editar y enviar; aprobar el margen; ver costes y margen. */
       puedeEditar: permisos.includes('quotes.manage'),
       puedeAprobar: permisos.includes('quotes.approve_margin'),
+      puedeVerCostes: permisos.includes('quotes.view_costs'),
     };
   }, [c, comerciales, categorias, permisos]);
 
@@ -199,7 +200,17 @@ export function usePresupuestos() {
    */
   const guardar = useCallback(
     async (v: PresupuestoVista, estado: string, original?: PresupuestoVista) => {
-      const cabecera = versionApi(v, { comercial: (n) => comerciales.find((x) => x.nombre === n)?.id ?? null, formaPago: await formaPagoId(v) });
+      const completa = versionApi(v, { comercial: (n) => comerciales.find((x) => x.nombre === n)?.id ?? null, formaPago: await formaPagoId(v) });
+      // Sin quotes.view_costs la API no deja cambiar margen, tipos ni costes internos (403): no se envían.
+      const veCostes = permisos.includes('quotes.view_costs');
+      const { margin: _m, ssRates: _s, costConcepts: _c, ...sinCostes } = completa;
+      const cabecera = veCostes ? completa : sinCostes;
+      const puesto = (p: (typeof v.posiciones)[number]) => {
+        const datos = puestoApi(p, v.conceptosEscandallo);
+        if (veCostes) return datos;
+        const { costs: _costs, margin: _margin, ...resto } = datos;
+        return resto;
+      };
       const status = estadoApi(estado) === 'in_preparation' ? 'in_preparation' : 'draft';
       let quoteId = v._id;
       let versionId = v._versionId;
@@ -210,21 +221,20 @@ export function usePresupuestos() {
       } else if ((v.empresaId || null) !== (v._clientIdGuardado ?? null)) {
         await repos.quotes.update(quoteId, { clientId: v.empresaId || null });
       }
-      const conceptos = v.conceptosEscandallo;
       const antes = new Set((original?._id === v._id ? original.posiciones : []).map((p) => p.id));
       const ahora = new Set(v.posiciones.map((p) => p.id));
       // Primero la cabecera (con los costes internos); después los puestos que se quitan, se cambian y se añaden.
       await repos.quoteVersions.update(versionId, cabecera);
       for (const id of antes) if (!ahora.has(id)) await repos.quoteVersions.removePosition(id);
       for (const p of v.posiciones) {
-        if (!antes.has(p.id)) await repos.quoteVersions.addPosition(versionId, puestoApi(p, conceptos));
-        else if (puestoCambiado(p)) await repos.quoteVersions.updatePosition(p.id, puestoApi(p, conceptos));
+        if (!antes.has(p.id)) await repos.quoteVersions.addPosition(versionId, puesto(p));
+        else if (puestoCambiado(p)) await repos.quoteVersions.updatePosition(p.id, puesto(p));
       }
       await repos.quoteVersions.update(versionId, { status });
       recargarLista();
       return quoteId;
     },
-    [comerciales, formaPagoId, sucursal, recargarLista],
+    [comerciales, formaPagoId, sucursal, recargarLista, permisos],
   );
 
   // ---- Estados ---------------------------------------------------------------
@@ -281,6 +291,17 @@ export function usePresupuestos() {
     },
     [tras, abrir],
   );
+  /** Revisión del servidor antes de enviar, en la forma de la lista de comprobación de la vista. */
+  const revisar = useCallback(async (v: PresupuestoVista) => {
+    const r = await repos.quoteVersions.review(v._versionId);
+    return r.checks.map((c) => ({
+      ok: c.ok,
+      tipo: c.kind === 'error' ? 'error' : 'aprobacion',
+      texto: c.message,
+      pestana: c.path.startsWith('positions') ? 'posiciones' : 'empresa',
+    }));
+  }, []);
+
   const enviar = useCallback((v: PresupuestoVista) => accion(v, (id) => repos.quoteVersions.send(id)), [accion]);
   const pedirAprobacion = useCallback((v: PresupuestoVista, motivo: string) => accion(v, (id) => repos.quoteVersions.requestApproval(id, motivo || null)), [accion]);
   const resolverAprobacion = useCallback(
@@ -423,6 +444,7 @@ export function usePresupuestos() {
     cambiarEstado,
     rechazar,
     anadirMotivoRechazo,
+    revisar,
     enviar,
     pedirAprobacion,
     resolverAprobacion,

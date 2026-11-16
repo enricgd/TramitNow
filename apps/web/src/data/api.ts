@@ -190,6 +190,7 @@ export function apiRepositories(): Repositories {
       requestApproval: (id, notes) => request('POST', `/quote-versions/${id}/request-approval`, { body: { notes: notes ?? undefined } }),
       approve: (id, notes) => request('POST', `/quote-versions/${id}/approve`, { body: { notes: notes ?? undefined } }),
       rejectApproval: (id, notes) => request('POST', `/quote-versions/${id}/reject-approval`, { body: { notes } }),
+      review: (id) => get(`/quote-versions/${id}/review`),
       send: (id) => request('POST', `/quote-versions/${id}/send`),
       pendingSignature: (id) => request('POST', `/quote-versions/${id}/pending-signature`),
       accept: (id) => request('POST', `/quote-versions/${id}/accept`),

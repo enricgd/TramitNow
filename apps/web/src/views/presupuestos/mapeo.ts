@@ -62,6 +62,8 @@ const INDEMNIZACION = 'indemnizacion';
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
 export function conceptosVista(v: Pick<QuoteVersion, 'ssRates' | 'costConcepts'>): ConceptoVista[] {
+  // Sin quotes.view_costs la API no da los tipos ni los costes internos: no hay escandallo que enseñar.
+  if (!v.ssRates) return [];
   const t = v.ssRates;
   return [
     {
@@ -241,7 +243,8 @@ function calcularLocal(pos: PuestoVista, conceptos: ConceptoVista[], margen: Mar
 /** La «economía» de un puesto en la forma que pinta la vista (la de su antigua función de cálculo). */
 export function economiaPuesto(pos: PuestoVista, conceptos: ConceptoVista[], margen: Margen) {
   const guardado = delServidor.get(pos);
-  const r = guardado && guardado.conceptos === conceptos ? guardado.calculo : calcularLocal(pos, conceptos, margen);
+  // Sin quotes.view_costs la API deja a null costes y margen: entonces se calcula aquí (la vista de comercial no los enseña).
+  const r = guardado && guardado.conceptos === conceptos && guardado.calculo.costHour != null ? guardado.calculo : calcularLocal(pos, conceptos, margen);
   const propios = new Set(Object.entries(pos.conceptos ?? {}).filter(([, a]) => num(a.porcentaje) !== null || num(a.importe) !== null || num(a.valor) !== null).map(([k]) => k));
   const objetivoPct = r.targetMargin.mode === 'percent' ? r.targetMargin.value : r.suggestedRate > 0 ? (r.targetMargin.value / r.suggestedRate) * 100 : 0;
   const extras = (pos.extras ?? []).map((x, i) => ({ ...x, salarioHora: r.extras[i]?.salaryHour ?? 0, tarifaHora: r.extras[i]?.rateHour ?? 0, recargoEquivalente: r.extras[i]?.surchargePercent ?? 0 }));
@@ -260,7 +263,7 @@ export function economiaPuesto(pos: PuestoVista, conceptos: ConceptoVista[], mar
     costeJornada: r.costHour * horasDia,
     desgloseConceptos: r.breakdown
       .filter((l) => l.kind !== 'salary' && l.kind !== 'margin')
-      .map((l) => ({ id: l.code, nombre: l.name, importeHora: l.perHour, esLegal: l.kind !== 'internal_cost', propio: l.kind === 'internal_cost' && propios.has(l.code) })),
+      .map((l) => ({ id: l.code, nombre: l.name, importeHora: l.perHour, esLegal: l.legal || l.kind === 'vacation', propio: l.custom || (l.kind === 'internal_cost' && propios.has(l.code)) })),
     tarifaPVP: r.rateHour,
     tarifaEsSugerida: r.rateIsSuggested,
     horasDia,
@@ -313,14 +316,14 @@ export function presupuestoVista(q: Quote, v: QuoteVersion, r: Resolver) {
     titulo: v.title ?? '',
     empresaId: q.clientId ?? '',
     cliente: q.clientName ?? '',
-    cif: e?.cif ?? '',
+    cif: q.clientTaxId ?? e?.cif ?? '',
     sector: e?.sector ?? '',
     ciudad: e?.ciudad ?? '',
     convenioEmpresa: e?.convenio ?? '',
     contactoId: v.contactId ?? '',
-    contacto: c ? `${c.nombre}${c.cargo ? ` (${c.cargo})` : ''}` : (v.contactName ?? ''),
+    contacto: v.contactName ? `${v.contactName}${v.contactPosition ? ` (${v.contactPosition})` : ''}` : c ? `${c.nombre}${c.cargo ? ` (${c.cargo})` : ''}` : '',
     emailContacto: v.contactEmail ?? c?.email ?? '',
-    telefonoContacto: c?.telefono ?? '',
+    telefonoContacto: v.contactPhone ?? c?.telefono ?? '',
     comercial: v.salesRepName ?? r.comercial(v.salesRepId),
     estado: ESTADOS[v.status],
     esEditableDirecto: v.editable,
@@ -339,6 +342,8 @@ export function presupuestoVista(q: Quote, v: QuoteVersion, r: Resolver) {
     garantiaSustitucionCustom,
     observacionesComerciales: v.commercialNotes ?? '',
     condiciones: v.conditions ?? '',
+    /** Sin quotes.view_costs no se envían (la API no deja cambiarlos). */
+    _veCostes: !!v.ssRates,
     margenObjetivo: v.margin.mode === 'percent' ? v.margin.value : 18,
     margenTipo: v.margin.mode === 'per_hour' ? 'importe' : 'porcentaje',
     margenImporte: v.margin.mode === 'per_hour' ? v.margin.value : '',
@@ -403,7 +408,7 @@ export const filaVista = (q: QuoteSummary) => ({
   estado: ESTADOS[q.status],
   puestosCount: q.positionsCount,
   tarifaMedia: q.averageRate,
-  margenPct: q.marginPercent,
+  margenPct: q.marginPercent ?? 0,
   fechaValidez: q.validUntil ?? '',
   esEditableDirecto: editable(q.status),
   diasSinRespuesta: q.daysWithoutResponse ?? undefined,

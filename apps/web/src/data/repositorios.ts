@@ -71,6 +71,7 @@ import type {
   QuoteCreate,
   QuotePositionInput,
   QuoteQuery,
+  QuoteReview,
   QuoteSummary,
   QuoteVersion,
   QuoteVersionInput,
@@ -291,6 +292,8 @@ export interface Repositories {
     approve(id: string, notes?: string | null): Promise<QuoteVersion>;
     /** «Pedir cambios». */
     rejectApproval(id: string, notes: string): Promise<QuoteVersion>;
+    /** Comprobaciones antes de enviar (las mismas que hace `send`). */
+    review(id: string): Promise<QuoteReview>;
     /** 422 `validacion` (con lo que falta en `details`), 409 `requiere_aprobacion` o 422 `salario_bajo_convenio`. */
     send(id: string): Promise<QuoteVersion>;
     pendingSignature(id: string): Promise<QuoteVersion>;

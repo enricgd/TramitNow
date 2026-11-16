@@ -13,6 +13,7 @@ import {
   type QuoteExtra,
   type QuotePosition,
   type QuotePositionInput,
+  type QuoteReview,
   type QuoteStatus,
   type QuoteSummary,
   type QuoteVersion,
@@ -52,22 +53,22 @@ const TABLAS: Record<string, Tabla> = {
 const minimoHora = (t: Tabla) => Math.round(((t.base + t.bonus * 12) / t.hours) * 10000) / 10000;
 
 /** Datos de cada empresa de ejemplo (memoriaEmpresas.ts) que el presupuesto necesita. */
-type Empresa = { name: string; branchId: string; cnae: string; agreement: string | null; contact: { id: string; name: string; email: string } | null };
+type Empresa = { name: string; taxId: string; branchId: string; cnae: string; agreement: string | null; contact: { id: string; name: string; email: string } | null };
 const EMPRESAS: Record<string, Empresa> = {
-  [id(100)]: { name: 'Trans-Logística Ibérica Norte, S.L.', branchId: NORTE, cnae: '52', agreement: LOG48, contact: { id: id(120), name: 'Marta Gómez Arana', email: 'marta.gomez@translog-norte.example' } },
-  [id(101)]: { name: 'Manufacturas Metálicas del Henares, S.A.', branchId: NORTE, cnae: '25', agreement: METAL, contact: { id: id(122), name: 'Alfonso Serrano', email: 'aserrano@metalhenares.example' } },
-  [id(102)]: { name: 'Mediterránea Agrícola y Envasado, S.L.', branchId: BARCELONA, cnae: '10', agreement: null, contact: null },
-  [id(103)]: { name: 'Hostelería & Eventos Premium BCN, S.L.', branchId: BARCELONA, cnae: '56', agreement: HOST, contact: { id: id(123), name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.example' } },
+  [id(100)]: { name: 'Trans-Logística Ibérica Norte, S.L.', taxId: 'B00000101', branchId: NORTE, cnae: '52', agreement: LOG48, contact: { id: id(120), name: 'Marta Gómez Arana', email: 'marta.gomez@translog-norte.example' } },
+  [id(101)]: { name: 'Manufacturas Metálicas del Henares, S.A.', taxId: 'A00000102', branchId: NORTE, cnae: '25', agreement: METAL, contact: { id: id(122), name: 'Alfonso Serrano', email: 'aserrano@metalhenares.example' } },
+  [id(102)]: { name: 'Mediterránea Agrícola y Envasado, S.L.', taxId: 'B00000103', branchId: BARCELONA, cnae: '10', agreement: null, contact: null },
+  [id(103)]: { name: 'Hostelería & Eventos Premium BCN, S.L.', taxId: 'B00000104', branchId: BARCELONA, cnae: '56', agreement: HOST, contact: { id: id(123), name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.example' } },
 };
 /** Contactos de ejemplo (memoriaEmpresas.ts), para el destinatario de la versión. */
-const CONTACTOS: Record<string, { name: string; email: string }> = Object.fromEntries(
+const CONTACTOS: Record<string, { name: string; email: string; position: string; phone: string }> = Object.fromEntries(
   [
-    [id(120), 'Marta Gómez Arana', 'marta.gomez@translog-norte.example'],
-    [id(121), 'Javier Ugarte Elorza', 'j.ugarte@translog-norte.example'],
-    [id(122), 'Alfonso Serrano', 'aserrano@metalhenares.example'],
-    [id(123), 'Sergi Pujol', 'spujol@premiumeventsbcn.example'],
-    [id(124), 'Montse Ferrer', 'mferrer@premiumeventsbcn.example'],
-  ].map(([k, name, email]) => [k, { name, email }]),
+    [id(120), 'Marta Gómez Arana', 'marta.gomez@translog-norte.example', 'Responsable de RRHH y Selección', '+34 600 000 120'],
+    [id(121), 'Javier Ugarte Elorza', 'j.ugarte@translog-norte.example', 'Jefe de Planta / Operaciones', '+34 600 000 121'],
+    [id(122), 'Alfonso Serrano', 'aserrano@metalhenares.example', 'Dir. Financiero', '+34 600 000 122'],
+    [id(123), 'Sergi Pujol', 'spujol@premiumeventsbcn.example', 'Coordinador de Eventos', '+34 600 000 123'],
+    [id(124), 'Montse Ferrer', 'mferrer@premiumeventsbcn.example', 'Jefa de sala', '+34 600 000 124'],
+  ].map(([k, name, email, position, phone]) => [k, { name, email, position, phone }]),
 );
 const FORMAS_PAGO: Record<string, string> = Object.fromEntries(
   ['Transferencia a 30 días', 'Transferencia a 60 días', 'Recibo SEPA a 30 días', 'Recibo SEPA a 60 días', 'Confirming a 90 días', 'Al contado'].map((n, i) => [id(300 + i), n]),
@@ -181,7 +182,10 @@ function semillas(): Semilla[] {
 // Estado en memoria (se crea al primer uso)
 // ---------------------------------------------------------------------------
 
-type Cabecera = Omit<Quote, 'currentVersion' | 'versions' | 'status' | 'versionNumber' | 'createdFromCode' | 'replacedByCode' | 'clientAgreementId'> & { updatedAt: string };
+type Cabecera = Omit<
+  Quote,
+  'currentVersion' | 'versions' | 'status' | 'versionNumber' | 'createdFromCode' | 'replacedByCode' | 'clientAgreementId' | 'clientTaxId' | 'clientSectorCode'
+> & { updatedAt: string };
 let estado: { cabeceras: Cabecera[]; versiones: QuoteVersion[]; siguiente: number } | undefined;
 let ajustesDe: () => Promise<TenantSettings> = async () => ({ quoteMinMarginPercent: null, quoteNoResponseDays: 15 });
 
@@ -193,7 +197,7 @@ const copia = <T>(x: T): T => structuredClone(x);
 function versionNueva(quoteId: string, n: number, datosVersion: Partial<QuoteVersion>, clientId: string | null): QuoteVersion {
   return {
     id: newId(), quoteId, versionNumber: n, status: 'draft', editable: true, title: null, contactId: clientId ? (EMPRESAS[clientId]?.contact?.id ?? null) : null,
-    contactName: null, contactEmail: null, salesRepId: null, salesRepName: null, issueDate: hoyISO(), validUntil: enDias(30), expectedStartDate: null, durationMonths: null, modality: null, paymentMethodId: null, paymentMethodName: null,
+    contactName: null, contactEmail: null, contactPosition: null, contactPhone: null, salesRepId: null, salesRepName: null, issueDate: hoyISO(), validUntil: enDias(30), expectedStartDate: null, durationMonths: null, modality: null, paymentMethodId: null, paymentMethodName: null,
     vatRate: 21, currency: 'EUR', replacementGuarantee: null, commercialNotes: null, conditions: null, margin: { mode: 'percent', value: 18 },
     ssRates: { ...DEFAULT_SS_RATES, atEp: atEpForCnae(clientId ? EMPRESAS[clientId]?.cnae : null) }, costConcepts: costes(), defaultExtras: extras(),
     approvalStatus: null, approvalNotes: null, approvalRequestedAt: null, approvalDecidedAt: null, approvalRequestedByName: null, approvalDecidedByName: null,
@@ -270,6 +274,8 @@ function calculada(v: QuoteVersion, minimo: number | null): QuoteVersion {
     editable: EDITABLES.includes(v.status),
     contactName: contacto?.name ?? null,
     contactEmail: contacto?.email ?? null,
+    contactPosition: contacto?.position ?? null,
+    contactPhone: contacto?.phone ?? null,
     paymentMethodName: v.paymentMethodId ? (FORMAS_PAGO[v.paymentMethodId] ?? null) : null,
     minMarginPercent: minimo,
     positions: v.positions.map((p, i) => ({ ...copia(p), calculation: r.positions[i] })),
@@ -288,6 +294,8 @@ async function completo(quoteId: string): Promise<Quote> {
   return {
     ...cab,
     clientAgreementId: c.clientId ? (EMPRESAS[c.clientId]?.agreement ?? null) : null,
+    clientTaxId: c.clientId ? (EMPRESAS[c.clientId]?.taxId ?? null) : null,
+    clientSectorCode: c.clientId ? (EMPRESAS[c.clientId]?.cnae ?? null) : null,
     status: vs[0].status,
     versionNumber: vs[0].versionNumber,
     createdFromCode: codigo(c.createdFromQuoteId),
@@ -306,7 +314,7 @@ async function resumen(q: Quote): Promise<QuoteSummary> {
   const t = v.totals!;
   const esperando = v.sentAt && (v.status === 'sent' || v.status === 'pending_signature');
   const dias = esperando ? Math.floor((Date.now() - new Date(v.sentAt!).getTime()) / 86_400_000) : null;
-  const { currentVersion: _v, versions: _vs, ...cab } = q;
+  const { currentVersion: _v, versions: _vs, clientTaxId: _t, clientSectorCode: _s, ...cab } = q;
   return {
     ...cab, title: v.title, salesRepId: v.salesRepId, salesRepName: v.salesRepName, issueDate: v.issueDate, validUntil: v.validUntil,
     positionsCount: v.positions.length, people: t.people, hours: t.hours, revenue: t.revenue, averageRate: t.averageRate, marginPercent: t.marginPercent,
@@ -325,6 +333,38 @@ function tocar(v: QuoteVersion, cambios: Partial<QuoteVersion>, texto: string) {
   log('quote', v.quoteId, null, 'update', texto);
 }
 const conCalculo = async (v: QuoteVersion) => delay(calculada(v, await minimo()));
+
+/** Las comprobaciones antes de enviar, como GET /v1/quote-versions/{id}/review. */
+async function revision(v: QuoteVersion): Promise<QuoteReview> {
+  const c = cabecera(v.quoteId);
+  const m = await minimo();
+  const r = calculada(v, m);
+  const con = (issue: string) => r.positions.map((p, i) => [p, i] as const).filter(([p]) => p.calculation!.issues.includes(issue as never));
+  const bajoConvenio = con('salary_below_agreement');
+  const bajoCoste = con('rate_below_cost');
+  const bajoMinimo = con('margin_below_minimum');
+  const sinTarifa = r.positions.map((p, i) => [p, i] as const).filter(([p]) => p.hourlyRate == null);
+  const nombres = (l: (readonly [QuotePosition, number])[]) => l.map(([p]) => p.name).join(', ');
+  const checks: QuoteReview['checks'] = [
+    { code: 'client', path: 'clientId', ok: !!c.clientId, kind: 'error', message: 'Empresa elegida' },
+    { code: 'contact', path: 'contactId', ok: !!v.contactId, kind: 'error', message: 'Contacto que recibe la propuesta' },
+    { code: 'contact_email', path: 'contactId', ok: !!r.contactEmail, kind: 'error', message: 'El contacto tiene email' },
+    { code: 'sales_rep', path: 'salesRepId', ok: !!v.salesRepId, kind: 'error', message: 'Comercial responsable' },
+    { code: 'valid_until', path: 'validUntil', ok: !!v.validUntil && v.validUntil >= hoyISO(), kind: 'error', message: 'Fecha de validez futura' },
+    { code: 'positions', path: 'positions', ok: v.positions.length > 0, kind: 'error', message: 'Al menos un puesto' },
+    { code: 'rate', path: sinTarifa.length ? `positions.${sinTarifa[0][1]}.hourlyRate` : 'positions', ok: !sinTarifa.length, kind: 'error', message: sinTarifa.length ? `Sin tarifa: ${nombres(sinTarifa)}` : 'Todos los puestos tienen tarifa' },
+    { code: 'rate_below_cost', path: bajoCoste.length ? `positions.${bajoCoste[0][1]}.hourlyRate` : 'positions', ok: !bajoCoste.length, kind: 'error', message: bajoCoste.length ? `Tarifa por debajo del coste: ${nombres(bajoCoste)}` : 'Ninguna tarifa por debajo del coste' },
+    {
+      code: 'below_agreement', path: bajoConvenio.length ? `positions.${bajoConvenio[0][1]}.annualBaseSalary` : 'positions', ok: !bajoConvenio.length, kind: 'error',
+      message: bajoConvenio.length ? `Salario por debajo del convenio de la empresa usuaria: ${nombres(bajoConvenio)}. No se puede pagar menos (art. 11 de la Ley 14/1994).` : 'Ningún salario por debajo del convenio',
+    },
+    {
+      code: 'margin', path: 'positions', ok: !bajoMinimo.length || v.approvalStatus === 'approved', kind: 'approval',
+      message: m === null ? 'Sin margen mínimo en esta ETT' : bajoMinimo.length ? `Margen por debajo del ${m} %: ${nombres(bajoMinimo)}${v.approvalStatus === 'approved' ? ' (aprobado)' : ''}` : `Margen de todos los puestos ≥ ${m} %`,
+    },
+  ];
+  return { ready: checks.every((x) => x.ok), needsApproval: bajoMinimo.length > 0, approvalStatus: v.approvalStatus, minMarginPercent: m, checks };
+}
 
 /** Como el servidor: los campos que no coinciden con la tabla del convenio son los cambiados a mano. */
 function marcarManuales(p: QuotePosition) {
@@ -544,25 +584,15 @@ export function memoryQuoteRepositories(ajustes: () => Promise<TenantSettings>):
         tocar(v, { approvalStatus: 'rejected', approvalNotes: notes, approvalDecidedAt: ahora() }, 'Se piden cambios en el margen');
         return conCalculo(v);
       },
+      review: async (versionId) => delay(await revision(version(versionId))),
       async send(versionId) {
         const v = version(versionId);
         editable(v);
-        const c = cabecera(v.quoteId);
-        const r = calculada(v, await minimo());
-        const faltan = (
-          [
-            [!c.clientId, 'clientId', 'Falta la empresa'],
-            [!v.contactId, 'contactId', 'Falta el contacto con email'],
-            [!v.salesRepId, 'salesRepId', 'Falta el comercial'],
-            [!v.validUntil || v.validUntil < hoyISO(), 'validUntil', 'La validez tiene que ser futura'],
-            [v.positions.length === 0, 'positions', 'Falta al menos un puesto'],
-            [v.positions.some((p) => p.hourlyRate == null), 'positions', 'Todos los puestos necesitan tarifa'],
-            [r.positions.some((p) => p.calculation!.issues.includes('rate_below_cost')), 'positions', 'Hay tarifas por debajo del coste'],
-          ] as const
-        ).filter(([falla]) => falla);
-        if (faltan.length) throw new ApiError(422, 'validacion', 'El presupuesto no se puede enviar todavía', faltan.map(([, path, message]) => ({ path, message })));
-        r.positions.forEach(comprobarConvenio);
-        if (r.positions.some((p) => p.calculation!.issues.includes('margin_below_minimum')) && v.approvalStatus !== 'approved') {
+        const r = await revision(v);
+        const errores = r.checks.filter((c) => !c.ok && c.kind === 'error');
+        if (errores.some((c) => c.code === 'below_agreement')) throw new ApiError(422, 'salario_bajo_convenio', errores.find((c) => c.code === 'below_agreement')!.message);
+        if (errores.length) throw new ApiError(422, 'validacion', 'El presupuesto no se puede enviar todavía', errores.map((c) => ({ path: c.path, message: c.message })));
+        if (r.needsApproval && v.approvalStatus !== 'approved') {
           throw new ApiError(409, 'requiere_aprobacion', 'Hay puestos con el margen por debajo del mínimo de la ETT: hace falta la aprobación de un responsable');
         }
         tocar(v, { status: 'sent', sentAt: ahora() }, 'Enviado al cliente');

@@ -101,7 +101,7 @@ const roles: Role[] = [
   role(30, 'admin', 'Administrador', 'tenant', [
     'module.administracion', 'module.laboral', 'module.seleccion', 'module.comercial', 'tenant.manage',
     'companies.manage', 'branches.manage', 'catalogs.manage', 'users.manage', 'roles.manage', 'addresses.write',
-    'labor_catalogs.manage',
+    'labor_catalogs.manage', 'clients.manage', 'quotes.manage', 'quotes.approve_margin', 'quotes.view_costs',
   ]),
   role(31, 'laboral', 'Laboral', 'tenant', ['module.laboral', 'addresses.write', 'labor_catalogs.manage']),
   role(32, 'director_zona', 'Director de zona', 'branches', ['module.laboral', 'module.seleccion', 'module.comercial', 'addresses.write']),
