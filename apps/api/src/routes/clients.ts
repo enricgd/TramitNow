@@ -78,14 +78,28 @@ export const clients = crudRoutes({
   name: 'Client',
   tag: 'Clientes',
   names: { one: 'el cliente', many: 'los clientes' },
-  schema: z.object({ ...base, ...clientFields, startDate: z.string().nullable(), deletedAt }).openapi('Client'),
+  schema: z
+    .object({
+      ...base,
+      ...clientFields,
+      startDate: z.string().nullable(),
+      readiness: z
+        .object({
+          centers: z.number().int().openapi({ description: 'Centros activos (no eliminados)' }),
+          contacts: z.number().int().openapi({ description: 'Contactos activos (no eliminados), suspendidos incluidos' }),
+          hasBilling: z.boolean().openapi({ description: 'Tiene datos de facturación (lo ve cualquier miembro, sin los datos)' }),
+        })
+        .openapi({ description: 'Solo lectura: resumen para la preparación (lista para presupuestar, operar, facturar)' }),
+      deletedAt,
+    })
+    .openapi('Client'),
   fields: clientFields,
   required: ['companyId', 'branchId', 'code', 'legalName'],
   createDefaults: { status: ClientStatus.default('active'), taxIdType: clientFields.taxIdType.default('nif') },
   columns: `id, company_id, branch_id, code, legal_name, trade_name, tax_id_type, tax_id, owner_user_id, client_type_id,
     business_group_id, activity, sector_code, default_agreement_id, to_char(start_date, 'YYYY-MM-DD') as start_date,
     status, blocked, blocked_reason, address_id, phone, fax, email, website, online_cpd_price_printing, observations,
-    created_at, updated_at, deleted_at`,
+    private.client_readiness(tenant_id, id) as readiness, created_at, updated_at, deleted_at`,
   permission: 'clients.manage',
   search: ['code', 'legal_name', 'trade_name', 'tax_id'],
   filters: {

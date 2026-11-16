@@ -279,7 +279,8 @@ que se amplía con una migración (como `permissions`). Tipos:
   ser opcional**: lo que se da de alta desde un desplegable ("+ Añadir") solo tiene nombre.
 - `retention_required` (solo en `document_type`): sus documentos no se pueden borrar. Ver "Documentos".
 - Leer: cualquier miembro. Escribir: `catalogs.manage` (de serie solo `admin`). Baja lógica (`deleted_at`).
-- No se cargan valores por defecto: los de las notas son de ejemplo y están por confirmar con administración.
+- No se cargan valores por defecto, salvo las causas especiales de IVA (fase 2): los de las notas son de ejemplo y
+  están por confirmar con administración.
 - El tipo `sector` se retiró en la fase 2: el sector del cliente es el catálogo común CNAE (ver "Fase 2: empresas").
 
 ### Historial de actividad
@@ -363,6 +364,8 @@ Decisiones de Enric sobre el modelo de clientes (2026-11-16; resumen en `docs/mo
 | Contactos | Rol `other` («Otro») con su texto en `other_role` (obligatorio con ese rol y solo con él), `validates_hours`, `suspended` con `suspended_at` / `suspended_by` (los pone un trigger) |
 | Centros | Sin cambios: `blocked` es el «Inactivo» de la pantalla; no hay otro estado |
 | Facturación | `invoice_layout`: `by_person` (por defecto) o `by_concept`. `fixed_payment_days` sigue como números: **31 = último día del mes**, y un día que el mes no tiene (30 en febrero) es su último día. Forma de pago e IVA, tablas maestras |
+| IVA del cliente | **Sin campo de régimen**: `vat_special_cause_id` NULL = régimen general, y `equivalence_surcharge`. La tabla maestra `vat_special_cause` se siembra en cada ETT (existentes y nuevas, trigger en `tenants`) con `EXENTA` (exenta de IVA), `ISP` (inversión del sujeto pasivo), `IGIC` (Canarias) e `IPSI` (Ceuta y Melilla); la ETT los renombra o da de baja. Lista en `private.vat_special_cause_defaults()` |
+| Preparación del cliente | `private.client_readiness(tenant, cliente)` → `{ centers, contacts, hasBilling }` contando solo lo no eliminado (los contactos suspendidos cuentan). SECURITY DEFINER para que el sí/no de facturación lo vea cualquier miembro, sin los datos; solo responde para la ETT activa. La API lo devuelve en cada cliente (`readiness`) |
 
 **CNAE: por qué la 2009.** `client_centers.cnae_code` ya guarda la clase CNAE-2009 (4 dígitos), que es la que usan la
 cotización por accidentes de trabajo (tarifa de primas) y Contrat@. La CNAE-2025 (Real Decreto 10/2025) está en vigor

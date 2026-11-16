@@ -164,6 +164,24 @@ describe('empresas, fase 2', () => {
     expect(actions).toEqual(expect.arrayContaining(['client:delete', 'client:restore', 'client_center:restore', 'client_contact:restore']));
   });
 
+  it('readiness: centros y contactos activos y si tiene facturación, también para quien no ve la facturación', async () => {
+    const own = await call('GET', `/v1/clients/${clientId}`, { token: seleccion });
+    expect(own.body.readiness).toEqual({ centers: 1, contacts: 2, hasBilling: true });
+    await call('DELETE', `/v1/client-contacts/${contactId}`, { token: admin });
+    const list = await call('GET', '/v1/clients?q=TEST-F2', { token: seleccion });
+    const byCode = Object.fromEntries(list.body.data.map((c: { code: string; readiness: unknown }) => [c.code, c.readiness]));
+    expect(byCode['TEST-F2-1']).toEqual({ centers: 1, contacts: 1, hasBilling: true });
+    expect(byCode['TEST-F2-2']).toEqual({ centers: 0, contacts: 0, hasBilling: false });
+    // Recién creado, también lo trae.
+    const created = await newClient({ code: 'TEST-F2-5', legalName: 'Nuevo Ficticio Cinco, S.L.' });
+    expect(created.body.readiness).toEqual({ centers: 0, contacts: 0, hasBilling: false });
+  });
+
+  it('causas especiales de IVA de serie (null = régimen general)', async () => {
+    const res = await call('GET', '/v1/catalog-items?type=vat_special_cause', { token: seleccion });
+    expect(res.body.data.map((i: { code: string }) => i.code).sort()).toEqual(['EXENTA', 'IGIC', 'IPSI', 'ISP']);
+  });
+
   it('restaurar un cliente choca si otro activo tiene su código', async () => {
     const temp = await newClient({ code: 'TEST-F2-4', legalName: 'Temporal Ficticio, S.L.' });
     await call('DELETE', `/v1/clients/${temp.body.id}`, { token: admin });

@@ -1,7 +1,7 @@
 -- Fase 2 (Empresas): CNAE como sector, convenio por defecto, contactos (valida horas, rol «Otro», suspensión),
 -- forma de imprimir la factura y baja lógica recuperable (en uso, cascada, restaurar, historial).
 
-select plan(30);
+select plan(33);
 
 -- Datos de prueba propios, como postgres. Ficticios.
 insert into public.collective_agreements (id, tenant_id, code, name) values
@@ -190,5 +190,22 @@ select is(
   (select array_agg(summary order by id) from public.activity_log where entity_type = 'document' and action in ('delete', 'restore')),
   array['Eliminación de documento «CIF»', 'Restauración de documento «CIF»'], 'en el historial');
 
+-- ---------------------------------------------------------------------------
+-- Preparación y causas especiales de IVA
+-- ---------------------------------------------------------------------------
 reset role;
+select pg_temp.login('a0000000-0000-0000-0000-000000000002');
+select is(
+  private.client_readiness('10000000-0000-0000-0000-00000000000a', '80000000-0000-0000-0000-0000000000a1'),
+  '{"centers": 1, "contacts": 1, "hasBilling": true}'::jsonb,
+  'preparación: lo activo, y la facturación también para quien no la puede leer');
+select is(
+  private.client_readiness('10000000-0000-0000-0000-00000000000b', '80000000-0000-0000-0000-0000000000a1'),
+  null, 'no responde para otra ETT');
+reset role;
+select is(
+  (select array_agg(code order by code) from public.catalog_items
+   where tenant_id = '10000000-0000-0000-0000-00000000000a' and catalog = 'vat_special_cause'),
+  array['EXENTA', 'IGIC', 'IPSI', 'ISP']::varchar[], 'cada ETT nueva trae las causas especiales de IVA de serie');
+
 select * from finish();
