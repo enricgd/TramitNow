@@ -1,5 +1,6 @@
 // Configuración desde variables de entorno. Falla al arrancar si falta algo obligatorio.
 
+import type { AuthAdminConfig } from './lib/auth-admin.js';
 import type { StorageConfig } from './lib/storage.js';
 
 export interface Config {
@@ -16,6 +17,8 @@ export interface Config {
   dbPoolMax: number;
   /** Supabase Storage (documentos). Sin él, las rutas de ficheros responden 503. */
   storage?: StorageConfig;
+  /** Supabase Auth con la service_role (alta e invitación de usuarios). Sin él, esas rutas responden 503. */
+  authAdmin?: AuthAdminConfig;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -44,6 +47,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: Number(env.PORT || 3000),
     dbPoolMax: Number(env.DB_POOL_MAX || 10),
     storage: loadStorageConfig(env),
+    authAdmin: loadAuthAdminConfig(env),
+  };
+}
+
+function loadAuthAdminConfig(env: NodeJS.ProcessEnv): AuthAdminConfig | undefined {
+  const url = env.AUTH_URL;
+  if (!url) return undefined;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) throw new Error('Para invitar usuarios (AUTH_URL) hace falta SUPABASE_SERVICE_ROLE_KEY');
+  return {
+    url: url.replace(/\/+$/, ''),
+    serviceKey,
+    redirectUrl: env.INVITE_REDIRECT_URL || undefined,
+    sendsEmail: env.AUTH_SENDS_INVITES === 'true',
   };
 }
 

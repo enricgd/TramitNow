@@ -10,6 +10,7 @@ import type { Config } from './config.js';
 import { requireAuth } from './lib/auth.js';
 import type { AppEnv } from './lib/context.js';
 import type { Sql } from './lib/db.js';
+import { AuthAdmin } from './lib/auth-admin.js';
 import { Storage } from './lib/storage.js';
 import { ApiError, errorBody, handleError } from './lib/errors.js';
 import { activity } from './routes/activity.js';
@@ -25,6 +26,7 @@ import { health } from './routes/health.js';
 import { collectiveAgreements, contractTypes, payrollConcepts, professionalCategories } from './routes/labor-catalogs.js';
 import { me } from './routes/me.js';
 import { memberships } from './routes/memberships.js';
+import { billableServices, contributionAccounts, miEtt } from './routes/mi-ett.js';
 import { roles } from './routes/roles.js';
 
 // Mensajes de validación en español.
@@ -34,11 +36,12 @@ export const API_VERSION = '0.1.0';
 
 export function createApp(options: {
   sql: Sql;
-  config: Pick<Config, 'jwtSecret' | 'jwtAudience' | 'corsOrigins' | 'storage'>;
+  config: Pick<Config, 'jwtSecret' | 'jwtAudience' | 'corsOrigins' | 'storage' | 'authAdmin'>;
   log?: boolean;
 }) {
   const { sql, config } = options;
   const storage = config.storage ? new Storage(config.storage) : undefined;
+  const authAdmin = config.authAdmin ? new AuthAdmin(config.authAdmin) : undefined;
   const app = new OpenAPIHono<AppEnv>();
 
   app.onError(handleError);
@@ -65,6 +68,7 @@ export function createApp(options: {
   app.use(async (c, next) => {
     c.set('sql', sql);
     c.set('storage', storage);
+    c.set('authAdmin', authAdmin);
     await next();
   });
 
@@ -91,6 +95,9 @@ export function createApp(options: {
   app.route('/v1', documents);
   app.route('/v1', activity);
   app.route('/v1', agreements);
+  app.route('/v1', miEtt);
+  app.route('/v1', contributionAccounts);
+  app.route('/v1', billableServices);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
     type: 'http',

@@ -50,6 +50,12 @@ export const app = createApp({
       publicUrl: process.env.STORAGE_URL!,
       serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
     },
+    authAdmin: {
+      url: process.env.AUTH_URL!,
+      serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      redirectUrl: 'http://localhost:5173/',
+      sendsEmail: false,
+    },
   },
   log: false,
 });

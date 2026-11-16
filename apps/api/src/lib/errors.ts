@@ -74,6 +74,9 @@ export function errorBody(code: ErrorCode, message: string, details?: Validation
 const uniqueMessages: Record<string, string> = {
   clients_tenant_company_tax_id_uniq: 'Ya existe un cliente con ese NIF en la sociedad',
   client_contacts_main_uniq: 'El cliente ya tiene un contacto principal',
+  contribution_accounts_tenant_code_uniq: 'Ese CCC ya está dado de alta',
+  number_series_key_uniq: 'Ya existe esa serie (misma clase, ámbito y año)',
+  memberships_tenant_id_user_id_key: 'Ese usuario ya está en esta ETT',
   catalog_items_tenant_catalog_name_uniq: 'Ya existe un valor con ese nombre en esta tabla maestra',
 };
 
@@ -81,6 +84,9 @@ const uniqueMessages: Record<string, string> = {
 const checkMessages: Record<string, string> = {
   client_contacts_other_role_check: 'Con el rol «Otro» hay que indicar cuál (otherRole); sin ese rol, otherRole va vacío',
   client_contacts_roles_check: 'Rol de contacto no válido',
+  contribution_accounts_code_check: 'El CCC no es válido: 11 cifras y las 2 de control tienen que cuadrar',
+  company_legal_profiles_check: 'Si la autorización es autonómica hay que indicar la comunidad (y si es estatal, ninguna)',
+  company_legal_profiles_check1: 'Para el documento del representante hay que indicar su tipo (DNI, NIE o pasaporte)',
 };
 
 /**
