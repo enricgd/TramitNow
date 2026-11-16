@@ -534,8 +534,9 @@ Reglas en la base de datos:
 - Historial: `quote`, `quote_version` (con resúmenes propios: «Envío al cliente (v1)», «Aprobación del margen»...)
   y `quote_position`. Las columnas `calc_*` (el cálculo guardado) no cuentan como cambios.
 
-Permisos nuevos: `quotes.manage` (admin, director de zona, comercial) y `quotes.approve_margin` (admin, director de
-zona). Leer: `module.comercial`, `quotes.manage` o `quotes.approve_margin`, en las sucursales a las que se tiene acceso.
+Permisos nuevos: `quotes.manage` (admin, director de zona, comercial), `quotes.approve_margin` (admin, director de
+zona) y `quotes.view_costs` (admin, director de zona; `20261117000200_quotes_view_costs.sql`): ver y cambiar costes
+internos y margen («Ver como comercial» de la pantalla). Sin él, la API no los devuelve ni deja cambiarlos. Leer: `module.comercial`, `quotes.manage` o `quotes.approve_margin`, en las sucursales a las que se tiene acceso.
 
 **Seguimiento de convenios por ETT (`tenant_agreement_*`): no se ha hecho.** Presupuestos no lo necesita: el puesto
 apunta directamente a la versión publicada del convenio global a través de `collective_agreements.global_agreement_id`
@@ -686,8 +687,7 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 
 - Fase 4: tipos de la Seguridad Social y AT/EP por CNAE de `apps/api/src/calc/quote.ts` marcados [verificar]; costes
   internos y coeficientes de los extras por defecto, [por confirmar]. Si el margen mínimo es por puesto o sobre el total
-  (hoy por puesto, como la pantalla). Ocultar costes y margen a quien no sea dirección («Ver como comercial»): hoy la
-  API los da a todo el que ve el presupuesto. Puestos «Otro / personalizado» sin tabla de convenio: no se puede
+  (hoy por puesto, como la pantalla). Puestos «Otro / personalizado» sin tabla de convenio: no se puede
   comprobar el art. 11 (hoy se permite enviarlos; ¿bloquear el envío?). Recordatorio al cliente y tarea de
   aprobación en Inicio (fase 12). Crear peticiones desde un presupuesto aceptado (fase 5).
 

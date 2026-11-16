@@ -125,13 +125,14 @@ describe('alta y puestos', () => {
     versionId = res.body.currentVersion.id;
     expect(res.body.code).toMatch(/^PRE\d{4}-\d{5}$/);
     expect(res.body.status).toBe('draft');
-    expect(res.body.clientAgreementId).toBe(AGREEMENT);
+    expect(res.body).toMatchObject({ clientAgreementId: AGREEMENT, clientTaxId: 'B00000000', clientSectorCode: '52' });
     const v = res.body.currentVersion;
     expect(v.salesRepId).toBe(COMMERCIAL);
     expect(v.contactId).toBe(CONTACT);
-    expect(v.costConcepts.map((c: { code: string }) => c.code)).toEqual(['absenteeism', 'ppe', 'medical']);
     expect(v.defaultExtras).toHaveLength(4);
-    expect(v.ssRates.atEp).toBe(3.5);
+    const full = await call('GET', `/v1/quote-versions/${versionId}`, { token: admin });
+    expect(full.body.costConcepts.map((c: { code: string }) => c.code)).toEqual(['absenteeism', 'ppe', 'medical']);
+    expect(full.body.ssRates.atEp).toBe(3.5);
     expect(v.margin).toEqual({ mode: 'percent', value: 18 });
     expect(v.editable).toBe(true);
   });
@@ -196,8 +197,27 @@ describe('alta y puestos', () => {
   });
 
   it('los costes internos de siempre no se quitan del presupuesto', async () => {
-    const res = await call('PATCH', `/v1/quote-versions/${versionId}`, { token: commercial, body: { costConcepts: [] } });
+    const res = await call('PATCH', `/v1/quote-versions/${versionId}`, { token: admin, body: { costConcepts: [] } });
     expect(res.status).toBe(422);
+  });
+
+  it('sin quotes.view_costs no se ven ni se cambian costes ni margen', async () => {
+    const seen = await call('GET', `/v1/quote-versions/${versionId}`, { token: commercial });
+    const calc = seen.body.positions[0].calculation;
+    expect(calc).toMatchObject({ costHour: null, marginPercent: null, ssHour: null, marginTotal: null });
+    expect(calc.grossSalaryHour).toBeGreaterThan(0);
+    expect(calc.breakdown.map((l: { kind: string }) => l.kind)).toEqual(['salary', 'vacation']);
+    expect(seen.body).toMatchObject({ ssRates: null, costConcepts: [] });
+    expect(seen.body.totals).toMatchObject({ cost: null, margin: null, marginPercent: null });
+    const write = await call('PATCH', `/v1/quote-versions/${versionId}`, { token: commercial, body: { ssRates: { commonContingencies: 0, unemployment: 0, fogasa: 0, vocationalTraining: 0, mei: 0, atEp: 0 } } });
+    expect(write.status).toBe(403);
+    const full = await call('GET', `/v1/quote-versions/${versionId}`, { token: admin });
+    const lines = full.body.positions[0].calculation.breakdown;
+    expect(lines.find((l: { kind: string }) => l.kind === 'social_security')).toMatchObject({ legal: true, custom: false });
+    expect(lines.filter((l: { kind: string }) => l.kind === 'internal_cost')).toHaveLength(3);
+    expect(full.body.positions[0].calculation).toMatchObject({ agreementMinimumSalaryHour: 12.3429, belowAgreement: false });
+    const me = await call('GET', '/v1/me', { token: admin });
+    expect(me.body.permissions).toEqual(expect.arrayContaining(['quotes.manage', 'quotes.approve_margin', 'quotes.view_costs']));
   });
 });
 
@@ -209,11 +229,17 @@ describe('envío y margen mínimo', () => {
   });
 
   it('con el margen por debajo del mínimo hace falta aprobación', async () => {
-    const before = await call('GET', `/v1/quote-versions/${versionId}`, { token: commercial });
+    const before = await call('GET', `/v1/quote-versions/${versionId}`, { token: admin });
     const cost = before.body.positions[0].calculation.costHour as number;
     const rate = Math.round((cost / 0.9) * 100) / 100;
     const upd = await call('PATCH', `/v1/quote-positions/${positionId}`, { token: commercial, body: { hourlyRate: rate } });
     expect(upd.body.positions[0].calculation.issues).toContain('margin_below_minimum');
+    const review = await call('GET', `/v1/quote-versions/${versionId}/review`, { token: commercial });
+    expect(review.status).toBe(200);
+    expect(review.body).toMatchObject({ ready: false, needsApproval: true, minMarginPercent: 15 });
+    expect(review.body.checks.filter((c: { ok: boolean }) => !c.ok)).toEqual([
+      expect.objectContaining({ code: 'margin', kind: 'approval', path: 'positions.0.hourlyRate' }),
+    ]);
     const send = await call('POST', `/v1/quote-versions/${versionId}/send`, { token: commercial });
     expect(send.status).toBe(409);
     expect(send.body.error.code).toBe('requiere_aprobacion');
@@ -229,6 +255,8 @@ describe('envío y margen mínimo', () => {
     expect(ok.status).toBe(200);
     expect(ok.body).toMatchObject({ approvalStatus: 'approved', approvalRequestedByName: 'Comercial Ficticio' });
     expect(ok.body.approvalDecidedAt).toBeTruthy();
+    const review = await call('GET', `/v1/quote-versions/${versionId}/review`, { token: commercial });
+    expect(review.body).toMatchObject({ ready: true, needsApproval: false, approvalStatus: 'approved' });
   });
 
   it('aprobado, se envía y queda cerrado', async () => {
@@ -247,6 +275,9 @@ describe('envío y margen mínimo', () => {
     const row = res.body.data.find((q: { id: string }) => q.id === quoteId);
     expect(row).toMatchObject({ status: 'sent', positionsCount: 1, daysWithoutResponse: 0, noResponse: false, people: 4, hours: 1920 });
     expect(row.revenue).toBeGreaterThan(0);
+    expect(row.marginPercent).toBeNull();
+    const asAdmin = await call('GET', '/v1/quotes?status=sent', { token: admin });
+    expect(asAdmin.body.data.find((q: { id: string }) => q.id === quoteId).marginPercent).toBeGreaterThan(0);
   });
 });
 

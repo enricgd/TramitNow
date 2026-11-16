@@ -109,6 +109,8 @@ export interface CostLine {
   /** percent: % sobre el salario por hora (S / H); per_hour: €/h. */
   mode: 'percent' | 'per_hour';
   value: number;
+  /** Valor propio del puesto (no el de por defecto del presupuesto). */
+  custom?: boolean;
 }
 
 /** Concepto extra (hora extra, nocturna, festiva...). Para el salario cuenta uno de los tres; ninguno = coeficiente 1. */
@@ -175,6 +177,10 @@ export interface BreakdownLine {
   perHour: number;
   /** % de la tarifa */
   percentOfRate: number;
+  /** Coste legal (Seguridad Social, indemnización): se aplica siempre. */
+  legal: boolean;
+  /** Coste interno con valor propio del puesto. */
+  custom: boolean;
 }
 
 export interface ExtraResult {
@@ -184,6 +190,7 @@ export interface ExtraResult {
   rateHour: number;
   /** Recargo equivalente sobre la tarifa normal (%). */
   surchargePercent: number;
+  agreementMinimumSalaryHour: number | null;
   belowAgreement: boolean;
 }
 
@@ -212,6 +219,10 @@ export interface PositionResult {
   marginTotal: number;
   breakdown: BreakdownLine[];
   extras: ExtraResult[];
+  /** Salario mínimo por hora del convenio de la empresa usuaria (null: sin tabla). */
+  agreementMinimumSalaryHour: number | null;
+  /** El salario por hora queda por debajo de ese mínimo (no se puede ofertar). */
+  belowAgreement: boolean;
   issues: PositionIssue[];
 }
 
@@ -302,19 +313,21 @@ export function calculatePosition(
   const marginPercent = rate > 0 ? (marginHour / rate) * 100 : 0;
 
   const pct = (perHour: number) => (rate > 0 ? r2((perHour / rate) * 100) : 0);
-  const line = (kind: BreakdownKind, code: string, name: string, perHour: number): BreakdownLine => ({
+  const line = (kind: BreakdownKind, code: string, name: string, perHour: number, custom = false): BreakdownLine => ({
     kind,
     code,
     name,
     perHour: r4(perHour),
     percentOfRate: pct(perHour),
+    legal: kind === 'social_security' || kind === 'severance',
+    custom,
   });
   const breakdown: BreakdownLine[] = [
     line('salary', 'salary', 'Salario de convenio', salary),
     line('vacation', 'vacation', 'Vacaciones (parte proporcional)', vacation),
     line('social_security', 'social_security', 'Seguridad Social de la empresa', ss),
     line('severance', 'severance', `Indemnización fin de contrato (${SEVERANCE_DAYS_PER_YEAR} días por año)`, severance),
-    ...internal.map((c) => line('internal_cost', c.code, c.name, c.perHour)),
+    ...internal.map((c) => line('internal_cost', c.code, c.name, c.perHour, c.custom ?? false)),
     line('margin', 'margin', 'Margen', marginHour),
   ];
 
@@ -336,15 +349,15 @@ export function calculatePosition(
       salaryHour: r4(salaryHour),
       rateHour: r4(rateHour),
       surchargePercent: rate > 0 ? r2((rateHour / rate - 1) * 100) : 0,
+      agreementMinimumSalaryHour: filled(x.agreementMinimumSalaryHour) ? x.agreementMinimumSalaryHour : null,
       belowAgreement: filled(x.agreementMinimumSalaryHour) && salaryHour < x.agreementMinimumSalaryHour - EPSILON,
     };
   });
 
   const hours = input.people * input.hoursPerPerson;
   const issues: PositionIssue[] = [];
-  if (filled(input.agreementMinimumSalaryHour) && gross < input.agreementMinimumSalaryHour - EPSILON) {
-    issues.push('salary_below_agreement');
-  }
+  const belowAgreement = filled(input.agreementMinimumSalaryHour) && gross < input.agreementMinimumSalaryHour - EPSILON;
+  if (belowAgreement) issues.push('salary_below_agreement');
   if (extras.some((x) => x.belowAgreement)) issues.push('extra_below_agreement');
   if (rateIsSuggested) issues.push('no_rate');
   if (rate < cost - EPSILON) issues.push('rate_below_cost');
@@ -373,6 +386,8 @@ export function calculatePosition(
     marginTotal: r2(marginHour * hours),
     breakdown,
     extras,
+    agreementMinimumSalaryHour: filled(input.agreementMinimumSalaryHour) ? input.agreementMinimumSalaryHour : null,
+    belowAgreement,
     issues,
   };
 }
