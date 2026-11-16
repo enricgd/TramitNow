@@ -8,7 +8,7 @@
 // - Eliminar es una baja lógica: lo eliminado sale con el filtro «Eliminados» y se puede recuperar. Lo que
 //   ya se ha usado no se elimina (409 en_uso): la pantalla ofrece suspender, desactivar o dar de baja.
 // - El acceso al Área de empresas aún no está en la API: en modo real, `portalDisponible` es false.
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { haceCuanto } from '../../cabecera/useCabecera';
 import {
   ApiError,
@@ -498,8 +498,19 @@ export type ArchivoSubida = {
   notas: string;
 };
 
-export function useEmpresas({ busqueda, eliminadas, pagina, seleccionada }: Filtros) {
+/** El valor, cuando lleva `ms` sin cambiar (para no buscar en el servidor a cada letra). */
+function useSinPrisa<T>(valor: T, ms = 250) {
+  const [actual, setActual] = useState(valor);
+  useEffect(() => {
+    const t = setTimeout(() => setActual(valor), ms);
+    return () => clearTimeout(t);
+  }, [valor, ms]);
+  return actual;
+}
+
+export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionada }: Filtros) {
   const { me, sucursal } = useSesion();
+  const busqueda = useSinPrisa(escrita.trim());
 
   const catalogos = useData(cargarCatalogos, []);
   const provs = useData(() => provincias().catch(() => [] as Province[]), []);
@@ -511,7 +522,7 @@ export function useEmpresas({ busqueda, eliminadas, pagina, seleccionada }: Filt
     async (r) => {
       if (!listo) return null;
       const p = await r.clients.list({
-        q: busqueda.trim() || undefined,
+        q: busqueda || undefined,
         branchId: sucursal ?? undefined,
         deleted: eliminadas || undefined,
         limit: POR_PAGINA,

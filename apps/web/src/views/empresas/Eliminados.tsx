@@ -1,8 +1,7 @@
 // Lo eliminado de una ficha (contactos, centros o documentos): la baja es lógica y desde aquí se recupera.
 import { useEffect, useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { Archive, RotateCcw } from 'lucide-react';
 import { Button, Card, EmptyState, Notice } from '../../ui';
-import { Archive } from 'lucide-react';
 import type { EliminadoVista } from './useEmpresas';
 
 export function Eliminados({
@@ -21,6 +20,7 @@ export function Eliminados({
   const [error, setError] = useState<string>();
   const [recuperando, setRecuperando] = useState<string>();
 
+  // Se carga al abrir la lista (la vista pasa `cargar` sin memorizar).
   useEffect(() => {
     let actual = true;
     cargar().then(
@@ -30,7 +30,8 @@ export function Eliminados({
     return () => {
       actual = false;
     };
-  }, [cargar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const restaurar = async (id: string) => {
     setRecuperando(id);
