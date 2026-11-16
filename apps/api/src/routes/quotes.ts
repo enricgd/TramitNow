@@ -9,7 +9,7 @@
 
 import { createRoute, z } from '@hono/zod-openapi';
 import type { Context } from 'hono';
-import { type AppEnv, withTenant } from '../lib/context.js';
+import { type AppEnv, type TenantContext, withTenant } from '../lib/context.js';
 import { type Tx, likePattern } from '../lib/db.js';
 import { ApiError, notFound } from '../lib/errors.js';
 import {
@@ -49,6 +49,7 @@ import { randomUUID } from 'node:crypto';
 
 const MANAGE = 'quotes.manage';
 const APPROVE = 'quotes.approve_margin';
+const VIEW_COSTS = 'quotes.view_costs';
 const tags = ['Presupuestos'];
 
 // ---------------------------------------------------------------------------
@@ -132,6 +133,8 @@ const BreakdownLineSchema = z.object({
   name: z.string(),
   perHour: z.number(),
   percentOfRate: z.number(),
+  legal: z.boolean().openapi({ description: 'Coste legal (Seguridad Social, indemnización)' }),
+  custom: z.boolean().openapi({ description: 'Coste interno con valor propio del puesto' }),
 });
 const PositionIssue = z.enum(['salary_below_agreement', 'extra_below_agreement', 'rate_below_cost', 'margin_below_minimum', 'no_rate']);
 const PositionCalcSchema = z
@@ -139,26 +142,33 @@ const PositionCalcSchema = z
     grossSalaryHour: z.number().openapi({ description: 'Salario por hora con vacaciones: el de la propuesta' }),
     salaryHour: z.number(),
     vacationHour: z.number(),
-    ssHour: z.number(),
-    ssRatePercent: z.number(),
-    severanceHour: z.number(),
-    internalCostsHour: z.number(),
-    costHour: z.number(),
+    ssHour: z.number().nullable(),
+    ssRatePercent: z.number().nullable(),
+    severanceHour: z.number().nullable(),
+    internalCostsHour: z.number().nullable(),
+    costHour: z.number().nullable(),
     suggestedRate: z.number(),
     rateHour: z.number(),
     rateIsSuggested: z.boolean(),
-    marginHour: z.number(),
-    marginPercent: z.number(),
+    marginHour: z.number().nullable(),
+    marginPercent: z.number().nullable(),
     targetMargin: MarginSchema,
     hours: z.number(),
     revenue: z.number(),
-    cost: z.number(),
-    marginTotal: z.number(),
+    cost: z.number().nullable(),
+    marginTotal: z.number().nullable(),
     breakdown: z.array(BreakdownLineSchema),
-    extras: z.array(z.object({ code: z.string(), name: z.string(), salaryHour: z.number(), rateHour: z.number(), surchargePercent: z.number(), belowAgreement: z.boolean() })),
+    extras: z.array(z.object({
+      code: z.string(), name: z.string(), salaryHour: z.number(), rateHour: z.number(), surchargePercent: z.number(),
+      agreementMinimumSalaryHour: z.number().nullable(), belowAgreement: z.boolean(),
+    })),
+    agreementMinimumSalaryHour: z.number().nullable(),
+    belowAgreement: z.boolean().openapi({ description: 'Salario por debajo del convenio (no se puede guardar: sirve para la vista previa)' }),
     issues: z.array(PositionIssue),
   })
-  .openapi('QuotePositionCalculation');
+  .openapi('QuotePositionCalculation', {
+    description: `Sin \`${VIEW_COSTS}\`: coste, Seguridad Social, indemnización, costes internos y margen van a null y el desglose solo trae salario y vacaciones`,
+  });
 
 const PositionSchema = z
   .object({
@@ -201,12 +211,12 @@ const TotalsSchema = z
     people: z.number(),
     hours: z.number(),
     revenue: z.number().openapi({ description: 'Facturación estimada (sin conceptos extra)' }),
-    cost: z.number(),
-    margin: z.number(),
-    marginPercent: z.number(),
+    cost: z.number().nullable(),
+    margin: z.number().nullable(),
+    marginPercent: z.number().nullable(),
     averageRate: z.number(),
   })
-  .openapi('QuoteTotals');
+  .openapi('QuoteTotals', { description: `Coste y margen, null sin \`${VIEW_COSTS}\`` });
 
 const VersionSchema = z
   .object({
@@ -219,6 +229,8 @@ const VersionSchema = z
     contactId: z.guid().nullable(),
     contactName: z.string().nullable(),
     contactEmail: z.string().nullable(),
+    contactPosition: z.string().nullable(),
+    contactPhone: z.string().nullable(),
     salesRepId: z.guid().nullable(),
     salesRepName: z.string().nullable(),
     issueDate: z.string(),
@@ -234,8 +246,8 @@ const VersionSchema = z
     commercialNotes: z.string().nullable(),
     conditions: z.string().nullable(),
     margin: MarginSchema,
-    ssRates: SsRatesSchema,
-    costConcepts: z.array(CostConceptSchema),
+    ssRates: SsRatesSchema.nullable().openapi({ description: `null sin \`${VIEW_COSTS}\`` }),
+    costConcepts: z.array(CostConceptSchema).openapi({ description: `Vacío sin \`${VIEW_COSTS}\`` }),
     defaultExtras: z.array(ExtraSchema),
     approvalStatus: ApprovalStatus,
     approvalRequestedByName: z.string().nullable(),
@@ -284,6 +296,8 @@ const quoteHeader = {
   branchId: z.guid(),
   clientId: z.guid().nullable(),
   clientName: z.string().nullable(),
+  clientTaxId: z.string().nullable(),
+  clientSectorCode: z.string().nullable().openapi({ description: 'CNAE del cliente (sector)' }),
   clientAgreementId: z.guid().nullable().openapi({ description: 'Convenio por defecto del cliente (los puestos parten de él)' }),
   status: VersionStatus,
   versionNumber: z.number().int(),
@@ -309,7 +323,7 @@ const QuoteSummarySchema = z
     hours: z.number().nullable(),
     revenue: z.number().nullable(),
     averageRate: z.number().nullable(),
-    marginPercent: z.number().nullable(),
+    marginPercent: z.number().nullable().openapi({ description: `null sin \`${VIEW_COSTS}\`` }),
     approvalStatus: ApprovalStatus,
     sentAt: Timestamp.nullable(),
     daysWithoutResponse: z.number().int().nullable().openapi({ description: 'Enviado o pendiente de firma: días desde el envío' }),
@@ -490,10 +504,11 @@ interface VersionRow extends Omit<Version, 'margin' | 'totals' | 'issues' | 'pos
   calcResult: { totals: Version['totals']; issues: Version['issues'] } | null;
 }
 
-async function loadVersion(tx: Tx, tenantId: string, versionId: string): Promise<Version> {
+async function loadVersionFull(tx: Tx, tenantId: string, versionId: string): Promise<Version> {
   const [row] = await tx<VersionRow[]>`
     select v.id, v.quote_id, v.version_number, v.status, v.title, v.contact_id, cc.name as contact_name,
-           cc.email as contact_email, v.sales_rep_id, sr.full_name as sales_rep_name,
+           cc.email as contact_email, cc.position as contact_position,
+           coalesce(cc.phone, cc.mobile) as contact_phone, v.sales_rep_id, sr.full_name as sales_rep_name,
            to_char(v.issue_date, 'YYYY-MM-DD') as issue_date, to_char(v.valid_until, 'YYYY-MM-DD') as valid_until,
            to_char(v.expected_start_date, 'YYYY-MM-DD') as expected_start_date, v.duration_months::float8 as duration_months,
            v.modality, v.payment_method_id, pm.name as payment_method_name, v.vat_rate::float8 as vat_rate, v.currency,
@@ -527,7 +542,8 @@ async function loadVersion(tx: Tx, tenantId: string, versionId: string): Promise
 }
 
 const summarySelect = (tx: Tx, tenantId: string) => tx`
-  select q.id, q.code, q.company_id, q.branch_id, q.client_id, c.legal_name as client_name,
+  select q.id, q.code, q.company_id, q.branch_id, q.client_id, c.legal_name as client_name, c.tax_id as client_tax_id,
+         c.sector_code as client_sector_code,
          c.default_agreement_id as client_agreement_id, v.status, v.version_number, q.created_from_quote_id,
          cf.code as created_from_code, rb.id as replaced_by_quote_id, rb.code as replaced_by_code, q.obsolete_at,
          q.obsolete_reason, q.created_at, v.title, v.sales_rep_id, sr.full_name as sales_rep_name,
@@ -556,7 +572,42 @@ const summarySelect = (tx: Tx, tenantId: string) => tx`
   where q.tenant_id = ${tenantId}
 `;
 
-async function loadQuote(tx: Tx, tenantId: string, quoteId: string) {
+const seesCosts = (ctx: TenantContext) => ctx.permissions.has(VIEW_COSTS);
+
+/** Sin quotes.view_costs: fuera coste, Seguridad Social, indemnización, costes internos y margen. */
+function hideCosts(v: Version): Version {
+  return {
+    ...v,
+    ssRates: null,
+    costConcepts: [],
+    totals: v.totals && { ...v.totals, cost: null, margin: null, marginPercent: null },
+    positions: v.positions.map((p) => ({
+      ...p,
+      costs: [],
+      calculation: p.calculation && {
+        ...p.calculation,
+        ssHour: null, ssRatePercent: null, severanceHour: null, internalCostsHour: null, costHour: null,
+        marginHour: null, marginPercent: null, cost: null, marginTotal: null,
+        breakdown: p.calculation.breakdown.filter((l) => l.kind === 'salary' || l.kind === 'vacation'),
+      },
+    })),
+  };
+}
+
+async function loadVersion(tx: Tx, ctx: TenantContext, versionId: string): Promise<Version> {
+  const v = await loadVersionFull(tx, ctx.tenantId, versionId);
+  return seesCosts(ctx) ? v : hideCosts(v);
+}
+
+/** Cambiar costes internos o tipos de la Seguridad Social exige verlos. */
+function requireCostsAccess(ctx: TenantContext, body: Record<string, unknown>, keys: string[]) {
+  if (!seesCosts(ctx) && keys.some((k) => body[k] !== undefined)) {
+    throw new ApiError(403, 'sin_permiso', `Cambiar ${keys.join(' o ')} exige ver los costes (${VIEW_COSTS})`);
+  }
+}
+
+async function loadQuote(tx: Tx, ctx: TenantContext, quoteId: string) {
+  const tenantId = ctx.tenantId;
   const [summary] = await tx<QuoteSummary[]>`${summarySelect(tx, tenantId)} and q.id = ${quoteId}`;
   if (!summary) throw notFound('El presupuesto no existe');
   const versions = await tx<z.infer<typeof VersionSummarySchema>[]>`
@@ -574,7 +625,12 @@ async function loadQuote(tx: Tx, tenantId: string, quoteId: string) {
     hours: _h, revenue: _r, averageRate: _a, marginPercent: _m, approvalStatus: _ap, sentAt: _sa,
     daysWithoutResponse: _d, noResponse: _n, rejectionReasonName: _rr, ...header
   } = summary;
-  return { ...header, currentVersion: await loadVersion(tx, tenantId, current.id), versions: [...versions] };
+  const see = seesCosts(ctx);
+  return {
+    ...header,
+    currentVersion: await loadVersion(tx, ctx, current.id),
+    versions: versions.map((v) => (see ? v : { ...v, marginPercent: null })),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -730,25 +786,70 @@ async function currentPosition(tx: Tx, tenantId: string, positionId: string) {
   return { versionId: row.versionId, position };
 }
 
-/** Comprobaciones antes de enviar («revisión antes de enviar»): un detalle por cada punto que falla. */
-async function sendChecklist(tx: Tx, tenantId: string, versionId: string) {
-  const v = await loadVersion(tx, tenantId, versionId);
-  const [q] = await tx<{ clientId: string | null }[]>`select client_id from public.quotes where tenant_id = ${tenantId} and id = ${v.quoteId}`;
-  const issues: { path: string; message: string }[] = [];
-  if (!q?.clientId) issues.push({ path: 'clientId', message: 'Falta el cliente' });
-  if (!v.contactId) issues.push({ path: 'contactId', message: 'Falta el contacto que recibe el presupuesto' });
-  else if (!v.contactEmail) issues.push({ path: 'contactId', message: 'El contacto no tiene email' });
-  if (!v.salesRepId) issues.push({ path: 'salesRepId', message: 'Falta el comercial' });
-  const [today] = await tx<{ d: string }[]>`select to_char(current_date, 'YYYY-MM-DD') as d`;
-  if (!v.validUntil || v.validUntil < today!.d) issues.push({ path: 'validUntil', message: 'La validez tiene que ser una fecha futura' });
-  if (v.positions.length === 0) issues.push({ path: 'positions', message: 'Hace falta al menos un puesto' });
+const ReviewCheckSchema = z
+  .object({
+    code: z.enum(['client', 'contact', 'contact_email', 'sales_rep', 'valid_until', 'positions', 'rate', 'rate_below_cost',
+      'below_agreement', 'margin']),
+    path: z.string().openapi({ description: 'Campo que hay que corregir (para «Corregir»): clientId, positions.0.hourlyRate...' }),
+    ok: z.boolean(),
+    kind: z.enum(['error', 'approval']).openapi({ description: 'error: impide enviar; approval: hace falta la aprobación del margen' }),
+    message: z.string(),
+  })
+  .openapi('QuoteReviewCheck');
+const ReviewSchema = z
+  .object({
+    ready: z.boolean().openapi({ description: 'Se puede enviar ya' }),
+    needsApproval: z.boolean().openapi({ description: 'Algún margen está por debajo del mínimo y no está aprobado' }),
+    approvalStatus: ApprovalStatus,
+    minMarginPercent: z.number().nullable(),
+    checks: z.array(ReviewCheckSchema),
+  })
+  .openapi('QuoteReview');
+type ReviewCheck = z.infer<typeof ReviewCheckSchema>;
+
+/** Revisión antes de enviar: todos los puntos, cumplidos o no. */
+async function reviewVersion(tx: Tx, tenantId: string, versionId: string): Promise<z.infer<typeof ReviewSchema>> {
+  const v = await loadVersionFull(tx, tenantId, versionId);
+  const [q] = await tx<{ clientId: string | null; minMargin: number | null; today: string }[]>`
+    select q.client_id, t.quote_min_margin_percent::float8 as min_margin, to_char(current_date, 'YYYY-MM-DD') as today
+    from public.quotes q join public.tenants t on t.id = q.tenant_id
+    where q.tenant_id = ${tenantId} and q.id = ${v.quoteId}
+  `;
+  const checks: ReviewCheck[] = [];
+  const add = (code: ReviewCheck['code'], path: string, ok: boolean, message: string, kind: ReviewCheck['kind'] = 'error') =>
+    checks.push({ code, path, ok, kind, message });
+  add('client', 'clientId', Boolean(q?.clientId), q?.clientId ? 'Empresa elegida' : 'Falta la empresa');
+  add('contact', 'contactId', Boolean(v.contactId), v.contactId ? 'Contacto elegido' : 'Falta el contacto que recibe el presupuesto');
+  if (v.contactId) add('contact_email', 'contactId', Boolean(v.contactEmail), v.contactEmail ? 'El contacto tiene email' : 'El contacto no tiene email');
+  add('sales_rep', 'salesRepId', Boolean(v.salesRepId), v.salesRepId ? 'Comercial asignado' : 'Falta el comercial');
+  const validOk = Boolean(v.validUntil && q && v.validUntil >= q.today);
+  add('valid_until', 'validUntil', validOk, validOk ? 'Validez futura' : 'La validez tiene que ser una fecha futura');
+  add('positions', 'positions', v.positions.length > 0, v.positions.length ? 'Tiene puestos' : 'Hace falta al menos un puesto');
   v.positions.forEach((p, i) => {
-    if (p.hourlyRate === null) issues.push({ path: `positions.${i}.hourlyRate`, message: `«${p.name}»: falta la tarifa` });
-    else if (p.calculation?.issues.includes('rate_below_cost')) {
-      issues.push({ path: `positions.${i}.hourlyRate`, message: `«${p.name}»: la tarifa no cubre el coste` });
+    const issues = p.calculation?.issues ?? [];
+    add('rate', `positions.${i}.hourlyRate`, p.hourlyRate !== null,
+      p.hourlyRate !== null ? `«${p.name}»: con tarifa` : `«${p.name}»: falta la tarifa`);
+    if (p.hourlyRate !== null) {
+      const ok = !issues.includes('rate_below_cost');
+      add('rate_below_cost', `positions.${i}.hourlyRate`, ok, ok ? `«${p.name}»: la tarifa cubre el coste` : `«${p.name}»: la tarifa no cubre el coste`);
+    }
+    if (p.agreementMinimumSalaryHour !== null) {
+      const ok = !issues.includes('salary_below_agreement') && !issues.includes('extra_below_agreement');
+      add('below_agreement', `positions.${i}.annualBaseSalary`, ok,
+        ok ? `«${p.name}»: salario de convenio o superior` : `«${p.name}»: salario por debajo del convenio (no se puede enviar)`);
+    }
+    if (q?.minMargin !== null && q?.minMargin !== undefined) {
+      const below = issues.includes('margin_below_minimum');
+      add('margin', `positions.${i}.hourlyRate`, !below || v.approvalStatus === 'approved',
+        !below ? `«${p.name}»: margen igual o superior al mínimo (${q.minMargin} %)`
+          : v.approvalStatus === 'approved' ? `«${p.name}»: margen por debajo del mínimo, aprobado`
+          : `«${p.name}»: margen por debajo del mínimo (${q.minMargin} %): hace falta la aprobación de un responsable`,
+        'approval');
     }
   });
-  return issues;
+  const errors = checks.filter((c) => !c.ok && c.kind === 'error');
+  const needsApproval = checks.some((c) => !c.ok && c.kind === 'approval');
+  return { ready: errors.length === 0 && !needsApproval, needsApproval, approvalStatus: v.approvalStatus, minMarginPercent: q?.minMargin ?? null, checks };
 }
 
 // ---------------------------------------------------------------------------
@@ -813,7 +914,8 @@ export const quotes = createRouter()
         const base = summarySelect(tx, ctx.tenantId);
         const data = await tx<QuoteSummary[]>`${base} and ${where} order by q.created_at desc, q.id limit ${q.limit} offset ${q.offset}`;
         const [count] = await tx<{ total: number }[]>`select count(*)::int as total from (${base} and ${where}) s`;
-        return { data: [...data], pagination: { limit: q.limit, offset: q.offset, total: count?.total ?? 0 } };
+        const rows = seesCosts(ctx) ? [...data] : data.map((r) => ({ ...r, marginPercent: null }));
+        return { data: rows, pagination: { limit: q.limit, offset: q.offset, total: count?.total ?? 0 } };
       });
       return c.json(page, 200);
     },
@@ -836,6 +938,7 @@ export const quotes = createRouter()
     async (c) => {
       const body = c.req.valid('json');
       const quote = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
+        requireCostsAccess(ctx, body, ['costConcepts', 'ssRates']);
         const scope = await quoteScope(tx, ctx.tenantId, body.clientId ?? null, body.branchId);
         checkRequiredConcepts(body.costConcepts);
         const [created] = await tx<{ id: string }[]>`
@@ -864,7 +967,7 @@ export const quotes = createRouter()
           insert into public.quote_versions ${tx(values as never)} returning id
         `;
         await recalculate(tx, ctx.tenantId, version!.id);
-        return loadQuote(tx, ctx.tenantId, created!.id);
+        return loadQuote(tx, ctx, created!.id);
       });
       return c.json(quote, 201);
     },
@@ -882,7 +985,7 @@ export const quotes = createRouter()
     }),
     async (c) => {
       const { id } = c.req.valid('param');
-      const quote = await withTenant(c, {}, (tx, ctx) => loadQuote(tx, ctx.tenantId, id));
+      const quote = await withTenant(c, {}, (tx, ctx) => loadQuote(tx, ctx, id));
       return c.json(quote, 200);
     },
   )
@@ -917,7 +1020,7 @@ export const quotes = createRouter()
             where tenant_id = ${ctx.tenantId} and quote_id = ${id}
           `;
         }
-        return loadQuote(tx, ctx.tenantId, id);
+        return loadQuote(tx, ctx, id);
       });
       return c.json(quote, 200);
     },
@@ -946,7 +1049,7 @@ export const quotes = createRouter()
           })} returning id
         `;
         await copyVersion(tx, ctx.tenantId, source.versionId, created!.id, 1, { withoutClientData: true });
-        return loadQuote(tx, ctx.tenantId, created!.id);
+        return loadQuote(tx, ctx, created!.id);
       });
       return c.json(quote, 201);
     },
@@ -983,7 +1086,7 @@ export const quotes = createRouter()
           })} returning id
         `;
         await copyVersion(tx, ctx.tenantId, source.versionId, created!.id, 1);
-        return { obsolete: await loadQuote(tx, ctx.tenantId, id), created: await loadQuote(tx, ctx.tenantId, created!.id) };
+        return { obsolete: await loadQuote(tx, ctx, id), created: await loadQuote(tx, ctx, created!.id) };
       });
       return c.json(result, 201);
     },
@@ -1001,7 +1104,7 @@ export const quotes = createRouter()
     }),
     async (c) => {
       const { id } = c.req.valid('param');
-      const version = await withTenant(c, {}, (tx, ctx) => loadVersion(tx, ctx.tenantId, id));
+      const version = await withTenant(c, {}, (tx, ctx) => loadVersion(tx, ctx, id));
       return c.json(version, 200);
     },
   )
@@ -1024,13 +1127,14 @@ export const quotes = createRouter()
       const body = c.req.valid('json');
       if (Object.keys(body).length === 0) throw new ApiError(400, 'validacion', 'No hay ningún campo que cambiar');
       const version = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
+        requireCostsAccess(ctx, body, ['costConcepts', 'ssRates']);
         const v = await findVersion(tx, ctx.tenantId, id);
         requireEditable(v);
         checkRequiredConcepts(body.costConcepts);
         await checkVersionRefs(tx, ctx.tenantId, v.quoteId, body.contactId, body.salesRepId);
         await tx`update public.quote_versions set ${tx(versionColumns(tx, body))} where tenant_id = ${ctx.tenantId} and id = ${id}`;
         await recalculate(tx, ctx.tenantId, id);
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 200);
     },
@@ -1053,6 +1157,7 @@ export const quotes = createRouter()
       const { id } = c.req.valid('param');
       const body = c.req.valid('json');
       const version = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
+        requireCostsAccess(ctx, body, ['costs']);
         const v = await findVersion(tx, ctx.tenantId, id);
         requireEditable(v);
         const cols = await positionColumns(tx, ctx.tenantId, v, body, null);
@@ -1064,7 +1169,7 @@ export const quotes = createRouter()
           insert into public.quote_positions ${tx({ sortOrder: order!.next, ...cols, tenantId: ctx.tenantId, quoteId: v.quoteId, versionId: id } as never)}
         `;
         await recalculate(tx, ctx.tenantId, id);
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 201);
     },
@@ -1087,13 +1192,14 @@ export const quotes = createRouter()
       const body = c.req.valid('json');
       if (Object.keys(body).length === 0) throw new ApiError(400, 'validacion', 'No hay ningún campo que cambiar');
       const version = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
+        requireCostsAccess(ctx, body, ['costs']);
         const { versionId, position } = await currentPosition(tx, ctx.tenantId, id);
         const v = await findVersion(tx, ctx.tenantId, versionId);
         requireEditable(v);
         const cols = await positionColumns(tx, ctx.tenantId, v, body, position as never);
         await tx`update public.quote_positions set ${tx(cols)} where tenant_id = ${ctx.tenantId} and id = ${id}`;
         await recalculate(tx, ctx.tenantId, versionId);
-        return loadVersion(tx, ctx.tenantId, versionId);
+        return loadVersion(tx, ctx, versionId);
       });
       return c.json(version, 200);
     },
@@ -1127,7 +1233,7 @@ export const quotes = createRouter()
         const cols = await positionColumns(tx, ctx.tenantId, v, patch, position as never);
         await tx`update public.quote_positions set ${tx(cols)} where tenant_id = ${ctx.tenantId} and id = ${id}`;
         await recalculate(tx, ctx.tenantId, versionId);
-        return loadVersion(tx, ctx.tenantId, versionId);
+        return loadVersion(tx, ctx, versionId);
       });
       return c.json(version, 200);
     },
@@ -1150,7 +1256,7 @@ export const quotes = createRouter()
         requireEditable(await findVersion(tx, ctx.tenantId, versionId));
         await tx`delete from public.quote_positions where tenant_id = ${ctx.tenantId} and id = ${id}`;
         await recalculate(tx, ctx.tenantId, versionId);
-        return loadVersion(tx, ctx.tenantId, versionId);
+        return loadVersion(tx, ctx, versionId);
       });
       return c.json(version, 200);
     },
@@ -1212,7 +1318,7 @@ export const quotes = createRouter()
           update public.quote_versions set approval_status = 'pending', approval_notes = ${notes ?? null}
           where tenant_id = ${ctx.tenantId} and id = ${id}
         `;
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 200);
     },
@@ -1229,7 +1335,7 @@ export const quotes = createRouter()
           set approval_status = 'approved', approval_notes = coalesce(${notes ?? null}, approval_notes)
           where tenant_id = ${ctx.tenantId} and id = ${id}
         `;
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 200);
     },
@@ -1246,9 +1352,33 @@ export const quotes = createRouter()
           update public.quote_versions set approval_status = 'rejected', approval_notes = ${notes}
           where tenant_id = ${ctx.tenantId} and id = ${id}
         `;
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 200);
+    },
+  )
+  .openapi(
+    createRoute({
+      method: 'get',
+      path: '/quote-versions/{id}/review',
+      tags,
+      summary: 'Revisión antes de enviar',
+      description:
+        'La lista de comprobación de «Enviar al cliente», con cada punto cumplido o no y el campo que hay que corregir. ' +
+        'Los de tipo `approval` (margen bajo el mínimo) se resuelven con la aprobación; los de tipo `error`, corrigiendo. ' +
+        'No cambia nada (en una versión editable, recalcula antes de revisar).',
+      security: bearerSecurity,
+      request: { params: VersionIdParams },
+      responses: { 200: jsonContent(ReviewSchema, 'Revisión'), ...errorResponses(400, 401, 403, 404, 422) },
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const review = await withTenant(c, {}, async (tx, ctx) => {
+        await findVersion(tx, ctx.tenantId, id);
+        if (ctx.permissions.has(MANAGE)) await recalculate(tx, ctx.tenantId, id);
+        return reviewVersion(tx, ctx.tenantId, id);
+      });
+      return c.json(review, 200);
     },
   )
   .openapi(
@@ -1262,10 +1392,11 @@ export const quotes = createRouter()
         const v = await findVersion(tx, ctx.tenantId, id);
         requireEditable(v);
         await recalculate(tx, ctx.tenantId, id);
-        const issues = await sendChecklist(tx, ctx.tenantId, id);
-        if (issues.length) throw new ApiError(422, 'validacion', 'El presupuesto no está listo para enviar', issues);
+        const review = await reviewVersion(tx, ctx.tenantId, id);
+        const errors = review.checks.filter((ch) => !ch.ok && ch.kind === 'error').map((ch) => ({ path: ch.path, message: ch.message }));
+        if (errors.length) throw new ApiError(422, 'validacion', 'El presupuesto no está listo para enviar', errors);
         await tx`update public.quote_versions set status = 'sent' where tenant_id = ${ctx.tenantId} and id = ${id}`;
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 200);
     },
@@ -1277,7 +1408,7 @@ export const quotes = createRouter()
       const version = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
         await findVersion(tx, ctx.tenantId, id);
         await tx`update public.quote_versions set status = 'pending_signature' where tenant_id = ${ctx.tenantId} and id = ${id}`;
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 200);
     },
@@ -1289,7 +1420,7 @@ export const quotes = createRouter()
       const version = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
         await findVersion(tx, ctx.tenantId, id);
         await tx`update public.quote_versions set status = 'accepted' where tenant_id = ${ctx.tenantId} and id = ${id}`;
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 200);
     },
@@ -1306,7 +1437,7 @@ export const quotes = createRouter()
           set status = 'rejected', rejection_reason_id = ${body.reasonId}, rejection_notes = ${body.notes ?? null}
           where tenant_id = ${ctx.tenantId} and id = ${id}
         `;
-        return loadVersion(tx, ctx.tenantId, id);
+        return loadVersion(tx, ctx, id);
       });
       return c.json(version, 200);
     },
@@ -1335,7 +1466,7 @@ export const quotes = createRouter()
         }
         const newId = await copyVersion(tx, ctx.tenantId, id, v.quoteId, v.versionNumber + 1);
         await tx`update public.quote_versions set status = 'superseded' where tenant_id = ${ctx.tenantId} and id = ${id}`;
-        return loadVersion(tx, ctx.tenantId, newId);
+        return loadVersion(tx, ctx, newId);
       });
       return c.json(version, 201);
     },
@@ -1361,7 +1492,7 @@ export const quotes = createRouter()
       const { id } = c.req.valid('param');
       const storage = storageOf(c);
       const result = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
-        const version = await loadVersion(tx, ctx.tenantId, id);
+        const version = await loadVersionFull(tx, ctx.tenantId, id);
         if (version.positions.length === 0) throw new ApiError(409, 'conflicto', 'El presupuesto aún no tiene puestos');
         const [info] = await tx<{
           code: string; companyName: string; companyTaxId: string | null; tradeName: string | null; authorization: string | null;

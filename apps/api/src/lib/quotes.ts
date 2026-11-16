@@ -238,8 +238,12 @@ export function resolveCosts(concepts: readonly CostConcept[], adjustments: read
   return concepts.flatMap((c): CostLine[] => {
     const a = adjustments.find((x) => x.code === c.code);
     if (a && !a.applies) return [];
-    if (a?.percent !== null && a?.percent !== undefined) return [{ code: c.code, name: c.name, mode: 'percent', value: a.percent }];
-    if (a?.perHour !== null && a?.perHour !== undefined) return [{ code: c.code, name: c.name, mode: 'per_hour', value: a.perHour }];
+    if (a?.percent !== null && a?.percent !== undefined) {
+      return [{ code: c.code, name: c.name, mode: 'percent', value: a.percent, custom: true }];
+    }
+    if (a?.perHour !== null && a?.perHour !== undefined) {
+      return [{ code: c.code, name: c.name, mode: 'per_hour', value: a.perHour, custom: true }];
+    }
     return [{ code: c.code, name: c.name, mode: c.mode, value: c.value }];
   });
 }

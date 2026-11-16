@@ -327,7 +327,7 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `GET /v1/activity?entityType=&entityId=&includeChildren=`: historial de una ficha, lo último primero, paginado | quien ve la ficha (la facturación, con `clients.billing.manage`) |
 | `POST /v1/documents/uploads`, `POST /v1/documents`, `GET /v1/documents` (`?entityType=&entityId=&typeId=&status=&visibleInPortal=&expiresBefore=&q=&deleted=`), `GET`, `PATCH`, `DELETE /v1/documents/{id}`, `POST /v1/documents/{id}/restore`, `GET /v1/documents/{id}/download`: documentos de clientes, centros y presupuestos (ver "Documentos") | leer, quien ve la ficha; escribir, quien puede editarla (`clients.manage` en su sucursal) |
 | `GET /v1/quotes` (`?q=&status=&salesRepId=&clientId=&branchId=&validity=valid\|expiring\|expired&noResponse=`), `GET /v1/quotes/{id}`, `GET /v1/quote-versions/{id}`, `GET /v1/quote-agreement-defaults?collectiveAgreementId=&agreementCategoryId=&date=`: presupuestos, versiones y tablas del convenio para un puesto | `module.comercial` o `quotes.manage`, en la sucursal del presupuesto |
-| `POST /v1/quotes`, `PATCH /v1/quotes/{id}`, `POST /v1/quotes/{id}/duplicate`, `POST /v1/quotes/{id}/obsolete`, `PATCH /v1/quote-versions/{id}`, `POST /v1/quote-versions/{id}/positions`, `PATCH`, `DELETE /v1/quote-positions/{id}`, `POST /v1/quote-positions/{id}/reset-from-agreement`, `POST /v1/quote-versions/{id}/request-approval` · `/send` · `/pending-signature` · `/accept` · `/reject` · `/new-version` · `/proposal-pdf` (ver "Presupuestos") | `quotes.manage` |
+| `POST /v1/quotes`, `PATCH /v1/quotes/{id}`, `POST /v1/quotes/{id}/duplicate`, `POST /v1/quotes/{id}/obsolete`, `PATCH /v1/quote-versions/{id}`, `POST /v1/quote-versions/{id}/positions`, `PATCH`, `DELETE /v1/quote-positions/{id}`, `POST /v1/quote-positions/{id}/reset-from-agreement`, `GET /v1/quote-versions/{id}/review`, `POST /v1/quote-versions/{id}/request-approval` · `/send` · `/pending-signature` · `/accept` · `/reject` · `/new-version` · `/proposal-pdf` (ver "Presupuestos") | `quotes.manage` |
 | `POST /v1/quote-versions/{id}/approve` · `/reject-approval`: aprobar el margen por debajo del mínimo o pedir cambios | `quotes.approve_margin` |
 
 Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
@@ -355,6 +355,11 @@ Social, indemnización de 12 días por año, costes internos y margen; tarifa su
 - **Errores propios**: 422 `salario_bajo_convenio` (salario, o el de un extra, por debajo del convenio de la empresa
   usuaria: siempre bloquea) y 409 `requiere_aprobacion` (al enviar con un margen por debajo del mínimo sin aprobar).
   `send` devuelve antes 422 `validacion` con un `details` por cada punto de la revisión que falla.
+- **Revisión antes de enviar**: `GET /v1/quote-versions/{id}/review` devuelve todos los puntos (cumplidos o no) con el
+  campo que hay que corregir; `send` usa la misma revisión.
+- **Costes y margen**: solo con `quotes.view_costs` (en `GET /v1/me` → `permissions`). Sin él, el cálculo trae a null
+  coste, Seguridad Social, indemnización, costes internos y margen, el desglose solo salario y vacaciones, y no se
+  pueden cambiar `costConcepts`, `ssRates` ni los `costs` de un puesto (403).
 - **PDF de la propuesta**: `proposal-pdf` lo genera con pdf-lib y lo guarda como documento del presupuesto; se
   descarga como cualquier documento. No lleva nada interno.
 

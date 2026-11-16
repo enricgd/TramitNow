@@ -1,7 +1,7 @@
 -- Presupuestos: salario nunca por debajo del convenio de la empresa usuaria (art. 11 Ley 14/1994), aprobación del
 -- margen por debajo del mínimo, versiones cerradas al enviar, transiciones de estado, obsoleto, historial, documentos
 -- y RLS. Datos inventados (REGCON 999999999999xx).
-select plan(40);
+select plan(41);
 
 -- ---------------------------------------------------------------------------
 -- Preparación (como postgres): convenio global publicado, convenios de las ETT, clientes y un comercial de A.
@@ -57,6 +57,12 @@ select ok(exists (select 1 from public.role_permissions rp join public.roles r o
                   where r.code = 'comercial' and rp.permission_code = 'quotes.manage'
                     and r.tenant_id = '10000000-0000-0000-0000-00000000000a'),
           'el rol comercial puede gestionar presupuestos');
+select ok(not exists (select 1 from public.role_permissions rp join public.roles r on r.id = rp.role_id
+                      where r.code = 'comercial' and rp.permission_code = 'quotes.view_costs')
+          and exists (select 1 from public.role_permissions rp join public.roles r on r.id = rp.role_id
+                      where r.code = 'director_zona' and rp.permission_code = 'quotes.view_costs'
+                        and r.tenant_id = '10000000-0000-0000-0000-00000000000a'),
+          'costes y margen: dirección sí, comercial no');
 select ok(exists (select 1 from public.catalog_items where tenant_id = '10000000-0000-0000-0000-00000000000a'
                   and catalog = 'quote_rejection_reason' and code = 'price'),
           'cada ETT tiene los motivos de rechazo de serie');
