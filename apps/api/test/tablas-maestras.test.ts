@@ -23,21 +23,21 @@ describe('tablas maestras', () => {
     const res = await call('GET', '/v1/catalog-types', { token: seleccion });
     expect(res.status).toBe(200);
     expect(res.body.data.map((t: { code: string }) => t.code)).toEqual(
-      expect.arrayContaining(['sector', 'payment_method', 'vat_regime', 'quote_rejection_reason', 'vacancy_cancellation_reason',
+      expect.arrayContaining(['payment_method', 'vat_regime', 'quote_rejection_reason', 'vacancy_cancellation_reason',
         'assignment_end_reason', 'incident_type', 'document_type']),
     );
   });
 
   it('admin crea valores solo con nombre; el nombre es único por tipo sin distinguir mayúsculas', async () => {
-    const created = await call('POST', '/v1/catalog-items', { token: admin, body: { type: 'sector', name: 'Logística' } });
+    const created = await call('POST', '/v1/catalog-items', { token: admin, body: { type: 'incident_type', name: 'Logística' } });
     expect(created.status).toBe(201);
-    expect(created.body).toMatchObject({ type: 'sector', name: 'Logística', code: null, status: 'active', retentionRequired: false, metadata: {} });
+    expect(created.body).toMatchObject({ type: 'incident_type', name: 'Logística', code: null, status: 'active', retentionRequired: false, metadata: {} });
 
-    const dup = await call('POST', '/v1/catalog-items', { token: admin, body: { type: 'sector', name: 'LOGÍSTICA' } });
+    const dup = await call('POST', '/v1/catalog-items', { token: admin, body: { type: 'incident_type', name: 'LOGÍSTICA' } });
     expect(dup.status).toBe(409);
     expect(dup.body.error.message).toBe('Ya existe un valor con ese nombre en esta tabla maestra');
 
-    const otherTenant = await call('POST', '/v1/catalog-items', { token: adminB, body: { type: 'sector', name: 'Logística' } });
+    const otherTenant = await call('POST', '/v1/catalog-items', { token: adminB, body: { type: 'incident_type', name: 'Logística' } });
     expect(otherTenant.status).toBe(201);
   });
 
@@ -46,7 +46,7 @@ describe('tablas maestras', () => {
     expect(badType.status).toBe(422);
     const retention = await call('POST', '/v1/catalog-items', {
       token: admin,
-      body: { type: 'sector', name: 'Con conservación', retentionRequired: true },
+      body: { type: 'incident_type', name: 'Con conservación', retentionRequired: true },
     });
     expect(retention.status).toBe(422);
     const docType = await call('POST', '/v1/catalog-items', {
@@ -59,7 +59,7 @@ describe('tablas maestras', () => {
 
   it('la lista exige el tipo y solo devuelve los de la ETT activa', async () => {
     expect((await call('GET', '/v1/catalog-items', { token: admin })).status).toBe(400);
-    const list = await call('GET', '/v1/catalog-items?type=sector', { token: seleccion });
+    const list = await call('GET', '/v1/catalog-items?type=incident_type', { token: seleccion });
     expect(list.status).toBe(200);
     expect(list.body.data.map((i: { name: string }) => i.name)).toEqual(['Logística']);
     expect(list.body.pagination.total).toBe(1);
@@ -68,7 +68,7 @@ describe('tablas maestras', () => {
   });
 
   it('editar: no cambia el tipo; sin catalogs.manage no escribe; otra ETT no lo ve', async () => {
-    const list = await call('GET', '/v1/catalog-items?type=sector', { token: admin });
+    const list = await call('GET', '/v1/catalog-items?type=incident_type', { token: admin });
     const id = list.body.data[0].id;
     const typeChange = await call('PATCH', `/v1/catalog-items/${id}`, { token: admin, body: { type: 'incident_type' } });
     expect(typeChange.status).toBe(400);
@@ -77,12 +77,12 @@ describe('tablas maestras', () => {
     expect(renamed.body.name).toBe('Logística y transporte');
 
     expect((await call('PATCH', `/v1/catalog-items/${id}`, { token: seleccion, body: { name: 'No' } })).status).toBe(403);
-    expect((await call('POST', '/v1/catalog-items', { token: seleccion, body: { type: 'sector', name: 'No' } })).status).toBe(403);
+    expect((await call('POST', '/v1/catalog-items', { token: seleccion, body: { type: 'incident_type', name: 'No' } })).status).toBe(403);
     expect((await call('GET', `/v1/catalog-items/${id}`, { token: adminB })).status).toBe(404);
     expect((await call('DELETE', `/v1/catalog-items/${id}`, { token: adminB })).status).toBe(404);
 
     expect((await call('DELETE', `/v1/catalog-items/${id}`, { token: admin })).status).toBe(204);
-    const again = await call('POST', '/v1/catalog-items', { token: admin, body: { type: 'sector', name: 'Logística y transporte' } });
+    const again = await call('POST', '/v1/catalog-items', { token: admin, body: { type: 'incident_type', name: 'Logística y transporte' } });
     expect(again.status).toBe(201);
   });
 });

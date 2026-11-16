@@ -15,7 +15,7 @@ insert into public.client_centers (id, tenant_id, client_id, branch_id, code, na
 insert into public.catalog_items (id, tenant_id, catalog, name, retention_required) values
   ('41000000-0000-0000-0000-0000000000a1', '10000000-0000-0000-0000-00000000000a', 'document_type', 'CIF', false),
   ('41000000-0000-0000-0000-0000000000a2', '10000000-0000-0000-0000-00000000000a', 'document_type', 'Contrato', true),
-  ('41000000-0000-0000-0000-0000000000a3', '10000000-0000-0000-0000-00000000000a', 'sector', 'Logística', false),
+  ('41000000-0000-0000-0000-0000000000a3', '10000000-0000-0000-0000-00000000000a', 'client_type', 'Logística', false),
   ('41000000-0000-0000-0000-0000000000b1', '10000000-0000-0000-0000-00000000000b', 'document_type', 'CIF', false);
 
 select is(
@@ -82,10 +82,10 @@ select throws_ok(
 -- Conservación obligatoria.
 select throws_ok(
   $$ delete from public.documents where id = '90000000-0000-0000-0000-0000000000a2' $$,
-  'TN409', null, 'un contrato no se puede borrar');
+  'TNRET', null, 'un contrato no se puede borrar');
 select throws_ok(
   $$ update public.documents set type_id = '41000000-0000-0000-0000-0000000000a1' where id = '90000000-0000-0000-0000-0000000000a2' $$,
-  'TN409', null, 'ni pasarlo a un tipo borrable');
+  'TNRET', null, 'ni pasarlo a un tipo borrable');
 select lives_ok(
   $$ delete from public.documents where id = '90000000-0000-0000-0000-0000000000a1' $$, 'el resto se borra de verdad');
 select is((select count(*)::int from public.documents where id = '90000000-0000-0000-0000-0000000000a1'), 0, 'ya no está');
@@ -93,7 +93,7 @@ select is((select count(*)::int from public.documents where id = '90000000-0000-
 select is(
   (select array_agg(summary order by id) from public.activity_log where entity_type = 'document'),
   array['Alta de documento «CIF»', 'Alta de documento «Contrato»', 'Validación de documento «CIF»',
-        'Cambios en documento «CIF»', 'Eliminación de documento «CIF»'],
+        'Cambios en documento «CIF»', 'Eliminación definitiva de documento «CIF»'],
   'todo deja rastro en el historial');
 select is(
   (select parent_type || ':' || parent_id from public.activity_log where entity_type = 'document' and summary like '%Contrato%'),

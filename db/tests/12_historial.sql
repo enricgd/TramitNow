@@ -40,10 +40,10 @@ select is(
   'Alta de centro de trabajo «Almacén ficticio»', 'resumen legible');
 select is(
   (select summary from public.activity_log where entity_type = 'client_contact' and action = 'delete'),
-  'Baja de contacto «Contacto Ficticio»', 'la baja lógica cuenta como baja');
+  'Eliminación de contacto «Contacto Ficticio»', 'la baja lógica cuenta como eliminación');
 select is(
   (select summary from public.activity_log where entity_type = 'client_center' and action = 'delete'),
-  'Eliminación de centro de trabajo «Almacén ficticio»', 'el borrado definitivo deja rastro');
+  'Eliminación definitiva de centro de trabajo «Almacén ficticio»', 'el borrado definitivo deja rastro');
 select is(
   (select parent_type || ':' || parent_id from public.activity_log where entity_type = 'client_center' and action = 'create'),
   'client:80000000-0000-0000-0000-0000000000a1', 'el centro cuelga de su cliente');
