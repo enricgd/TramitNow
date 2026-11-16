@@ -7,109 +7,17 @@ import {
     CreditCard, Sparkles, Sliders, Globe, Mail, Phone, Briefcase, FileSpreadsheet,
     Key, Layers, ArrowRight, Save, RefreshCw, AlertCircle, Eye, UserPlus, EyeOff
 } from 'lucide-react';
-import { PageHeader, Button, Badge, Tabs, Modal, Drawer, Card, SectionTitle, Field, TextInput, Interruptor, Notice, Select, IconButton, Confirmar } from '../ui';
+import { PageHeader, Button, Badge, Tabs, Modal, Drawer, Card, SectionTitle, Field, TextInput, Interruptor, Notice, Select, IconButton, Confirmar, CargandoPagina, ErrorCarga, Proximamente } from '../ui';
 import { datosDeCp } from './codigosPostales';
-import { SERVICIOS_INICIALES, FORMAS_COBRO } from './serviciosDemo';
-import { REPRESENTANTE_ETT } from './ettDemo';
+import { FORMAS_COBRO } from './serviciosDemo';
+import { useMiEtt, mensajeError } from './mi-ett/useMiEtt';
+import { leerCampos } from './mi-ett/formulario';
 
-// Datos de la propia ETT. Los mismos que salen en Facturación (CIF, dirección, autorización e IBAN) y en la cabecera.
-const initialCompanyData = {
-    legalName: "ETT Global Servicios Temporales, S.L.",
-    tradeName: "ETT Global People",
-    cif: "B00000000",
-    companyType: "Sociedad Limitada (S.L.)",
-    country: "España",
-    address: "C/ Ejemplo 1, 3ª planta",
-    postalCode: "48001",
-    city: "Bilbao",
-    province: "Bizkaia",
-    phone: "+34 944 000 000",
-    email: "central@ettglobal.example",
-    adminEmail: "administracion@ettglobal.example",
-    web: "https://www.ettglobal.example",
-    logoUrl: null,
-    lastUpdated: "Hoy a las 10:45 por Begoña Arrieta Lasa",
-    // Datos de ETT (Ley 14/1994)
-    autorizacion: "00/0000-ETT",
-    fechaAutorizacion: "2019-03-12",
-    cnae: "7820 · Actividades de las empresas de trabajo temporal",
-    convenio: "Convenio colectivo estatal de empresas de trabajo temporal",
-    registroMercantil: "Registro Mercantil de Bizkaia",
-    tomo: "0000", folio: "00", hoja: "BI-00000",
-    representante: REPRESENTANTE_ETT.nombre, representanteDni: REPRESENTANTE_ETT.dni, representanteCargo: REPRESENTANTE_ETT.cargo,
-    mutua: "Mutua colaboradora con la Seguridad Social de ejemplo",
-    servicioPrevencion: "Servicio de prevención ajeno de ejemplo",
-    // Garantía financiera obligatoria de las ETT: se actualiza cada año
-    garantiaTipo: "Aval bancario", garantiaEntidad: "Entidad bancaria de ejemplo", garantiaImporte: "185.000 €", garantiaVence: "2026-12-08",
-    // Certificado digital de empresa y Sistema RED
-    redAutorizacion: "00000", certificadoCaduca: "2026-12-20",
-    // Facturación: las mismas series que en Facturación
-    billingSeries: "F2026-",
-    invoicePrefix: "R2026-",
-    proximaFactura: 108,
-    proximaRectificativa: 4,
-    vatRate: "21%",
-    withholdingRate: "0%",
-    iban: "ES00 0000 0000 0000 0000 0000",
-    swiftBic: "XXXXESXXXXX",
-    paymentMethod: "Transferencia bancaria",
-    customPaymentMethod: "",
-    paymentTerms: "30 días fecha factura",
-    currency: "EUR (€)",
-    billingAddressSameAsFiscal: true,
-    billingBranchMode: "centralized", // centralized | per_branch
-};
+// Los datos (ETT, sociedades, sucursales, usuarios...) llegan de mi-ett/useMiEtt.ts, en modo demo y en real.
+// Los de ejemplo están en src/data/memoria.ts. Lo que aún no tiene API sale como «Disponible próximamente».
 
 // Códigos de cuenta de cotización (CCC): uno por provincia y por tipo de personal
-const initialCcc = [
-    { id: 'ccc-1', numero: '48 0000001 01', provincia: 'Bizkaia', tipo: 'Personas en misión', sucursal: 'Delegación Norte (Bilbao)' },
-    { id: 'ccc-2', numero: '48 0000002 02', provincia: 'Bizkaia', tipo: 'Personal de estructura', sucursal: 'Delegación Norte (Bilbao)' },
-    { id: 'ccc-3', numero: '08 0000003 03', provincia: 'Barcelona', tipo: 'Personas en misión', sucursal: 'Sucursal Barcelona' },
-];
 const TIPOS_CCC = ['Personas en misión', 'Personal de estructura'];
-
-const initialBranches = [
-    { id: 'norte', code: 'DEL-NORTE', name: 'Delegación Norte (Bilbao)', city: 'Bilbao', address: 'C/ Ejemplo 1, 3ª planta', phone: '+34 944 000 000', email: 'norte@ettglobal.example', manager: 'Ane Uriarte', activeUsers: 6, completion: 100, status: 'active', isHeadquarters: true },
-    { id: 'bcn', code: 'SUC-BCN', name: 'Sucursal Barcelona', city: 'Barcelona', address: 'C/ Ejemplo 20, local 2', phone: '+34 930 000 000', email: 'barcelona@ettglobal.example', manager: 'Nuria Castells', activeUsers: 2, completion: 86, status: 'active', isHeadquarters: false },
-];
-
-// Las mismas personas que firman, seleccionan y venden en el resto de pantallas
-const initialUsers = [
-    { id: 1, name: 'Begoña Arrieta Lasa', email: 'begona.arrieta@ettglobal.example', role: 'Dirección', department: 'Dirección', branch: 'Todas', status: 'active', lastLogin: 'Hace 15 min' },
-    { id: 2, name: 'Ane Uriarte', email: 'ane.uriarte@ettglobal.example', role: 'Responsable de sucursal', department: 'Operaciones', branch: 'Delegación Norte (Bilbao)', status: 'active', lastLogin: 'Hoy 08:45' },
-    { id: 3, name: 'Nuria Castells', email: 'nuria.castells@ettglobal.example', role: 'Responsable de sucursal', department: 'Operaciones', branch: 'Sucursal Barcelona', status: 'active', lastLogin: 'Hoy 09:10' },
-    { id: 4, name: 'Jon Ibarra', email: 'jon.ibarra@ettglobal.example', role: 'Selección', department: 'Selección', branch: 'Delegación Norte (Bilbao)', status: 'active', lastLogin: 'Hoy 10:02' },
-    { id: 5, name: 'Ana Gómez', email: 'ana.gomez@ettglobal.example', role: 'Selección', department: 'Selección', branch: 'Delegación Norte (Bilbao)', status: 'active', lastLogin: 'Ayer 18:20' },
-    { id: 6, name: 'Elena Navarro', email: 'elena.navarro@ettglobal.example', role: 'Comercial', department: 'Comercial', branch: 'Delegación Norte (Bilbao)', status: 'active', lastLogin: 'Hoy 09:30' },
-    { id: 7, name: 'Carlos Mendoza', email: 'carlos.mendoza@ettglobal.example', role: 'Comercial', department: 'Comercial', branch: 'Delegación Norte (Bilbao)', status: 'active', lastLogin: 'Hace 2 días' },
-    { id: 8, name: 'Laura Vidal', email: 'laura.vidal@ettglobal.example', role: 'Comercial', department: 'Comercial', branch: 'Sucursal Barcelona', status: 'active', lastLogin: 'Hoy 11:05' },
-    { id: 9, name: 'Lucía Santos', email: 'lucia.santos@ettglobal.example', role: 'Administración y facturación', department: 'Administración', branch: 'Todas', status: 'active', lastLogin: 'Hoy 10:12' },
-    { id: 10, name: 'Marcos Rubio', email: 'marcos.rubio@ettglobal.example', role: 'Gestión laboral', department: 'Laboral', branch: 'Sin asignar', status: 'pending', lastLogin: 'Nunca' },
-];
-
-const initialTemplates = [
-    { id: 'tpl-1', name: 'Presupuesto comercial estándar 2026', category: 'Presupuestos', scope: 'Global (Todas)', status: 'active', format: 'PDF + Interactivo', updated: '12 Ene 2026' },
-    { id: 'tpl-2', name: 'Factura ordinaria (series F y R)', category: 'Facturación', scope: 'Global (Todas)', status: 'active', format: 'PDF / XML Facturae', updated: '02 Feb 2026' },
-    { id: 'tpl-3', name: 'Presupuesto de hostelería y eventos', category: 'Presupuestos', scope: 'Sucursal Barcelona', status: 'incomplete', format: 'PDF', updated: '15 Sep 2026' },
-    { id: 'tpl-4', name: 'Contrato de puesta a disposición (CPD)', category: 'Laboral / Legal', scope: 'Global (Todas)', status: 'active', format: 'PDF firmable', updated: '10 Feb 2026' }
-];
-
-// Portales propios de la ETT: subdominio y correos de bienvenida
-const initialPortales = {
-    subdominio: 'ettglobal',
-    bienvenida: {
-        empresa: { activo: true, asunto: 'Tu acceso al Área de empresas de {ett}', texto: 'Hola, {nombre}:\n\nTe hemos dado acceso al Área de empresas de {ett} para {empresa}. Desde allí puedes ver a tu personal en misión, validar los partes de horas, firmar los CPD y descargar las facturas, según tus permisos.\n\nElige tu contraseña aquí: {enlace}' },
-        candidato: { activo: true, asunto: 'Bienvenida a {ett}', texto: 'Hola, {nombre}:\n\nGracias por inscribirte. Desde tu área personal puedes subir tus documentos, seguir tus candidaturas y firmar tu contrato.\n\nEntra aquí: {enlace}' },
-    },
-};
-
-const initialActivity = [
-    { id: 'act-1', timestamp: 'Hoy, 10:45', user: 'Begoña Arrieta Lasa', action: 'Añadió el CCC de personas en misión de Barcelona', type: 'fiscal' },
-    { id: 'act-2', timestamp: '02 Oct, 16:30', user: 'Lucía Santos', action: 'Emitió la factura F2026-0101 (septiembre, Trans-Logística)', type: 'billing' },
-    { id: 'act-3', timestamp: '15 Sep, 11:20', user: 'Begoña Arrieta Lasa', action: 'Abrió la Sucursal Barcelona (responsable: Nuria Castells)', type: 'branch' },
-    { id: 'act-4', timestamp: '08 Ene, 09:15', user: 'Begoña Arrieta Lasa', action: 'Renovó la garantía financiera hasta el 08/12/2026', type: 'fiscal' },
-    { id: 'act-5', timestamp: '02 Ene, 08:00', user: 'Lucía Santos', action: 'Activó las series de 2026: F2026- y R2026-', type: 'billing' }
-];
 
 const fechaES = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
 const diasHasta = (iso) => (iso ? Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00')) / 86400000) : null);
@@ -117,27 +25,21 @@ const DIAS_AVISO = 60;
 
 export default function FichaEttView() {
     const [activeTab, setActiveTab] = useState('resumen');
-    const [company, setCompany] = useState(initialCompanyData);
-    const [branches, setBranches] = useState(initialBranches);
-    const [ccc, setCcc] = useState(initialCcc);
+    const miEtt = useMiEtt();
+    const { company, branches, ccc, users, templates, activity, portales, setPortales, servicios, setServicios, hayAjustes } = miEtt;
     const [cccEdicion, setCccEdicion] = useState(null); // { id?, numero, provincia, tipo, sucursal }
     const [cccAEliminar, setCccAEliminar] = useState(null);
-    const [users, setUsers] = useState(initialUsers);
-    const [templates, setTemplates] = useState(initialTemplates);
-    const [activity, setActivity] = useState(initialActivity);
-    const [portales, setPortales] = useState(initialPortales);
 
     // UI State
     const [density, setDensity] = useState('comfortable'); // comfortable | compact
     const [toast, setToast] = useState(null);
     // Servicios que factura la ETT además de las horas
-    const [servicios, setServicios] = useState(SERVICIOS_INICIALES);
     const cambiarServicio = (id, campo, valor) => setServicios(prev => prev.map(x => (x.id === id ? { ...x, [campo]: valor } : x)));
     const [isEditingFiscal, setIsEditingFiscal] = useState(false);
     const [isEditingBilling, setIsEditingBilling] = useState(false);
     const [branchDrawer, setBranchDrawer] = useState({ open: false, mode: 'create', data: null });
     const [userDrawer, setUserDrawer] = useState({ open: false, mode: 'invite', data: null });
-    const [sensitiveModal, setSensitiveModal] = useState({ open: false, field: '', pendingValue: '', reason: '' });
+    const [sensitiveModal, setSensitiveModal] = useState({ open: false, field: '', pendingValue: '', reason: '', valores: null });
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -148,16 +50,36 @@ export default function FichaEttView() {
     };
 
     // Log activity helper
-    const logAction = (actionText, type = 'system') => {
-        const newAct = {
-            id: 'act-' + Date.now(),
-            timestamp: 'Ahora mismo',
-            user: 'Usuario Demo (tú)',
-            action: actionText,
-            type: type
-        };
-        setActivity(prev => [newAct, ...prev]);
+    const logAction = (actionText, type = 'system') => miEtt.registrar(actionText, type);
+
+    // Guarda con el hook: avisa del resultado y devuelve si ha ido bien.
+    const guardar = async (accion, mensajeOk) => {
+        setIsSaving(true);
+        try {
+            await accion();
+            if (mensajeOk) showToast(mensajeOk);
+            return true;
+        } catch (e) {
+            showToast(mensajeError(e), 'error');
+            return false;
+        } finally {
+            setIsSaving(false);
+        }
     };
+    const abrirInvitacion = () => (hayAjustes ? setUserDrawer({ open: true, mode: 'invite', data: null }) : showToast('Disponible próximamente: el alta de usuarios aún no está en la API', 'info'));
+
+    if (miEtt.estado === 'cargando') return <CargandoPagina texto="Cargando Mi ETT" />;
+    if (miEtt.estado === 'error' || !company) {
+        return (
+            <div className="w-full px-4 sm:px-6 py-5">
+                <ErrorCarga
+                    titulo={miEtt.estado === 'error' ? 'No se ha podido cargar Mi ETT' : 'Esta ETT aún no tiene ninguna sociedad'}
+                    mensaje={miEtt.estado === 'error' ? miEtt.error : 'Las sociedades las da de alta el equipo de TramitNOW al crear la ETT.'}
+                    onReintentar={miEtt.reintentar}
+                />
+            </div>
+        );
+    }
 
     // Lo que falta o caduca pronto, para el Resumen
     const avisos = [];
@@ -165,10 +87,10 @@ export default function FichaEttView() {
     if (dG !== null && dG <= DIAS_AVISO) avisos.push({ texto: dG < 0 ? 'Garantía financiera vencida' : `La garantía financiera vence en ${dG} días`, detalle: `${company.garantiaTipo} · ${fechaES(company.garantiaVence)}. Es obligatoria para operar como ETT.`, tab: 'fiscal', tono: dG < 0 ? 'danger' : 'warning' });
     const dC = diasHasta(company.certificadoCaduca);
     if (dC !== null && dC <= DIAS_AVISO) avisos.push({ texto: dC < 0 ? 'Certificado digital caducado' : `El certificado digital caduca en ${dC} días`, detalle: `Sin él no se pueden comunicar altas en el Sistema RED ni contratos en Contrat@.`, tab: 'fiscal', tono: dC < 0 ? 'danger' : 'warning' });
-    branches.forEach(b => TIPOS_CCC.forEach(tipo => {
+    if (hayAjustes) branches.forEach(b => TIPOS_CCC.forEach(tipo => {
         if (!ccc.some(c => c.sucursal === b.name && c.tipo === tipo)) avisos.push({ texto: `${b.name}: sin CCC de ${tipo.toLowerCase()}`, detalle: 'Añádelo en Datos fiscales → Seguridad Social.', tab: 'fiscal', tono: 'warning' });
     }));
-    if (!company.iban) avisos.push({ texto: 'Falta el IBAN de la ETT', detalle: 'Se imprime en las facturas.', tab: 'facturacion', tono: 'danger' });
+    if (hayAjustes && !company.iban) avisos.push({ texto: 'Falta el IBAN de la ETT', detalle: 'Se imprime en las facturas.', tab: 'facturacion', tono: 'danger' });
     users.filter(u => u.branch === 'Sin asignar').forEach(u => avisos.push({ texto: `${u.name}: sin sucursal asignada`, detalle: u.role, tab: 'usuarios', tono: 'warning' }));
     templates.filter(t => t.status === 'incomplete').forEach(tp => avisos.push({ texto: `Plantilla incompleta: ${tp.name}`, detalle: tp.scope, tab: 'plantillas', tono: 'warning' }));
     const completitud = Math.max(0, 100 - avisos.length * 4);
@@ -178,10 +100,11 @@ export default function FichaEttView() {
         if (!/^\d{2} ?\d{7} ?\d{2}$/.test(d.numero.trim())) { showToast('El CCC tiene 11 cifras: 2 de provincia, 7 de número y 2 de control', 'error'); return; }
         const n = d.numero.replace(/\s/g, '');
         const fila = { ...d, numero: `${n.slice(0, 2)} ${n.slice(2, 9)} ${n.slice(9)}` };
-        setCcc(prev => (d.id ? prev.map(c => (c.id === d.id ? fila : c)) : [...prev, { ...fila, id: `ccc-${Date.now()}` }]));
-        logAction(`${d.id ? 'Modificó' : 'Añadió'} el CCC ${fila.numero} (${fila.provincia}, ${fila.tipo.toLowerCase()})`, 'fiscal');
-        showToast(`CCC ${fila.numero} guardado`);
-        setCccEdicion(null);
+        guardar(() => miEtt.guardarCcc(fila), `CCC ${fila.numero} guardado`).then(ok => {
+            if (!ok) return;
+            logAction(`${d.id ? 'Modificó' : 'Añadió'} el CCC ${fila.numero} (${fila.provincia}, ${fila.tipo.toLowerCase()})`, 'fiscal');
+            setCccEdicion(null);
+        });
     };
 
     return (
@@ -208,20 +131,25 @@ export default function FichaEttView() {
                         title="Mi ETT"
                         status={
                             <>
-                                <Badge tone="success" icon={CheckCircle2}>ETT autorizada n.º {company.autorizacion}</Badge>
-                                <Badge tone={avisos.length ? 'warning' : 'success'}>{avisos.length ? `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}` : 'Todo en regla'}</Badge>
+                                {company.autorizacion && <Badge tone="success" icon={CheckCircle2}>ETT autorizada n.º {company.autorizacion}</Badge>}
+                                <Badge tone={avisos.length ? 'warning' : 'success'}>{avisos.length ? `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}` : hayAjustes ? 'Todo en regla' : 'Sin avisos'}</Badge>
                             </>
                         }
                         subtitle={
                             <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                 <span>{company.legalName}</span>
                                 <span className="font-mono">CIF {company.cif}</span>
-                                <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" />Sede central: {company.city}</span>
+                                {company.city && <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" />Sede central: {company.city}</span>}
                                 <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" />{company.lastUpdated}</span>
                             </span>
                         }
                         actions={
                             <>
+                                {miEtt.sociedades.length > 1 && (
+                                    <Select value={miEtt.sociedadId} onChange={(e) => miEtt.elegirSociedad(e.target.value)} aria-label="Sociedad">
+                                        {miEtt.sociedades.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </Select>
+                                )}
                                 <Button icon={Download} onClick={() => showToast("Exportando ficha completa en formato PDF oficial...", "info")}>Exportar PDF</Button>
                                 <Button variant="primary" icon={Edit3} onClick={() => setIsEditingFiscal(true)}>Editar datos fiscales</Button>
                             </>
@@ -234,10 +162,10 @@ export default function FichaEttView() {
                         tabs={[
                             { id: 'resumen', label: 'Resumen' },
                             { id: 'fiscal', label: 'Datos fiscales' },
-                            { id: 'facturacion', label: 'Facturación', alert: !company.iban },
+                            { id: 'facturacion', label: 'Facturación', alert: hayAjustes && !company.iban },
                             { id: 'sucursales', label: 'Sucursales', count: branches.length },
                             { id: 'usuarios', label: 'Usuarios y roles', count: users.length },
-                            { id: 'plantillas', label: 'Plantillas', count: templates.length },
+                            { id: 'plantillas', label: 'Plantillas', count: hayAjustes ? templates.length : undefined },
                             { id: 'portales', label: 'Portales' },
                             { id: 'actividad', label: 'Actividad' },
                         ]}
@@ -265,7 +193,7 @@ export default function FichaEttView() {
                                         ))}
                                     </ul>
                                 </Card>
-                            ) : <Notice tone="success" icon={CheckCircle2}>Todo en regla: datos fiscales, CCC, garantía, certificado, facturación y usuarios.</Notice>}
+                            ) : <Notice tone="success" icon={CheckCircle2}>{hayAjustes ? 'Todo en regla: datos fiscales, CCC, garantía, certificado, facturación y usuarios.' : 'Sin avisos en la sociedad, las sucursales y los usuarios. Los CCC, la garantía y el certificado se revisarán cuando estén disponibles.'}</Notice>}
 
                             {/* OVERVIEW STATUS CARDS */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -273,15 +201,15 @@ export default function FichaEttView() {
                                     title="Datos Fiscales"
                                     status={avisos.some(a => a.tab === 'fiscal') ? 'Revisar' : 'Completos'}
                                     statusColor={avisos.some(a => a.tab === 'fiscal') ? 'amber' : 'emerald'}
-                                    subtitle={`CIF, autorización, ${ccc.length} CCC, garantía`}
+                                    subtitle={hayAjustes ? `CIF, autorización, ${ccc.length} CCC, garantía` : 'CIF, dirección y contacto'}
                                     icon={Building2}
                                     onClick={() => setActiveTab('fiscal')}
                                 />
                                 <StatusCard
                                     title="Facturación"
-                                    status={company.iban ? "Configurado" : "Falta cuenta bancaria"}
-                                    statusColor={company.iban ? "emerald" : "amber"}
-                                    subtitle={`Serie: ${company.billingSeries} • IVA 21%`}
+                                    status={!hayAjustes ? 'Próximamente' : company.iban ? "Configurado" : "Falta cuenta bancaria"}
+                                    statusColor={!hayAjustes ? 'slate' : company.iban ? "emerald" : "amber"}
+                                    subtitle={hayAjustes ? `Serie: ${company.billingSeries} • IVA 21%` : 'Series, IVA e IBAN'}
                                     icon={Receipt}
                                     onClick={() => setActiveTab('facturacion')}
                                 />
@@ -289,7 +217,7 @@ export default function FichaEttView() {
                                     title="Sucursales"
                                     status={`${branches.length} activas`}
                                     statusColor="indigo"
-                                    subtitle={branches.map(b => b.city).join(', ')}
+                                    subtitle={branches.map(b => b.city || b.name).join(', ')}
                                     icon={MapPin}
                                     onClick={() => setActiveTab('sucursales')}
                                 />
@@ -303,8 +231,8 @@ export default function FichaEttView() {
                                 />
                                 <StatusCard
                                     title="Plantillas Doc."
-                                    status={`${templates.length} registradas`}
-                                    statusColor="indigo"
+                                    status={hayAjustes ? `${templates.length} registradas` : 'Próximamente'}
+                                    statusColor={hayAjustes ? 'indigo' : 'slate'}
                                     subtitle="Presupuestos y Facturas"
                                     icon={FileText}
                                     onClick={() => setActiveTab('plantillas')}
@@ -338,18 +266,20 @@ export default function FichaEttView() {
                                         </div>
                                         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                                             <span className="text-slate-400 font-medium block">Sede Central y Domicilio Fiscal</span>
-                                            <span className="text-slate-800 font-semibold block mt-0.5">{company.address}</span>
-                                            <span className="text-slate-500 block">{company.postalCode} - {company.city} ({company.province})</span>
+                                            <span className="text-slate-800 font-semibold block mt-0.5">{company.address || <span className="text-slate-400 italic font-normal">Sin dirección</span>}</span>
+                                            <span className="text-slate-500 block">{[company.postalCode, company.city].filter(Boolean).join(' - ')}{company.province && ` (${company.province})`}</span>
                                         </div>
                                         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                                             <span className="text-slate-400 font-medium block">Contacto General de la ETT</span>
-                                            <span className="text-slate-800 font-medium block mt-0.5">{company.phone}</span>
+                                            <span className="text-slate-800 font-medium block mt-0.5">{company.phone || <span className="text-slate-400 italic font-normal">Sin teléfono</span>}</span>
                                             <span className="text-indigo-600 font-medium block">{company.email}</span>
                                         </div>
                                         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                                             <span className="text-slate-400 font-medium block">Parámetros de Facturación</span>
+                                            {hayAjustes ? <>
                                             <span className="text-slate-800 font-medium block mt-0.5">Series: {company.billingSeries} y {company.invoicePrefix} (IVA {company.vatRate})</span>
                                             <span className="text-slate-500 block">Forma: {company.paymentMethod}</span>
+                                            </> : <span className="text-slate-500 block mt-0.5">Disponible próximamente</span>}
                                         </div>
                                     </div>
 
@@ -384,20 +314,17 @@ export default function FichaEttView() {
                                             <QuickActionButton
                                                 icon={UserPlus}
                                                 label="Invitar usuario / comercial"
-                                                onClick={() => setUserDrawer({ open: true, mode: 'invite', data: null })}
+                                                onClick={abrirInvitacion}
                                             />
                                             <QuickActionButton
                                                 icon={CreditCard}
                                                 label="Configurar IBAN y pagos"
-                                                onClick={() => { setActiveTab('facturacion'); setIsEditingBilling(true); }}
+                                                onClick={() => { setActiveTab('facturacion'); if (hayAjustes) setIsEditingBilling(true); }}
                                             />
                                             <QuickActionButton
                                                 icon={Upload}
                                                 label="Cambiar logotipo oficial"
-                                                onClick={() => {
-                                                    setCompany(prev => ({ ...prev, logoUrl: null }));
-                                                    showToast("Logotipo corporativo actualizado");
-                                                }}
+                                                onClick={() => showToast('Disponible próximamente: la subida del logotipo aún no está en la API', 'info')}
                                             />
                                         </div>
                                     </div>
@@ -421,7 +348,7 @@ export default function FichaEttView() {
                                                             {b.name}
                                                             {b.isHeadquarters && <span className="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-1 rounded">SEDE</span>}
                                                         </div>
-                                                        <div className="text-[11px] text-slate-500">Resp: {b.manager || <span className="text-amber-600 italic">Sin asignar</span>}</div>
+                                                        {b.manager !== undefined && <div className="text-[11px] text-slate-500">Resp: {b.manager || <span className="text-amber-600 italic">Sin asignar</span>}</div>}
                                                     </div>
                                                     <div className="text-right">
                                                         <span className="font-mono font-semibold text-slate-700">{b.completion}%</span>
@@ -491,6 +418,11 @@ export default function FichaEttView() {
                                 </div>
                             </div>
 
+                            {!hayAjustes ? (
+                                <Proximamente titulo="Datos de ETT, Seguridad Social y garantía">
+                                    Autorización de ETT, registro mercantil, representante legal, CCC, mutua, garantía financiera y certificado digital. Aún no se guardan: llegarán con su ruta en la API.
+                                </Proximamente>
+                            ) : <>
                             {/* DATOS DE ETT Y REGISTRO */}
                             <Card className="p-5 space-y-3">
                                 <SectionTitle actions={<Button size="sm" icon={Edit3} onClick={() => setIsEditingFiscal(true)}>Editar</Button>}>Empresa de trabajo temporal y registro</SectionTitle>
@@ -561,11 +493,17 @@ export default function FichaEttView() {
                                     );
                                 })}
                             </div>
+                            </>}
                         </div>
                     )}
 
                     {/* 3. FACTURACIÓN TAB */}
-                    {activeTab === 'facturacion' && (
+                    {activeTab === 'facturacion' && !hayAjustes && (
+                        <div className="fade-in">
+                            <Proximamente titulo="Facturación de la ETT">Series de facturas, IVA, IBAN, forma de pago y servicios que factura la ETT. Aún no se guardan: llegarán con su ruta en la API.</Proximamente>
+                        </div>
+                    )}
+                    {activeTab === 'facturacion' && hayAjustes && (
                         <div className="space-y-6 fade-in">
 
                             {/* Warning banner if bank account is missing */}
@@ -705,7 +643,7 @@ export default function FichaEttView() {
                                 </div>
                                 <div className="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between gap-3">
                                     <span className="text-[11px] text-slate-500">Los servicios desactivados ya no salen al registrar uno nuevo; los ya facturados no cambian.</span>
-                                    <Button size="sm" variant="primary" icon={Save} onClick={() => { setServicios(prev => prev.filter(x => x.nombre.trim()).map(({ nuevo, ...x }) => x)); showToast('Servicios guardados'); }}>Guardar</Button>
+                                    <Button size="sm" variant="primary" icon={Save} disabled={isSaving} onClick={() => guardar(miEtt.guardarServicios, 'Servicios guardados')}>Guardar</Button>
                                 </div>
                             </Card>
                         </div>
@@ -746,6 +684,7 @@ export default function FichaEttView() {
                                                         )}
                                                     </div>
                                                     <h3 className="text-base font-semibold text-slate-900 mt-1.5">{b.name}</h3>
+                                                    {miEtt.sociedades.length > 1 && <div className="text-[11px] text-slate-500">{b.sociedad}</div>}
                                                 </div>
                                                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" title="Activa"></span>
                                             </div>
@@ -753,17 +692,17 @@ export default function FichaEttView() {
                                             <div className="mt-4 space-y-2 text-xs text-slate-600">
                                                 <div className="flex items-center gap-2">
                                                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                                    <span className="truncate">{b.address}, {b.city}</span>
+                                                    <span className="truncate">{[b.address, b.city].filter(Boolean).join(', ') || <span className="text-slate-400 italic">Sin dirección</span>}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                                    <span>{b.phone}</span>
+                                                    <span>{b.phone || <span className="text-slate-400 italic">Sin teléfono</span>}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                                     <span>{b.activeUsers} usuarios asignados</span>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                {b.manager !== undefined && <div className="flex items-center gap-2">
                                                     <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                                     <span>
                                                         Responsable: {b.manager ? (
@@ -772,7 +711,7 @@ export default function FichaEttView() {
                                                             <span className="text-amber-600 font-semibold italic">Sin responsable asignado</span>
                                                         )}
                                                     </span>
-                                                </div>
+                                                </div>}
                                             </div>
                                         </div>
 
@@ -799,9 +738,7 @@ export default function FichaEttView() {
                                                     <button
                                                         onClick={() => {
                                                             if (confirm(`¿Desactivar la sucursal ${b.name}? Los comerciales pasarán a la sede central.`)) {
-                                                                setBranches(branches.filter(item => item.id !== b.id));
-                                                                logAction(`Desactivó la sucursal ${b.name}`, 'branch');
-                                                                showToast(`Sucursal ${b.name} desactivada.`);
+                                                                guardar(() => miEtt.desactivarSucursal(b.id), `Sucursal ${b.name} desactivada.`).then(ok => ok && logAction(`Desactivó la sucursal ${b.name}`, 'branch'));
                                                             }
                                                         }}
                                                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
@@ -827,7 +764,7 @@ export default function FichaEttView() {
                                     <p className="text-xs text-slate-500">Gestión de accesos, permisos por módulo ETT y delegación de sucursales.</p>
                                 </div>
                                 <button
-                                    onClick={() => setUserDrawer({ open: true, mode: 'invite', data: null })}
+                                    onClick={abrirInvitacion}
                                     className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
                                 >
                                     <UserPlus className="w-4 h-4" />
@@ -835,11 +772,13 @@ export default function FichaEttView() {
                                 </button>
                             </div>
 
+                            {miEtt.errorUsuarios && <Notice tone="warning" icon={AlertTriangle}>No se pueden ver los usuarios: {miEtt.errorUsuarios}</Notice>}
+
                             {/* Users List Table */}
                             <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                                 <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
                                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                                        <span>Equipo de la ETT ({users.length} miembros activos)</span>
+                                        <span>Equipo de la ETT ({users.filter(u => u.status === 'active').length} miembros activos)</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="relative">
@@ -870,7 +809,7 @@ export default function FichaEttView() {
                                                 <td className="py-3 px-4">
                                                     <div className="flex items-center gap-2.5">
                                                         <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-semibold flex items-center justify-center text-xs">
-                                                            {u.name.split(' ').map(n=>n[0]).join('')}
+                                                            {u.name.split(' ').slice(0, 2).map(n=>n[0]).join('')}
                                                         </div>
                                                         <div>
                                                             <div className="font-semibold text-slate-800">{u.name}</div>
@@ -900,7 +839,7 @@ export default function FichaEttView() {
                                                         </span>
                                                     ) : (
                                                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px] font-semibold">
-                                                            <Clock className="w-3 h-3" /> Invitación pendiente
+                                                            <Clock className="w-3 h-3" /> {u.statusLabel}
                                                         </span>
                                                     )}
                                                 </td>
@@ -958,7 +897,10 @@ export default function FichaEttView() {
                     )}
 
                     {/* 6. PLANTILLAS TAB */}
-                    {activeTab === 'plantillas' && (
+                    {activeTab === 'plantillas' && !hayAjustes && (
+                        <div className="fade-in"><Proximamente titulo="Plantillas documentales">Presupuestos, facturas y contratos con el membrete de la ETT. Llegarán con los documentos (fase 1 del plan).</Proximamente></div>
+                    )}
+                    {activeTab === 'plantillas' && hayAjustes && (
                         <div className="space-y-6 fade-in">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
@@ -1019,7 +961,10 @@ export default function FichaEttView() {
                     )}
 
                     {/* PORTALES: subdominio de la ETT y correos de bienvenida */}
-                    {activeTab === 'portales' && (
+                    {activeTab === 'portales' && !hayAjustes && (
+                        <div className="fade-in"><Proximamente titulo="Portales">Subdominio de la ETT y correos de bienvenida del Área de empresas y del portal del trabajador. Llegarán con los portales (fase 11 del plan).</Proximamente></div>
+                    )}
+                    {activeTab === 'portales' && hayAjustes && (
                         <div className="space-y-4 fade-in">
                             <Card className="p-5 space-y-4">
                                 <SectionTitle actions={<Badge tone="success" dot>Activos</Badge>}>Dirección de los portales</SectionTitle>
@@ -1049,7 +994,7 @@ export default function FichaEttView() {
                                         </div>
                                     ))}
                                 </div>
-                                {portales.subdominio !== initialPortales.subdominio && (
+                                {portales.subdominio !== miEtt.portalesGuardados?.subdominio && (
                                     <Notice tone="warning" icon={AlertTriangle}>
                                         Si cambias el subdominio, los enlaces que ya tienen las empresas y los candidatos dejarán de funcionar.
                                     </Notice>
@@ -1089,14 +1034,17 @@ export default function FichaEttView() {
                                     })}
                                 </div>
                                 <div className="flex justify-end">
-                                    <Button variant="primary" icon={Save} onClick={() => showToast('Configuración de los portales guardada')}>Guardar</Button>
+                                    <Button variant="primary" icon={Save} disabled={isSaving} onClick={() => guardar(miEtt.guardarPortales, 'Configuración de los portales guardada')}>Guardar</Button>
                                 </div>
                             </Card>
                         </div>
                     )}
 
                     {/* 7. ACTIVIDAD TAB */}
-                    {activeTab === 'actividad' && (
+                    {activeTab === 'actividad' && !hayAjustes && (
+                        <div className="fade-in"><Proximamente titulo="Registro de actividad">El historial de cambios de la ETT llegará con el historial de actividad común a todas las fichas (fase 1 del plan).</Proximamente></div>
+                    )}
+                    {activeTab === 'actividad' && hayAjustes && (
                         <div className="space-y-6 fade-in">
                             <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6">
                                 <div className="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -1155,39 +1103,27 @@ export default function FichaEttView() {
                                 Cancelar
                             </button>
                             <button
+                                disabled={isSaving}
                                 onClick={() => {
-                                    const newLegal = document.getElementById('edit-legalName')?.value || company.legalName;
-                                    const newCif = document.getElementById('edit-cif')?.value || company.cif;
+                                    const valores = leerCampos('edit-', ['legalName', 'tradeName', 'cif', 'companyType', 'address', 'postalCode', 'city', 'province', 'phone', 'email', 'web', 'autorizacion', 'fechaAutorizacion', 'convenio', 'registroMercantil', 'tomo', 'folio', 'hoja', 'representante', 'representanteDni', 'representanteCargo', 'mutua', 'servicioPrevencion', 'garantiaTipo', 'garantiaEntidad', 'garantiaImporte', 'garantiaVence', 'redAutorizacion', 'certificadoCaduca']);
 
                                     // Check if sensitive field changed
-                                    if (newCif !== company.cif || newLegal !== company.legalName) {
+                                    if (valores.cif !== company.cif || valores.legalName !== company.legalName) {
                                         setSensitiveModal({
                                             open: true,
-                                            field: newCif !== company.cif ? 'CIF/NIF' : 'Razón Social',
-                                            pendingValue: newCif !== company.cif ? newCif : newLegal,
-                                            reason: ''
+                                            field: valores.cif !== company.cif ? 'CIF/NIF' : 'Razón Social',
+                                            pendingValue: valores.cif !== company.cif ? valores.cif : valores.legalName,
+                                            reason: '',
+                                            valores,
                                         });
                                         return;
                                     }
 
-                                    // Direct update for non-sensitive
-                                    setCompany(prev => ({
-                                        ...prev,
-                                        tradeName: document.getElementById('edit-tradeName')?.value || prev.tradeName,
-                                        address: document.getElementById('edit-address')?.value || prev.address,
-                                        postalCode: document.getElementById('edit-postalCode')?.value || prev.postalCode,
-                                        city: document.getElementById('edit-city')?.value || prev.city,
-                                        province: document.getElementById('edit-province')?.value || prev.province,
-                                        phone: document.getElementById('edit-phone')?.value || prev.phone,
-                                        email: document.getElementById('edit-email')?.value || prev.email,
-                                        web: document.getElementById('edit-web')?.value || prev.web,
-                                        ...Object.fromEntries(['autorizacion', 'fechaAutorizacion', 'convenio', 'registroMercantil', 'tomo', 'folio', 'hoja', 'representante', 'representanteDni', 'representanteCargo', 'mutua', 'servicioPrevencion', 'garantiaTipo', 'garantiaEntidad', 'garantiaImporte', 'garantiaVence', 'redAutorizacion', 'certificadoCaduca']
-                                            .map(k => [k, document.getElementById(`edit-${k}`)?.value || prev[k]])),
-                                        lastUpdated: "Hoy (recién editado)"
-                                    }));
-                                    setIsEditingFiscal(false);
-                                    logAction("Actualizó los datos de contacto y domicilio de la ETT", "fiscal");
-                                    showToast("Datos fiscales actualizados con éxito");
+                                    guardar(() => miEtt.guardarFiscal(valores), "Datos fiscales actualizados con éxito").then(ok => {
+                                        if (!ok) return;
+                                        setIsEditingFiscal(false);
+                                        logAction("Actualizó los datos de contacto y domicilio de la ETT", "fiscal");
+                                    });
                                 }}
                                 className="px-5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition flex items-center gap-1.5"
                             >
@@ -1201,27 +1137,28 @@ export default function FichaEttView() {
                             <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 text-amber-900">
                                 <strong>Nota de seguridad:</strong> Si modificas el CIF o la Razón Social se solicitará confirmación expresa antes de guardar.
                             </div>
+                            {miEtt.sociedades.length > 1 && <p className="text-slate-500">Sociedad: <strong className="text-slate-700">{company.legalName}</strong>. Para editar otra, elígela arriba, junto al título.</p>}
 
                             <DrawerInput
                                 label="Razón social oficial"
                                 defaultValue={company.legalName}
                                 id="edit-legalName"
                             />
-                            <DrawerInput
+                            {hayAjustes && <DrawerInput
                                 label="Nombre Comercial"
                                 defaultValue={company.tradeName}
                                 id="edit-tradeName"
-                            />
+                            />}
                             <DrawerInput
                                 label="CIF / NIF"
                                 defaultValue={company.cif}
                                 id="edit-cif"
                             />
-                            <DrawerInput
+                            {hayAjustes && <DrawerInput
                                 label="Tipo de Sociedad"
                                 defaultValue={company.companyType}
                                 id="edit-companyType"
-                            />
+                            />}
                             <DrawerInput
                                 label="Dirección Fiscal"
                                 defaultValue={company.address}
@@ -1267,6 +1204,9 @@ export default function FichaEttView() {
                                 id="edit-web"
                             />
 
+                            {!hayAjustes ? (
+                                <Notice icon={Clock}>Nombre comercial, forma jurídica, datos de ETT, registro mercantil, representante, Seguridad Social, garantía y certificado: disponible próximamente.</Notice>
+                            ) : <>
                             <SectionTitle>Empresa de trabajo temporal y registro</SectionTitle>
                             <div className="grid grid-cols-2 gap-3">
                                 <DrawerInput label="N.º de autorización de ETT" defaultValue={company.autorizacion} id="edit-autorizacion" />
@@ -1303,6 +1243,7 @@ export default function FichaEttView() {
                                 <DrawerInput label="Autorización del Sistema RED" defaultValue={company.redAutorizacion} id="edit-redAutorizacion" />
                                 <DrawerInput label="El certificado caduca" type="date" defaultValue={company.certificadoCaduca} id="edit-certificadoCaduca" />
                             </div>
+                            </>}
                         </div>
 
                 </Drawer>
@@ -1317,7 +1258,7 @@ export default function FichaEttView() {
                     size="max-w-md"
                     footer={<>
                         <Button onClick={() => setCccEdicion(null)}>Cancelar</Button>
-                        <Button variant="primary" icon={Save} onClick={guardarCcc}>Guardar</Button>
+                        <Button variant="primary" icon={Save} disabled={isSaving} onClick={guardarCcc}>Guardar</Button>
                     </>}
                 >
                     <div className="space-y-3 text-xs">
@@ -1340,10 +1281,9 @@ export default function FichaEttView() {
             )}
             {cccAEliminar && (
                 <Confirmar title={`Eliminar el CCC ${cccAEliminar.numero}`} onClose={() => setCccAEliminar(null)} onConfirm={() => {
-                    setCcc(prev => prev.filter(c => c.id !== cccAEliminar.id));
-                    logAction(`Eliminó el CCC ${cccAEliminar.numero}`, 'fiscal');
-                    showToast(`CCC ${cccAEliminar.numero} eliminado`);
+                    const fila = cccAEliminar;
                     setCccAEliminar(null);
+                    guardar(() => miEtt.eliminarCcc(fila.id), `CCC ${fila.numero} eliminado`).then(ok => ok && logAction(`Eliminó el CCC ${fila.numero}`, 'fiscal'));
                 }}>
                     {cccAEliminar.provincia} · {cccAEliminar.tipo.toLowerCase()} · {cccAEliminar.sucursal}. Si hay personas dadas de alta con este CCC, hay que pasarlas a otro antes.
                 </Confirmar>
@@ -1366,28 +1306,15 @@ export default function FichaEttView() {
                                 Cancelar
                             </button>
                             <button
+                                disabled={isSaving}
                                 onClick={() => {
-                                    const newIban = document.getElementById('edit-iban')?.value || '';
-                                    const selMethod = document.getElementById('edit-paymentMethodSelect')?.value || company.paymentMethod;
-                                    const customVal = document.getElementById('edit-customPaymentInput')?.value || '';
-
-                                    setCompany(prev => ({
-                                        ...prev,
-                                        billingSeries: document.getElementById('edit-billingSeries')?.value || prev.billingSeries,
-                                        invoicePrefix: document.getElementById('edit-invoicePrefix')?.value || prev.invoicePrefix,
-                                        vatRate: document.getElementById('edit-vatRate')?.value || prev.vatRate,
-                                        withholdingRate: document.getElementById('edit-withholdingRate')?.value || prev.withholdingRate,
-                                        iban: newIban,
-                                        swiftBic: document.getElementById('edit-swiftBic')?.value || prev.swiftBic,
-                                        paymentMethod: selMethod,
-                                        customPaymentMethod: customVal,
-                                        paymentTerms: document.getElementById('edit-paymentTerms')?.value || prev.paymentTerms,
-                                        adminEmail: document.getElementById('edit-adminEmail')?.value || prev.adminEmail,
-                                    }));
-
-                                    setIsEditingBilling(false);
-                                    logAction("Actualizó cuenta bancaria IBAN y condiciones de facturación", "billing");
-                                    showToast("Parámetros de facturación guardados correctamente");
+                                    const v = leerCampos('edit-', ['billingSeries', 'invoicePrefix', 'vatRate', 'withholdingRate', 'iban', 'swiftBic', 'paymentMethodSelect', 'customPaymentInput', 'paymentTerms', 'adminEmail']);
+                                    const { paymentMethodSelect, customPaymentInput = '', ...valores } = v;
+                                    guardar(() => miEtt.guardarFacturacion({ ...valores, paymentMethod: paymentMethodSelect, customPaymentMethod: customPaymentInput }), "Parámetros de facturación guardados correctamente").then(ok => {
+                                        if (!ok) return;
+                                        setIsEditingBilling(false);
+                                        logAction("Actualizó cuenta bancaria IBAN y condiciones de facturación", "billing");
+                                    });
                                 }}
                                 className="px-5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition flex items-center gap-1.5"
                             >
@@ -1488,47 +1415,17 @@ export default function FichaEttView() {
                                 Cancelar
                             </button>
                             <button
+                                disabled={isSaving}
                                 onClick={() => {
-                                    const nameVal = document.getElementById('branch-name')?.value;
-                                    if (!nameVal) {
-                                        showToast("Introduce el nombre de la sucursal", "error");
-                                        return;
-                                    }
-
-                                    if (branchDrawer.mode === 'create') {
-                                        const newBr = {
-                                            id: 'suc-' + Date.now(),
-                                            code: document.getElementById('branch-code')?.value || 'SUC-NEW',
-                                            name: nameVal,
-                                            city: document.getElementById('branch-city')?.value || 'Ciudad',
-                                            address: document.getElementById('branch-address')?.value || 'Dirección',
-                                            phone: document.getElementById('branch-phone')?.value || '+34 900 00 00 00',
-                                            email: document.getElementById('branch-email')?.value || 'sucursal@ettglobal.es',
-                                            manager: document.getElementById('branch-manager')?.value || null,
-                                            activeUsers: 1,
-                                            completion: 80,
-                                            status: 'active',
-                                            isHeadquarters: false
-                                        };
-                                        setBranches([...branches, newBr]);
-                                        logAction(`Añadió nueva sucursal: ${nameVal}`, 'branch');
-                                        showToast(`Sucursal ${nameVal} creada con éxito`);
-                                    } else {
-                                        setBranches(branches.map(b => b.id === branchDrawer.data.id ? {
-                                            ...b,
-                                            name: nameVal,
-                                            code: document.getElementById('branch-code')?.value || b.code,
-                                            city: document.getElementById('branch-city')?.value || b.city,
-                                            address: document.getElementById('branch-address')?.value || b.address,
-                                            phone: document.getElementById('branch-phone')?.value || b.phone,
-                                            email: document.getElementById('branch-email')?.value || b.email,
-                                            manager: document.getElementById('branch-manager')?.value || null,
-                                        } : b));
-                                        logAction(`Modificó la sucursal: ${nameVal}`, 'branch');
-                                        showToast(`Sucursal ${nameVal} actualizada`);
-                                    }
-
-                                    setBranchDrawer({ open: false, mode: 'create', data: null });
+                                    const valores = leerCampos('branch-', ['name', 'code', 'city', 'address', 'phone', 'email', 'manager', 'companyId']);
+                                    valores.isHeadquarters = document.getElementById('branch-isHeadquarters')?.checked ?? false;
+                                    const nameVal = valores.name;
+                                    const crear = branchDrawer.mode === 'create';
+                                    guardar(() => miEtt.guardarSucursal(crear ? null : branchDrawer.data.id, valores), crear ? `Sucursal ${nameVal} creada con éxito` : `Sucursal ${nameVal} actualizada`).then(ok => {
+                                        if (!ok) return;
+                                        logAction(crear ? `Añadió nueva sucursal: ${nameVal}` : `Modificó la sucursal: ${nameVal}`, 'branch');
+                                        setBranchDrawer({ open: false, mode: 'create', data: null });
+                                    });
                                 }}
                                 className="px-5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
                             >
@@ -1538,6 +1435,14 @@ export default function FichaEttView() {
                 >
 
                         <div className="space-y-4 text-xs">
+                            {branchDrawer.mode === 'create' && miEtt.sociedades.length > 1 && (
+                                <div>
+                                    <label className="font-semibold text-slate-700 block mb-1">Sociedad</label>
+                                    <select id="branch-companyId" defaultValue={miEtt.sociedadId} className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500">
+                                        {miEtt.sociedades.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                            )}
                             <DrawerInput
                                 label="Nombre de la Sucursal"
                                 placeholder="Ej: Sucursal Tarragona"
@@ -1576,17 +1481,18 @@ export default function FichaEttView() {
                                     id="branch-email"
                                 />
                             </div>
-                            <DrawerInput
+                            {hayAjustes && <DrawerInput
                                 label="Responsable de Sucursal"
                                 placeholder="Nombre del director de delegación"
                                 defaultValue={branchDrawer.data?.manager || ''}
                                 id="branch-manager"
-                            />
+                            />}
 
                             <div className="pt-2">
                                 <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
                                     <input
                                         type="checkbox"
+                                        id="branch-isHeadquarters"
                                         className="rounded text-indigo-600 focus:ring-indigo-500"
                                         defaultChecked={branchDrawer.data?.isHeadquarters || false}
                                         disabled={branchDrawer.data?.isHeadquarters}
@@ -1616,44 +1522,20 @@ export default function FichaEttView() {
                                 Cancelar
                             </button>
                             <button
+                                disabled={isSaving}
                                 onClick={() => {
-                                    const name = document.getElementById('user-name')?.value;
-                                    const email = document.getElementById('user-email')?.value;
+                                    const { name, email, role: roleId, branch: branchValue } = leerCampos('user-', ['name', 'email', 'role', 'branch']);
                                     if (!name || !email) {
                                         showToast("Nombre y email son requeridos", "error");
                                         return;
                                     }
-
-                                    const role = document.getElementById('user-role')?.value || 'Comercial';
-                                    const branch = document.getElementById('user-branch')?.value || 'Barcelona (Central)';
-
-                                    if (userDrawer.mode === 'invite') {
-                                        const newUser = {
-                                            id: Date.now(),
-                                            name,
-                                            email,
-                                            role,
-                                            department: role.includes('Comercial') ? 'Comercial' : 'Operaciones',
-                                            branch,
-                                            status: 'pending',
-                                            lastLogin: 'Invitación enviada'
-                                        };
-                                        setUsers([...users, newUser]);
-                                        logAction(`Invitó al usuario ${name} con rol ${role}`, 'users');
-                                        showToast(`Invitación enviada a ${email}`);
-                                    } else {
-                                        setUsers(users.map(u => u.id === userDrawer.data.id ? {
-                                            ...u,
-                                            name,
-                                            email,
-                                            role,
-                                            branch
-                                        } : u));
-                                        logAction(`Actualizó rol y permisos de ${name}`, 'users');
-                                        showToast(`Usuario ${name} actualizado`);
-                                    }
-
-                                    setUserDrawer({ open: false, mode: 'invite', data: null });
+                                    const role = miEtt.roles.find(r => r.id === roleId)?.name ?? '';
+                                    const invitar = userDrawer.mode === 'invite';
+                                    guardar(() => (invitar ? miEtt.invitarUsuario({ name, email, roleId, branchValue }) : miEtt.guardarUsuario(userDrawer.data.id, { name, email, roleId, branchValue })), invitar ? `Invitación enviada a ${email}` : `Usuario ${name} actualizado`).then(ok => {
+                                        if (!ok) return;
+                                        logAction(invitar ? `Invitó al usuario ${name} con rol ${role}` : `Actualizó rol y permisos de ${name}`, 'users');
+                                        setUserDrawer({ open: false, mode: 'invite', data: null });
+                                    });
                                 }}
                                 className="px-5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
                             >
@@ -1680,16 +1562,10 @@ export default function FichaEttView() {
                                 <label className="font-semibold text-slate-700 block mb-1">Rol en el ERP de la ETT</label>
                                 <select
                                     id="user-role"
-                                    defaultValue={userDrawer.data?.role || 'Comercial Senior'}
+                                    defaultValue={userDrawer.data?.roleId || miEtt.roles.find(r => r.code === 'comercial')?.id}
                                     className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500"
                                 >
-                                    <option value="Dirección / CEO">Dirección / CEO (Acceso total)</option>
-                                    <option value="Administración & Facturación">Administración y Facturación</option>
-                                    <option value="Responsable de Sucursal">Responsable de Sucursal</option>
-                                    <option value="Comercial Senior">Comercial Senior (Presupuestos)</option>
-                                    <option value="Selección & Recruiting">Selección y Talent Pool</option>
-                                    <option value="Gestor Laboral">Gestor Laboral (Contratos CPD)</option>
-                                    <option value="Consulta / Auditoría">Consulta / Solo Lectura</option>
+                                    {miEtt.roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                 </select>
                             </div>
 
@@ -1697,14 +1573,14 @@ export default function FichaEttView() {
                                 <label className="font-semibold text-slate-700 block mb-1">Sucursal asignada</label>
                                 <select
                                     id="user-branch"
-                                    defaultValue={userDrawer.data?.branch || 'Barcelona (Central)'}
+                                    defaultValue={userDrawer.data ? userDrawer.data.branchValue : branches[0]?.id}
                                     className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-indigo-500"
                                 >
-                                    <option value="Todas">Todas las sucursales (Ámbito Global)</option>
+                                    <option value="*">Todas las sucursales (Ámbito Global)</option>
                                     {branches.map(b => (
-                                        <option key={b.id} value={b.name}>{b.name}</option>
+                                        <option key={b.id} value={b.id}>{b.name}</option>
                                     ))}
-                                    <option value="Sin asignar">Sin asignar (Pendiente)</option>
+                                    <option value="">Sin asignar (Pendiente)</option>
                                 </select>
                             </div>
 
@@ -1727,27 +1603,26 @@ export default function FichaEttView() {
             {sensitiveModal.open && (
                 <Modal
                   title={`¿Confirmar el cambio de ${sensitiveModal.field}?`}
-                  onClose={() => setSensitiveModal({ open: false, field: '', pendingValue: '', reason: '' })}
+                  onClose={() => setSensitiveModal({ open: false, field: '', pendingValue: '', reason: '', valores: null })}
                   size="max-w-md"
                   footer={<>
                             <button
-                                onClick={() => setSensitiveModal({ open: false, field: '', pendingValue: '', reason: '' })}
+                                onClick={() => setSensitiveModal({ open: false, field: '', pendingValue: '', reason: '', valores: null })}
                                 className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
                             >
                                 Cancelar
                             </button>
                             <button
+                                disabled={isSaving}
                                 onClick={() => {
                                     const reason = document.getElementById('sensitive-reason')?.value || 'Actualización autorizada';
-                                    if (sensitiveModal.field === 'CIF/NIF') {
-                                        setCompany(prev => ({ ...prev, cif: sensitiveModal.pendingValue }));
-                                    } else {
-                                        setCompany(prev => ({ ...prev, legalName: sensitiveModal.pendingValue }));
-                                    }
-                                    logAction(`Cambio sensible de ${sensitiveModal.field} a '${sensitiveModal.pendingValue}'. Motivo: ${reason}`, 'fiscal');
-                                    setSensitiveModal({ open: false, field: '', pendingValue: '', reason: '' });
-                                    setIsEditingFiscal(false);
-                                    showToast(`Dato sensible ${sensitiveModal.field} modificado con registro en auditoría`);
+                                    const { field, pendingValue, valores } = sensitiveModal;
+                                    guardar(() => miEtt.guardarFiscal(valores), `Dato sensible ${field} modificado con registro en auditoría`).then(ok => {
+                                        if (!ok) return;
+                                        logAction(`Cambio sensible de ${field} a '${pendingValue}'. Motivo: ${reason}`, 'fiscal');
+                                        setSensitiveModal({ open: false, field: '', pendingValue: '', reason: '', valores: null });
+                                        setIsEditingFiscal(false);
+                                    });
                                 }}
                                 className="px-4 py-2 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
                             >
@@ -1780,7 +1655,8 @@ function StatusCard({ title, status, statusColor, subtitle, icon: Icon, onClick 
     const colorClasses = {
         emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
         amber: 'bg-amber-50 text-amber-700 border-amber-200',
-        indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+        indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        slate: 'bg-slate-50 text-slate-600 border-slate-200'
     };
 
     return (

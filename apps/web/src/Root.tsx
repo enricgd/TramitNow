@@ -3,6 +3,7 @@ import App, { type CurrentUser } from './App';
 import Login from './Login';
 import { supabase, useAuth } from './auth/session';
 import { DEMO } from './modo';
+import { SesionProvider } from './sesion';
 
 const NO_TENANT = 'Tu usuario no tiene acceso a ninguna ETT. Pide a tu administrador que te dé de alta.';
 
@@ -10,10 +11,16 @@ const NO_TENANT = 'Tu usuario no tiene acceso a ninguna ETT. Pide a tu administr
 const DEMO_USER: CurrentUser = { name: 'Usuario Demo', email: 'demo@example.com', role: 'admin' };
 
 export default function Root() {
-  return DEMO ? <App user={DEMO_USER} onSignOut={() => {}} /> : <AuthRoot />;
+  return DEMO ? (
+    <SesionProvider>
+      <App user={DEMO_USER} onSignOut={() => {}} />
+    </SesionProvider>
+  ) : (
+    <AuthRoot />
+  );
 }
 
-// Sin sesión válida se muestra el login. Con sesión, la app (de momento con datos de ejemplo).
+// Sin sesión válida se muestra el login. Con sesión, la app; la ETT y las sucursales salen de /v1/me (sesion.tsx).
 function AuthRoot() {
   const auth = useAuth();
   const [message, setMessage] = useState<string>();
@@ -31,17 +38,20 @@ function AuthRoot() {
   if (auth.status === 'signedOut') return <Login message={message} />;
 
   const { claims } = auth;
+  // key: al cambiar de usuario o de ETT se vuelve a pedir /v1/me.
   return (
-    <App
-      user={{
-        name: claims.user_metadata?.full_name || claims.email || '',
-        email: claims.email ?? '',
-        role: claims.app_role ?? '',
-      }}
-      onSignOut={() => {
-        setMessage(undefined);
-        supabase.auth.signOut();
-      }}
-    />
+    <SesionProvider key={`${claims.sub}:${claims.tenant_id}`}>
+      <App
+        user={{
+          name: claims.user_metadata?.full_name || claims.email || '',
+          email: claims.email ?? '',
+          role: claims.app_role ?? '',
+        }}
+        onSignOut={() => {
+          setMessage(undefined);
+          supabase.auth.signOut();
+        }}
+      />
+    </SesionProvider>
   );
 }

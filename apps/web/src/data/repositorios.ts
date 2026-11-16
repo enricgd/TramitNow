@@ -3,6 +3,7 @@
 import type {
   Address,
   AddressInput,
+  AppNotification,
   AutonomousCommunity,
   Branch,
   BranchCreate,
@@ -30,6 +31,7 @@ import type {
   CatalogInput,
   CollectiveAgreement,
   CollectiveAgreementQuery,
+  EttSettings,
   ContractKey,
   ContractType,
   ContractTypeQuery,
@@ -48,6 +50,7 @@ import type {
   ProfessionalCategoryQuery,
   Province,
   Role,
+  SearchResult,
 } from './tipos';
 
 /** Operaciones de un catálogo de la ETT (convenios, categorías...): listar, ver, crear, editar y baja lógica. */
@@ -133,5 +136,33 @@ export interface Repositories {
   memberships: {
     list(query?: MembershipQuery): Promise<Page<Membership>>;
     get(id: string): Promise<Membership>;
+  };
+
+  // -------------------------------------------------------------------------
+  // Pendiente de API: de momento solo datos de ejemplo (ver tipos.ts).
+  // -------------------------------------------------------------------------
+
+  /** Buscador global de la cabecera. `sample`: los resultados son de ejemplo (no hay ruta todavía). */
+  search: {
+    readonly sample?: boolean;
+    query(text: string): Promise<SearchResult[]>;
+    recent(): Promise<string[]>;
+  };
+  /** Avisos del usuario de la sesión. */
+  notifications: {
+    readonly sample?: boolean;
+    list(): Promise<AppNotification[]>;
+    markRead(id: string): Promise<void>;
+    markAllRead(): Promise<void>;
+  };
+  /**
+   * Lo que Mi ETT necesita y apps/api aún no tiene (datos legales, facturación, CCC, servicios, plantillas,
+   * portales, actividad, invitaciones). Contra la API lanza ApiError `no_disponible` (501): la pantalla lo
+   * muestra como «Disponible próximamente».
+   */
+  ettSettings: {
+    get(): Promise<EttSettings>;
+    /** Cambia solo las partes enviadas. */
+    update(data: Partial<EttSettings>): Promise<EttSettings>;
   };
 }

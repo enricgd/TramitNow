@@ -1,6 +1,7 @@
 // Repositorios contra apps/api. Cada petición lleva el token de la sesión de Supabase Auth.
 // En desarrollo (`npm run dev:real`) Vite reenvía /v1 a la API local; en el NAS, VITE_API_URL.
 import { supabase } from '../auth/session';
+import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import type { CatalogRepository, Repositories } from './repositorios';
 import { ApiError } from './tipos';
 
@@ -34,6 +35,10 @@ async function request<T>(method: string, path: string, options: { query?: Query
   }
   return json as T;
 }
+
+/** Para lo que aún no tiene ruta en apps/api: la pantalla lo muestra como «Disponible próximamente». */
+const notAvailable = (): Promise<never> =>
+  Promise.reject(new ApiError(501, 'no_disponible', 'Disponible próximamente: aún no está en la API'));
 
 const get = <T>(path: string, query?: Query) => request<T>('GET', path, { query });
 const unwrap = <T>(p: Promise<{ data: T }>) => p.then((r) => r.data);
@@ -114,5 +119,11 @@ export function apiRepositories(): Repositories {
       list: (query) => get('/memberships', query),
       get: (id) => get(`/memberships/${id}`),
     },
+
+    // Pendiente de API. El buscador y los avisos siguen con los datos de ejemplo (sample: la cabecera lo
+    // indica); cuando existan /v1/search y /v1/notifications, se cambian por las peticiones.
+    search: sampleSearch(true),
+    notifications: sampleNotifications(true),
+    ettSettings: { get: notAvailable, update: notAvailable },
   };
 }
