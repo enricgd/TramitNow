@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { X, Trash2, AlertTriangle, type LucideIcon } from 'lucide-react';
+import { X, Trash2, AlertTriangle, RotateCcw, type LucideIcon } from 'lucide-react';
 import { Button } from './Button';
 import { Notice } from './Layout';
 
@@ -110,6 +110,7 @@ export function Confirmar({
   onConfirm,
   onClose,
   alternativa,
+  recuperable,
 }: {
   title: ReactNode;
   children?: ReactNode;
@@ -117,6 +118,8 @@ export function Confirmar({
   onConfirm: () => void;
   onClose: () => void;
   alternativa?: { label: string; icon?: LucideIcon; onClick: () => void };
+  /** Si la baja es lógica: dónde se recupera. Sustituye al aviso «no se podrá recuperar». */
+  recuperable?: ReactNode;
 }) {
   return (
     <Modal
@@ -139,9 +142,15 @@ export function Confirmar({
     >
       <div className="space-y-3 text-xs text-slate-600">
         {children}
-        <Notice tone="danger" icon={AlertTriangle}>
-          Una vez eliminado no se podrá recuperar.
-        </Notice>
+        {recuperable ? (
+          <Notice tone="info" icon={RotateCcw}>
+            {recuperable}
+          </Notice>
+        ) : (
+          <Notice tone="danger" icon={AlertTriangle}>
+            Una vez eliminado no se podrá recuperar.
+          </Notice>
+        )}
       </div>
     </Modal>
   );

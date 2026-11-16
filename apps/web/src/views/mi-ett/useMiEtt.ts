@@ -26,6 +26,8 @@ import {
   type Role,
 } from '../../data';
 import { useSesion } from '../../sesion';
+export { mensajeError } from '../comun/datos';
+import { direccionVista, fechaCorta, guardarDireccion, mensajeError, provincias, quitarDireccionNueva, vacioANull, type DireccionVista } from '../comun/datos';
 
 // ---------------------------------------------------------------------------
 // Forma de la pantalla
@@ -83,98 +85,6 @@ const TIPOS_SOCIEDAD: Record<CompanyType, string> = {
 const ESTADOS_USUARIO: Record<Membership['status'], string> = { active: 'Activo', blocked: 'Bloqueado', inactive: 'Inactivo' };
 
 const NO_DISPONIBLE = (que: string) => new ApiError(501, 'no_disponible', `Disponible próximamente: ${que} aún no está en la API.`);
-
-/** Texto para mostrar de un error de la API, con el detalle de los campos si lo hay. */
-export function mensajeError(e: unknown): string {
-  if (e instanceof ApiError) {
-    const campos = e.details?.map((d) => `${d.path}: ${d.message}`).join('; ');
-    return campos ? `${e.message} (${campos})` : e.message;
-  }
-  return e instanceof Error ? e.message : String(e);
-}
-
-const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-const normalizar = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-const vacioANull = (texto: string | undefined) => (texto?.trim() ? texto.trim() : null);
-
-// ---------------------------------------------------------------------------
-// Direcciones: la pantalla usa texto libre (dirección, CP, localidad, provincia); la API, códigos oficiales.
-// ---------------------------------------------------------------------------
-
-type DireccionVista = { address: string; postalCode: string; city: string; province: string; country: string };
-
-let provinciasCache: Promise<Province[]> | undefined;
-const provincias = () => (provinciasCache ??= repos.catalogs.provinces().catch((e) => ((provinciasCache = undefined), Promise.reject(e))));
-
-// Los nombres de municipio no cambian: se piden una vez por sesión.
-const municipios = new Map<string, Promise<string | undefined>>();
-const nombreMunicipio = (r: Repositories, code: string) => {
-  if (!municipios.has(code)) municipios.set(code, r.catalogs.municipality(code).then((m) => m.name, () => (municipios.delete(code), undefined)));
-  return municipios.get(code)!;
-};
-
-function textoCalle(a: Address) {
-  const calle = [a.streetType, a.street].filter(Boolean).join(' ');
-  return `${calle}${a.number ? ` ${a.number}` : ''}${a.door ? `, ${a.door}` : ''}`;
-}
-
-async function direccionVista(r: Repositories, a: Address | undefined, todas: Province[]): Promise<DireccionVista> {
-  if (!a) return { address: '', postalCode: '', city: '', province: '', country: '' };
-  const municipio = a.municipalityCode ? await nombreMunicipio(r, a.municipalityCode) : undefined;
-  return {
-    address: textoCalle(a),
-    postalCode: a.postalCode ?? '',
-    city: municipio ?? a.city ?? '',
-    province: todas.find((p) => p.code === a.provinceCode)?.name ?? '',
-    country: a.countryCode === 'ES' ? 'España' : a.countryCode,
-  };
-}
-
-/**
- * Guarda la dirección escrita en la pantalla. La provincia sale del código postal (sus dos primeras cifras
- * son el código INE de la provincia) o del nombre; la localidad se busca en el catálogo de municipios y,
- * si no se encuentra una sola, se guarda como texto. Devuelve el id de la dirección (nueva o la misma).
- */
-async function guardarDireccion(actual: Address | undefined, d: Omit<DireccionVista, 'country'>): Promise<string | null> {
-  const antes = actual ? { address: textoCalle(actual), postalCode: actual.postalCode ?? '' } : undefined;
-  const texto = d.address.trim();
-  const cp = d.postalCode.trim();
-  const ciudad = d.city.trim();
-  if (!texto && !cp && !ciudad) return actual?.id ?? null;
-
-  let provinceCode: string | null = /^\d{5}$/.test(cp) ? cp.slice(0, 2) : null;
-  if (!provinceCode && d.province.trim()) {
-    provinceCode = (await provincias()).find((p) => normalizar(p.name) === normalizar(d.province))?.code ?? null;
-  }
-  let municipalityCode: string | null = null;
-  let city: string | null = ciudad || null;
-  if (ciudad.length >= 2) {
-    const encontrados = await repos.catalogs.municipalities(provinceCode ? { provinceCode, q: ciudad } : { q: ciudad });
-    const exactos = encontrados.filter((m) => normalizar(m.name) === normalizar(ciudad));
-    if (exactos.length === 1) {
-      municipalityCode = exactos[0].code;
-      provinceCode = exactos[0].provinceCode;
-      city = null;
-    }
-  }
-
-  // Si la calle no ha cambiado, se conservan tipo de vía, número y puerta tal como estaban.
-  const calle: AddressInput =
-    actual && antes?.address === texto
-      ? {}
-      : { streetType: null, street: texto || null, number: null, door: null };
-  const data: AddressInput = { ...calle, postalCode: cp || null, city, municipalityCode, provinceCode, countryCode: 'ES' };
-  if (actual) {
-    await repos.addresses.update(actual.id, data);
-    return actual.id;
-  }
-  return (await repos.addresses.create(data)).id;
-}
-
-/** Si se ha creado una dirección para un registro que luego no se ha podido guardar, se borra. */
-async function quitarDireccionNueva(nueva: string | null | undefined, anterior: string | null | undefined) {
-  if (nueva && nueva !== anterior) await repos.addresses.remove(nueva).catch(() => {});
-}
 
 // ---------------------------------------------------------------------------
 // Carga

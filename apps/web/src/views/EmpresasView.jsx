@@ -6,208 +6,22 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
       Lock, X, Edit3, ArrowRight, Sparkles, Phone, Mail, Globe, Shield, 
       Info, Trash2, Check, AlertCircle, Eye, ExternalLink, HelpCircle, 
       Building, Briefcase, FileCheck, Layers, ArrowLeft, RefreshCw, BookmarkCheck,
-      Upload, Download, ZoomIn, ZoomOut, CirclePause, CirclePlay, CloudUpload, FileImage,
+      Upload, Download, ZoomIn, ZoomOut, CirclePause, CirclePlay, CloudUpload, FileImage, Archive, RotateCcw,
     } from 'lucide-react';
-import { Page, PageHeader, Card, EmptyState, Notice, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Tabs, Modal, Drawer, Confirmar, Interruptor } from '../ui';
+import { Page, PageHeader, Card, EmptyState, Notice, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Tabs, Modal, Drawer, Confirmar, Interruptor, CargandoPagina, ErrorCarga } from '../ui';
+import { DEMO } from '../modo';
+import { useEmpresas, mensajeError } from './empresas/useEmpresas';
+import { SelectorCnae } from './empresas/SelectorCnae';
+import { Eliminados } from './empresas/Eliminados';
 import { PERMISOS_PORTAL, permisosPorRoles } from '../portal/permisosEmpresa';
 import { CLAVE_SERVICIO_PENDIENTE } from './serviciosDemo';
 import { CLAVE_PRESUPUESTO_EMPRESA, dejarTraspaso } from './traspasos';
 
-    // DATOS DEMO INICIALES
-    const INITIAL_COMPANIES = [
-      {
-id: 'comp-1',
-cif: 'B-87654321',
-name: 'Trans-Logística Ibérica Norte, S.L.',
-tradeName: 'TransLog Norte',
-status: 'active',
-readiness: {
-  basic: true,
-  quote: true,
-  operations: false, // falta centros
-  billing: false     // faltan datos facturación
-},
-readinessLabel: 'Lista para presupuestar',
-readinessStep: 2,
-owner: 'Carlos Mendoza (Consultor ETT)',
-country: 'España',
-email: 'contacto@translog-norte.es',
-phone: '+34 944 123 456',
-address: 'Polígono Industrial Artunduaga, Pabellón 14',
-postalCode: '48970',
-city: 'Basauri',
-province: 'Bizkaia',
-sector: 'Logística y almacén',
-notes: 'Cliente con alta demanda en picos de campaña Black Friday y verano. Exige perfiles carretilleros con carnet vigente.',
-lastActivity: 'Hace 2 horas — Presupuesto PRE-2026-0048 en borrador',
-createdAt: '2026-03-15',
-contacts: [
-  {
-    id: 'cont-1',
-    name: 'Marta Gómez Arana',
-    email: 'marta.gomez@translog-norte.es',
-    phone: '+34 654 987 321',
-    role: 'Responsable de RRHH y Selección',
-    types: ['RR. HH.', 'Solicitante', 'Destinatario de Presupuestos'],
-    isMain: true,
-    isQuoteRecipient: true,
-    notes: 'Contacto principal para firma de presupuestos y gestión de altas de personal.',
-    portal: { activo: true, desde: '2026-03-20', ultimoAcceso: 'Ayer 17:40', permisos: ['pedir', 'personal', 'facturas', 'documentos'] }
-  },
-  {
-    id: 'cont-2',
-    name: 'Javier Ugarte Elorza',
-    email: 'j.ugarte@translog-norte.es',
-    phone: '+34 611 223 344',
-    role: 'Jefe de Planta / Operaciones',
-    types: ['Operativo', 'Valida horas', 'Prevención / PRL'],
-    isMain: false,
-    isQuoteRecipient: false,
-    notes: 'Gestiona la entrada a muelle y la entrega de EPIs a carretilleros.',
-    portal: { activo: true, desde: '2026-06-25', ultimoAcceso: 'Hoy 08:15', permisos: ['personal', 'horas', 'documentos'] }
-  }
-],
-centers: [], // VACÍO INTENCIONAL PARA DEMO DE PENDIENTE
-billing: {
-  taxName: 'Trans-Logística Ibérica Norte, S.L.',
-  taxAddress: 'Polígono Industrial Artunduaga, Pabellón 14, 48970 Basauri (Bizkaia)',
-  vatRegime: 'Régimen general 21 %',
-  paymentMethod: 'Transferencia a 60 días',
-  billingContactEmail: 'facturacion@translog-norte.es',
-  iban: '',
-  swift: '',
-  riskLimit: '30.000 € (Pendiente scoring Coface)',
-  specialVat: false,
-  fixedPayDays: 'Día 10 y 25',
-  facturaDetalle: 'concepto',
-  isComplete: false
-},
-activity: [
-  { id: 'act-1', date: '2026-04-12 11:30', user: 'Carlos Mendoza', action: 'Presupuesto PRE-2026-0048 generado en borrador', type: 'quote' },
-  { id: 'act-2', date: '2026-04-10 16:45', user: 'Marta Gómez (Cliente)', action: 'Contacto añadido y validado como destinatario de presupuestos', type: 'contact' },
-  { id: 'act-3', date: '2026-04-09 10:15', user: 'Carlos Mendoza', action: 'Alta rápida completada desde llamada comercial inicial', type: 'system' }
-]
-      },
-      {
-id: 'comp-2',
-cif: 'A-28193847',
-name: 'Manufacturas Metálicas del Henares, S.A.',
-tradeName: 'MetalHenares',
-status: 'active',
-readiness: { basic: true, quote: true, operations: true, billing: true },
-readinessLabel: 'Facturación y Operativa listas',
-readinessStep: 4,
-owner: 'Elena Rivas',
-country: 'España',
-email: 'info@metalhenares.com',
-phone: '+34 918 765 432',
-address: 'C/ del Torno 8, Alcalá de Henares',
-postalCode: '28806',
-city: 'Madrid',
-province: 'Madrid',
-sector: 'Industria metalúrgica',
-notes: 'Cliente consolidado. 4 centros activos y facturación mensual agrupada.',
-lastActivity: 'Ayer — Petición PET-2026-102 confirmada',
-createdAt: '2026-01-20',
-contacts: [
-  { id: 'cont-201', name: 'Alfonso Serrano', email: 'aserrano@metalhenares.com', phone: '+34 600 112 233', role: 'Dir. Financiero', types: ['Facturación', 'Dirección'], isMain: true, isQuoteRecipient: true }
-],
-centers: [
-  { id: 'cent-201', name: 'Planta Principal Alcalá', address: 'C/ del Torno 8', postalCode: '28806', city: 'Alcalá de Henares', country: 'España', notes: 'Sede central' }
-],
-billing: { taxName: 'Manufacturas Metálicas del Henares, S.A.', taxAddress: 'C/ del Torno 8', vatRegime: 'Régimen general 21 %', paymentMethod: 'Confirming bancario', iban: 'ES91 2100 **** **** **** 4432', isComplete: true },
-activity: []
-      },
-      {
-id: 'comp-3',
-cif: 'B-65432198',
-name: 'Mediterránea Agrícola y Envasado, S.L.',
-tradeName: 'AgroMediterráneo',
-status: 'prospect',
-readiness: { basic: true, quote: false, operations: false, billing: false },
-readinessLabel: 'Alta básica (Falta contacto)',
-readinessStep: 1,
-owner: 'Carlos Mendoza',
-country: 'España',
-email: 'info@agromediterranea-demo.es',
-phone: '+34 968 112 233',
-address: 'Carretera del Palmar km 3',
-postalCode: '30120',
-city: 'Murcia',
-province: 'Murcia',
-sector: 'Agroalimentario',
-notes: 'Lead entrante feria Fruit Attraction. Pendiente validar contacto de contratación.',
-lastActivity: 'Hace 3 días — Alta básica registrada',
-createdAt: '2026-04-05',
-contacts: [],
-centers: [],
-billing: { isComplete: false },
-activity: []
-      },
-      {
-id: 'comp-4',
-cif: 'B-99887766',
-name: 'Hostelería & Eventos Premium BCN, S.L.',
-tradeName: 'Premium Events BCN',
-status: 'active',
-readiness: { basic: true, quote: true, operations: true, billing: false },
-readinessLabel: 'Petición operativa lista',
-readinessStep: 3,
-owner: 'Laura Vidal',
-country: 'España',
-email: 'rrhh@premiumeventsbcn.cat',
-phone: '+34 932 456 789',
-address: 'Passeig de Gràcia 112, 4º',
-postalCode: '08008',
-city: 'Barcelona',
-province: 'Barcelona',
-sector: 'Hostelería y eventos',
-notes: 'Requieren camareros con idiomas y protocolo para hoteles 5* GL.',
-lastActivity: 'Hace 5 días — Centro "Palau de Congressos" añadido',
-createdAt: '2026-02-14',
-contacts: [
-  { id: 'cont-401', name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.cat', phone: '+34 688 990 011', role: 'Coordinador de Eventos', types: ['Comercial', 'Operativo'], isMain: true, isQuoteRecipient: true, portal: { activo: true, desde: '2026-09-28', ultimoAcceso: 'Hace 3 días', permisos: ['pedir', 'personal', 'facturas', 'documentos'] } },
-  { id: 'cont-402', name: 'Montse Ferrer', email: 'mferrer@premiumeventsbcn.cat', phone: '+34 688 990 022', role: 'Jefa de sala', types: ['Operativo', 'Valida horas'], isMain: false, isQuoteRecipient: false, portal: { activo: true, desde: '2026-10-08', ultimoAcceso: 'Hoy 09:02', permisos: ['personal', 'horas'] } }
-],
-centers: [
-  { id: 'cent-401', name: 'Palau de Congressos BCN', address: 'Av. Diagonal 661', postalCode: '08028', city: 'Barcelona', country: 'España', notes: 'Acceso puerta de proveedores c/ Martí i Franquès' }
-],
-billing: { isComplete: false, facturaDetalle: 'persona' },
-activity: []
-      }
-    ];
-
-    // Categorías de empresa. Se pueden ampliar desde el formulario con "Añadir".
-    const SECTORES = [
-      'Agroalimentario',
-      'Comercio y distribución',
-      'Construcción',
-      'Hostelería y eventos',
-      'Industria metalúrgica',
-      'Limpieza y servicios',
-      'Logística y almacén',
-      'Oficinas y administración',
-      'Sanidad y cuidados',
-    ];
-
-    // Listas de facturación y tipos de documento (se pueden ampliar con "Añadir")
-    const FORMAS_PAGO = ['Transferencia a 30 días', 'Transferencia a 60 días', 'Recibo SEPA a 30 días', 'Recibo SEPA a 60 días', 'Confirming a 90 días', 'Al contado'];
-    const DIAS_PAGO = ['Sin día fijo', 'Día 5 de cada mes', 'Día 10 de cada mes', 'Día 10 y 25 de cada mes', 'Día 15 de cada mes', 'Último día del mes'];
-    const REGIMENES_IVA = ['Régimen general 21 %', 'Reducido 10 %', 'Exento', 'Inversión del sujeto pasivo', 'Recargo de equivalencia', 'IGIC (Canarias)'];
-    const TIPOS_DOCUMENTO = ['Acuerdo de confidencialidad', 'CIF', 'Certificado de Hacienda', 'Certificado de la Seguridad Social', 'Contrato', 'Escrituras', 'Mandato SEPA', 'Póliza de seguro'];
-
-    // Documentos de ejemplo por empresa
-    const INITIAL_DOCUMENTOS = {
-      'comp-1': [
-        { id: 'doc-1', nombre: 'Contrato marco ETT - TransLogística 2026.pdf', tipo: 'Contrato', subidoPor: 'Carlos Mendoza', fecha: '12/02/2026', tamano: '1,4 MB', estado: 'Borrador', paginas: 6 },
-        { id: 'doc-2', nombre: 'Tarjeta CIF B-87654321.pdf', tipo: 'CIF', subidoPor: 'Sistema', fecha: '03/02/2026', tamano: '420 KB', estado: 'Validado', paginas: 1 },
-      ],
-    };
+    // Los datos (y los de ejemplo del modo demo) llegan de useEmpresas: ver src/views/empresas/useEmpresas.ts.
 
     export default function EmpresasView() {
       // Estado de datos
-      const [companies, setCompanies] = useState(INITIAL_COMPANIES);
-      const [selectedCompanyId, setSelectedCompanyId] = useState('comp-1');
+      const [selectedCompanyId, setSelectedCompanyId] = useState(null);
       const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'datos' | 'contactos' | 'centros' | 'facturacion' | 'documentos' | 'actividad'
       
       // Filtros del listado
@@ -216,29 +30,28 @@ activity: []
       const [filterOwner, setFilterOwner] = useState('all');
       const [filterReadiness, setFilterReadiness] = useState('all');
       const [filterSector, setFilterSector] = useState('all');
-      const [sectores, setSectores] = useState(SECTORES);
-      const anadirSector = (s) => setSectores(prev => [...prev, s].sort((a, b) => a.localeCompare(b, 'es')));
+      // Lista paginada en el servidor y filtro «Eliminadas» (las bajas son recuperables)
+      const [pagina, setPagina] = useState(0);
+      const [verEliminadas, setVerEliminadas] = useState(false);
+      // En la ficha: lista de contactos, centros o documentos eliminados ('contacto' | 'centro' | 'documento')
+      const [verEliminados, setVerEliminados] = useState(null);
+      // Lo que no se puede eliminar porque ya se ha usado (la API responde 409 en_uso)
+      const [noSePuede, setNoSePuede] = useState(null); // { tipo, item, motivo }
 
       // Documentos: visor y confirmación de borrado
-      const [documentos, setDocumentos] = useState(INITIAL_DOCUMENTOS);
       const [docAbierto, setDocAbierto] = useState(null);
+      const [urlDoc, setUrlDoc] = useState(null); // URL temporal del fichero abierto en el visor
       const [docABorrar, setDocABorrar] = useState(null);
       const [zoomDoc, setZoomDoc] = useState(100);
       const [subiendoDocs, setSubiendoDocs] = useState(false);
-      const [tiposDoc, setTiposDoc] = useState(TIPOS_DOCUMENTO);
 
       // Contactos y centros: suspender (reversible) o eliminar (definitivo, con confirmación)
       const [aBorrar, setABorrar] = useState(null); // { tipo: 'contacto' | 'centro', item }
 
-      // Listas de facturación ampliables
-      const [formasPago, setFormasPago] = useState(FORMAS_PAGO);
-      const [diasPago, setDiasPago] = useState(DIAS_PAGO);
-      const [regimenesIva, setRegimenesIva] = useState(REGIMENES_IVA);
-      const anadirA = (setter) => (v) => setter(prev => [...prev, v]);
 
       // Contexto simulado (ej: abierto desde Presupuesto)
       const [simulationContext, setSimulationContext] = useState({
-active: true,
+active: DEMO,
 code: 'Presupuesto PRE-2026-0048',
 role: 'Consultor Comercial ETT',
 origin: 'Negociación tarifa carretilleros turno noche'
@@ -257,10 +70,24 @@ hasUnsavedChanges: false
       const [showRulesDrawer, setShowRulesDrawer] = useState(false);
       const [viewMode, setViewMode] = useState('list'); // 'list' | 'detail'
 
-      // Obtener empresa activa
-      const currentCompany = useMemo(() => {
-return companies.find(c => c.id === selectedCompanyId) || companies[0];
-      }, [companies, selectedCompanyId]);
+      // Datos: lista, ficha abierta, catálogos y acciones (API o datos de ejemplo en modo demo)
+      const emp = useEmpresas({ busqueda: searchTerm, eliminadas: verEliminadas, pagina, seleccionada: viewMode === 'detail' ? selectedCompanyId : null });
+      const companies = emp.lista.empresas;
+      const currentCompany = emp.ficha.empresa;
+      const cat = emp.catalogos;
+      const abrirEmpresa = (id) => { setSelectedCompanyId(id); setViewMode('detail'); setActiveTab('resumen'); setVerEliminados(null); };
+
+      // Ejecuta una acción de guardado con su aviso; si la API la rechaza, muestra el motivo.
+      const ejecutar = async (accion, mensajeOk) => {
+        try {
+          const r = await accion();
+          if (mensajeOk) showToast(typeof mensajeOk === 'function' ? mensajeOk(r) : mensajeOk);
+          return r ?? true;
+        } catch (e) {
+          showToast(mensajeError(e), 'error');
+          return false;
+        }
+      };
 
       // Abre Presupuestos con un presupuesto nuevo para esta empresa (contacto destinatario y comercial incluidos)
       const crearPresupuesto = () => {
@@ -274,43 +101,36 @@ return companies.find(c => c.id === selectedCompanyId) || companies[0];
         window.location.hash = '#/presupuestos';
       };
 
-      // Toast helper
-      const actualizarEmpresa = (cambio) => setCompanies(prev => prev.map(c => (c.id === currentCompany.id ? cambio(c) : c)));
-      const campoDe = (tipo) => (tipo === 'contacto' ? 'contacts' : 'centers');
+      const alternarSuspension = (tipo, item) =>
+        ejecutar(() => emp.alternarSuspension(tipo, item), (suspendido) => `${item.name}: ${suspendido ? (tipo === 'centro' ? 'desactivado' : 'suspendido') : 'reactivado'}`);
 
-      const alternarSuspension = (tipo, item) => {
-        const suspendido = !item.suspendido;
-        actualizarEmpresa(c => ({ ...c, [campoDe(tipo)]: c[campoDe(tipo)].map(x => (x.id === item.id ? { ...x, suspendido } : x)) }));
-        showToast(`${item.name}: ${suspendido ? (tipo === 'centro' ? 'desactivado' : 'suspendido') : 'reactivado'}`);
-      };
-
-      const eliminarElemento = () => {
-        const { tipo, item } = aBorrar;
-        actualizarEmpresa(c => {
-          const lista = c[campoDe(tipo)].filter(x => x.id !== item.id);
-          const nueva = { ...c, [campoDe(tipo)]: lista };
-          if (tipo === 'centro' && lista.length === 0) nueva.readiness = { ...c.readiness, operations: false };
-          return nueva;
-        });
-        showToast(`${item.name} eliminado`);
+      // Baja lógica: se recupera desde «Eliminados». Si ya se ha usado (409 en_uso), se explica y se ofrece la alternativa.
+      const eliminarElemento = async (tipo = aBorrar.tipo, item = aBorrar.item) => {
         setABorrar(null);
+        try {
+          await emp.eliminar(tipo, item.id);
+          if (tipo === 'empresa') { setViewMode('list'); setSelectedCompanyId(null); }
+          showToast(`${item.name || item.nombre} eliminado. Se puede recuperar desde «Eliminados».`);
+          return true;
+        } catch (e) {
+          if (e?.code === 'en_uso') setNoSePuede({ tipo, item, motivo: e.message });
+          else showToast(mensajeError(e), 'error');
+          return false;
+        }
       };
+      const restaurar = async (tipo, id) => !!(await ejecutar(() => emp.restaurar(tipo, id), 'Recuperado'));
 
       // Acceso al Área de empresas: lo da la ETT; el contacto recibe una invitación por correo
       const [accesoPortal, setAccesoPortal] = useState(null); // { contacto, permisos, nuevo }
-      const guardarAccesoPortal = () => {
+      const guardarAccesoPortal = async () => {
         const { contacto, permisos, nuevo } = accesoPortal;
-        const hoy = new Date().toISOString().slice(0, 10);
-        actualizarEmpresa(c => ({ ...c, contacts: c.contacts.map(x => (x.id === contacto.id ? { ...x, portal: { ...(x.portal || {}), activo: true, permisos, desde: x.portal?.activo ? x.portal.desde : hoy, ...(nuevo ? { invitado: hoy, ultimoAcceso: null } : {}) } } : x)) }));
-        showToast(nuevo ? `Invitación al Área de empresas enviada a ${contacto.email}` : `Permisos de ${contacto.name} actualizados`);
-        setAccesoPortal(null);
+        if (await ejecutar(() => emp.guardarAccesoPortal(contacto.id, permisos), nuevo ? `Invitación al Área de empresas enviada a ${contacto.email}` : `Permisos de ${contacto.name} actualizados`)) setAccesoPortal(null);
       };
-      const quitarAccesoPortal = (contacto) => {
-        actualizarEmpresa(c => ({ ...c, contacts: c.contacts.map(x => (x.id === contacto.id ? { ...x, portal: { ...x.portal, activo: false } } : x)) }));
-        showToast(`${contacto.name} ya no puede entrar en el Área de empresas`);
-      };
+      const quitarAccesoPortal = (contacto) => ejecutar(() => emp.quitarAccesoPortal(contacto.id), `${contacto.name} ya no puede entrar en el Área de empresas`);
 
-      const actualizarFacturacion = (campo, valor) => actualizarEmpresa(c => ({ ...c, billing: { ...c.billing, [campo]: valor } }));
+      const actualizarFacturacion = (campo, valor) =>
+        ejecutar(() => emp.actualizarFacturacion(campo, valor)).then((avisos) => { if (Array.isArray(avisos) && avisos.length) showToast(avisos.join(' '), 'error'); else if (avisos) showToast('Datos de facturación guardados'); });
+      const anadirOpcion = (tipo) => (nombre) => ejecutar(() => emp.catalogos.anadirOpcion(tipo, nombre), `«${nombre}» añadido a la lista`);
 
       const showToast = (message, type = 'success') => {
 setToast({ message, type });
@@ -328,191 +148,63 @@ if (!force && drawerState.hasUnsavedChanges) {
       };
 
       // Guardado de empresa rápida
-      const handleSaveCompany = (formData, isEdit = false) => {
-if (isEdit) {
-  setCompanies(prev => prev.map(c => {
-    if (c.id === currentCompany.id) {
-      return {
-        ...c,
-        ...formData,
-        activity: [
-          {
-            id: 'act-' + Date.now(),
-            date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-            user: 'Carlos Mendoza',
-            action: 'Datos de empresa actualizados desde el panel lateral',
-            type: 'system'
-          },
-          ...c.activity
-        ]
-      };
-    }
-    return c;
-  }));
-  showToast('Empresa actualizada correctamente');
-} else {
-  const newId = 'comp-' + Date.now();
-  const newComp = {
-    id: newId,
-    cif: formData.cif,
-    name: formData.name,
-    tradeName: formData.tradeName || formData.name,
-    status: 'active',
-    readiness: { basic: true, quote: false, operations: false, billing: false },
-    readinessLabel: 'Alta básica (Falta contacto)',
-    readinessStep: 1,
-    owner: formData.owner || 'Carlos Mendoza',
-    country: formData.country || 'España',
-    email: formData.email || '',
-    phone: formData.phone || '',
-    address: formData.address || '',
-    postalCode: formData.postalCode || '',
-    city: formData.city || '',
-    province: formData.province || '',
-    sector: formData.sector || 'General',
-    notes: formData.notes || '',
-    lastActivity: 'Ahora — Alta rápida creada',
-    createdAt: new Date().toISOString().substring(0, 10),
-    contacts: [],
-    centers: [],
-    billing: { isComplete: false },
-    activity: [
-      {
-        id: 'act-' + Date.now(),
-        date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        user: formData.owner || 'Carlos Mendoza',
-        action: 'Alta rápida inicial registrada en ERP',
-        type: 'system'
-      }
-    ]
-  };
-  setCompanies(prev => [newComp, ...prev]);
-  setSelectedCompanyId(newId);
-  setViewMode('detail');
-  setActiveTab('resumen');
-  showToast('Empresa creada con éxito (Borrador inicial)');
-}
-setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+      const handleSaveCompany = async (formData, isEdit = false) => {
+        const id = await ejecutar(() => emp.guardarEmpresa(formData, isEdit), isEdit ? 'Empresa actualizada correctamente' : formData.borrador ? 'Empresa guardada como borrador' : 'Empresa creada con éxito');
+        if (!id) return false;
+        if (!isEdit) abrirEmpresa(id);
+        setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+        return true;
       };
 
       // Guardar Contacto
-      const handleSaveContact = (contactData, isEdit = false) => {
-setCompanies(prev => prev.map(c => {
-  if (c.id === currentCompany.id) {
-    let updatedContacts;
-    if (isEdit) {
-      updatedContacts = c.contacts.map(ct => ct.id === contactData.id ? contactData : (contactData.isMain ? { ...ct, isMain: false } : ct));
-    } else {
-      const newContact = { ...contactData, id: 'cont-' + Date.now() };
-      updatedContacts = contactData.isMain 
-        ? [newContact, ...c.contacts.map(ct => ({ ...ct, isMain: false }))]
-        : [...c.contacts, newContact];
-    }
-
-    // Actualizar readiness si ya tiene contacto principal
-    const hasQuoteContact = updatedContacts.some(ct => ct.isQuoteRecipient || ct.isMain);
-    const newReadiness = {
-      ...c.readiness,
-      quote: hasQuoteContact
-    };
-
-    let label = c.readinessLabel;
-    if (newReadiness.quote && !newReadiness.operations) {
-      label = 'Lista para presupuestar';
-    }
-
-    return {
-      ...c,
-      contacts: updatedContacts,
-      readiness: newReadiness,
-      readinessLabel: label,
-      activity: [
-        {
-          id: 'act-' + Date.now(),
-          date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          user: 'Carlos Mendoza',
-          action: isEdit ? `Contacto modificado: ${contactData.name}` : `Nuevo contacto añadido: ${contactData.name} (${contactData.types.join(', ')})`,
-          type: 'contact'
-        },
-        ...c.activity
-      ]
-    };
-  }
-  return c;
-}));
-showToast(isEdit ? 'Contacto actualizado' : 'Contacto añadido y vinculado a presupuesto');
-setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+      const handleSaveContact = async (contactData, isEdit = false) => {
+        if (!(await ejecutar(() => emp.guardarContacto(contactData), isEdit ? 'Contacto actualizado' : 'Contacto añadido'))) return false;
+        setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+        return true;
       };
 
       // Guardar Centro
-      const handleSaveCenter = (centerData, isEdit = false) => {
-setCompanies(prev => prev.map(c => {
-  if (c.id === currentCompany.id) {
-    let updatedCenters;
-    if (isEdit) {
-      updatedCenters = c.centers.map(ct => ct.id === centerData.id ? centerData : ct);
-    } else {
-      const newCenter = { ...centerData, id: 'cent-' + Date.now() };
-      updatedCenters = [...c.centers, newCenter];
-    }
+      const handleSaveCenter = async (centerData, isEdit = false) => {
+        if (!(await ejecutar(() => emp.guardarCentro(centerData), isEdit ? 'Centro actualizado' : 'Centro operativo creado (desbloquea Petición)'))) return false;
+        setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+        return true;
+      };
 
-    const hasCenters = updatedCenters.length > 0;
-    const newReadiness = {
-      ...c.readiness,
-      operations: hasCenters
-    };
-
-    let label = c.readinessLabel;
-    if (newReadiness.operations && newReadiness.quote) {
-      label = newReadiness.billing ? 'Facturación y Operativa listas' : 'Petición operativa lista';
-    }
-
-    return {
-      ...c,
-      centers: updatedCenters,
-      readiness: newReadiness,
-      readinessLabel: label,
-      activity: [
-        {
-          id: 'act-' + Date.now(),
-          date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          user: 'Carlos Mendoza',
-          action: isEdit ? `Centro de trabajo modificado: ${centerData.name}` : `Nuevo centro operativo añadido: ${centerData.name}`,
-          type: 'center'
-        },
-        ...c.activity
-      ]
-    };
-  }
-  return c;
-}));
-showToast(isEdit ? 'Centro actualizado' : 'Centro operativo creado (desbloquea Petición)');
-setDrawerState({ isOpen: false, type: null, data: null, hasUnsavedChanges: false });
+      // Documentos: el visor pide la URL temporal del fichero
+      const abrirDocumento = (doc) => {
+        setDocAbierto(doc);
+        setZoomDoc(100);
+        setUrlDoc(null);
+        emp.urlDocumento(doc.id).then(setUrlDoc, () => setUrlDoc(null));
+      };
+      const descargarDocumento = async (doc) => {
+        const url = await ejecutar(() => emp.urlDocumento(doc.id));
+        if (typeof url === 'string') window.open(url, '_blank', 'noopener');
+        else if (url) showToast('Es un documento de ejemplo: no tiene fichero que descargar', 'error');
       };
 
       // Filtrado en tabla
       const filteredCompanies = useMemo(() => {
+// La búsqueda va al servidor; preparación, categoría y responsable se aplican a la página cargada.
 return companies.filter(c => {
-  const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.cif.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.tradeName && c.tradeName.toLowerCase().includes(searchTerm.toLowerCase()));
+  const matchSearch = true;
   const matchStatus = filterStatus === 'all' || c.status === filterStatus;
-  const matchOwner = filterOwner === 'all' || c.owner.toLowerCase().includes(filterOwner.toLowerCase());
+  const matchOwner = filterOwner === 'all' || c.ownerUserId === filterOwner;
   const matchReadiness = filterReadiness === 'all' || 
     (filterReadiness === 'quote' && c.readiness.quote) ||
     (filterReadiness === 'operations' && c.readiness.operations) ||
     (filterReadiness === 'billing' && c.readiness.billing);
-  const matchSector = filterSector === 'all' || c.sector === filterSector;
+  const matchSector = filterSector === 'all' || c.sectorCode === filterSector;
   return matchSearch && matchStatus && matchOwner && matchReadiness && matchSector;
 });
-      }, [companies, searchTerm, filterStatus, filterOwner, filterReadiness, filterSector]);
+      }, [companies, filterStatus, filterOwner, filterReadiness, filterSector]);
 
       return (
 <div className="flex min-h-full text-sm">
   {/* TOAST FLOTANTE */}
   {toast && (
-    <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-lg border border-slate-800 animate-bounce">
-      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+    <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2.5 max-w-md bg-slate-900 text-white px-4 py-3 rounded-lg shadow-lg border border-slate-800 ${toast.type === 'error' ? '' : 'animate-bounce'}`}>
+      {toast.type === 'error' ? <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" /> : <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />}
       <span className="font-medium text-xs md:text-sm">{toast.message}</span>
       <button onClick={() => setToast(null)} className="text-slate-400 hover:text-white ml-2">
         <X className="w-4 h-4" />
@@ -548,7 +240,7 @@ return companies.filter(c => {
       <Page>
         <PageHeader
           title="Empresas"
-          count={companies.length}
+          count={emp.lista.total}
           subtitle="Clientes y posibles clientes, y qué les falta para presupuestar, operar y facturar."
           actions={
             <Button variant="primary" icon={Plus} onClick={() => setDrawerState({ isOpen: true, type: 'new-company', data: null, hasUnsavedChanges: false })}>
@@ -562,7 +254,7 @@ return companies.filter(c => {
             <SearchInput
               className="flex-1 min-w-[220px] max-w-md"
               value={searchTerm}
-              onChange={setSearchTerm}
+              onChange={(v) => { setSearchTerm(v); setPagina(0); }}
               placeholder="Buscar por razón social, nombre comercial o CIF..."
             />
             <Select value={filterReadiness} onChange={(e) => setFilterReadiness(e.target.value)}>
@@ -573,19 +265,27 @@ return companies.filter(c => {
             </Select>
             <Select value={filterSector} onChange={(e) => setFilterSector(e.target.value)}>
               <option value="all">Todas las categorías</option>
-              {sectores.map(s => <option key={s} value={s}>{s}</option>)}
+              {cat.sectores.filter(s => companies.some(c => c.sectorCode === s.code)).map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
             </Select>
             <Select value={filterOwner} onChange={(e) => setFilterOwner(e.target.value)}>
               <option value="all">Todos los responsables</option>
-              <option value="carlos">Carlos Mendoza</option>
-              <option value="elena">Elena Rivas</option>
-              <option value="laura">Laura Vidal</option>
+              {cat.responsables.filter(r => companies.some(c => c.ownerUserId === r.id)).map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
             </Select>
-            <span className="ml-auto text-[11px] text-slate-500">{filteredCompanies.length} de {companies.length}</span>
+            <Select value={verEliminadas ? 'eliminadas' : 'activas'} onChange={(e) => { setVerEliminadas(e.target.value === 'eliminadas'); setPagina(0); }} aria-label="Activas o eliminadas">
+              <option value="activas">Empresas activas</option>
+              <option value="eliminadas">Eliminadas</option>
+            </Select>
+            <span className="ml-auto text-[11px] text-slate-500">{filteredCompanies.length === companies.length ? `${emp.lista.desde}–${emp.lista.hasta} de ${emp.lista.total}` : `${filteredCompanies.length} de ${companies.length} en esta página`}</span>
           </div>
 
-          {filteredCompanies.length === 0 ? (
-            <EmptyState icon={Building2} title="No hay empresas con estos filtros" text="Prueba con otra búsqueda o cambia los filtros." />
+          {emp.lista.estado === 'error' ? (
+            <ErrorCarga mensaje={emp.lista.error} onReintentar={emp.lista.reintentar} />
+          ) : emp.lista.estado === 'cargando' ? (
+            <CargandoPagina texto="Cargando empresas…" />
+          ) : filteredCompanies.length === 0 ? (
+            verEliminadas
+              ? <EmptyState icon={Archive} title="No hay empresas eliminadas" text="Las empresas que se eliminen aparecerán aquí y se podrán recuperar." />
+              : <EmptyState icon={Building2} title={companies.length ? 'No hay empresas con estos filtros' : 'Todavía no hay empresas'} text={companies.length || searchTerm ? 'Prueba con otra búsqueda o cambia los filtros.' : 'Da de alta la primera con «Nueva empresa».'} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -597,7 +297,7 @@ return companies.filter(c => {
                     <th className="py-2 px-3 font-medium">Contacto principal</th>
                     <th className="py-2 px-3 font-medium">Preparación</th>
                     <th className="py-2 px-3 font-medium">Responsable</th>
-                    <th className="py-2 px-3 font-medium">Última actividad</th>
+                    <th className="py-2 px-3 font-medium">{verEliminadas ? 'Eliminada' : 'Última actividad'}</th>
                     <th className="py-2 px-3" aria-label="Acciones"></th>
                   </tr>
                 </thead>
@@ -615,11 +315,8 @@ return companies.filter(c => {
 return (
                       <tr
                         key={company.id}
-                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer"
-                        onClick={() => {
-                          setSelectedCompanyId(company.id);
-                          setViewMode('detail');
-                        }}
+                        className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 ${verEliminadas ? '' : 'cursor-pointer'}`}
+                        onClick={() => { if (!verEliminadas) abrirEmpresa(company.id); }}
                       >
                         <td className="py-2.5 px-3">
                           <div className="font-medium text-slate-900 min-w-[180px]">{company.name}</div>
@@ -652,23 +349,28 @@ return (
                           </div>
                         </td>
                         <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{company.owner}</td>
-                        <td className="py-2.5 px-3 text-[11px] text-slate-500"><div className="max-w-[180px] truncate" title={company.lastActivity}>{company.lastActivity}</div></td>
+                        <td className="py-2.5 px-3 text-[11px] text-slate-500"><div className="max-w-[180px] truncate" title={company.lastActivity}>{verEliminadas ? `El ${company.deletedAt}` : company.lastActivity}</div></td>
                         <td className="py-2.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedCompanyId(company.id);
-                              setViewMode('detail');
-                            }}
-                          >
-                            Abrir
-                          </Button>
+                          {verEliminadas ? (
+                            <Button size="sm" icon={RotateCcw} onClick={() => restaurar('empresa', company.id)}>Recuperar</Button>
+                          ) : (
+                            <Button size="sm" onClick={() => abrirEmpresa(company.id)}>Abrir</Button>
+                          )}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          {emp.lista.paginas > 1 && (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-slate-200 text-[11px] text-slate-500">
+              <span>Página {pagina + 1} de {emp.lista.paginas}</span>
+              <div className="flex items-center gap-2">
+                <Button size="sm" disabled={pagina === 0 || emp.lista.cargando} onClick={() => setPagina(p => p - 1)}>Anterior</Button>
+                <Button size="sm" disabled={pagina + 1 >= emp.lista.paginas || emp.lista.cargando} onClick={() => setPagina(p => p + 1)}>Siguiente</Button>
+              </div>
             </div>
           )}
         </Card>
@@ -681,14 +383,21 @@ return (
     )}
 
     {/* VISTA 2: FICHA 360º DE LA EMPRESA */}
-    {viewMode === 'detail' && (
+    {viewMode === 'detail' && emp.ficha.estado === 'cargando' && <CargandoPagina texto="Cargando la ficha…" />}
+    {viewMode === 'detail' && emp.ficha.estado === 'error' && (
+      <div className="w-full px-4 sm:px-6 py-5 space-y-4">
+        <PageHeader breadcrumbs={[{ label: 'Empresas', onClick: () => setViewMode('list') }]} title="Empresa" />
+        <ErrorCarga mensaje={emp.ficha.error} onReintentar={emp.ficha.reintentar} />
+      </div>
+    )}
+    {viewMode === 'detail' && emp.ficha.estado === 'listo' && (
       <div className="w-full px-4 sm:px-6 py-5 space-y-4">
         <PageHeader
           breadcrumbs={[{ label: 'Empresas', onClick: () => setViewMode('list') }, { label: currentCompany.name }]}
           title={currentCompany.name}
           status={
             <>
-              <Badge tone="success" dot>Cliente activo</Badge>
+              <Badge tone={currentCompany.statusTone} dot>{currentCompany.statusLabel}</Badge>
               <Badge tone={currentCompany.readiness.quote ? 'success' : 'warning'}>{currentCompany.readinessLabel}</Badge>
             </>
           }
@@ -708,6 +417,7 @@ return (
               <Button variant="primary" icon={FileCheck} onClick={crearPresupuesto}>
                 Crear presupuesto
               </Button>
+              <IconButton icon={Trash2} title="Eliminar empresa" className="hover:text-rose-600 hover:bg-rose-50" onClick={() => setABorrar({ tipo: 'empresa', item: currentCompany })} />
             </>
           }
         />
@@ -721,7 +431,7 @@ return (
             { id: 'contactos', label: 'Contactos', count: currentCompany.contacts.length },
             { id: 'centros', label: 'Centros', count: currentCompany.centers.length },
             { id: 'facturacion', label: 'Facturación' },
-            { id: 'documentos', label: 'Documentos' },
+            { id: 'documentos', label: 'Documentos', count: currentCompany.documentos.length },
             { id: 'actividad', label: 'Historial' },
           ]}
         />
@@ -768,7 +478,9 @@ return (
                         <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">HABILITADO</span>
                       </div>
                       <p className="text-xs text-slate-600">
-                        Tiene contacto destinatario (<strong>{currentCompany.contacts[0]?.name || 'Marta Gómez'}</strong>) listo para recibir propuestas de tarifa/hora.
+                        {currentCompany.readiness.quote
+                          ? <>Tiene contacto destinatario (<strong>{(currentCompany.contacts.find(c => c.isQuoteRecipient && !c.suspendido) || currentCompany.contacts.find(c => c.isMain) || currentCompany.contacts[0])?.name}</strong>) listo para recibir propuestas de tarifa/hora.</>
+                          : 'Falta un contacto que reciba los presupuestos. Se puede presupuestar igualmente y añadirlo después.'}
                       </p>
                       <div className="pt-1">
                         <button
@@ -839,7 +551,9 @@ return (
                         </span>
                       </div>
                       <p className="text-xs text-slate-500">
-                        Faltan datos fiscales avanzados (IBAN, días de pago y scoring de riesgo). Se requerirán antes de la primera factura mensual.
+                        {currentCompany.billing.isComplete
+                          ? `Forma de pago (${currentCompany.billing.paymentMethod}) e IBAN configurados.`
+                          : 'Faltan datos fiscales avanzados (IBAN, días de pago y scoring de riesgo). Se requerirán antes de la primera factura mensual.'}
                       </p>
                       <div className="pt-1">
                         <button
@@ -1028,6 +742,10 @@ return (
                     <div className="text-slate-700 mt-0.5">{currentCompany.sector || 'General'}</div>
                   </div>
                   <div>
+                    <div className="text-slate-400 text-[11px] font-semibold">Convenio por defecto</div>
+                    <div className="text-slate-700 mt-0.5">{currentCompany.defaultAgreement || 'Sin convenio por defecto (se elige en cada centro)'}</div>
+                  </div>
+                  <div>
                     <div className="text-slate-400 text-[11px] font-semibold">Responsable ETT Asignado</div>
                     <div className="text-emerald-700 font-semibold mt-0.5">{currentCompany.owner}</div>
                   </div>
@@ -1046,23 +764,32 @@ return (
           {/* TAB 3: CONTACTOS */}
           {activeTab === 'contactos' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="min-w-[14rem] flex-1">
                   <h3 className="text-sm font-semibold text-slate-900">Directorio de contactos de la empresa</h3>
                   <p className="text-xs text-slate-500">
                     Solo se exige nombre y teléfono/email. No pedimos DNI.
                   </p>
                 </div>
-                <button
-                  onClick={() => setDrawerState({ isOpen: true, type: 'new-contact', data: null, hasUnsavedChanges: false })}
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Añadir contacto
-                </button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" icon={Archive} onClick={() => setVerEliminados(v => (v === 'contacto' ? null : 'contacto'))}>{verEliminados === 'contacto' ? 'Ver activos' : 'Eliminados'}</Button>
+                  <button
+                    onClick={() => setDrawerState({ isOpen: true, type: 'new-contact', data: null, hasUnsavedChanges: false })}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Añadir contacto
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,340px),1fr))] gap-4">
+              {verEliminados === 'contacto' && (
+                <Eliminados titulo="Contactos eliminados" vacio="Los contactos que se eliminen aparecerán aquí." cargar={() => emp.eliminados('contacto')} onRestaurar={(id) => restaurar('contacto', id)} />
+              )}
+              {verEliminados !== 'contacto' && currentCompany.contacts.length === 0 && (
+                <EmptyState icon={Users} title="Sin contactos" text="Añade la persona que recibe los presupuestos para poder enviarle una propuesta." />
+              )}
+              {verEliminados !== 'contacto' && <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,340px),1fr))] gap-4">
                 {currentCompany.contacts.map(contact => (
                   <div 
                     key={contact.id}
@@ -1142,7 +869,13 @@ return (
                       )}
                     </div>
 
-                    {/* Acceso al Área de empresas */}
+                    {/* Acceso al Área de empresas (aún no está en la API: en modo real, «Disponible próximamente») */}
+                    {!emp.ficha.portalDisponible ? (
+                      <div className="pt-2 border-t border-slate-100 text-xs flex items-center justify-between gap-2">
+                        <span className="font-medium text-slate-700 flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-slate-400" />Acceso al Área de empresas</span>
+                        <Badge>Disponible próximamente</Badge>
+                      </div>
+                    ) : (
                     <div className="pt-2 border-t border-slate-100 text-xs space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-slate-700 flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-slate-400" />Acceso al Área de empresas</span>
@@ -1169,9 +902,10 @@ return (
                         <div className="text-[11px] text-slate-500">{contact.email ? 'Sin acceso. Al activarlo le llega una invitación por correo.' : 'Necesita un email para poder entrar.'}</div>
                       )}
                     </div>
+                    )}
                   </div>
                 ))}
-              </div>
+              </div>}
 
               {accesoPortal && (
                 <Modal
@@ -1210,23 +944,28 @@ return (
           {/* TAB 4: CENTROS */}
           {activeTab === 'centros' && (
             <div className="space-y-4">
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-[14rem] flex-1">
                   <h3 className="text-sm font-semibold text-slate-900">Centros de trabajo / naves operativas</h3>
                   <p className="text-xs text-slate-500">
                     Requeridos únicamente para <strong>Peticiones Operativas</strong> (asignar trabajadores al centro y turno).
                   </p>
                 </div>
-                <button
-                  onClick={() => setDrawerState({ isOpen: true, type: 'new-center', data: null, hasUnsavedChanges: false })}
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Añadir centro
-                </button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" icon={Archive} onClick={() => setVerEliminados(v => (v === 'centro' ? null : 'centro'))}>{verEliminados === 'centro' ? 'Ver activos' : 'Eliminados'}</Button>
+                  <button
+                    onClick={() => setDrawerState({ isOpen: true, type: 'new-center', data: null, hasUnsavedChanges: false })}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Añadir centro
+                  </button>
+                </div>
               </div>
 
-              {currentCompany.centers.length === 0 ? (
+              {verEliminados === 'centro' ? (
+                <Eliminados titulo="Centros eliminados" vacio="Los centros que se eliminen aparecerán aquí." cargar={() => emp.eliminados('centro')} onRestaurar={(id) => restaurar('centro', id)} />
+              ) : currentCompany.centers.length === 0 ? (
                 <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-8 text-center space-y-3">
                   <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto">
                     <MapPin className="w-6 h-6" />
@@ -1255,7 +994,7 @@ return (
                           </div>
                           <div>
                             <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-2">{center.name}{center.suspendido && <Badge tone="warning">Inactivo</Badge>}</h4>
-                            <p className="text-xs text-slate-500">{center.address}, {center.postalCode} {center.city}</p>
+                            <p className="text-xs text-slate-500">{[center.address, [center.postalCode, center.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'Sin dirección'}</p>
                           </div>
                         </div>
                         <div className="flex items-center">
@@ -1271,7 +1010,7 @@ return (
 
                       <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100 space-y-1">
                         <div className="font-semibold text-slate-700 text-[11px]">Datos Operativos</div>
-                        <div>Convenio aplicación: {center.laborAgreement || 'General ETT Sectorial'}</div>
+                        <div>Convenio aplicación: {center.laborAgreement || 'Sin convenio'}{center.heredado && <span className="text-slate-400"> (el de la empresa)</span>}</div>
                         {center.notes && <div className="text-slate-500 italic">"{center.notes}"</div>}
                       </div>
                     </div>
@@ -1328,15 +1067,15 @@ return (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     <div>
                       <span className="font-semibold text-slate-900">Dirección Fiscal Completa</span>
-                      <div className="text-[11px] text-slate-500">Basauri (Bizkaia)</div>
+                      <div className="text-[11px] text-slate-500">{currentCompany.city ? `${currentCompany.city}${currentCompany.province ? ` (${currentCompany.province})` : ''}` : 'Sin dirección fiscal'}</div>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center gap-2.5">
-                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div className={`p-3 rounded-lg border flex items-center gap-2.5 ${currentCompany.billing.tieneIban ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/50'}`}>
+                    {currentCompany.billing.tieneIban ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <Clock className="w-4 h-4 text-amber-600 shrink-0" />}
                     <div>
                       <span className="font-semibold text-slate-900">IBAN / Mandato SEPA B2B</span>
-                      <div className="text-[11px] text-amber-700">Pendiente de recibir firmado</div>
+                      <div className={`text-[11px] ${currentCompany.billing.tieneIban ? 'text-slate-500' : 'text-amber-700'}`}>{currentCompany.billing.tieneIban ? 'IBAN registrado' : 'Pendiente de recibir firmado'}</div>
                     </div>
                   </div>
 
@@ -1344,7 +1083,7 @@ return (
                     <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                     <div>
                       <span className="font-semibold text-slate-900">Límite de Riesgo / Crédito ETT</span>
-                      <div className="text-[11px] text-amber-700">Límite propuesto 30.000 € (Pendiente riesgo)</div>
+                      <div className="text-[11px] text-amber-700">{currentCompany.billing.riskLimit ? `Límite propuesto ${currentCompany.billing.riskLimit} (Pendiente riesgo)` : 'Sin límite propuesto'}</div>
                     </div>
                   </div>
                 </div>
@@ -1375,8 +1114,8 @@ return (
                       <SelectConAlta
                         value={currentCompany.billing.paymentMethod || ''}
                         onChange={(v) => actualizarFacturacion('paymentMethod', v)}
-                        options={formasPago}
-                        onAdd={anadirA(setFormasPago)}
+                        options={cat.formasPago}
+                        onAdd={anadirOpcion('payment_method')}
                         placeholder="Selecciona una opción"
                         nuevoPlaceholder="Ej. Transferencia a 45 días"
                       />
@@ -1388,11 +1127,11 @@ return (
                     <div className="mt-1">
                       <SelectConAlta
                         value={currentCompany.billing.fixedPayDays || ''}
-                        onChange={(v) => actualizarFacturacion('fixedPayDays', v)}
-                        options={diasPago}
-                        onAdd={anadirA(setDiasPago)}
+                        onChange={(v) => v && actualizarFacturacion('fixedPayDays', v)}
+                        options={cat.diasPago}
+                        onAdd={() => {}}
                         placeholder="Selecciona una opción"
-                        nuevoPlaceholder="Ej. Día 20 de cada mes"
+                        nuevoPlaceholder="Ej. Día 20 o Días 5 y 20 (hasta 3)"
                       />
                     </div>
                   </div>
@@ -1417,7 +1156,7 @@ return (
                   <div>
                     <label className="text-slate-500 text-[11px] font-semibold">Cómo quiere las facturas de horas</label>
                     <div className="mt-1">
-                      <Select value={currentCompany.billing.facturaDetalle || 'concepto'} onChange={(e) => actualizarFacturacion('facturaDetalle', e.target.value)} className="w-full" aria-label="Cómo quiere las facturas de horas">
+                      <Select value={currentCompany.billing.facturaDetalle || 'persona'} onChange={(e) => actualizarFacturacion('facturaDetalle', e.target.value)} className="w-full" aria-label="Cómo quiere las facturas de horas">
                         <option value="concepto">Por concepto: una línea por tipo de hora, con anexo de horas e importe por persona</option>
                         <option value="persona">Por persona: una línea por persona y tipo de hora</option>
                       </Select>
@@ -1431,10 +1170,10 @@ return (
                       <SelectConAlta
                         value={currentCompany.billing.vatRegime || ''}
                         onChange={(v) => actualizarFacturacion('vatRegime', v)}
-                        options={regimenesIva}
-                        onAdd={anadirA(setRegimenesIva)}
+                        options={cat.regimenesIva}
+                        onAdd={anadirOpcion('vat_special_cause')}
                         placeholder="Selecciona una opción"
-                        nuevoPlaceholder="Ej. Régimen especial agrario"
+                        nuevoPlaceholder="Otra causa especial de IVA"
                       />
                     </div>
                   </div>
@@ -1461,10 +1200,15 @@ return (
                   <h3 className="text-sm font-semibold text-slate-900">Documentación mercantil y contratos</h3>
                   <p className="text-xs text-slate-500">Contratos mercantiles, acuerdos de confidencialidad y CIF digitalizado.</p>
                 </div>
-                <Button icon={Upload} onClick={() => setSubiendoDocs(true)}>Subir documento</Button>
+                <div className="flex items-center gap-2">
+                  <Button icon={Archive} onClick={() => setVerEliminados(v => (v === 'documento' ? null : 'documento'))}>{verEliminados === 'documento' ? 'Ver activos' : 'Eliminados'}</Button>
+                  <Button icon={Upload} onClick={() => setSubiendoDocs(true)}>Subir documento</Button>
+                </div>
               </div>
 
-              {(documentos[currentCompany.id] || []).length === 0 ? (
+              {verEliminados === 'documento' ? (
+                <div className="p-4"><Eliminados titulo="Documentos eliminados" vacio="Los documentos que se eliminen aparecerán aquí." cargar={() => emp.eliminados('documento')} onRestaurar={(id) => restaurar('documento', id)} /></div>
+              ) : currentCompany.documentos.length === 0 ? (
                 <EmptyState
                   icon={FileText}
                   title="Sin documentos"
@@ -1473,12 +1217,12 @@ return (
                 />
               ) : (
                 <ul className="divide-y divide-slate-100 text-xs">
-                  {(documentos[currentCompany.id] || []).map(doc => (
+                  {currentCompany.documentos.map(doc => (
                     <li key={doc.id} className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-slate-50">
                       <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
                         <FileText className="w-4 h-4" />
                       </div>
-                      <button type="button" onClick={() => { setDocAbierto(doc); setZoomDoc(100); }} className="min-w-0 flex-1 text-left">
+                      <button type="button" onClick={() => abrirDocumento(doc)} className="min-w-0 flex-1 text-left">
                         <div className="font-medium text-slate-900 truncate hover:text-indigo-700">{doc.nombre}</div>
                         <div className="text-[11px] text-slate-500">
                           {doc.subidoPor} · {doc.fecha} · {doc.tamano}
@@ -1489,9 +1233,9 @@ return (
                       <Badge>{doc.tipo}</Badge>
                       <Badge tone={doc.estado === 'Validado' ? 'success' : 'warning'} dot>{doc.estado}</Badge>
                       <div className="flex items-center gap-1">
-                        <Button size="sm" icon={Eye} onClick={() => { setDocAbierto(doc); setZoomDoc(100); }}>Ver</Button>
-                        <IconButton icon={Download} title="Descargar" onClick={() => showToast(`Descargando ${doc.nombre}...`)} />
-                        <IconButton icon={Trash2} title="Eliminar" className="hover:text-rose-600 hover:bg-rose-50" onClick={() => setDocABorrar(doc)} />
+                        <Button size="sm" icon={Eye} onClick={() => abrirDocumento(doc)}>Ver</Button>
+                        <IconButton icon={Download} title="Descargar" onClick={() => descargarDocumento(doc)} />
+                        <IconButton icon={Trash2} title={doc.conservar ? `Los documentos de tipo «${doc.tipo}» se conservan: no se pueden eliminar` : 'Eliminar'} disabled={doc.conservar} className="hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40" onClick={() => setDocABorrar(doc)} />
                       </div>
                     </li>
                   ))}
@@ -1509,6 +1253,7 @@ return (
               </div>
 
               <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200 text-xs">
+                {currentCompany.activity.length === 0 && <div className="text-slate-400">Todavía no hay cambios registrados.</div>}
                 {currentCompany.activity.map(act => (
                   <div key={act.id} className="relative">
                     <span className="absolute -left-6 top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white"></span>
@@ -1536,8 +1281,8 @@ return (
         {/* RENDER FORMULARIOS DEL DRAWER */}
         {drawerState.type === 'new-company' && (
           <DrawerCompanyForm
-            sectores={sectores}
-            onAddSector={anadirSector}
+            catalogos={cat}
+            comprobarCif={emp.comprobarCif}
             title="Alta rápida de empresa / cliente"
             subtitle="Solo 5 campos indispensables para empezar a presupuestar de inmediato."
             initialData={null}
@@ -1549,8 +1294,8 @@ return (
 
         {drawerState.type === 'edit-company' && (
           <DrawerCompanyForm
-            sectores={sectores}
-            onAddSector={anadirSector}
+            catalogos={cat}
+            comprobarCif={emp.comprobarCif}
             title="Editar datos de empresa"
             subtitle={`Modificando ficha de ${drawerState.data?.name || currentCompany.name}`}
             initialData={drawerState.data || currentCompany}
@@ -1593,6 +1338,8 @@ return (
             companyFiscalAddress={currentCompany.address}
             companyCity={currentCompany.city}
             companyPostalCode={currentCompany.postalCode}
+            convenios={cat.convenios}
+            convenioEmpresa={currentCompany.defaultAgreement}
             initialData={null}
             onClose={() => handleCloseDrawer()}
             onSave={(data) => handleSaveCenter(data, false)}
@@ -1604,6 +1351,8 @@ return (
           <DrawerCenterForm
             title="Editar centro operativo"
             subtitle="Modificación de ubicación o reglas laborales particulares."
+            convenios={cat.convenios}
+            convenioEmpresa={currentCompany.defaultAgreement}
             initialData={drawerState.data}
             isEdit={true}
             onClose={() => handleCloseDrawer()}
@@ -1645,13 +1394,13 @@ return (
   {docAbierto && (
     <Modal
       title={docAbierto.nombre}
-      subtitle={<>{docAbierto.tipo} · {docAbierto.paginas} {docAbierto.paginas === 1 ? 'página' : 'páginas'} · {docAbierto.tamano}</>}
+      subtitle={<>{docAbierto.tipo} · {docAbierto.tamano}</>}
       status={<Badge tone={docAbierto.estado === 'Validado' ? 'success' : 'warning'} dot>{docAbierto.estado}</Badge>}
       onClose={() => setDocAbierto(null)}
       size="max-w-5xl"
       toolbar={
         <div className="flex items-center justify-between gap-2 px-5 py-2 border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
-          <span>Página 1 de {docAbierto.paginas}</span>
+          <span>{urlDoc ? 'Vista previa del fichero' : 'Vista previa de ejemplo'}</span>
           <div className="flex items-center gap-1">
             <IconButton icon={ZoomOut} title="Alejar" onClick={() => setZoomDoc(z => Math.max(50, z - 25))} />
             <span className="w-10 text-center">{zoomDoc} %</span>
@@ -1661,17 +1410,22 @@ return (
       }
       footer={
         <div className="flex flex-1 items-center justify-between gap-2">
-          <Button variant="danger" icon={Trash2} onClick={() => setDocABorrar(docAbierto)}>Eliminar</Button>
+          {docAbierto.conservar ? <span className="text-[11px] text-slate-500">Se conserva: no se puede eliminar</span> : <Button variant="danger" icon={Trash2} onClick={() => setDocABorrar(docAbierto)}>Eliminar</Button>}
           <div className="flex items-center gap-2">
-            <Button icon={Download} onClick={() => showToast(`Descargando ${docAbierto.nombre}...`)}>Descargar</Button>
+            <Button icon={Download} onClick={() => descargarDocumento(docAbierto)}>Descargar</Button>
             <Button variant="primary" onClick={() => setDocAbierto(null)}>Cerrar</Button>
           </div>
         </div>
       }
     >
       <div className="grid gap-5 md:grid-cols-[1fr_220px]">
-        {/* Vista previa (en la demo, una página simulada) */}
+        {/* Vista previa: el fichero si hay URL; si no (documentos de ejemplo), una página simulada */}
         <div className="bg-slate-100 rounded-lg p-4 overflow-auto max-h-[60vh] flex justify-center">
+          {urlDoc && docAbierto.esImagen ? (
+            <img src={urlDoc} alt={docAbierto.nombre} className="origin-top transition-transform max-w-full" style={{ transform: `scale(${zoomDoc / 100})` }} />
+          ) : urlDoc ? (
+            <iframe src={urlDoc} title={docAbierto.nombre} className="w-full min-h-[55vh] bg-white border border-slate-200" />
+          ) : (
           <div
             className="bg-white shadow-sm border border-slate-200 p-8 space-y-3 origin-top transition-transform"
             style={{ width: 420, minHeight: 560, transform: `scale(${zoomDoc / 100})` }}
@@ -1691,6 +1445,7 @@ return (
             </div>
             <p className="pt-4 text-center text-[10px] text-slate-400">Vista previa de ejemplo</p>
           </div>
+          )}
         </div>
 
         {/* Datos del documento */}
@@ -1701,7 +1456,10 @@ return (
             ['Subido por', docAbierto.subidoPor],
             ['Fecha', docAbierto.fecha],
             ['Tamaño', docAbierto.tamano],
-            ['Páginas', docAbierto.paginas],
+            ['Estado', docAbierto.estado],
+            ...(docAbierto.caduca ? [['Caduca', docAbierto.caduca]] : []),
+            ['Quién lo ve', docAbierto.visibleCliente ? 'También el cliente, en su portal' : 'Solo el equipo de la ETT'],
+            ...(docAbierto.notas ? [['Notas', docAbierto.notas]] : []),
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-[11px] text-slate-500">{k}</dt>
@@ -1718,19 +1476,16 @@ return (
     <Confirmar
       title="¿Eliminar este documento?"
       onClose={() => setDocABorrar(null)}
-      onConfirm={() => {
-        setDocumentos(prev => ({
-          ...prev,
-          [currentCompany.id]: (prev[currentCompany.id] || []).filter(d => d.id !== docABorrar.id),
-        }));
-        if (docAbierto?.id === docABorrar.id) setDocAbierto(null);
-        showToast(`Documento eliminado: ${docABorrar.nombre}`);
+      recuperable={<>Se podrá recuperar desde <strong>Eliminados</strong>, en esta misma pestaña.</>}
+      onConfirm={async () => {
+        const doc = docABorrar;
         setDocABorrar(null);
+        if (await ejecutar(() => emp.eliminar('documento', doc.id), `Documento eliminado: ${doc.nombre}`) && docAbierto?.id === doc.id) setDocAbierto(null);
       }}
     >
       <p>
-        De la ficha de {currentCompany.name} se borrará <strong className="text-slate-800">{docABorrar.nombre}</strong>.
-        En el historial quedará anotado quién lo eliminó y cuándo, pero no el documento.
+        <strong className="text-slate-800">{docABorrar.nombre}</strong> dejará de verse en la ficha de {currentCompany.name} y en el portal del cliente.
+        En el historial quedará anotado quién lo eliminó y cuándo.
       </p>
     </Confirmar>
   )}
@@ -1738,12 +1493,15 @@ return (
   {/* CONFIRMAR BORRADO DE CONTACTO O CENTRO */}
   {aBorrar && (
     <Confirmar
-      title={aBorrar.tipo === 'contacto' ? `¿Eliminar a ${aBorrar.item.name}?` : `¿Eliminar el centro ${aBorrar.item.name}?`}
-      confirmLabel="Eliminar definitivamente"
+      title={aBorrar.tipo === 'contacto' ? `¿Eliminar a ${aBorrar.item.name}?` : aBorrar.tipo === 'empresa' ? `¿Eliminar la empresa ${aBorrar.item.name}?` : `¿Eliminar el centro ${aBorrar.item.name}?`}
+      confirmLabel="Eliminar"
       onClose={() => setABorrar(null)}
-      onConfirm={eliminarElemento}
+      onConfirm={() => eliminarElemento()}
+      recuperable={aBorrar.tipo === 'empresa'
+        ? <>Se podrá recuperar desde la lista de Empresas, con el filtro <strong>Eliminadas</strong>.</>
+        : <>Se podrá recuperar desde <strong>Eliminados</strong>, en la pestaña {aBorrar.tipo === 'contacto' ? 'Contactos' : 'Centros'}.</>}
       alternativa={
-        aBorrar.item.suspendido
+        aBorrar.item.suspendido || aBorrar.tipo === 'empresa'
           ? undefined
           : {
               label: aBorrar.tipo === 'contacto' ? 'Suspender' : 'Desactivar',
@@ -1755,9 +1513,11 @@ return (
             }
       }
     >
-      {aBorrar.tipo === 'contacto' ? (
+      {aBorrar.tipo === 'empresa' ? (
+        <p>Dejará de salir en la lista de Empresas y en los buscadores de presupuestos y peticiones. Si ya tiene presupuestos o peticiones, no se puede eliminar: solo darla de baja.</p>
+      ) : aBorrar.tipo === 'contacto' ? (
         <>
-          <p>Se borrarán sus datos de contacto y dejará de aparecer en presupuestos, avisos y portal del cliente.</p>
+          <p>Dejará de aparecer en presupuestos, avisos y portal del cliente.</p>
           {aBorrar.item.isMain && <Notice tone="warning" icon={AlertTriangle}>Es el contacto principal: tendrás que elegir otro.</Notice>}
           {!aBorrar.item.suspendido && (
             <p>
@@ -1767,7 +1527,7 @@ return (
         </>
       ) : (
         <>
-          <p>Se borrará el centro con su dirección y sus datos operativos. Las peticiones ya cerradas conservan su copia.</p>
+          <p>Dejará de salir en la ficha y no se podrá usar en peticiones. Si ya tiene peticiones, no se puede eliminar: solo desactivar.</p>
           {!aBorrar.item.suspendido && (
             <p>
               Si el centro solo cierra una temporada, <strong className="text-slate-800">desactívalo</strong>: no se podrá usar en peticiones nuevas y podrás reactivarlo.
@@ -1778,17 +1538,47 @@ return (
     </Confirmar>
   )}
 
+  {/* NO SE PUEDE ELIMINAR: ya se ha usado (409 en_uso). Se explica el motivo y se ofrece la alternativa. */}
+  {noSePuede && (
+    <Modal
+      title={`No se puede eliminar ${noSePuede.item.name}`}
+      onClose={() => setNoSePuede(null)}
+      size="max-w-md"
+      footer={<>
+        <Button onClick={() => setNoSePuede(null)}>Cancelar</Button>
+        {noSePuede.tipo === 'empresa' ? (
+          noSePuede.item.status !== 'inactive' && <Button variant="primary" icon={CirclePause} onClick={async () => { const { item } = noSePuede; setNoSePuede(null); await ejecutar(() => emp.darDeBaja(item.id), `${item.name}: dada de baja`); }}>Dar de baja</Button>
+        ) : !noSePuede.item.suspendido && (
+          <Button variant="primary" icon={CirclePause} onClick={() => { const { tipo, item } = noSePuede; setNoSePuede(null); alternarSuspension(tipo, item); }}>{noSePuede.tipo === 'contacto' ? 'Suspender' : 'Desactivar'}</Button>
+        )}
+      </>}
+    >
+      <div className="space-y-3 text-xs text-slate-600">
+        <Notice tone="warning" icon={AlertTriangle}>{noSePuede.motivo}</Notice>
+        <p>
+          {noSePuede.tipo === 'empresa'
+            ? 'Lo que ya se ha usado se conserva para el historial. Dándola de baja no saldrá para nuevos presupuestos ni peticiones.'
+            : noSePuede.tipo === 'contacto'
+              ? 'Lo que ya se ha usado se conserva. Suspendido, no recibirá presupuestos ni avisos y se puede reactivar.'
+              : 'Lo que ya se ha usado se conserva. Desactivado, no se podrá usar en peticiones nuevas y se puede reactivar.'}
+        </p>
+      </div>
+    </Modal>
+  )}
+
   {/* SUBIR DOCUMENTOS */}
   {subiendoDocs && (
     <SubirDocumentos
       empresa={currentCompany.name}
-      tipos={tiposDoc}
-      onAddTipo={(v) => setTiposDoc(prev => [...prev, v].sort((x, y) => x.localeCompare(y, 'es')))}
+      tipos={cat.tiposDocumento}
+      onAddTipo={anadirOpcion('document_type')}
       onClose={() => setSubiendoDocs(false)}
-      onSubir={(nuevos) => {
-        setDocumentos(prev => ({ ...prev, [currentCompany.id]: [...nuevos, ...(prev[currentCompany.id] || [])] }));
-        setSubiendoDocs(false);
-        showToast(nuevos.length === 1 ? 'Documento subido. Queda pendiente de validar.' : `${nuevos.length} documentos subidos. Quedan pendientes de validar.`);
+      onSubir={async (archivos, alAvanzar) => {
+        const fallos = await emp.subirDocumentos(archivos, alAvanzar);
+        const subidos = archivos.length - fallos.length;
+        if (subidos) showToast(subidos === 1 ? 'Documento subido. Queda pendiente de validar.' : `${subidos} documentos subidos. Quedan pendientes de validar.`);
+        if (!fallos.length) setSubiendoDocs(false);
+        return fallos;
       }}
     />
   )}
@@ -1855,13 +1645,14 @@ return (
     }
 
     // COMPONENTE: FORMULARIO DE ALTA RÁPIDA / EDICIÓN DE EMPRESA
-    function DrawerCompanyForm({ title, subtitle, initialData, isEdit = false, onClose, onSave, onChange, sectores, onAddSector }) {
+    function DrawerCompanyForm({ title, subtitle, initialData, isEdit = false, onClose, onSave, onChange, catalogos, comprobarCif }) {
       const [name, setName] = useState(initialData?.name || '');
       const [cif, setCif] = useState(initialData?.cif || '');
       const [country, setCountry] = useState(initialData?.country || 'España');
       const [email, setEmail] = useState(initialData?.email || '');
       const [phone, setPhone] = useState(initialData?.phone || '');
-      const [owner, setOwner] = useState(initialData?.owner || 'Carlos Mendoza (Consultor ETT)');
+      // Responsable: un usuario de la ETT (por defecto, quien da el alta)
+      const [owner, setOwner] = useState(initialData?.ownerUserId || (catalogos.responsables.some(r => r.id === catalogos.yo) ? catalogos.yo : ''));
 
       // Campos opcionales (Más datos)
       const [showMore, setShowMore] = useState(isEdit || false);
@@ -1870,7 +1661,8 @@ return (
       const [postalCode, setPostalCode] = useState(initialData?.postalCode || '');
       const [city, setCity] = useState(initialData?.city || '');
       const [province, setProvince] = useState(initialData?.province || '');
-      const [sector, setSector] = useState(initialData?.sector || '');
+      const [sector, setSector] = useState(initialData?.sectorCode || ''); // división CNAE
+      const [defaultAgreementId, setDefaultAgreementId] = useState(initialData?.defaultAgreementId || '');
       const [notes, setNotes] = useState(initialData?.notes || '');
 
       // Validación & Duplicados Demo
@@ -1881,14 +1673,15 @@ return (
       const handleCifChange = (val) => {
 setCif(val);
 onChange();
-if (val.trim().toUpperCase() === 'B-87654321' && !isEdit) {
-  setDuplicateWarning('Aviso: Ya existe una empresa registrada con CIF B-87654321 ("Trans-Logística Ibérica Norte, S.L.").');
-} else {
-  setDuplicateWarning(null);
-}
+setDuplicateWarning(null);
+      };
+      // Al salir del campo, avisa si ya hay otra empresa con ese CIF
+      const revisarCif = async () => {
+const otra = cif.trim() ? await comprobarCif(cif) : null;
+setDuplicateWarning(otra ? `Aviso: Ya existe una empresa registrada con CIF ${cif.trim().toUpperCase()} ("${otra}").` : null);
       };
 
-      const handleSubmit = (e) => {
+      const handleSubmit = async (e, borrador = false) => {
 e.preventDefault();
 const errs = {};
 
@@ -1906,8 +1699,7 @@ if (Object.keys(errs).length > 0) {
 }
 
 setIsSubmitting(true);
-setTimeout(() => {
-  onSave({
+const ok = await onSave({
     name,
     cif: cif.toUpperCase(),
     country,
@@ -1920,9 +1712,11 @@ setTimeout(() => {
     city,
     province,
     sector,
-    notes
-  });
-}, 400);
+    defaultAgreementId,
+    notes,
+    borrador,
+});
+if (!ok) setIsSubmitting(false);
       };
 
       return (
@@ -1999,6 +1793,7 @@ setTimeout(() => {
             type="text"
             value={cif}
             onChange={(e) => handleCifChange(e.target.value)}
+            onBlur={revisarCif}
             placeholder="Ej. B-87654321"
             className={`w-full px-3 py-2 border rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs ${
               errors.cif ? 'border-rose-500 bg-rose-50/30' : 'border-slate-200'
@@ -2067,9 +1862,8 @@ setTimeout(() => {
           onChange={(e) => { setOwner(e.target.value); onChange(); }}
           className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs bg-white"
         >
-          <option value="Carlos Mendoza (Consultor ETT)">Carlos Mendoza (Consultor ETT)</option>
-          <option value="Elena Rivas (Consultora Senior)">Elena Rivas (Consultora Senior)</option>
-          <option value="Laura Vidal (Key Account Manager)">Laura Vidal (Key Account Manager)</option>
+          <option value="">Elige quién la lleva</option>
+          {catalogos.responsables.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
         </select>
       </div>
     </div>
@@ -2147,14 +1941,16 @@ setTimeout(() => {
 
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Sector o actividad</label>
-            <SelectConAlta
-              value={sector}
-              onChange={(v) => { setSector(v); onChange(); }}
-              options={sectores}
-              onAdd={onAddSector}
-              placeholder="Selecciona un sector"
-              nuevoPlaceholder="Nombre del nuevo sector"
-            />
+            <SelectorCnae value={sector} onChange={(v) => { setSector(v); onChange(); }} opciones={catalogos.sectores} />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Convenio por defecto</label>
+            <Select value={defaultAgreementId} onChange={(e) => { setDefaultAgreementId(e.target.value); onChange(); }} className="w-full" aria-label="Convenio por defecto">
+              <option value="">Sin decidir (se elige en cada centro)</option>
+              {catalogos.convenios.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </Select>
+            <p className="mt-1 text-[11px] text-slate-400">Lo heredan los centros que no tengan un convenio propio.</p>
           </div>
 
           <div>
@@ -2187,7 +1983,8 @@ setTimeout(() => {
       {!isEdit && (
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={(e) => handleSubmit(e, true)}
+          disabled={isSubmitting}
           className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-semibold"
         >
           Guardar borrador
@@ -2214,7 +2011,8 @@ setTimeout(() => {
       const [phone, setPhone] = useState(initialData?.phone || '');
       const [role, setRole] = useState(initialData?.role || '');
       const [isMain, setIsMain] = useState(initialData?.isMain || false);
-      const [isQuoteRecipient, setIsQuoteRecipient] = useState(initialData?.isQuoteRecipient || true);
+      const [isQuoteRecipient, setIsQuoteRecipient] = useState(initialData?.isQuoteRecipient ?? true);
+      const [guardando, setGuardando] = useState(false);
       const [types, setTypes] = useState(initialData?.types || ['Comercial', 'Solicitante']);
       const [notes, setNotes] = useState(initialData?.notes || '');
       const [errors, setErrors] = useState({});
@@ -2233,7 +2031,7 @@ if (types.includes(t)) {
 }
       };
 
-      const handleSubmit = (e) => {
+      const handleSubmit = async (e) => {
 e.preventDefault();
 const errs = {};
 if (!name.trim()) errs.name = 'El nombre y apellidos son obligatorios';
@@ -2256,7 +2054,8 @@ if (isQuoteRecipient && !finalTypes.includes('Destinatario de Presupuestos')) {
   finalTypes.push('Destinatario de Presupuestos');
 }
 
-onSave({
+setGuardando(true);
+const ok = await onSave({
   id: initialData?.id,
   name,
   email,
@@ -2267,6 +2066,7 @@ onSave({
   types: finalTypes,
   notes
 });
+if (!ok) setGuardando(false);
       };
 
       return (
@@ -2427,9 +2227,10 @@ onSave({
     <button
       type="submit"
       form="contact-form"
+      disabled={guardando}
       className="px-5 py-2 bg-indigo-600 hover:bg-indigo-600 text-white rounded-lg text-xs font-semibold shadow-sm"
     >
-      {isEdit ? 'Actualizar Contacto' : 'Añadir Contacto'}
+      {guardando ? 'Guardando...' : isEdit ? 'Actualizar Contacto' : 'Añadir Contacto'}
     </button>
   </div>
 </div>
@@ -2437,7 +2238,7 @@ onSave({
     }
 
     // COMPONENTE: FORMULARIO DE CENTRO OPERATIVO
-    function DrawerCenterForm({ title, subtitle, companyFiscalAddress, companyCity, companyPostalCode, initialData, isEdit = false, onClose, onSave, onChange }) {
+    function DrawerCenterForm({ title, subtitle, companyFiscalAddress, companyCity, companyPostalCode, convenios = [], convenioEmpresa = '', initialData, isEdit = false, onClose, onSave, onChange }) {
       const [name, setName] = useState(initialData?.name || '');
       const [address, setAddress] = useState(initialData?.address || '');
       const [postalCode, setPostalCode] = useState(initialData?.postalCode || '');
@@ -2446,7 +2247,9 @@ onSave({
       
       // Opciones avanzadas
       const [showAdvanced, setShowAdvanced] = useState(false);
-      const [laborAgreement, setLaborAgreement] = useState(initialData?.laborAgreement || 'Convenio Logística y Transporte');
+      // Convenio propio del centro ('' = hereda el convenio por defecto de la empresa)
+      const [laborAgreementId, setLaborAgreementId] = useState(initialData?.laborAgreementId || '');
+      const [guardando, setGuardando] = useState(false);
       const [notes, setNotes] = useState(initialData?.notes || '');
       const [errors, setErrors] = useState({});
 
@@ -2457,7 +2260,7 @@ if (companyPostalCode) setPostalCode(companyPostalCode);
 onChange();
       };
 
-      const handleSubmit = (e) => {
+      const handleSubmit = async (e) => {
 e.preventDefault();
 const errs = {};
 if (!name.trim()) errs.name = 'El nombre del centro es obligatorio';
@@ -2470,16 +2273,18 @@ if (Object.keys(errs).length > 0) {
   return;
 }
 
-onSave({
+setGuardando(true);
+const ok = await onSave({
   id: initialData?.id,
   name,
   address,
   postalCode,
   city,
   country,
-  laborAgreement,
+  laborAgreementId,
   notes
 });
+if (!ok) setGuardando(false);
       };
 
       return (
@@ -2583,13 +2388,10 @@ onSave({
         <div className="pt-3 space-y-3 animate-in fade-in">
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Convenio colectivo aplicable</label>
-            <input
-              type="text"
-              value={laborAgreement}
-              onChange={(e) => { setLaborAgreement(e.target.value); onChange(); }}
-              placeholder="Convenio Provincial de Logística"
-              className="w-full px-3 py-1.5 border border-slate-200 rounded text-xs"
-            />
+            <Select value={laborAgreementId} onChange={(e) => { setLaborAgreementId(e.target.value); onChange(); }} className="w-full" aria-label="Convenio colectivo aplicable">
+              <option value="">{convenioEmpresa ? `El de la empresa: ${convenioEmpresa}` : 'Sin convenio (la empresa no tiene uno por defecto)'}</option>
+              {convenios.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </Select>
           </div>
 
           <div>
@@ -2619,9 +2421,10 @@ onSave({
     <button
       type="submit"
       form="center-form"
+      disabled={guardando}
       className="px-5 py-2 bg-indigo-600 hover:bg-indigo-600 text-white rounded-lg text-xs font-semibold shadow-sm"
     >
-      {isEdit ? 'Actualizar Centro' : 'Crear Centro Operativo'}
+      {guardando ? 'Guardando...' : isEdit ? 'Actualizar Centro' : 'Crear Centro Operativo'}
     </button>
   </div>
 </div>
@@ -2648,11 +2451,13 @@ onSave({
           const tamanoOk = f.size <= MAX_MB_DOC * 1024 * 1024;
           return {
             id: `${Date.now()}-${i}-${f.name}`,
+            archivo: f,
             nombre: f.name,
             bytes: f.size,
             esImagen: f.type.startsWith('image/'),
             error: !formatoOk ? 'Formato no admitido (solo PDF, JPG o PNG)' : !tamanoOk ? `Supera los ${MAX_MB_DOC} MB` : '',
-            tipo: /cif/i.test(f.name) ? 'CIF' : /contrato/i.test(f.name) ? 'Contrato' : '',
+            // Se propone el tipo por el nombre, si existe en la tabla maestra
+            tipo: /cif/i.test(f.name) && tipos.includes('CIF') ? 'CIF' : /contrato/i.test(f.name) && tipos.includes('Contrato') ? 'Contrato' : '',
             caduca: '',
             visible: 'interno',
             notas: '',
@@ -2677,32 +2482,14 @@ onSave({
       const sinTipo = validos.filter((a) => !a.tipo).length;
       const puedeSubir = validos.length > 0 && sinTipo === 0 && progreso === null;
 
-      const subir = () => {
+      // Sube los válidos uno a uno (URL firmada, fichero a Storage y registro). Los que fallan se quedan en la
+      // lista con el motivo; los subidos se quitan.
+      const subir = async () => {
         setProgreso(0);
-        let p = 0;
-        const t = setInterval(() => {
-          p += 20;
-          setProgreso(p);
-          if (p >= 100) {
-            clearInterval(t);
-            const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            onSubir(
-              validos.map((a) => ({
-                id: `doc-${a.id}`,
-                nombre: a.nombre,
-                tipo: a.tipo,
-                subidoPor: 'Usuario Demo',
-                fecha: hoy,
-                tamano: tamanoLegible(a.bytes),
-                estado: 'Pendiente de validar',
-                paginas: 1,
-                caduca: a.caduca ? new Date(a.caduca).toLocaleDateString('es-ES') : '',
-                visibleCliente: a.visible === 'cliente',
-                notas: a.notas,
-              })),
-            );
-          }
-        }, 250);
+        const fallos = await onSubir(validos, setProgreso);
+        const conError = new Map(fallos.map((f) => [f.id, f.error]));
+        setArchivos((prev) => prev.filter((a) => a.error || conError.has(a.id)).map((a) => (conError.has(a.id) ? { ...a, error: conError.get(a.id) } : a)));
+        setProgreso(null);
       };
 
       return (
@@ -2750,7 +2537,7 @@ onSave({
                 onChange={(e) => { anadir(e.target.files); e.target.value = ''; }}
               />
             </div>
-            {archivos.length === 0 && (
+            {archivos.length === 0 && DEMO && (
               <div className="text-center">
                 <button type="button" onClick={anadirEjemplos} className="text-[11px] font-medium text-indigo-600 hover:underline">
                   Probar con archivos de ejemplo

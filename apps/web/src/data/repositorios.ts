@@ -1,6 +1,18 @@
 // Contrato de la capa de datos. Las pantallas solo conocen esto: no saben si los datos vienen de la API
 // (api.ts) o son de ejemplo (memoria.ts). Cada operación corresponde a una ruta de apps/api.
 import type {
+  ActivityEntry,
+  ActivityQuery,
+  CatalogItem,
+  CatalogItemCreate,
+  CatalogItemQuery,
+  Cnae,
+  CnaeQuery,
+  ContactPortalAccess,
+  DocumentInput,
+  DocumentQuery,
+  DocumentUpload,
+  StoredDocument,
   Address,
   AddressInput,
   AppNotification,
@@ -112,7 +124,10 @@ export interface Repositories {
     get(id: string): Promise<Client>;
     create(data: ClientCreate): Promise<Client>;
     update(id: string, data: ClientInput): Promise<Client>;
+    /** Baja lógica (204). 409 `en_uso` si ya se ha usado: entonces solo se da de baja (status inactive). */
     remove(id: string): Promise<void>;
+    /** Recupera uno eliminado (409 `conflicto` si choca con otro activo). */
+    restore(id: string): Promise<Client>;
     /** Solo con clients.billing.manage. 404 (ApiError no_encontrado) si aún no tiene. */
     billing(id: string): Promise<ClientBillingResult>;
     /** Crea o actualiza: solo cambia los campos enviados. */
@@ -123,14 +138,43 @@ export interface Repositories {
     get(id: string): Promise<ClientCenter>;
     create(data: ClientCenterCreate): Promise<ClientCenter>;
     update(id: string, data: ClientCenterInput): Promise<ClientCenter>;
+    /** Baja lógica. 409 `en_uso`: solo se desactiva (blocked). */
     remove(id: string): Promise<void>;
+    restore(id: string): Promise<ClientCenter>;
   };
   clientContacts: {
     list(query?: ClientContactQuery): Promise<Page<ClientContact>>;
     get(id: string): Promise<ClientContact>;
     create(data: ClientContactCreate): Promise<ClientContact>;
     update(id: string, data: ClientContactInput): Promise<ClientContact>;
+    /** Baja lógica. 409 `en_uso`: solo se suspende (suspended). */
     remove(id: string): Promise<void>;
+    restore(id: string): Promise<ClientContact>;
+  };
+  /** Catálogo CNAE-2009, común y de solo lectura. */
+  cnae: {
+    list(query?: CnaeQuery): Promise<Cnae[]>;
+  };
+  /** Tablas maestras simples de la ETT. Crear exige catalogs.manage (409 si el nombre ya existe). */
+  catalogItems: {
+    list(query: CatalogItemQuery): Promise<Page<CatalogItem>>;
+    create(data: CatalogItemCreate): Promise<CatalogItem>;
+  };
+  /** Historial de cambios de una ficha (y de sus hijos con includeChildren). */
+  activity: {
+    list(query: ActivityQuery): Promise<Page<ActivityEntry>>;
+  };
+  /** Documentos de clientes y centros, con el fichero en Storage. */
+  documents: {
+    list(query?: DocumentQuery): Promise<Page<StoredDocument>>;
+    /** Pide la URL firmada, sube el fichero directamente a Storage y lo registra. */
+    upload(data: DocumentUpload): Promise<StoredDocument>;
+    update(id: string, data: DocumentInput): Promise<StoredDocument>;
+    /** Baja lógica. 409 `conservacion_obligatoria` si su tipo exige conservarlo. */
+    remove(id: string): Promise<void>;
+    restore(id: string): Promise<StoredDocument>;
+    /** URL temporal para ver o descargar el fichero (null si en la demo no hay fichero). */
+    downloadUrl(id: string): Promise<string | null>;
   };
   /** Usuarios de la ETT (solo lectura: el alta e invitación llegarán a la API más adelante). */
   memberships: {
@@ -164,5 +208,13 @@ export interface Repositories {
     get(): Promise<EttSettings>;
     /** Cambia solo las partes enviadas. */
     update(data: Partial<EttSettings>): Promise<EttSettings>;
+  };
+  /**
+   * Acceso de los contactos del cliente al Área de empresas (fase 11). Contra la API lanza `no_disponible`.
+   */
+  portalAccess: {
+    list(clientId: string): Promise<Record<string, ContactPortalAccess>>;
+    save(contactId: string, permissions: string[]): Promise<ContactPortalAccess>;
+    revoke(contactId: string): Promise<void>;
   };
 }

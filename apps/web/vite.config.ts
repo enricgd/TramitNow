@@ -32,11 +32,14 @@ const PAGES = {
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   server: {
-    // Supabase Auth local (db/local/reset.sh) y apps/api local (`npm run dev` en apps/api), para
+    // Supabase Auth local (db/local/reset.sh), apps/api local (`npm run dev` en apps/api) y Storage local, para
     // `npm run dev:real`. En el NAS la web llama a VITE_SUPABASE_URL y VITE_API_URL directamente.
+    // Storage local no responde a CORS: el navegador sube y descarga por aquí si apps/api firma las URL con
+    // STORAGE_PUBLIC_URL=http://localhost:5173/storage/v1 (ver apps/README.md, «Documentos en local»).
     proxy: {
       '/auth/v1': { target: 'http://127.0.0.1:9999', rewrite: (path) => path.replace(/^\/auth\/v1/, '') },
       '/v1': { target: 'http://127.0.0.1:3000' },
+      '/storage/v1': { target: 'http://127.0.0.1:54325', rewrite: (path) => path.replace(/^\/storage\/v1/, '') },
     },
   },
   define: {
@@ -45,6 +48,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       input: mode === 'ejemplo' ? PAGES : { erp: PAGES.erp },
+      // Los datos de ejemplo (src/data/memoria*.ts) no hacen nada al cargarse: si la compilación no usa el modo
+      // demo (la del NAS), se descartan enteros en vez de dejar parte de sus datos en el JS.
+      treeshake: { moduleSideEffects: (id) => !/[\\/]src[\\/]data[\\/]memoria[^\\/]*\.ts$/.test(id) },
     },
   },
 }));
