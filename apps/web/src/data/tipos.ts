@@ -217,6 +217,12 @@ export type PayrollConceptQuery = CatalogQuery & { conceptType?: PayrollConcept[
 // ---------------------------------------------------------------------------
 // Clientes (empresas usuarias), centros de trabajo, contactos y facturación
 // ---------------------------------------------------------------------------
+
+/**
+ * Baja lógica recuperable: DELETE la marca, `?deleted=true` lista solo las eliminadas (con su fecha) y
+ * POST /{id}/restore la recupera. Lo que ya se ha usado no se elimina (409 `en_uso`): se suspende o desactiva.
+ */
+type Deleted = { deletedAt?: string | null };
 export type ClientStatus = 'prospect' | 'active' | 'inactive';
 
 export type Client = Stamped & {
@@ -244,10 +250,15 @@ export type Client = Stamped & {
   website: string | null;
   onlineCpdPricePrinting: boolean;
   observations: string | null;
-};
-export type ClientInput = Partial<Omit<Client, keyof Stamped>>;
+  /** Sector: división del catálogo común CNAE (GET /v1/cnae). */
+  sectorCode: string | null;
+  /** Convenio por defecto: lo heredan los centros sin convenio propio. */
+  defaultAgreementId: string | null;
+} & Deleted;
+export type ClientInput = Partial<Omit<Client, keyof Stamped | 'deletedAt'>>;
 export type ClientCreate = ClientInput & Pick<Client, 'companyId' | 'branchId' | 'code' | 'legalName'>;
-export type ClientQuery = PageQuery & { q?: string; status?: ClientStatus; companyId?: string; branchId?: string; blocked?: boolean };
+/** `branchId`: una o varias sucursales separadas por comas. `deleted`: solo los eliminados. */
+export type ClientQuery = PageQuery & { q?: string; status?: ClientStatus; companyId?: string; branchId?: string; blocked?: boolean; deleted?: boolean };
 
 export type ClientCenter = Stamped & {
   clientId: string;
@@ -273,10 +284,12 @@ export type ClientCenter = Stamped & {
   tcBranchId: string | null;
   accessInstructions: string | null;
   notes: string | null;
-};
-export type ClientCenterInput = Partial<Omit<ClientCenter, keyof Stamped>>;
+  /** Solo lectura: el convenio propio o, si no tiene, el de la empresa (defaultAgreementId). */
+  effectiveClientAgreementId: string | null;
+} & Deleted;
+export type ClientCenterInput = Partial<Omit<ClientCenter, keyof Stamped | 'deletedAt' | 'effectiveClientAgreementId'>>;
 export type ClientCenterCreate = ClientCenterInput & Pick<ClientCenter, 'clientId' | 'branchId' | 'code' | 'name'>;
-export type ClientCenterQuery = PageQuery & { q?: string; clientId?: string; branchId?: string };
+export type ClientCenterQuery = PageQuery & { q?: string; clientId?: string; branchId?: string; deleted?: boolean };
 
 export type ContactRole = 'commercial' | 'requester' | 'operations' | 'billing' | 'hr' | 'prevention' | 'management';
 export type ClientContact = Stamped & {
@@ -300,10 +313,16 @@ export type ClientContact = Stamped & {
   invoiceSendType: 'email' | 'postal' | 'portal' | null;
   sortOrder: number | null;
   notes: string | null;
-};
-export type ClientContactInput = Partial<Omit<ClientContact, keyof Stamped>>;
+  /** Valida los partes de horas en el portal. */
+  validatesHours: boolean;
+  /** Rol «Otro», con el texto escrito. */
+  otherRole: string | null;
+  /** Suspendido: no recibe presupuestos ni avisos. Se reactiva. */
+  suspended: boolean;
+} & Deleted;
+export type ClientContactInput = Partial<Omit<ClientContact, keyof Stamped | 'deletedAt'>>;
 export type ClientContactCreate = ClientContactInput & Pick<ClientContact, 'clientId' | 'name'>;
-export type ClientContactQuery = PageQuery & { q?: string; clientId?: string; centerId?: string };
+export type ClientContactQuery = PageQuery & { q?: string; clientId?: string; centerId?: string; deleted?: boolean };
 
 export type ClientBilling = Stamped & {
   clientId: string;
@@ -332,10 +351,103 @@ export type ClientBilling = Stamped & {
   statisticalSectorId: string | null;
   offerMarginPercent: number | null;
   offerCoefficient: number | null;
+  /** Factura de horas: una línea por persona o por concepto (con anexo por persona). */
+  invoiceLayout: InvoiceLayout;
+  /**
+   * Régimen de IVA (tabla maestra vat_regime). No está en el contrato de la fase 2: si la API no lo devuelve,
+   * la pantalla lo muestra como «Disponible próximamente».
+   */
+  vatRegimeId?: string | null;
 };
+export type InvoiceLayout = 'by_person' | 'by_concept';
 export type ClientBillingInput = Partial<Omit<ClientBilling, keyof Stamped | 'clientId'>>;
 /** `warnings`: avisos que no impiden guardar (p. ej. plazo de pago por encima del legal). */
 export type ClientBillingResult = { billing: ClientBilling; warnings: string[] };
+
+// ---------------------------------------------------------------------------
+// Catálogo CNAE, tablas maestras, historial y documentos
+// ---------------------------------------------------------------------------
+
+/** CNAE-2009, común a todas las ETT (GET /v1/cnae). */
+export type Cnae = { code: string; name: string; level: 'section' | 'division' | 'group' | 'class'; parentCode: string | null };
+export type CnaeQuery = { q?: string; level?: 'section' | 'division' };
+
+/** Tablas maestras simples de la ETT (catalog_items): sectores, formas de pago, tipos de documento... */
+export type CatalogItemType = 'payment_method' | 'vat_regime' | 'document_type' | 'sector' | (string & {});
+export type CatalogItem = Stamped & {
+  type: CatalogItemType;
+  code: string | null;
+  name: string;
+  parentId: string | null;
+  metadata: Record<string, unknown> | null;
+  status: Status;
+  /** Solo tipos de documento: sus documentos no se pueden eliminar (conservación obligatoria). */
+  retentionRequired: boolean;
+};
+export type CatalogItemQuery = PageQuery & { type: CatalogItemType; q?: string; status?: Status; parentId?: string };
+export type CatalogItemCreate = { type: CatalogItemType; name: string; code?: string; parentId?: string; status?: Status };
+
+/** Historial de cambios (GET /v1/activity), lo último primero. */
+export type ActivityEntityType = 'client' | 'client_center' | 'client_contact' | 'client_billing' | 'document';
+export type ActivityEntry = {
+  id: string;
+  entityType: ActivityEntityType;
+  entityId: string;
+  parentType: ActivityEntityType | null;
+  parentId: string | null;
+  action: 'create' | 'update' | 'delete' | 'restore';
+  actorUserId: string | null;
+  actorName: string | null;
+  occurredAt: string;
+  summary: string;
+  changes: Record<string, { old: unknown; new: unknown } | { masked: true }> | null;
+};
+export type ActivityQuery = PageQuery & { entityType: ActivityEntityType; entityId: string; includeChildren?: boolean };
+
+export type DocumentEntityType = 'client' | 'client_center';
+export type DocumentStatus = 'pending' | 'validated' | 'draft';
+export type StoredDocument = Stamped & {
+  entityType: DocumentEntityType;
+  entityId: string;
+  typeId: string;
+  typeName: string;
+  /** Su tipo exige conservarlo: no se puede eliminar (409 conservacion_obligatoria). */
+  retentionRequired: boolean;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: DocumentStatus;
+  expiresOn: string | null;
+  visibleInPortal: boolean;
+  notes: string | null;
+  uploadedBy: string | null;
+  uploadedByName: string | null;
+  uploadedAt: string;
+  validatedBy: string | null;
+  validatedByName: string | null;
+  validatedAt: string | null;
+} & Deleted;
+export type DocumentQuery = PageQuery & {
+  entityType?: DocumentEntityType;
+  entityId?: string;
+  typeId?: string;
+  status?: DocumentStatus;
+  q?: string;
+  deleted?: boolean;
+};
+/** Datos de un documento nuevo: el fichero lo sube el repositorio (URL firmada, PUT a Storage y registro). */
+export type DocumentUpload = {
+  entityType: DocumentEntityType;
+  entityId: string;
+  file: File;
+  typeId: string;
+  name: string;
+  status?: 'pending' | 'draft';
+  expiresOn?: string | null;
+  visibleInPortal?: boolean;
+  notes?: string | null;
+};
+export type DocumentInput = Partial<Pick<StoredDocument, 'typeId' | 'name' | 'status' | 'expiresOn' | 'visibleInPortal' | 'notes'>>;
 
 // ---------------------------------------------------------------------------
 // Pendiente de API. Lo que las pantallas ya usan y apps/api aún no tiene: de momento solo hay datos de
@@ -439,3 +551,9 @@ export type EttSettings = {
   users: Record<string, EttUserExtra>;
   invitations: EttInvitation[];
 };
+
+/**
+ * Acceso de un contacto del cliente al Área de empresas (fase 11 del plan). Por id de contacto.
+ * `invitedAt`: fecha de la invitación; `lastAccess`: texto del último acceso, null si aún no ha entrado.
+ */
+export type ContactPortalAccess = { active: boolean; since: string | null; invitedAt: string | null; lastAccess: string | null; permissions: string[] };

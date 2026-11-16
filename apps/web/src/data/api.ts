@@ -3,7 +3,7 @@
 import { supabase } from '../auth/session';
 import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import type { CatalogRepository, Repositories } from './repositorios';
-import { ApiError } from './tipos';
+import { ApiError, type DocumentUpload, type StoredDocument } from './tipos';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -51,7 +51,23 @@ function crud(path: string) {
     create: (body: unknown) => request<never>('POST', path, { body }),
     update: (id: string, body: unknown) => request<never>('PATCH', `${path}/${id}`, { body }),
     remove: (id: string) => request<void>('DELETE', `${path}/${id}`),
+    restore: (id: string) => request<never>('POST', `${path}/${id}/restore`),
   };
+}
+
+/** Subida de un documento en tres pasos: URL firmada, PUT directo a Storage (sin token) y registro. */
+async function uploadDocument({ file, ...data }: DocumentUpload): Promise<StoredDocument> {
+  const { uploadUrl, storagePath } = await request<{ uploadUrl: string; storagePath: string }>('POST', '/documents/uploads', {
+    body: { entityType: data.entityType, entityId: data.entityId, fileName: file.name, mimeType: file.type, sizeBytes: file.size },
+  });
+  let res: Response;
+  try {
+    res = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+  } catch {
+    throw new ApiError(0, 'sin_conexion', `No se ha podido subir ${file.name}: no se llega al almacén de ficheros`);
+  }
+  if (!res.ok) throw new ApiError(res.status, 'subida_fallida', `No se ha podido subir ${file.name} (error ${res.status} del almacén)`);
+  return request('POST', '/documents', { body: { ...data, storagePath } });
 }
 
 function catalog<T extends { code: string; name: string }, Q extends Query>(path: string): CatalogRepository<T, Q> {
@@ -115,6 +131,18 @@ export function apiRepositories(): Repositories {
     },
     clientCenters: crud('/client-centers'),
     clientContacts: crud('/client-contacts'),
+    // La API puede devolver la lista tal cual o en { data }.
+    cnae: { list: (query) => get<{ data: never[] } | never[]>('/cnae', query).then((r) => (Array.isArray(r) ? r : r.data)) },
+    catalogItems: {
+      list: (query) => get('/catalog-items', query),
+      create: (body) => request('POST', '/catalog-items', { body }),
+    },
+    activity: { list: (query) => get('/activity', query) },
+    documents: {
+      ...crud('/documents'),
+      upload: uploadDocument,
+      downloadUrl: (id) => get<{ url: string }>(`/documents/${id}/download`).then((r) => r.url),
+    },
     memberships: {
       list: (query) => get('/memberships', query),
       get: (id) => get(`/memberships/${id}`),
@@ -125,5 +153,6 @@ export function apiRepositories(): Repositories {
     search: sampleSearch(true),
     notifications: sampleNotifications(true),
     ettSettings: { get: notAvailable, update: notAvailable },
+    portalAccess: { list: notAvailable, save: notAvailable, revoke: notAvailable },
   };
 }
