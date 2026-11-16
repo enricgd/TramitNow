@@ -46,6 +46,15 @@ const ContractKeySchema = z
   })
   .openapi('ContractKey');
 
+const CnaeSchema = z
+  .object({
+    code: z.string().openapi({ description: 'Sección (letra) o división (2 dígitos)', example: '78' }),
+    name: z.string(),
+    level: z.enum(['section', 'division']),
+    parentCode: z.string().nullable().openapi({ description: 'Sección de una división; null en las secciones' }),
+  })
+  .openapi('CnaeActivity');
+
 const MunicipalityQuery = z
   .object({
     provinceCode: twoDigits.optional(),
@@ -185,6 +194,39 @@ export const catalogs = createRouter()
           order by code
         `,
       );
+      return c.json({ data: [...data] } as never, 200);
+    },
+  )
+  .openapi(
+    createRoute({
+      method: 'get',
+      path: '/cnae',
+      tags,
+      summary: 'Actividades económicas CNAE-2009 (sector de los clientes)',
+      description: 'Secciones y divisiones, en orden de código (cada sección seguida de sus divisiones). 109 en total.',
+      security: bearerSecurity,
+      request: {
+        query: z.object({
+          q: z.string().trim().min(1).max(100).optional().openapi({ description: 'Busca en el nombre o por código' }),
+          level: z.enum(['section', 'division']).optional(),
+          parentCode: z.string().regex(/^[A-Z]$/).optional().openapi({ description: 'Divisiones de esta sección' }),
+        }),
+      },
+      responses: { 200: jsonContent(listOf(CnaeSchema), 'Actividades CNAE'), ...errorResponses(400, 401) },
+    }),
+    async (c) => {
+      const { q, level, parentCode } = c.req.valid('query');
+      const data = await withUser(c, (tx) => {
+        const conditions = [tx`active`];
+        if (q) conditions.push(tx`(name ilike ${likePattern(q)} or code = upper(${q}))`);
+        if (level) conditions.push(tx`level = ${level}`);
+        if (parentCode) conditions.push(tx`parent_code = ${parentCode}`);
+        const where = conditions.reduce((acc, cond) => tx`${acc} and ${cond}`);
+        return tx`
+          select code, name, level, parent_code from public.cnae_activities where ${where}
+          order by coalesce(parent_code, code), level desc, code
+        `;
+      });
       return c.json({ data: [...data] } as never, 200);
     },
   );

@@ -227,7 +227,10 @@ de Supabase Auth.
 8. Si es una ficha o cuelga de una: trigger de historial (`private.log_activity`, ver "Historial de actividad") y, si
    lleva documentos, su tipo en `documents.entity_type`. Si tiene sucursal, `branch_id` (la API filtra con `?branchId=`).
 9. Reglas de negocio en triggers que el usuario deba leer: `raise exception '<mensaje en español>' using errcode =
-   'TN409'` (o `'TN422'`); la API devuelve ese mensaje con 409 (o 422).
+   'TN409'` (o `'TN422'`); la API devuelve ese mensaje con 409 (o 422). Para «no se puede eliminar porque se usa»,
+   `'TNUSE'` (409 `en_uso`); para conservación obligatoria, `'TNRET'` (409 `conservacion_obligatoria`).
+10. Si se puede eliminar desde la pantalla: baja lógica recuperable (ver "Fase 2: empresas"), con su comprobación de
+   uso en `private.entity_in_use`. Y si la tabla nueva usa clientes, centros o contactos, añadir esa consulta allí.
 
 ## Módulo 2: empresas cliente
 
@@ -270,17 +273,19 @@ que se amplía con una migración (como `permissions`). Tipos:
 
 | Ya usados por tablas | Nuevos (notas del diseño) |
 |---|---|
-| `geo_zone`, `tax_id_type`, `client_type`, `business_group`, `payment_method`, `invoice_type`, `invoice_print_model`, `vat_special_cause`, `retention_type`, `statistical_sector` | `sector`, `vat_regime`, `quote_rejection_reason`, `vacancy_cancellation_reason` (baja de plaza), `assignment_end_reason` (fin de misión), `incident_type`, `document_type` |
+| `geo_zone`, `tax_id_type`, `client_type`, `business_group`, `payment_method`, `invoice_type`, `invoice_print_model`, `vat_special_cause`, `retention_type`, `statistical_sector` | `vat_regime`, `quote_rejection_reason`, `vacancy_cancellation_reason` (baja de plaza), `assignment_end_reason` (fin de misión), `incident_type`, `document_type` |
 
 - **Nombre único por tipo sin distinguir mayúsculas** (`lower(name)`, entre los no dados de baja). El **código pasa a
   ser opcional**: lo que se da de alta desde un desplegable ("+ Añadir") solo tiene nombre.
 - `retention_required` (solo en `document_type`): sus documentos no se pueden borrar. Ver "Documentos".
 - Leer: cualquier miembro. Escribir: `catalogs.manage` (de serie solo `admin`). Baja lógica (`deleted_at`).
-- No se cargan valores por defecto: los de las notas son de ejemplo y están por confirmar con administración.
+- No se cargan valores por defecto, salvo las causas especiales de IVA (fase 2): los de las notas son de ejemplo y
+  están por confirmar con administración.
+- El tipo `sector` se retiró en la fase 2: el sector del cliente es el catálogo común CNAE (ver "Fase 2: empresas").
 
 ### Historial de actividad
 
-`activity_log`: quién (`actor_user_id`), cuándo, qué entidad, acción (`create`, `update`, `delete`), un resumen en
+`activity_log`: quién (`actor_user_id`), cuándo, qué entidad, acción (`create`, `update`, `delete`, `restore`), un resumen en
 español ("Alta de centro de trabajo «Almacén»", "Validación de documento «CIF»") y, en los cambios, `changes` con el
 antes y el después de cada columna cambiada.
 
@@ -291,8 +296,9 @@ antes y el después de cada columna cambiada.
   `private.activity_visible`.
 - `parent_type` / `parent_id`: la ficha a la que pertenece (el cliente de un centro, de un contacto, de su
   facturación o de un documento suyo o de sus centros). Así la ficha del cliente enseña todo lo suyo.
-- La baja lógica (`deleted_at`) cuenta como `delete` ("Baja de ..."); el borrado de verdad, "Eliminación de ...".
-  Tocar solo `updated_at` no deja rastro. Borrar una ETT entera no deja rastro (no hay a qué apuntar).
+- La baja lógica (`deleted_at`) cuenta como `delete` ("Eliminación de ..."); quitarla, como `restore`
+  ("Restauración de ..."); el borrado de la fila, "Eliminación definitiva de ...". Suspender y reactivar un contacto
+  tienen su resumen ("Suspensión de contacto ..."). Tocar solo `updated_at` no deja rastro. Borrar una ETT entera no deja rastro (no hay a qué apuntar).
 - **Datos sensibles**: de `iban`, `swift_bic`, `document_number` y `tax_id` solo se guarda que han cambiado
   (`{"masked": true}`). En el alta y la baja no se copia la fila, solo el resumen (que lleva el nombre).
 - **Visibilidad** (`private.activity_visible`, SECURITY INVOKER: usa las RLS de quien lee): la de la entidad. Los
@@ -312,11 +318,12 @@ portal, notas, quién lo subió y cuándo, y quién lo validó y cuándo (los po
   ventana de subida del diseño), con la ruta `{tenant_id}/{entity_type}/{entity_id}/{uuid}.{ext}` (un check lo
   exige). El bucket no tiene políticas para `anon` ni `authenticated`: solo se entra con URL firmadas por la API, que
   es la única que tiene la `service_role`. El fichero, la ficha y quién lo subió no se cambian después.
-- **Permisos**: leer, quien ve la ficha (hoy, cualquier miembro: los clientes los ven todos). Subir, editar, validar y
-  borrar, quien puede editar la ficha (`clients.manage` en la sucursal del cliente o del centro).
-- **Borrado definitivo** (fila y fichero), como pide el diseño, con rastro en el historial; por eso no hay `deleted_at`.
-  **Conservación obligatoria**: si el tipo tiene `retention_required`, no se puede borrar el documento ni pasarlo a un
-  tipo que no la tenga (error `TN409` → 409).
+- **Permisos**: leer, quien ve la ficha (hoy, cualquier miembro: los clientes los ven todos). Subir, editar, validar,
+  eliminar y restaurar, quien puede editar la ficha (`clients.manage` en la sucursal del cliente o del centro).
+- **Eliminar es una baja lógica recuperable** desde la fase 2 (en la fase 1 era definitivo): `deleted_at`, el fichero se
+  queda en Storage y el documento se puede restaurar (si su ficha no está eliminada). Queda en el historial.
+  **Conservación obligatoria**: si el tipo tiene `retention_required`, no se puede eliminar el documento (ni de forma
+  lógica ni definitiva) ni pasarlo a un tipo que no la tenga (error `TNRET` → 409 `conservacion_obligatoria`).
 
 ### Numeración por series
 
@@ -334,18 +341,58 @@ devuelve `(series_id, number, formatted)`, p. ej. `PRE2026-00001`.
 ### Decisiones pendientes (no se han tomado aquí)
 
 - **Tablas maestras**: ¿quién amplía las listas desde los formularios? Hoy, solo `catalogs.manage` (admin); el diseño
-  deja que cualquiera añada valores (y sugiere que queden "pendientes de revisar"). ¿Los sectores son de cada ETT o
-  comunes? (hoy, de cada ETT). Valores iniciales de forma de pago, IVA, motivos y tipos de documento.
-- **Días de pago** como tabla maestra (lo pide el diseño): `client_billing_profiles.fixed_payment_days` es una lista
-  de días; cambiarlo es una de las 7 decisiones del modelo de clientes.
-- **Sector del cliente**: hay tipo `sector`, pero `clients` aún no tiene la columna (decisiones del modelo de clientes).
+  deja que cualquiera añada valores (y sugiere que queden "pendientes de revisar"). Valores iniciales de forma de pago,
+  IVA, motivos y tipos de documento. (Sectores y días de pago: decididos en la fase 2.)
 - **Documentos**: ¿quién valida? (hoy, quien puede editar la ficha). ¿Pueden leer todos los miembros los documentos de
   un cliente, como la ficha? ¿Qué tipos son de conservación obligatoria y durante cuánto tiempo (contratos, CPD,
-  nóminas)? Y qué pasa al cumplirse el plazo: hoy no se borran nunca. Borrar un documento que se ha enseñado en el
-  portal del cliente.
+  nóminas)? Y qué pasa al cumplirse el plazo: hoy no se borran nunca. Eliminar un documento que se ha enseñado en el
+  portal del cliente. Se mantienen los criterios actuales hasta que se decida (fase 2, decisión 6).
 - **Historial**: cuánto tiempo se guarda y si los nombres de contactos borrados deben quedar en los resúmenes (RGPD).
 - **Series**: si las facturas van por sociedad o por sucursal, el formato del número y si se dan de alta a mano.
 - Ficheros subidos pero nunca registrados (paso 3 sin hacer): habrá que limpiarlos con un proceso programado.
+
+## Fase 2: empresas
+
+Decisiones de Enric sobre el modelo de clientes (2026-11-16; resumen en `docs/modelo-backend.md`, §03). Migraciones
+`20261116000100_cnae.sql`, `..._000200_clients_fase2.sql` y `..._000300_soft_delete.sql`; tests
+`tests/15_empresas_fase2.sql` y, en `apps/api`, `test/empresas-fase2` (y `documentos`).
+
+| Qué | Cómo |
+|---|---|
+| Sector del cliente | `clients.sector_code` → **`cnae_activities`**, catálogo global (como municipios): secciones (letra) y divisiones (2 dígitos) de la **CNAE-2009**. Se retira la tabla maestra `sector` (no la usaba ninguna tabla; sus valores se borran) |
+| Convenio por defecto | `clients.default_agreement_id` → `collective_agreements` de la ETT. Los centros con `client_agreement_id` NULL lo heredan; la API da `effectiveClientAgreementId` (no se guarda) |
+| Contactos | Rol `other` («Otro») con su texto en `other_role` (obligatorio con ese rol y solo con él), `validates_hours`, `suspended` con `suspended_at` / `suspended_by` (los pone un trigger) |
+| Centros | Sin cambios: `blocked` es el «Inactivo» de la pantalla; no hay otro estado |
+| Facturación | `invoice_layout`: `by_person` (por defecto) o `by_concept`. `fixed_payment_days` sigue como números: **31 = último día del mes**, y un día que el mes no tiene (30 en febrero) es su último día. Forma de pago e IVA, tablas maestras |
+| IVA del cliente | **Sin campo de régimen**: `vat_special_cause_id` NULL = régimen general, y `equivalence_surcharge`. La tabla maestra `vat_special_cause` se siembra en cada ETT (existentes y nuevas, trigger en `tenants`) con `EXENTA` (exenta de IVA), `ISP` (inversión del sujeto pasivo), `IGIC` (Canarias) e `IPSI` (Ceuta y Melilla); la ETT los renombra o da de baja. Lista en `private.vat_special_cause_defaults()` |
+| Preparación del cliente | `private.client_readiness(tenant, cliente)` → `{ centers, contacts, hasBilling }` contando solo lo no eliminado (los contactos suspendidos cuentan). SECURITY DEFINER para que el sí/no de facturación lo vea cualquier miembro, sin los datos; solo responde para la ETT activa. La API lo devuelve en cada cliente (`readiness`) |
+
+**CNAE: por qué la 2009.** `client_centers.cnae_code` ya guarda la clase CNAE-2009 (4 dígitos), que es la que usan la
+cotización por accidentes de trabajo (tarifa de primas) y Contrat@. La CNAE-2025 (Real Decreto 10/2025) está en vigor
+desde 2025 con otra estructura de secciones y divisiones; pasar a ella es una decisión pendiente (la columna `version`
+permite tener las dos). Los códigos son los oficiales; los literales están transcritos **[verificar]** con la
+publicación del INE.
+
+### Eliminar y restaurar (baja lógica recuperable)
+
+En clientes, centros, contactos y documentos, «eliminar» pone `deleted_at`:
+
+- Lo eliminado no sale en las listas; con `?deleted=true` salen **solo** los eliminados (con `deletedAt`). Se restaura
+  con `POST /v1/<recurso>/{id}/restore`. Mismos permisos que editar.
+- **Solo se elimina lo que no se ha usado**: `private.entity_in_use(tipo, tenant, id)` devuelve el motivo y un trigger
+  lanza `TNUSE` (409 `en_uso`). Hoy, un cliente está en uso si otro cliente activo le factura (`invoice_client_id`);
+  centros y contactos aún no los usa nada, pero la función es el punto donde se añadirán presupuestos, peticiones,
+  misiones y CPD. Lo usado se desactiva (`clients.status`/`blocked`, `client_centers.blocked`) o se suspende
+  (contactos).
+- **Eliminar un cliente elimina sus centros y contactos** con la misma marca de tiempo; restaurarlo restaura solo esos
+  (no lo que se eliminó antes por separado). Un centro o un contacto no se restaura si su cliente está eliminado
+  (`TN409`), ni un documento si su ficha lo está. Los documentos del cliente no se eliminan con él.
+- Restaurar puede chocar con los únicos de lo activo (código, NIF, contacto principal): 409 `conflicto`.
+- Documentos de conservación obligatoria: no se eliminan (`TNRET`, 409 `conservacion_obligatoria`).
+- Todo queda en el historial (`delete` / `restore`).
+
+Pendiente de decidir: cuánto tiempo se guarda lo eliminado y cuándo se purga de verdad (filas y ficheros de Storage),
+y quién puede purgar. Hoy no se purga nada.
 
 ## Probar en local
 
@@ -481,7 +528,7 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
   siguiendo las reglas de arriba, con su historial (`private.log_activity`) y sus documentos (`documents`).
 - Datos personales (NIF, Nº SS, IBAN, documentos): cifrado a nivel de columna y auditoría de accesos.
 - Más catálogos oficiales globales: ocupaciones CNO-11 (y el código de 8 dígitos del SEPE para Contrat@),
-  CNAE, regímenes de la Seguridad Social, tipos de documento de identidad (`client_centers.cnae_code` y
+  grupos y clases de la CNAE (hoy solo secciones y divisiones, en `cnae_activities`), regímenes de la Seguridad Social, tipos de documento de identidad (`client_centers.cnae_code` y
   `ss_regime_code` pasarán a FK). `professional_categories.cno_code`
   pasará a FK cuando exista el de ocupaciones.
 - Catálogo global de convenios, con tablas salariales por versión y cambios retroactivos: propuesta en

@@ -59,6 +59,12 @@ export interface CrudOptions<Q extends z.ZodRawShape> {
    * separadas por comas (el filtro «Todas las sucursales» de las pantallas).
    */
   branchColumn?: string;
+  /**
+   * Eliminar recuperable (db/README.md, "Fase 2"): la lista acepta `?deleted=true` (solo lo eliminado), hay
+   * `POST {path}/{id}/restore` y DELETE puede dar 409 `en_uso`. `schema` y `columns` tienen que incluir
+   * `deletedAt` / `deleted_at`.
+   */
+  restorable?: boolean;
 }
 
 /** `?branchId=a,b`: una o varias sucursales separadas por comas. */
@@ -93,6 +99,14 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
   const ListQuery = PaginationQuery.extend({
     ...(o.hasStatus === false ? {} : { status: z.enum(['active', 'inactive']).optional() }),
     ...(o.branchColumn ? { branchId: BranchIdsQuery } : {}),
+    ...(o.restorable
+      ? {
+          deleted: z
+            .stringbool()
+            .optional()
+            .openapi({ description: 'true: solo los eliminados (con deletedAt), para restaurarlos. Por defecto, los activos' }),
+        }
+      : {}),
     ...(o.search ? { q: z.string().trim().min(1).max(100).optional().openapi({ description: `Busca en ${o.search.join(', ')}` }) } : {}),
     ...(o.filters ?? {}),
   });
@@ -114,7 +128,7 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
     return row;
   };
 
-  return createRouter()
+  const router = createRouter()
     .openapi(
       createRoute({
         method: 'get',
@@ -126,9 +140,20 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
         responses: { 200: jsonContent(paginated(Schema), capitalize(o.names.many)), ...errorResponses(400, 401, 403) },
       }),
       async (c) => {
-        const query = valid(c, 'query') as { limit: number; offset: number; status?: string; q?: string; branchId?: string[] };
+        const query = valid(c, 'query') as {
+          limit: number;
+          offset: number;
+          status?: string;
+          q?: string;
+          branchId?: string[];
+          deleted?: boolean;
+        };
         const page = await withTenant(c, {}, async (tx, ctx) => {
-          const conditions: Fragment[] = [tx`tenant_id = ${ctx.tenantId} and deleted_at is null`];
+          const conditions: Fragment[] = [
+            query.deleted && o.restorable
+              ? tx`tenant_id = ${ctx.tenantId} and deleted_at is not null`
+              : tx`tenant_id = ${ctx.tenantId} and deleted_at is null`,
+          ];
           if (query.status) conditions.push(tx`status = ${query.status}`);
           if (query.branchId && o.branchColumn) conditions.push(tx`${tx(o.branchColumn)} in ${tx(query.branchId)}`);
           if (query.q && o.search) {
@@ -217,11 +242,17 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
         method: 'delete',
         path: `${o.path}/{id}`,
         tags,
-        summary: `Dar de baja ${o.names.one}`,
-        description: `Baja lógica: deja de aparecer, pero lo que ya lo usa lo sigue referenciando. Requiere \`${o.permission}\`.`,
+        summary: o.restorable ? `Eliminar ${o.names.one}` : `Dar de baja ${o.names.one}`,
+        description: o.restorable
+          ? `Baja lógica recuperable: deja de salir en las listas (salvo con \`?deleted=true\`) y se puede restaurar. ` +
+            `409 \`en_uso\` si ya se ha usado: entonces se desactiva o se suspende. Requiere \`${o.permission}\`.`
+          : `Baja lógica: deja de aparecer, pero lo que ya lo usa lo sigue referenciando. Requiere \`${o.permission}\`.`,
         security: bearerSecurity,
         request: { params: IdParams },
-        responses: { 204: { description: 'Dado de baja' }, ...errorResponses(400, 401, 403, 404) },
+        responses: {
+          204: { description: o.restorable ? 'Eliminado' : 'Dado de baja' },
+          ...errorResponses(...(o.restorable ? ([400, 401, 403, 404, 409] as const) : ([400, 401, 403, 404] as const))),
+        },
       }),
       async (c) => {
         const { id } = valid(c, 'param') as { id: string };
@@ -236,6 +267,35 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
         return c.body(null, 204);
       },
     );
+
+  if (!o.restorable) return router;
+  return router.openapi(
+    createRoute({
+      method: 'post',
+      path: `${o.path}/{id}/restore`,
+      tags,
+      summary: `Restaurar ${o.names.one} eliminado`,
+      description:
+        `Solo para lo eliminado (\`?deleted=true\`). 409 \`conflicto\` si choca con algo activo (código repetido, ` +
+        `segundo contacto principal...) o si lo que lo contiene sigue eliminado. Requiere \`${o.permission}\`.`,
+      security: bearerSecurity,
+      request: { params: IdParams },
+      responses: { 200: jsonContent(Schema, `${capitalize(label)} restaurado`), ...errorResponses(400, 401, 403, 404, 409) },
+    }),
+    async (c) => {
+      const { id } = valid(c, 'param') as { id: string };
+      const row = await withTenant(c, { permission: o.permission }, async (tx, ctx) => {
+        const [restored] = await tx`
+          update ${table(tx)} set deleted_at = null
+          where tenant_id = ${ctx.tenantId} and id = ${id} and deleted_at is not null
+          returning ${tx.unsafe(columns)}
+        `;
+        if (!restored) throw notFound(`${capitalize(o.names.one)} no existe o no está eliminado`);
+        return restored;
+      });
+      return c.json(row as never, 200);
+    },
+  );
 }
 
 function capitalize(text: string) {

@@ -16,7 +16,7 @@ const ActivitySchema = z
     entityId: z.guid(),
     parentType: ActivityEntityType.nullable().openapi({ description: 'Ficha a la que pertenece (el cliente de un centro)' }),
     parentId: z.guid().nullable(),
-    action: z.enum(['create', 'update', 'delete']),
+    action: z.enum(['create', 'update', 'delete', 'restore']).openapi({ description: 'delete: eliminación (lógica o definitiva)' }),
     actorUserId: z.guid().nullable(),
     actorName: z.string().nullable().openapi({ description: 'Nombre de quien lo hizo, si se puede ver' }),
     occurredAt: Timestamp,
