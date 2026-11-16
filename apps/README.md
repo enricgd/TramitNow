@@ -60,7 +60,7 @@ reload();
 - `memoria.ts`: datos de ejemplo en memoria para el **modo demo** (`npm run dev`, el del diseñador): sin login,
   sin API y sin base de datos. Se comporta como la API (filtros, paginación, errores) y no entra en la
   compilación para el NAS. Si una pantalla necesita datos de ejemplo nuevos, van aquí, no dentro de la vista.
-  Las pantallas grandes tienen su fichero (`memoriaEmpresas.ts`) y las ayudas comunes están en `memoriaBase.ts`.
+  Las pantallas grandes tienen su fichero (`memoriaEmpresas.ts`, `memoriaMiEtt.ts`) y las ayudas comunes están en `memoriaBase.ts`.
   **Nada en el nivel superior de estos ficheros puede tener efectos** (`push`, contadores, llamadas que cambien
   estado, `Date.now()`): `vite.config.ts` los marca sin efectos para que la compilación del NAS los descarte.
 - `api.ts`: contra `apps/api` con el token de la sesión. Con `npm run dev:real`, Vite reenvía `/v1` a la API
@@ -126,9 +126,8 @@ con sus tipos al final de `tipos.ts`, en una forma provisional), con su implemen
 API hay dos opciones, según lo que tenga sentido en real:
 
 - **Mostrarlo como «Disponible próximamente»**: `api.ts` rechaza con `ApiError` `no_disponible` (501) y la
-  pantalla pinta `Proximamente` en su lugar. Es lo que hace Mi ETT con `ettSettings` (datos legales de la
-  ETT, facturación, CCC, servicios, plantillas, portales, actividad, invitaciones, responsables de sucursal y
-  email y departamento de los usuarios). Es lo normal cuando son datos de la propia ETT: unos de ejemplo
+  pantalla pinta `Proximamente` en su lugar. Es lo que hace Mi ETT con `ettSettings` (plantillas, portales,
+  historial de Mi ETT y responsable de cada sucursal). Es lo normal cuando son datos de la propia ETT: unos de ejemplo
   mezclados con los reales llevarían a error.
 - **Seguir con los datos de ejemplo, avisando**: los datos de ejemplo van en un fichero aparte que importan
   las dos implementaciones (no en `memoria.ts`, que no entra en la compilación del NAS) y el repositorio
@@ -144,10 +143,24 @@ Lo que en Empresas sigue sin API, de momento: el acceso de los contactos al Áre
 «Recargo de equivalencia» es `equivalenceSurcharge`. La lista pide el contacto principal de cada fila (columna
 «Contacto principal»).
 
-Lo que en Mi ETT sigue sin API, de momento: alta e invitación de usuarios y cambio de su rol o sus sucursales
-(la API solo los lista), el email de los usuarios (está en `auth.users`), la matriz de permisos (fija en la
-vista), el logotipo (Storage), la exportación a PDF y el registro de actividad. Las sucursales dadas de baja
-no se ven (la lista solo muestra las activas) y los CCC se asocian a la sucursal por su nombre.
+Mi ETT, con API: datos legales (`companyLegal`) y facturación (`companyBilling`) de cada sociedad, series de
+facturas y rectificativas del año (`numberSeries`; si no existen, se crean al guardar), CCC
+(`contributionAccounts`), servicios que factura la ETT (`billableServices`; el código se genera del nombre),
+ajustes de presupuestos (`tenantSettings`, en la pestaña Facturación) y usuarios con alta, invitación, nuevo
+enlace, revocación, rol, departamento, estado y sucursal (`memberships`). La forma de pago «Otra…» se añade a la
+tabla maestra `payment_method`. Lo que sigue sin API: plantillas, portales, historial de Mi ETT, responsable de
+cada sucursal, logotipo, matriz de permisos (fija en la vista) y exportación a PDF. Las sucursales dadas de baja
+no se ven (la lista solo muestra las activas).
+
+#### Invitación de usuarios
+
+Aún no hay correo saliente: al dar de alta un usuario, la API devuelve `inviteUrl` y Mi ETT lo enseña con un
+mensaje listo para copiar y enviarlo a mano. El enlace lleva a `/verify?token=...&type=invite` de la web, que
+abre la página de bienvenida (`Login` en modo `invite`, desde `Root.tsx`): la persona elige su contraseña, la
+web comprueba el enlace con Supabase Auth (`verifyOtp` con el `token_hash`), guarda la contraseña
+(`updateUser`) y entra. El enlace vale una vez. En local, la API necesita `AUTH_URL`, `INVITE_REDIRECT_URL` y
+`AUTH_SENDS_INVITES=false` en `apps/api/.env` (ver `.env.example`). En el modo demo el enlace abre la misma
+página y entra sin red.
 
 ## api
 

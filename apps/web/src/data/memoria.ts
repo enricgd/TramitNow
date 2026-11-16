@@ -1,11 +1,10 @@
 // Repositorios en memoria con datos de ejemplo, para el modo demo (`npm run dev`, ver src/modo.ts).
 // Se comportan como la API (paginación, filtros, errores) para que las pantallas funcionen igual en los dos
 // modos. Los cambios duran hasta recargar la página. Todo es ficticio: nunca datos reales.
-import { REPRESENTANTE_ETT, AUTORIZACION_ETT } from '../views/ettDemo';
-import { SERVICIOS_INICIALES } from '../views/serviciosDemo';
 import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import { NOW, checkUniqueCode, delay, find, id, matches, newId, page, stamp, touch } from './memoriaBase';
 import { clientAddresses, memoryClientRepositories } from './memoriaEmpresas';
+import { memoryMiEttRepositories } from './memoriaMiEtt';
 import type { CatalogRepository, Repositories } from './repositorios';
 import {
   ApiError,
@@ -13,10 +12,10 @@ import {
   type Branch,
   type CollectiveAgreement,
   type Company,
-  type EttSettings,
   type ContractKey,
   type ContractType,
   type Membership,
+  type MembershipContextInput,
   type PageQuery,
   type PayrollConcept,
   type ProfessionalCategory,
@@ -110,12 +109,27 @@ const roles: Role[] = [
 ];
 
 // El usuario de la membresía n es id(n + 100).
-const member = (n: number, fullName: string, roleCode: string, branchIds: string[], status: Membership['status'] = 'active'): Membership => {
+const member = (
+  n: number,
+  fullName: string,
+  roleCode: string,
+  branchIds: string[],
+  email: string,
+  department: string,
+  lastSignInAt: string | null,
+  status: Membership['status'] = 'active',
+): Membership => {
   const r = roles.find((x) => x.code === roleCode)!;
   return {
     id: id(n),
     userId: id(n + 100),
     fullName,
+    email,
+    lastSignInAt,
+    department,
+    invitationPending: lastSignInAt === null,
+    invitedAt: lastSignInAt === null ? '2026-10-20T09:00:00.000Z' : null,
+    invitedBy: lastSignInAt === null ? id(251) : null,
     status,
     role: { id: r.id, code: r.code, name: r.name, scope: r.scope },
     contexts: branchIds.length
@@ -127,17 +141,27 @@ const member = (n: number, fullName: string, roleCode: string, branchIds: string
 
 // El equipo de Mi ETT: las mismas personas que firman, seleccionan y venden en el resto de pantallas.
 const memberships: Membership[] = [
-  member(150, 'Usuario Demo', 'admin', []),
-  member(151, 'Begoña Arrieta Lasa', 'admin', []),
-  member(152, 'Ane Uriarte', 'director_zona', [id(20)]),
-  member(153, 'Nuria Castells', 'director_zona', [id(21)]),
-  member(154, 'Jon Ibarra', 'seleccion', [id(20)]),
-  member(155, 'Ana Gómez', 'seleccion', [id(20)]),
-  member(156, 'Elena Navarro', 'comercial', [id(20)]),
-  member(157, 'Carlos Mendoza', 'comercial', [id(20)]),
-  member(158, 'Laura Vidal', 'comercial', [id(21)]),
-  member(159, 'Lucía Santos', 'admin', []),
+  member(150, 'Usuario Demo', 'admin', [], 'demo@example.com', 'Dirección', '2026-10-27T09:55:00.000Z'),
+  member(151, 'Begoña Arrieta Lasa', 'admin', [], 'begona.arrieta@ettglobal.example', 'Dirección', '2026-10-27T09:40:00.000Z'),
+  member(152, 'Ane Uriarte', 'director_zona', [id(20)], 'ane.uriarte@ettglobal.example', 'Operaciones', '2026-10-27T08:45:00.000Z'),
+  member(153, 'Nuria Castells', 'director_zona', [id(21)], 'nuria.castells@ettglobal.example', 'Operaciones', '2026-10-27T09:10:00.000Z'),
+  member(154, 'Jon Ibarra', 'seleccion', [id(20)], 'jon.ibarra@ettglobal.example', 'Selección', '2026-10-27T10:02:00.000Z'),
+  member(155, 'Ana Gómez', 'seleccion', [id(20)], 'ana.gomez@ettglobal.example', 'Selección', '2026-10-26T18:20:00.000Z'),
+  member(156, 'Elena Navarro', 'comercial', [id(20)], 'elena.navarro@ettglobal.example', 'Comercial', '2026-10-27T09:30:00.000Z'),
+  member(157, 'Carlos Mendoza', 'comercial', [id(20)], 'carlos.mendoza@ettglobal.example', 'Comercial', '2026-10-25T12:00:00.000Z'),
+  member(158, 'Laura Vidal', 'comercial', [id(21)], 'laura.vidal@ettglobal.example', 'Comercial', '2026-10-27T11:05:00.000Z'),
+  member(159, 'Lucía Santos', 'admin', [], 'lucia.santos@ettglobal.example', 'Administración', '2026-10-27T10:12:00.000Z'),
+  member(160, 'Marcos Rubio', 'laboral', [], 'marcos.rubio@ettglobal.example', 'Laboral', null),
 ];
+
+/** Enlace de invitación de la demo: abre la página de invitación sin llegar a ningún servidor. */
+const enlaceDemo = (n: string) => `${typeof window === 'undefined' ? '' : window.location.origin}/verify?token=demo-${n}&type=invite`;
+
+function contextos(lista: MembershipContextInput[]): Membership['contexts'] {
+  const hayDefecto = lista.some((c) => c.isDefault);
+  return lista.map((c, i) => ({ companyId: c.companyId, branchId: c.branchId ?? null, isDefault: hayDefecto ? !!c.isDefault : i === 0 }));
+}
+
 const DEMO_USER_ID = id(250);
 
 const permissions = [
@@ -228,6 +252,11 @@ const agreements: CollectiveAgreement[] = [
     id: id(63), code: 'MET28', name: 'Convenio del metal de Madrid (ejemplo)', officialCode: null, scope: 'provincial',
     autonomousCommunityCode: null, provinceCode: '28', validFrom: '2025-01-01', validTo: null, notes: null, status: 'active', ...stamp,
   },
+  // El del personal de estructura de la ETT (Mi ETT).
+  {
+    id: id(64), code: 'ETT', name: 'Convenio estatal de empresas de trabajo temporal (ejemplo)', officialCode: null, scope: 'state',
+    autonomousCommunityCode: null, provinceCode: null, validFrom: '2025-01-01', validTo: null, notes: null, status: 'active', ...stamp,
+  },
 ];
 const categories: ProfessionalCategory[] = [
   ['MOZO', 'Mozo de almacén', id(61), '9811', 10],
@@ -254,101 +283,6 @@ const concepts: PayrollConcept[] = [
   concept(92, 'NOCT', 'Plus nocturnidad', 'salary_supplement', 'percentage', 25),
   concept(93, 'TRANS', 'Plus transporte', 'allowance', 'fixed_day', 3.5, false),
 ];
-
-// Lo de Mi ETT que aún no tiene API (los datos de ejemplo que tenía FichaEttView.jsx, con la misma forma).
-const ettSettings: EttSettings = {
-  legal: {
-    nombreComercial: TENANT.tradeName,
-    formaJuridica: 'Sociedad Limitada (S.L.)',
-    autorizacion: AUTORIZACION_ETT,
-    fechaAutorizacion: '2019-03-12',
-    cnae: '7820 · Actividades de las empresas de trabajo temporal',
-    convenio: 'Convenio colectivo estatal de empresas de trabajo temporal',
-    registroMercantil: 'Registro Mercantil de Bizkaia',
-    tomo: '0000',
-    folio: '00',
-    hoja: 'BI-00000',
-    representante: REPRESENTANTE_ETT.nombre,
-    representanteDni: REPRESENTANTE_ETT.dni,
-    representanteCargo: REPRESENTANTE_ETT.cargo,
-    mutua: 'Mutua colaboradora con la Seguridad Social de ejemplo',
-    servicioPrevencion: 'Servicio de prevención ajeno de ejemplo',
-    // Garantía financiera obligatoria de las ETT: se actualiza cada año
-    garantiaTipo: 'Aval bancario',
-    garantiaEntidad: 'Entidad bancaria de ejemplo',
-    garantiaImporte: '185.000 €',
-    garantiaVence: '2026-12-08',
-    // Certificado digital de empresa y Sistema RED
-    redAutorizacion: '00000',
-    certificadoCaduca: '2026-12-20',
-  },
-  // Las mismas series que en Facturación
-  billing: {
-    billingSeries: 'F2026-',
-    invoicePrefix: 'R2026-',
-    proximaFactura: 108,
-    proximaRectificativa: 4,
-    vatRate: '21%',
-    withholdingRate: '0%',
-    iban: 'ES00 0000 0000 0000 0000 0000',
-    swiftBic: 'XXXXESXXXXX',
-    paymentMethod: 'Transferencia bancaria',
-    customPaymentMethod: '',
-    paymentTerms: '30 días fecha factura',
-    currency: 'EUR (€)',
-    adminEmail: 'administracion@ettglobal.example',
-    billingAddressSameAsFiscal: true,
-    billingBranchMode: 'centralized',
-  },
-  // Códigos de cuenta de cotización (CCC): uno por provincia y por tipo de personal
-  contributionAccounts: [
-    { id: 'ccc-1', numero: '48 0000001 01', provincia: 'Bizkaia', tipo: 'Personas en misión', sucursal: 'Delegación Norte (Bilbao)' },
-    { id: 'ccc-2', numero: '48 0000002 02', provincia: 'Bizkaia', tipo: 'Personal de estructura', sucursal: 'Delegación Norte (Bilbao)' },
-    { id: 'ccc-3', numero: '08 0000003 03', provincia: 'Barcelona', tipo: 'Personas en misión', sucursal: 'Sucursal Barcelona' },
-  ],
-  services: structuredClone(SERVICIOS_INICIALES),
-  templates: [
-    { id: 'tpl-1', name: 'Presupuesto comercial estándar 2026', category: 'Presupuestos', scope: 'Global (Todas)', status: 'active', format: 'PDF + Interactivo', updated: '12 Ene 2026' },
-    { id: 'tpl-2', name: 'Factura ordinaria (series F y R)', category: 'Facturación', scope: 'Global (Todas)', status: 'active', format: 'PDF / XML Facturae', updated: '02 Feb 2026' },
-    { id: 'tpl-3', name: 'Presupuesto de hostelería y eventos', category: 'Presupuestos', scope: 'Sucursal Barcelona', status: 'incomplete', format: 'PDF', updated: '15 Sep 2026' },
-    { id: 'tpl-4', name: 'Contrato de puesta a disposición (CPD)', category: 'Laboral / Legal', scope: 'Global (Todas)', status: 'active', format: 'PDF firmable', updated: '10 Feb 2026' },
-  ],
-  // Portales propios de la ETT: subdominio y correos de bienvenida
-  portals: {
-    subdominio: 'ettglobal',
-    bienvenida: {
-      empresa: { activo: true, asunto: 'Tu acceso al Área de empresas de {ett}', texto: 'Hola, {nombre}:\n\nTe hemos dado acceso al Área de empresas de {ett} para {empresa}. Desde allí puedes ver a tu personal en misión, validar los partes de horas, firmar los CPD y descargar las facturas, según tus permisos.\n\nElige tu contraseña aquí: {enlace}' },
-      candidato: { activo: true, asunto: 'Bienvenida a {ett}', texto: 'Hola, {nombre}:\n\nGracias por inscribirte. Desde tu área personal puedes subir tus documentos, seguir tus candidaturas y firmar tu contrato.\n\nEntra aquí: {enlace}' },
-    },
-  },
-  activity: [
-    { id: 'act-1', timestamp: 'Hoy, 10:45', user: 'Begoña Arrieta Lasa', action: 'Añadió el CCC de personas en misión de Barcelona', type: 'fiscal' },
-    { id: 'act-2', timestamp: '02 Oct, 16:30', user: 'Lucía Santos', action: 'Emitió la factura F2026-0101 (septiembre, Trans-Logística)', type: 'billing' },
-    { id: 'act-3', timestamp: '15 Sep, 11:20', user: 'Begoña Arrieta Lasa', action: 'Abrió la Sucursal Barcelona (responsable: Nuria Castells)', type: 'branch' },
-    { id: 'act-4', timestamp: '08 Ene, 09:15', user: 'Begoña Arrieta Lasa', action: 'Renovó la garantía financiera hasta el 08/12/2026', type: 'fiscal' },
-    { id: 'act-5', timestamp: '02 Ene, 08:00', user: 'Lucía Santos', action: 'Activó las series de 2026: F2026- y R2026-', type: 'billing' },
-  ],
-  branchManagers: { [id(20)]: 'Ane Uriarte', [id(21)]: 'Nuria Castells' },
-  users: Object.fromEntries(
-    (
-      [
-        [150, 'demo@example.com', 'Dirección', 'Ahora'],
-        [151, 'begona.arrieta@ettglobal.example', 'Dirección', 'Hace 15 min'],
-        [152, 'ane.uriarte@ettglobal.example', 'Operaciones', 'Hoy 08:45'],
-        [153, 'nuria.castells@ettglobal.example', 'Operaciones', 'Hoy 09:10'],
-        [154, 'jon.ibarra@ettglobal.example', 'Selección', 'Hoy 10:02'],
-        [155, 'ana.gomez@ettglobal.example', 'Selección', 'Ayer 18:20'],
-        [156, 'elena.navarro@ettglobal.example', 'Comercial', 'Hoy 09:30'],
-        [157, 'carlos.mendoza@ettglobal.example', 'Comercial', 'Hace 2 días'],
-        [158, 'laura.vidal@ettglobal.example', 'Comercial', 'Hoy 11:05'],
-        [159, 'lucia.santos@ettglobal.example', 'Administración', 'Hoy 10:12'],
-      ] as const
-    ).map(([n, email, departamento, ultimoAcceso]) => [id(n), { email, departamento, ultimoAcceso }]),
-  ),
-  invitations: [
-    { id: 'inv-1', name: 'Marcos Rubio', email: 'marcos.rubio@ettglobal.example', roleId: id(31), branchId: null, createdAt: NOW },
-  ],
-};
 
 function memoryCatalog<T extends { id: string; code: string; name: string; status: Status; createdAt: string; updatedAt: string }, Q extends PageQuery & { status?: Status; q?: string }>(
   items: T[],
@@ -383,6 +317,7 @@ export function memoryRepositories(): Repositories {
         delay({
           user: { id: DEMO_USER_ID, email: 'demo@example.com', fullName: 'Usuario Demo', phone: null, status: 'active', mustChangePassword: false },
           isSuperadmin: false,
+          isContentEditor: false,
           activeTenant: TENANT,
           role: { id: id(30), code: 'admin', name: 'Administrador', scope: 'tenant' },
           permissions: roles[0].permissions,
@@ -510,12 +445,48 @@ export function memoryRepositories(): Repositories {
       list: (q = {}) =>
         page(memberships.filter((m) => (!q.status || m.status === q.status) && (!q.roleId || m.role.id === q.roleId)), q),
       get: async (membershipId) => delay(find(memberships, membershipId)),
+      async create(data) {
+        const email = data.email.trim().toLowerCase();
+        if (memberships.some((m) => m.email === email)) throw new ApiError(409, 'conflicto', 'Ese usuario ya está en esta ETT');
+        const r = roles.find((x) => x.id === data.roleId);
+        if (!r) throw new ApiError(422, 'referencia_invalida', 'El rol no existe en esta ETT');
+        const nuevo: Membership = {
+          id: newId(), userId: newId(), fullName: data.fullName.trim(), email, lastSignInAt: null, department: data.department ?? null,
+          invitationPending: true, invitedAt: new Date().toISOString(), invitedBy: DEMO_USER_ID, status: 'active',
+          role: { id: r.id, code: r.code, name: r.name, scope: r.scope }, contexts: contextos(data.contexts), ...stamp,
+        };
+        memberships.push(nuevo);
+        return delay({ membership: nuevo, inviteUrl: enlaceDemo(nuevo.id), existingUser: false });
+      },
+      async update(membershipId, { contexts, roleId, ...data }) {
+        const m = find(memberships, membershipId);
+        if (m.userId === DEMO_USER_ID && ((roleId && roleId !== m.role.id) || (data.status && data.status !== 'active'))) {
+          throw new ApiError(409, 'conflicto', 'No puedes cambiar tu propio rol ni bloquearte: pídeselo a otro administrador');
+        }
+        const r = roleId ? roles.find((x) => x.id === roleId) : undefined;
+        if (roleId && !r) throw new ApiError(422, 'referencia_invalida', 'El rol no existe en esta ETT');
+        touch(m, {
+          ...data,
+          ...(r ? { role: { id: r.id, code: r.code, name: r.name, scope: r.scope } } : {}),
+          ...(contexts ? { contexts: contextos(contexts) } : {}),
+        });
+        return delay(m);
+      },
+      async resendInvitation(membershipId) {
+        const m = find(memberships, membershipId);
+        if (!m.invitationPending) throw new ApiError(409, 'conflicto', 'Este usuario ya aceptó la invitación');
+        touch(m, { invitedAt: new Date().toISOString(), invitedBy: DEMO_USER_ID });
+        return delay({ inviteUrl: enlaceDemo(m.id) });
+      },
+      async revokeInvitation(membershipId) {
+        const m = find(memberships, membershipId);
+        if (!m.invitationPending) throw new ApiError(409, 'conflicto', 'Este usuario ya aceptó la invitación: para quitarle el acceso, bloquéalo');
+        memberships.splice(memberships.indexOf(m), 1);
+        await delay(null);
+      },
     },
+    ...memoryMiEttRepositories(),
     search: sampleSearch(false),
     notifications: sampleNotifications(false),
-    ettSettings: {
-      get: () => delay(ettSettings),
-      update: async (data) => delay(Object.assign(ettSettings, structuredClone(data))),
-    },
   };
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import App, { type CurrentUser } from './App';
-import Login from './Login';
+import Login, { leerInvitacion } from './Login';
 import { supabase, useAuth } from './auth/session';
 import { DEMO } from './modo';
 import { SesionProvider } from './sesion';
@@ -11,6 +11,21 @@ const NO_TENANT = 'Tu usuario no tiene acceso a ninguna ETT. Pide a tu administr
 const DEMO_USER: CurrentUser = { name: 'Usuario Demo', email: 'demo@example.com', role: 'admin' };
 
 export default function Root() {
+  // Enlace de invitación (Mi ETT → Invitar usuario): primero, elegir la contraseña; después, la aplicación.
+  const [invitacion, setInvitacion] = useState(leerInvitacion);
+  if (invitacion) {
+    return (
+      <Login
+        initialMode="invite"
+        invitacion={invitacion}
+        onInvitacionAceptada={() => {
+          window.history.replaceState(null, '', '/');
+          setInvitacion(null);
+        }}
+      />
+    );
+  }
+
   return DEMO ? (
     <SesionProvider>
       <App user={DEMO_USER} onSignOut={() => {}} />

@@ -137,7 +137,7 @@ se cambian o se añaden.
 Las pantallas ya conectadas a datos reales (la cabecera, Mi ETT y Empresas, de momento) ya no los llevan
 dentro: los cargan con un hook (`src/cabecera/useCabecera.ts`, `src/views/mi-ett/useMiEtt.ts`,
 `src/views/empresas/useEmpresas.ts`) y sus datos de ejemplo están en `src/data/memoria.ts`,
-`src/data/memoriaEmpresas.ts` y `src/data/ejemploCabecera.ts`. En esas pantallas, los cambios de diseño se
+`src/data/memoriaEmpresas.ts`, `src/data/memoriaMiEtt.ts` y `src/data/ejemploCabecera.ts`. En esas pantallas, los cambios de diseño se
 hacen en la vista como siempre; si hace falta un dato nuevo, añádelo a esos ficheros con la misma forma y
 anótalo en la nota. No vuelvas a poner datos dentro de la vista ni llames a `repos` desde ella.
 

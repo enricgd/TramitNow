@@ -146,6 +146,29 @@ export function apiRepositories(): Repositories {
     memberships: {
       list: (query) => get('/memberships', query),
       get: (id) => get(`/memberships/${id}`),
+      create: (body) => request('POST', '/memberships', { body }),
+      update: (id, body) => request('PATCH', `/memberships/${id}`, { body }),
+      resendInvitation: (id) => request('POST', `/memberships/${id}/resend-invitation`),
+      revokeInvitation: (id) => request('DELETE', `/memberships/${id}/invitation`),
+    },
+    companyLegal: {
+      get: (id) => get(`/companies/${id}/legal`),
+      save: (id, body) => request('PUT', `/companies/${id}/legal`, { body }),
+    },
+    companyBilling: {
+      get: (id) => get(`/companies/${id}/billing-settings`),
+      save: (id, body) => request('PUT', `/companies/${id}/billing-settings`, { body }),
+    },
+    numberSeries: {
+      list: (query) => unwrap(get('/number-series', query)),
+      create: (body) => request('POST', '/number-series', { body }),
+      update: (id, body) => request('PATCH', `/number-series/${id}`, { body }),
+    },
+    contributionAccounts: crud('/contribution-accounts'),
+    billableServices: crud('/billable-services'),
+    tenantSettings: {
+      get: () => get('/tenant-settings'),
+      update: (body) => request('PATCH', '/tenant-settings', { body }),
     },
 
     // Pendiente de API. El buscador y los avisos siguen con los datos de ejemplo (sample: la cabecera lo
