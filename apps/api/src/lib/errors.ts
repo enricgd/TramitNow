@@ -20,6 +20,7 @@ export const errorCodes = [
   'conflicto',
   'referencia_invalida',
   'error_interno',
+  'servicio_no_disponible',
 ] as const;
 export type ErrorCode = (typeof errorCodes)[number];
 
@@ -71,10 +72,21 @@ export function errorBody(code: ErrorCode, message: string, details?: Validation
 const uniqueMessages: Record<string, string> = {
   clients_tenant_company_tax_id_uniq: 'Ya existe un cliente con ese NIF en la sociedad',
   client_contacts_main_uniq: 'El cliente ya tiene un contacto principal',
+  catalog_items_tenant_catalog_name_uniq: 'Ya existe un valor con ese nombre en esta tabla maestra',
 };
 
+/**
+ * Errores de reglas de negocio lanzados por nuestros triggers con `errcode = 'TN409'` o `'TN422'`: el mensaje está
+ * escrito en español para el usuario y se devuelve tal cual, con ese estado HTTP.
+ */
+const businessRuleStatus = { TN409: [409, 'conflicto'], TN422: [422, 'validacion'] } as const;
+
 /** Traduce los errores de Postgres que puede provocar el cliente; el resto son errores internos. */
-function fromPostgres(err: { code: string; constraint_name?: string }): ApiError | undefined {
+function fromPostgres(err: { code: string; constraint_name?: string; message?: string }): ApiError | undefined {
+  if (err.code in businessRuleStatus) {
+    const [status, code] = businessRuleStatus[err.code as keyof typeof businessRuleStatus];
+    return new ApiError(status, code, err.message ?? 'No se puede hacer');
+  }
   switch (err.code) {
     case '23505':
       return new ApiError(
@@ -98,7 +110,7 @@ function fromPostgres(err: { code: string; constraint_name?: string }): ApiError
   }
 }
 
-function isPostgresError(err: unknown): err is { code: string; constraint_name?: string } {
+function isPostgresError(err: unknown): err is { code: string; constraint_name?: string; message?: string } {
   return typeof err === 'object' && err !== null && (err as { name?: string }).name === 'PostgresError';
 }
 

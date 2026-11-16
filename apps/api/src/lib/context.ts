@@ -6,8 +6,9 @@ import type { Context } from 'hono';
 import type { AuthVariables, Claims } from './auth.js';
 import { type Tx, type Sql, withClaims } from './db.js';
 import { ApiError, forbidden } from './errors.js';
+import type { Storage } from './storage.js';
 
-export type AppEnv = { Variables: AuthVariables & { sql: Sql } };
+export type AppEnv = { Variables: AuthVariables & { sql: Sql; storage: Storage | undefined } };
 
 export interface UserContext {
   userId: string;

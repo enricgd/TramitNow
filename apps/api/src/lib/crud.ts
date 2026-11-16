@@ -6,6 +6,7 @@
 
 import { createRoute, z } from '@hono/zod-openapi';
 import type { Context } from 'hono';
+import type postgres from 'postgres';
 import type { PendingQuery, Row } from 'postgres';
 import { withTenant, type AppEnv } from './context.js';
 import { type Tx, likePattern, pickDefined } from './db.js';
@@ -49,7 +50,28 @@ export interface CrudOptions<Q extends z.ZodRawShape> {
   orderBy?: string;
   /** `false` para tablas sin `status` (no se ofrece `?status=`). */
   hasStatus?: boolean;
+  /** Campos que solo se fijan al crear (no se pueden editar después). */
+  createOnly?: readonly string[];
+  /** Campo de la API → columna (en camelCase) cuando no se llaman igual, p. ej. { type: 'catalog' }. */
+  columnAliases?: Record<string, string>;
+  /**
+   * Columna de sucursal de la tabla, si la tiene: la lista acepta `?branchId=` con una o varias sucursales
+   * separadas por comas (el filtro «Todas las sucursales» de las pantallas).
+   */
+  branchColumn?: string;
 }
+
+/** `?branchId=a,b`: una o varias sucursales separadas por comas. */
+export const BranchIdsQuery = z
+  .string()
+  .transform((value) => value.split(',').map((id) => id.trim()).filter(Boolean))
+  .pipe(z.array(z.guid()).min(1).max(50))
+  .optional()
+  .openapi({
+    type: 'string',
+    description: 'Una o varias sucursales separadas por comas (las de GET /v1/me → branches)',
+    example: '30000000-0000-0000-0000-0000000000a1',
+  });
 
 export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
   const label = o.names.one.replace(/^(el|la) /, '');
@@ -60,11 +82,17 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
     .required(Object.fromEntries(o.required.map((k) => [k, true])) as never)
     .extend(o.createDefaults ?? {})
     .openapi(`${o.name}Create`);
-  const UpdateSchema = z.strictObject(o.fields).partial().openapi(`${o.name}Update`);
+  const createOnly = new Set(o.createOnly ?? []);
+  const updateFields = Object.fromEntries(Object.entries(o.fields).filter(([key]) => !createOnly.has(key)));
+  const UpdateSchema = z.strictObject(updateFields).partial().openapi(`${o.name}Update`);
   const writable = Object.keys(o.fields);
+  const editable = Object.keys(updateFields);
+  const toColumns = (values: Record<string, postgres.SerializableParameter>) =>
+    Object.fromEntries(Object.entries(values).map(([key, value]) => [o.columnAliases?.[key] ?? key, value]));
 
   const ListQuery = PaginationQuery.extend({
     ...(o.hasStatus === false ? {} : { status: z.enum(['active', 'inactive']).optional() }),
+    ...(o.branchColumn ? { branchId: BranchIdsQuery } : {}),
     ...(o.search ? { q: z.string().trim().min(1).max(100).optional().openapi({ description: `Busca en ${o.search.join(', ')}` }) } : {}),
     ...(o.filters ?? {}),
   });
@@ -98,10 +126,11 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
         responses: { 200: jsonContent(paginated(Schema), capitalize(o.names.many)), ...errorResponses(400, 401, 403) },
       }),
       async (c) => {
-        const query = valid(c, 'query') as { limit: number; offset: number; status?: string; q?: string };
+        const query = valid(c, 'query') as { limit: number; offset: number; status?: string; q?: string; branchId?: string[] };
         const page = await withTenant(c, {}, async (tx, ctx) => {
           const conditions: Fragment[] = [tx`tenant_id = ${ctx.tenantId} and deleted_at is null`];
           if (query.status) conditions.push(tx`status = ${query.status}`);
+          if (query.branchId && o.branchColumn) conditions.push(tx`${tx(o.branchColumn)} in ${tx(query.branchId)}`);
           if (query.q && o.search) {
             const pattern = likePattern(query.q);
             const any = o.search.map((col) => tx`${tx(col)} ilike ${pattern}`).reduce((a, b) => tx`${a} or ${b}`);
@@ -149,7 +178,7 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
       async (c) => {
         const body = valid(c, 'json');
         const row = await withTenant(c, { permission: o.permission }, async (tx, ctx) => {
-          const values = { ...pickDefined(body, writable), tenantId: ctx.tenantId };
+          const values = { ...toColumns(pickDefined(body, writable)), tenantId: ctx.tenantId };
           const [created] = await tx`insert into ${table(tx)} ${tx(values)} returning ${tx.unsafe(columns)}`;
           return created!;
         });
@@ -169,7 +198,7 @@ export function crudRoutes<Q extends z.ZodRawShape>(o: CrudOptions<Q>) {
       }),
       async (c) => {
         const { id } = valid(c, 'param') as { id: string };
-        const patch = pickDefined(valid(c, 'json'), writable);
+        const patch = toColumns(pickDefined(valid(c, 'json'), editable));
         if (Object.keys(patch).length === 0) throw new ApiError(400, 'validacion', 'No hay ningún campo que cambiar');
         const row = await withTenant(c, { permission: o.permission }, async (tx, ctx) => {
           const [updated] = await tx`

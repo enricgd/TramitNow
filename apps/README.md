@@ -151,9 +151,11 @@ Todos los módulos siguen estas reglas.
 | 409 | `conflicto` | Duplicado (p. ej. código de sociedad repetido) |
 | 422 | `referencia_invalida` | Apunta a un registro que no existe en la ETT activa |
 | 500 | `error_interno` | Cualquier otra cosa (el detalle va solo al log) |
+| 503 | `servicio_no_disponible` | Supabase Storage no responde o la API no lo tiene configurado (documentos) |
 
 Desde el código: `throw new ApiError(status, code, mensaje)`, `notFound()`, `forbidden()`. Los errores de
-Postgres se traducen solos (`23505` → 409, `23503` → 422, `42501` → 403...).
+Postgres se traducen solos (`23505` → 409, `23503` → 422, `42501` → 403...). Las reglas de negocio de los triggers
+con `errcode` `TN409` o `TN422` llegan con su mensaje (en español) y ese estado.
 
 **Paginación**: las listas que pueden crecer aceptan `?limit=` (1–200, por defecto 50) y `?offset=` y devuelven
 
@@ -197,9 +199,43 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `/v1/collective-agreements`, `/v1/professional-categories`, `/v1/contract-types`, `/v1/payroll-concepts`: listar (filtros, `?q=`, `?status=`), ver, crear, editar y dar de baja (`DELETE`, baja lógica) | miembro; escribir, `labor_catalogs.manage` |
 | `/v1/clients` (`?q=` busca en código, razón social, nombre comercial y NIF; `?status=`, `?companyId=`, `?branchId=`, `?blocked=`), `/v1/client-centers?clientId=`, `/v1/client-contacts?clientId=`: listar, ver, crear, editar y dar de baja | miembro; escribir, `clients.manage` en la sucursal del cliente o del centro |
 | `GET`, `PUT /v1/clients/{id}/billing`: facturación del cliente (`PUT` crea o actualiza; devuelve `warnings` si el plazo de pago supera el legal) | `clients.billing.manage` |
+| `GET /v1/catalog-types`: tipos de tabla maestra (lista cerrada) | token |
+| `/v1/catalog-items?type=` (obligatorio; `?q=`, `?status=`, `?parentId=`): tablas maestras de la ETT. Listar, ver, crear (`type` y `name`; `code` opcional), editar (el tipo no cambia) y dar de baja. Nombre único por tipo sin distinguir mayúsculas (409) | miembro; escribir, `catalogs.manage` |
+| `GET /v1/activity?entityType=&entityId=&includeChildren=`: historial de una ficha, lo último primero, paginado | quien ve la ficha (la facturación, con `clients.billing.manage`) |
+| `POST /v1/documents/uploads`, `POST /v1/documents`, `GET /v1/documents` (`?entityType=&entityId=&typeId=&status=&visibleInPortal=&expiresBefore=&q=`), `GET`, `PATCH`, `DELETE /v1/documents/{id}`, `GET /v1/documents/{id}/download`: documentos de clientes y centros (ver "Documentos") | leer, quien ve la ficha; escribir, quien puede editarla (`clients.manage` en su sucursal) |
 
 Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
 sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
+Opciones de `crud.ts` además de las básicas: `branchColumn` (la lista acepta `?branchId=` con una o varias sucursales
+separadas por comas; hoy en clientes y centros), `createOnly` (campos que no se editan) y `columnAliases` (campo de la
+API con otro nombre de columna).
+
+**Filtro por sucursal.** `GET /v1/me` → `branches` son las sucursales con las que puede trabajar el usuario (todas si su
+rol abarca la ETT). La web enseña el filtro «Todas las sucursales» si hay más de una y lo pasa como
+`?branchId=id1,id2`. Ver otras sucursales no está prohibido en todas las listas (los clientes los ven todos): el
+filtro es para trabajar, las RLS siguen mandando.
+
+### Documentos
+
+Los ficheros están en Supabase Storage (bucket privado `documents`, ver `db/README.md`). La API firma las URL con la
+`service_role` y la web sube y descarga directamente contra Storage:
+
+1. `POST /v1/documents/uploads` `{ entityType, entityId, fileName, mimeType, sizeBytes }` → `201 { storagePath,
+   uploadUrl, expiresIn }`. Comprueba que puede editar la ficha (403/404) y que es PDF, JPG o PNG de hasta 10 MB (400).
+   `uploadUrl` caduca a los **60 segundos** (lo fija Storage): pedirla justo antes de subir cada fichero.
+2. `PUT uploadUrl` con el fichero como cuerpo y `Content-Type: <mimeType>` (sin token: la URL ya va firmada).
+3. `POST /v1/documents` `{ entityType, entityId, storagePath, typeId, name, status?, expiresOn?, visibleInPortal?,
+   notes? }` → `201 Document`. Comprueba que el fichero está en Storage (si no, 422) y toma de ahí el tamaño y el tipo.
+   `status` solo `pending` (por defecto) o `draft`.
+
+Después: `PATCH /v1/documents/{id}` cambia tipo, nombre, estado (`"validated"` valida y pone quién y cuándo),
+caducidad, visibilidad y notas; `GET /v1/documents/{id}/download` → `{ url, expiresIn }` (5 minutos; descarga con el
+nombre del documento); `DELETE` lo elimina de verdad (fila y fichero) y deja rastro en el historial, salvo que su tipo
+sea de conservación obligatoria (`retentionRequired`: 409).
+
+Variables: `STORAGE_URL` (desde la API), `STORAGE_PUBLIC_URL` (como lo ve el navegador; por defecto `STORAGE_URL`) y
+`SUPABASE_SERVICE_ROLE_KEY`. Sin ellas la API arranca, pero las rutas de ficheros responden 503. En local, en
+`.env.example` (Storage en `127.0.0.1:54325`); en el NAS, en `infra/nas/docker-compose.override.yml`.
 
 Pendiente: alta e invitación de usuarios (necesita la `service_role`), edición de roles y membresías, y borrado
 de sociedades y sucursales.
@@ -214,7 +250,7 @@ sh db/local/reset.sh
 cd apps/api && npm test
 ```
 
-Van contra la base local (Postgres + Auth de `db/local/`, nunca el NAS) con los datos ficticios de
+Van contra la base local (Postgres + Auth + Storage de `db/local/`, nunca el NAS) con los datos ficticios de
 `db/tests/_fixtures.sql` (ETT A y B), que se confirman al empezar y se borran al terminar; la ETT DEMO no se toca.
 Los tokens se firman con el `JWT_SECRET` local y los claims que daría el hook. Comprueban que con un token
 de la ETT A la API nunca devuelve ni modifica nada de la B, que sin token o con un token manipulado responde 401,

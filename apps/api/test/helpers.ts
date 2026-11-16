@@ -39,7 +39,16 @@ export const adminSql = postgres(process.env.ADMIN_DATABASE_URL!, { max: 1, onno
 
 export const app = createApp({
   sql: apiSql,
-  config: { jwtSecret: secret, jwtAudience: 'authenticated', corsOrigins: ['http://localhost:5173'] },
+  config: {
+    jwtSecret: secret,
+    jwtAudience: 'authenticated',
+    corsOrigins: ['http://localhost:5173'],
+    storage: {
+      url: process.env.STORAGE_URL!,
+      publicUrl: process.env.STORAGE_URL!,
+      serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    },
+  },
   log: false,
 });
 

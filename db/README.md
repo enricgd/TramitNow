@@ -48,7 +48,7 @@ db/
 | Tabla | Qué es |
 |---|---|
 | `tenants` | ETT clientes de la plataforma |
-| `catalog_items` | Catálogos simples por ETT (formas de pago, zonas, causas...). Los oficiales son globales: ver módulo 1 |
+| `catalog_items` | Tablas maestras simples por ETT (formas de pago, sectores, motivos...), de los tipos de `catalog_types`. Los oficiales son globales: ver módulo 1 |
 | `addresses` | Direcciones reutilizables |
 | `companies` | Sociedades de la ETT |
 | `branches` | Sucursales de una sociedad |
@@ -224,6 +224,10 @@ de Supabase Auth.
 6. Si hace falta un permiso nuevo: insertarlo en `permissions` y asignarlo a los roles de serie de las ETT
    existentes y en `private.seed_tenant_roles()`.
 7. Tests en `tests/` que prueben que otra ETT no lee ni escribe.
+8. Si es una ficha o cuelga de una: trigger de historial (`private.log_activity`, ver "Historial de actividad") y, si
+   lleva documentos, su tipo en `documents.entity_type`. Si tiene sucursal, `branch_id` (la API filtra con `?branchId=`).
+9. Reglas de negocio en triggers que el usuario deba leer: `raise exception '<mensaje en español>' using errcode =
+   'TN409'` (o `'TN422'`); la API devuelve ese mensaje con 409 (o 422).
 
 ## Módulo 2: empresas cliente
 
@@ -250,7 +254,98 @@ La API avisa (sin impedirlo) si el plazo de pago supera los 60 días de la Ley 3
 la maqueta (lista para presupuestar, para operar o para facturar) se calcula; no se guarda.
 
 Fuera de este módulo: firma digital de facturas y CPD (`client_digital_signature_settings`), riesgos del puesto
-(PRL: decidir si van aquí o con peticiones y CPD), portal de cliente, documentos (Storage) e historial (auditoría).
+(PRL: decidir si van aquí o con peticiones y CPD) y portal de cliente. Los documentos y el historial son comunes a
+todas las fichas: ver "Fase 1: cimientos comunes".
+
+## Fase 1: cimientos comunes
+
+Lo que usan casi todas las pantallas (`docs/plan-desarrollo.md`, fase 1). Migraciones `20261115000100_catalog_types.sql`
+a `..._000400_number_series.sql`; tests `tests/11_tablas_maestras.sql` a `tests/14_series.sql` y, en `apps/api`,
+`test/tablas-maestras`, `historial`, `documentos` y `series` (este último prueba la concurrencia con dos conexiones).
+
+### Tablas maestras
+
+`catalog_items` (por ETT) con el tipo en `catalog`, que ahora es una FK a **`catalog_types`**: lista cerrada y global,
+que se amplía con una migración (como `permissions`). Tipos:
+
+| Ya usados por tablas | Nuevos (notas del diseño) |
+|---|---|
+| `geo_zone`, `tax_id_type`, `client_type`, `business_group`, `payment_method`, `invoice_type`, `invoice_print_model`, `vat_special_cause`, `retention_type`, `statistical_sector` | `sector`, `vat_regime`, `quote_rejection_reason`, `vacancy_cancellation_reason` (baja de plaza), `assignment_end_reason` (fin de misión), `incident_type`, `document_type` |
+
+- **Nombre único por tipo sin distinguir mayúsculas** (`lower(name)`, entre los no dados de baja). El **código pasa a
+  ser opcional**: lo que se da de alta desde un desplegable ("+ Añadir") solo tiene nombre.
+- `retention_required` (solo en `document_type`): sus documentos no se pueden borrar. Ver "Documentos".
+- Leer: cualquier miembro. Escribir: `catalogs.manage` (de serie solo `admin`). Baja lógica (`deleted_at`).
+- No se cargan valores por defecto: los de las notas son de ejemplo y están por confirmar con administración.
+
+### Historial de actividad
+
+`activity_log`: quién (`actor_user_id`), cuándo, qué entidad, acción (`create`, `update`, `delete`), un resumen en
+español ("Alta de centro de trabajo «Almacén»", "Validación de documento «CIF»") y, en los cambios, `changes` con el
+antes y el después de cada columna cambiada.
+
+- Lo escriben **solo triggers** (`private.log_activity`, SECURITY DEFINER); `authenticated` no puede insertar, cambiar
+  ni borrar. Hoy, en `clients`, `client_centers`, `client_contacts`, `client_billing_profiles` y `documents`. Para otra
+  tabla: `create trigger ... after insert or update or delete ... execute function private.log_activity('tipo',
+  'columna_nombre', 'tipo_padre', 'columna_padre')` y añadir el tipo a `private.activity_label` y
+  `private.activity_visible`.
+- `parent_type` / `parent_id`: la ficha a la que pertenece (el cliente de un centro, de un contacto, de su
+  facturación o de un documento suyo o de sus centros). Así la ficha del cliente enseña todo lo suyo.
+- La baja lógica (`deleted_at`) cuenta como `delete` ("Baja de ..."); el borrado de verdad, "Eliminación de ...".
+  Tocar solo `updated_at` no deja rastro. Borrar una ETT entera no deja rastro (no hay a qué apuntar).
+- **Datos sensibles**: de `iban`, `swift_bic`, `document_number` y `tax_id` solo se guarda que han cambiado
+  (`{"masked": true}`). En el alta y la baja no se copia la fila, solo el resumen (que lleva el nombre).
+- **Visibilidad** (`private.activity_visible`, SECURITY INVOKER: usa las RLS de quien lee): la de la entidad. Los
+  hijos se ven si se ve su ficha, así que el rastro de algo eliminado de verdad sigue visible; la facturación, solo
+  con `clients.billing.manage`.
+
+### Documentos
+
+`documents`: una tabla para cualquier ficha (`entity_type` + `entity_id`), con tipo (`document_type`), nombre,
+ruta en Storage, tipo MIME, tamaño, estado (`pending` al subir, `validated`, `draft`), caducidad opcional, visible en el
+portal, notas, quién lo subió y cuándo, y quién lo validó y cuándo (los pone un trigger, no el cliente).
+
+- Entidades hoy: `client` y `client_center`. Las siguientes (`offer`, `request`, `candidate`, `file`...) se añaden con
+  su tabla ampliando el check de `entity_type` y `private.document_entity_exists / _writable / _visible`.
+  `entity_id` no puede tener FK: un trigger comprueba que la ficha existe en la ETT.
+- **Ficheros**: bucket privado `documents` de Supabase Storage (lo crea la migración; 10 MB, PDF, JPG o PNG, como la
+  ventana de subida del diseño), con la ruta `{tenant_id}/{entity_type}/{entity_id}/{uuid}.{ext}` (un check lo
+  exige). El bucket no tiene políticas para `anon` ni `authenticated`: solo se entra con URL firmadas por la API, que
+  es la única que tiene la `service_role`. El fichero, la ficha y quién lo subió no se cambian después.
+- **Permisos**: leer, quien ve la ficha (hoy, cualquier miembro: los clientes los ven todos). Subir, editar, validar y
+  borrar, quien puede editar la ficha (`clients.manage` en la sucursal del cliente o del centro).
+- **Borrado definitivo** (fila y fichero), como pide el diseño, con rastro en el historial; por eso no hay `deleted_at`.
+  **Conservación obligatoria**: si el tipo tiene `retention_required`, no se puede borrar el documento ni pasarlo a un
+  tipo que no la tenga (error `TN409` → 409).
+
+### Numeración por series
+
+`number_series`: una fila por ETT, clase de documento (`quote`, `request`, `invoice`), sociedad y sucursal (opcionales)
+y año, con prefijo, ceros (`padding`) y el último número. `private.next_number(tenant, clase, año, sociedad, sucursal)`
+devuelve `(series_id, number, formatted)`, p. ej. `PRE2026-00001`.
+
+- **Sin huecos**: el número sale de un `UPDATE` de la fila de la serie; el bloqueo de fila hace esperar a la siguiente
+  transacción y, si la que lo pidió se deshace, el número vuelve. Hay que pedirlo **en la misma transacción que crea
+  el documento**, nunca antes.
+- Si la serie no existe, se crea con el primer número y el prefijo por defecto (`PRE`, `PET`, `FAC` + año + `-`).
+- Los miembros leen las series de su ETT; solo `next_number()` las cambia. Aún no hay rutas en la API: las usarán
+  presupuestos, peticiones y facturas al crear.
+
+### Decisiones pendientes (no se han tomado aquí)
+
+- **Tablas maestras**: ¿quién amplía las listas desde los formularios? Hoy, solo `catalogs.manage` (admin); el diseño
+  deja que cualquiera añada valores (y sugiere que queden "pendientes de revisar"). ¿Los sectores son de cada ETT o
+  comunes? (hoy, de cada ETT). Valores iniciales de forma de pago, IVA, motivos y tipos de documento.
+- **Días de pago** como tabla maestra (lo pide el diseño): `client_billing_profiles.fixed_payment_days` es una lista
+  de días; cambiarlo es una de las 7 decisiones del modelo de clientes.
+- **Sector del cliente**: hay tipo `sector`, pero `clients` aún no tiene la columna (decisiones del modelo de clientes).
+- **Documentos**: ¿quién valida? (hoy, quien puede editar la ficha). ¿Pueden leer todos los miembros los documentos de
+  un cliente, como la ficha? ¿Qué tipos son de conservación obligatoria y durante cuánto tiempo (contratos, CPD,
+  nóminas)? Y qué pasa al cumplirse el plazo: hoy no se borran nunca. Borrar un documento que se ha enseñado en el
+  portal del cliente.
+- **Historial**: cuánto tiempo se guarda y si los nombres de contactos borrados deben quedar en los resúmenes (RGPD).
+- **Series**: si las facturas van por sociedad o por sucursal, el formato del número y si se dan de alta a mano.
+- Ficheros subidos pero nunca registrados (paso 3 sin hacer): habrá que limpiarlos con un proceso programado.
 
 ## Probar en local
 
@@ -270,6 +365,12 @@ sh db/tests/run.sh
   `postgres`, contraseña `postgres`).
 - Supabase Auth `supabase/gotrue:v2.197.0` (contenedor `tramitnow-auth-local`, `127.0.0.1:9999`) con el hook
   de token activado. Al arrancar crea su esquema `auth` completo (con `auth.jwt()`).
+- Supabase Storage `supabase/storage-api:v1.81.0` (contenedor `tramitnow-storage-local`, `127.0.0.1:54325`; el 5000
+  lo usa AirPlay en macOS), con los ficheros en un volumen. Al arrancar crea su esquema `storage`, que la migración de
+  documentos necesita (crea el bucket). Las claves `ANON_KEY` y `SERVICE_ROLE_KEY` locales están en `local/dev.env`.
+
+No uses `docker compose up` a mano con el compose cambiado sobre una base que quieras conservar: puede recrear el
+contenedor de Postgres con un volumen nuevo (vacío). Si pasa, `reset.sh` lo deja todo como al principio.
 
 Después aplica las migraciones, carga los municipios del INE (`seeds/ine-municipios.sql`), habilita el login de `tramitnow_api` (con la contraseña local `API_DB_PASSWORD`
 de `local/dev.env`, para `apps/api`) y da de alta la ETT DEMO con
@@ -376,8 +477,8 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 
 ## Pendiente
 
-- Resto de tablas del modelo (ofertas, peticiones, candidatos, trabajadores, documentos, comunicaciones,
-  auditoría, importaciones), siguiendo las reglas de arriba.
+- Resto de tablas del modelo (ofertas, peticiones, candidatos, trabajadores, comunicaciones, importaciones),
+  siguiendo las reglas de arriba, con su historial (`private.log_activity`) y sus documentos (`documents`).
 - Datos personales (NIF, Nº SS, IBAN, documentos): cifrado a nivel de columna y auditoría de accesos.
 - Más catálogos oficiales globales: ocupaciones CNO-11 (y el código de 8 dígitos del SEPE para Contrat@),
   CNAE, regímenes de la Seguridad Social, tipos de documento de identidad (`client_centers.cnae_code` y
