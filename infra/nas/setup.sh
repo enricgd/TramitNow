@@ -31,7 +31,7 @@ git -C supabase fetch --depth 1 origin "$SUPABASE_REF"
 git -C supabase checkout -q "$SUPABASE_REF"
 
 # UGOS exige que existan todas las rutas montadas antes de crear el Proyecto.
-mkdir -p proyecto backups supabase/docker/volumes/db/data
+mkdir -p proyecto backups supabase/docker/volumes/db/data caddy/site-ejemplo
 
 # Los contenedores (postgres, envoy) no corren como root: necesitan poder leer los ficheros
 # montados, y las carpetas compartidas de UGOS los crean sin permiso para "otros".

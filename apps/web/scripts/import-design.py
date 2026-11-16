@@ -30,18 +30,21 @@ if not m:
 lines = m.group(1).splitlines()
 
 
-def drop_block(lines, start_pat, end_pat, after=0):
+def drop_block(lines, start_pat, end_pat, after=0, required=True):
     """Elimina desde la primera línea que casa con start_pat (a partir de 'after') hasta end_pat."""
     for i in range(after, len(lines)):
         if re.search(start_pat, lines[i]):
             for j in range(i, len(lines)):
                 if re.search(end_pat, lines[j]):
                     return lines[:i] + lines[j + 1:], i
-    sys.exit(f"No se encuentra el bloque {start_pat}")
+    if required:
+        sys.exit(f"No se encuentra el bloque {start_pat}")
+    return lines, None
 
 
 app_start = next(i for i, l in enumerate(lines) if re.match(r"\s*function App\(", l))
-lines, _ = drop_block(lines, r"<aside\b", r"</aside>", app_start)
+# Algunos diseños (presupuestos.html) no llevan barra lateral propia.
+lines, _ = drop_block(lines, r"<aside\b", r"</aside>", app_start, required=False)
 if args.strip_header:
     lines, _ = drop_block(lines, r"<header\b", r"</header>", app_start)
 

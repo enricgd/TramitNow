@@ -56,7 +56,7 @@ select throws_ok(
      values ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000b1', 'X', 'Cruzada') $$,
   '23503', null, 'sucursal de A no puede colgar de una sociedad de B');
 select throws_ok(
-  $$ insert into public.addresses (tenant_id, street, province_id)
+  $$ insert into public.addresses (tenant_id, street, geo_zone_id)
      values ('10000000-0000-0000-0000-00000000000a', 'Calle', '40000000-0000-0000-0000-0000000000b1') $$,
   '23503', null, 'dirección de A no puede usar un catálogo de B');
 select throws_ok(

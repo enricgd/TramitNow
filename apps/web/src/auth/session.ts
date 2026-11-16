@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createClient, type Session } from '@supabase/supabase-js';
+import { DEMO } from '../modo';
 
 // Supabase se usa solo para Auth (y más adelante Storage). Los datos irán por apps/api.
 // En desarrollo, Vite reenvía /auth/v1 al Supabase Auth local (ver vite.config.ts y db/README.md).
@@ -10,8 +11,10 @@ export const authConfigError = anonKey
   ? null
   : 'Falta VITE_SUPABASE_ANON_KEY en la compilación (ver apps/web/.env.example).';
 
+// En modo demo no hay sesión: no se recupera la que haya dejado `dev:real` en el navegador (así no hay ninguna
+// petición de red).
 export const supabase = createClient(url, anonKey || 'sin-configurar', {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  auth: { persistSession: !DEMO, autoRefreshToken: !DEMO, detectSessionInUrl: !DEMO },
 });
 
 // Claims que añade el hook de token (db/migrations/*_access_token_hook.sql).

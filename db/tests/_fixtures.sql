@@ -19,12 +19,12 @@ insert into public.tenants (id, code, legal_name) values
   ('10000000-0000-0000-0000-00000000000b', 'ETT-B', 'ETT Ficticia B, S.L.');
 
 insert into public.catalog_items (id, tenant_id, catalog, code, name) values
-  ('40000000-0000-0000-0000-0000000000a1', '10000000-0000-0000-0000-00000000000a', 'province', '08', 'Provincia A'),
-  ('40000000-0000-0000-0000-0000000000b1', '10000000-0000-0000-0000-00000000000b', 'province', '08', 'Provincia B');
+  ('40000000-0000-0000-0000-0000000000a1', '10000000-0000-0000-0000-00000000000a', 'geo_zone', 'Z1', 'Zona A'),
+  ('40000000-0000-0000-0000-0000000000b1', '10000000-0000-0000-0000-00000000000b', 'geo_zone', 'Z1', 'Zona B');
 
-insert into public.addresses (id, tenant_id, street, city, province_id) values
-  ('50000000-0000-0000-0000-0000000000a1', '10000000-0000-0000-0000-00000000000a', 'Calle Ejemplo 1', 'Ciudad A', '40000000-0000-0000-0000-0000000000a1'),
-  ('50000000-0000-0000-0000-0000000000b1', '10000000-0000-0000-0000-00000000000b', 'Calle Ejemplo 2', 'Ciudad B', '40000000-0000-0000-0000-0000000000b1');
+insert into public.addresses (id, tenant_id, street, province_code, municipality_code, geo_zone_id) values
+  ('50000000-0000-0000-0000-0000000000a1', '10000000-0000-0000-0000-00000000000a', 'Calle Ejemplo 1', '08', '08019', '40000000-0000-0000-0000-0000000000a1'),
+  ('50000000-0000-0000-0000-0000000000b1', '10000000-0000-0000-0000-00000000000b', 'Calle Ejemplo 2', '28', '28079', '40000000-0000-0000-0000-0000000000b1');
 
 insert into public.companies (id, tenant_id, code, name, address_id) values
   ('20000000-0000-0000-0000-0000000000a1', '10000000-0000-0000-0000-00000000000a', 'A', 'Sociedad A', '50000000-0000-0000-0000-0000000000a1'),

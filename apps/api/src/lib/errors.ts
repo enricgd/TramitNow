@@ -18,8 +18,11 @@ export const errorCodes = [
   'no_encontrado',
   'validacion',
   'conflicto',
+  'en_uso',
+  'conservacion_obligatoria',
   'referencia_invalida',
   'error_interno',
+  'servicio_no_disponible',
 ] as const;
 export type ErrorCode = (typeof errorCodes)[number];
 
@@ -67,14 +70,52 @@ export function errorBody(code: ErrorCode, message: string, details?: Validation
   return { error: details ? { code, message, details } : { code, message } };
 }
 
+/** Mensajes propios de algunas unicidades; el resto de duplicados dicen "código duplicado". */
+const uniqueMessages: Record<string, string> = {
+  clients_tenant_company_tax_id_uniq: 'Ya existe un cliente con ese NIF en la sociedad',
+  client_contacts_main_uniq: 'El cliente ya tiene un contacto principal',
+  catalog_items_tenant_catalog_name_uniq: 'Ya existe un valor con ese nombre en esta tabla maestra',
+};
+
+/** Mensajes propios de algunas comprobaciones (CHECK); el resto dicen "no cumplen las reglas". */
+const checkMessages: Record<string, string> = {
+  client_contacts_other_role_check: 'Con el rol «Otro» hay que indicar cuál (otherRole); sin ese rol, otherRole va vacío',
+  client_contacts_roles_check: 'Rol de contacto no válido',
+};
+
+/**
+ * Errores de reglas de negocio lanzados por nuestros triggers con un SQLSTATE propio: el mensaje está escrito en
+ * español para el usuario y se devuelve tal cual, con ese estado HTTP y código.
+ *   TN409 conflicto · TN422 validación · TNUSE en uso (no se puede eliminar) · TNRET conservación obligatoria
+ */
+const businessRuleStatus = {
+  TN409: [409, 'conflicto'],
+  TN422: [422, 'validacion'],
+  TNUSE: [409, 'en_uso'],
+  TNRET: [409, 'conservacion_obligatoria'],
+} as const;
+
 /** Traduce los errores de Postgres que puede provocar el cliente; el resto son errores internos. */
-function fromPostgres(err: { code: string; constraint_name?: string }): ApiError | undefined {
+function fromPostgres(err: { code: string; constraint_name?: string; message?: string }): ApiError | undefined {
+  if (err.code in businessRuleStatus) {
+    const [status, code] = businessRuleStatus[err.code as keyof typeof businessRuleStatus];
+    return new ApiError(status, code, err.message ?? 'No se puede hacer');
+  }
   switch (err.code) {
     case '23505':
-      return new ApiError(409, 'conflicto', 'Ya existe un registro con esos datos (código duplicado)');
+      return new ApiError(
+        409,
+        'conflicto',
+        uniqueMessages[err.constraint_name ?? ''] ?? 'Ya existe un registro con esos datos (código duplicado)',
+      );
     case '23503':
       return new ApiError(422, 'referencia_invalida', 'Hace referencia a un registro que no existe o no es de esta ETT');
     case '23514':
+      return new ApiError(
+        422,
+        'validacion',
+        checkMessages[err.constraint_name ?? ''] ?? 'Los datos no cumplen las reglas de la base de datos',
+      );
     case '23502':
     case '22001':
       return new ApiError(422, 'validacion', 'Los datos no cumplen las reglas de la base de datos');
@@ -88,7 +129,7 @@ function fromPostgres(err: { code: string; constraint_name?: string }): ApiError
   }
 }
 
-function isPostgresError(err: unknown): err is { code: string; constraint_name?: string } {
+function isPostgresError(err: unknown): err is { code: string; constraint_name?: string; message?: string } {
   return typeof err === 'object' && err !== null && (err as { name?: string }).name === 'PostgresError';
 }
 

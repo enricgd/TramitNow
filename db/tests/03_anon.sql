@@ -1,6 +1,6 @@
 -- anon (petición sin sesión, solo con la anon key) no ve nada del núcleo.
 
-select plan(16);
+select plan(18);
 
 select set_config('request.jwt.claims', '{"role": "anon"}', true);
 set local role anon;
@@ -17,6 +17,8 @@ select throws_ok('select * from public.roles', '42501', null, 'anon no lee roles
 select throws_ok('select * from public.role_permissions', '42501', null, 'anon no lee role_permissions');
 select throws_ok('select * from public.memberships', '42501', null, 'anon no lee memberships');
 select throws_ok('select * from public.user_contexts', '42501', null, 'anon no lee user_contexts');
+select throws_ok('select * from public.clients', '42501', null, 'anon no lee clients');
+select throws_ok('select * from public.client_contacts', '42501', null, 'anon no lee client_contacts');
 select throws_ok($$ insert into public.tenants (code, legal_name) values ('X', 'X') $$, '42501', null, 'anon no inserta tenants');
 select throws_ok('select private.current_tenant_id()', '42501', null, 'anon no usa las funciones de private');
 

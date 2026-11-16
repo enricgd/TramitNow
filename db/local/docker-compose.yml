@@ -1,4 +1,5 @@
-# Postgres + Supabase Auth (GoTrue) para probar en local: migraciones, tests y login de apps/web.
+# Postgres + Supabase Auth (GoTrue) + Supabase Storage para probar en local: migraciones, tests, login de apps/web
+# y documentos.
 # Mismas versiones que el NAS (infra/nas/setup.sh → docker/docker-compose.yml de Supabase).
 # Se levanta y prepara con db/local/reset.sh (que pasa --env-file dev.env). Ver db/README.md.
 # Todo lo de aquí son valores de desarrollo: nunca los uses fuera de tu máquina.
@@ -51,3 +52,41 @@ services:
       GOTRUE_MAILER_AUTOCONFIRM: "true"
       GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
       GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: pg-functions://postgres/private/custom_access_token_hook
+
+  # Ficheros de los documentos (bucket privado `documents`, ver db/README.md). Solo lo usa apps/api con la
+  # service_role para firmar URL y borrar; la web sube y descarga con esas URL firmadas.
+  # Puerto 54325 en el Mac (el 5000 lo ocupa AirPlay en macOS).
+  storage:
+    image: supabase/storage-api:v1.81.0
+    container_name: tramitnow-storage-local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:54325:5000
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://127.0.0.1:5000/status
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      # Storage no usa PostgREST para lo que hace la API; en local no lo hay.
+      POSTGREST_URL: http://localhost:3000
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:postgres@db:5432/postgres
+      STORAGE_PUBLIC_URL: http://127.0.0.1:54325
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      GLOBAL_S3_BUCKET: stub
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+    volumes:
+      - storage-data:/var/lib/storage
+
+volumes:
+  storage-data:

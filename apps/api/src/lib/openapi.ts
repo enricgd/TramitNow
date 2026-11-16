@@ -23,7 +23,8 @@ const errorDescriptions = {
   403: 'Sin permiso, sin ETT activa o usuario bloqueado (`sin_permiso`, `sin_ett_activa`, `usuario_bloqueado`)',
   404: 'No existe o es de otra ETT (`no_encontrado`)',
   409: 'Duplicado (`conflicto`)',
-  422: 'Referencia a un registro que no existe en la ETT (`referencia_invalida`)',
+  422: 'Referencia a un registro que no existe en la ETT (`referencia_invalida`) o regla no cumplida (`validacion`)',
+  503: 'El almacén de documentos no responde o no está configurado (`servicio_no_disponible`)',
 } as const;
 
 /** Respuestas de error documentadas para una ruta. */

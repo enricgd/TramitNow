@@ -15,6 +15,8 @@ const env = {
   ADMIN_DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
   SUPABASE_JWT_SECRET: devEnv.JWT_SECRET!,
   AUTH_URL: 'http://127.0.0.1:9999',
+  STORAGE_URL: 'http://127.0.0.1:54325',
+  SUPABASE_SERVICE_ROLE_KEY: devEnv.SERVICE_ROLE_KEY!,
   DEMO_EMAIL: devEnv.DEMO_EMAIL!,
   DEMO_PASSWORD: devEnv.DEMO_PASSWORD!,
 };

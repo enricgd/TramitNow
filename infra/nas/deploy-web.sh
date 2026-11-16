@@ -4,9 +4,11 @@
 #
 # Uso:  sh infra/nas/deploy-web.sh                (NAS por defecto: Enric@192.168.2.8)
 #       NAS=usuario@ip sh infra/nas/deploy-web.sh
+#       SSH_KEY=~/.ssh/otra_clave sh infra/nas/deploy-web.sh   (por defecto, la misma que deploy-web-ejemplo.sh)
 set -e
 
 NAS=${NAS:-Enric@192.168.2.8}
+SSH_KEY=${SSH_KEY:-$HOME/.ssh/id_ed25519_enricgd}
 DEST=/volume1/docker/tramitnow/caddy/site
 
 cd "$(dirname "$0")/../../apps/web"
@@ -15,9 +17,9 @@ if [ -n "$(git status --porcelain .)" ]; then
   echo "Aviso: apps/web tiene cambios sin commitear; la versión desplegada no corresponderá a un commit."
 fi
 
-# La URL y la anon key de Supabase se incrustan al compilar (ver apps/web/.env.example).
-if ! grep -qs '^VITE_SUPABASE_ANON_KEY=.' .env.production.local; then
-  echo "Falta apps/web/.env.production.local con VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY (copia .env.example)."
+# Las URL de Supabase y de la API y la anon key se incrustan al compilar (ver apps/web/.env.example).
+if ! grep -qs '^VITE_SUPABASE_ANON_KEY=.' .env.production.local || ! grep -qs '^VITE_API_URL=.' .env.production.local; then
+  echo "Falta apps/web/.env.production.local con VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY y VITE_API_URL (copia .env.example)."
   exit 1
 fi
 
@@ -26,7 +28,7 @@ npm run build
 
 # Se copia con tar por SSH: el rsync de UGOS no permite escribir en /volume1/docker.
 # El contenido se sustituye dentro de la carpeta (no se renombra) porque Caddy la tiene montada.
-COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C dist -czf - . | ssh "$NAS" "
+COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C dist -czf - . | ssh -i "$SSH_KEY" "$NAS" "
   set -e
   tmp=\$(mktemp -d)
   tar -xzf - -C \"\$tmp\"

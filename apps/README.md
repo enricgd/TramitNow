@@ -31,18 +31,123 @@ Después se añade la entrada `view: CandidatosView` en `NAV` (`src/App.tsx`).
 `src/Login.tsx` (de `design/login.html`) inicia sesión con Supabase Auth (`@supabase/supabase-js`, solo
 para Auth). `src/Root.tsx` muestra el login sin sesión y la app con ella; si el token no trae `tenant_id`
 (el usuario no pertenece a ninguna ETT activa) cierra la sesión y lo avisa. `src/auth/session.ts` lee
-los claims del hook (`tenant_id`, `app_role`, `branch_ids`). La cabecera muestra el usuario y su rol;
-la ETT, la sucursal y las pantallas siguen con datos de ejemplo.
+los claims del hook (`tenant_id`, `app_role`, `branch_ids`). Con sesión, `src/sesion.tsx` (`SesionProvider`,
+`useSesion()`) carga `/v1/me` una vez para toda la app: la cabecera muestra la ETT activa, el usuario, su rol
+y, si ve varias sucursales, el selector de sucursal (se recuerda en el navegador; las listas aún no filtran por
+ella). Con varias ETT, el nombre de la ETT es un selector que llama a `changeTenant` y recarga.
 
 - En local, `npm run dev` es el **modo demo**: entra sin login con un usuario ficticio y no necesita Supabase.
 - Para probar el login en local: `sh db/local/reset.sh` levanta Postgres + Auth con un usuario demo (ver
-  `db/README.md`) y `npm run dev:real` reenvía `/auth/v1` a ese Auth.
-- En el NAS: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env.production.local` (ver `.env.example`).
+  `db/README.md`) y `npm run dev:real` reenvía `/auth/v1` a ese Auth y `/v1` a la API local.
+- En el NAS: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` y `VITE_API_URL` en `.env.production.local` (ver `.env.example`).
 - "¿Has olvidado tu contraseña?" llama a Supabase Auth; para que llegue el correo hay que configurar
   SMTP en el `.env` del NAS. El enlace abre la pantalla "Nueva contraseña".
 
-Pendiente: capa de datos (repositorios con implementación en memoria y contra `apps/api`), y que la cabecera
-muestre la ETT y sucursal reales cuando exista la API.
+### Datos
+
+Las pantallas leen y guardan a través de `src/data/` (repositorios), nunca con `fetch` ni con `supabase.from(...)`:
+
+```tsx
+import { repos, useData } from '../data';
+
+const { data, loading, error, reload } = useData((r) => r.branches.list(), []);
+await repos.branches.update(id, { phone });
+reload();
+```
+
+- `repositorios.ts`: el contrato (una operación por ruta de `apps/api`). `tipos.ts`: los datos tal como los
+  devuelve la API y `ApiError` (`code` estable, `message` en español para mostrar, `details` por campo).
+- `memoria.ts`: datos de ejemplo en memoria para el **modo demo** (`npm run dev`, el del diseñador): sin login,
+  sin API y sin base de datos. Se comporta como la API (filtros, paginación, errores) y no entra en la
+  compilación para el NAS. Si una pantalla necesita datos de ejemplo nuevos, van aquí, no dentro de la vista.
+  Las pantallas grandes tienen su fichero (`memoriaEmpresas.ts`) y las ayudas comunes están en `memoriaBase.ts`.
+  **Nada en el nivel superior de estos ficheros puede tener efectos** (`push`, contadores, llamadas que cambien
+  estado, `Date.now()`): `vite.config.ts` los marca sin efectos para que la compilación del NAS los descarte.
+- `api.ts`: contra `apps/api` con el token de la sesión. Con `npm run dev:real`, Vite reenvía `/v1` a la API
+  local (en otra terminal, `cd apps/api && npm run dev`; sus valores locales en `apps/api/.env.example`).
+  En el NAS, `VITE_API_URL` en `.env.production.local`.
+- Cuando la API gane una ruta, se añade al contrato y a las dos implementaciones.
+
+Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`) y Empresas
+(`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**). El
+resto de pantallas aún usan los datos de ejemplo que llevan dentro.
+
+#### Conectar una pantalla
+
+El diseñador sigue editando las vistas (`src/views/*View.jsx`, `Header.tsx`) en la rama `design`. Para que
+sus cambios y los nuestros no choquen, **la vista solo pinta** y todo lo de datos va aparte:
+
+1. **Un hook por pantalla** en su carpeta: `src/views/<pantalla>/use<Pantalla>.ts` (por ejemplo
+   `src/views/mi-ett/useMiEtt.ts`). Carga con `useData` y guarda con `repos`; traduce de la forma de la API
+   (`tipos.ts`, en inglés) a la que ya usa la vista (sus nombres de campo, sus textos) y al revés. La vista
+   recibe datos y funciones (`guardarSucursal(id, valores)`, `desactivarSucursal(id)`...), nunca `repos`.
+2. **En la vista, lo mínimo**: cambiar los `useState(INITIAL_...)` por el hook, los `setX(...)` de guardar
+   por la función del hook y añadir los estados. No reescribir el JSX ni cambiar nombres de campo: si la
+   vista usa `company.cif`, el hook da `cif`. Las funciones del hook lanzan `ApiError`; la vista lo muestra con
+   `mensajeError(e)` (en Mi ETT, con su `guardar(accion, mensajeOk)`, que avisa y devuelve si ha ido bien).
+3. **Los datos de ejemplo de la vista pasan a `memoria.ts`**, en los repositorios que ya existen (sociedades,
+   sucursales, usuarios...) o, si la API aún no los tiene, en un repositorio «pendiente de API» (abajo).
+4. **Estados**, con los componentes de `src/ui/Estados.tsx`: `CargandoPagina` la primera vez (al recargar
+   tras guardar se siguen viendo los datos), `ErrorCarga` con «Reintentar», el vacío de la pantalla (por
+   ejemplo, ETT sin sociedades) y `Proximamente` para lo que aún no tiene API.
+5. **Probar en los dos modos**: `npm run dev` (en la pestaña de red del navegador no debe haber peticiones a
+   `/v1` ni a `/auth`) y `npm run dev:real` con `apps/api` y la base local.
+
+Lo que añadió Empresas, para copiarlo en las siguientes:
+
+- **Lista grande**: búsqueda, sucursal de la cabecera (`useSesion().sucursal` → `?branchId=`) y página
+  (`limit`, `offset`) van al servidor; la búsqueda espera a que se deje de escribir. Los filtros que la API aún
+  no tiene se aplican a la página cargada y la vista lo dice («N de M en esta página»).
+- **Eliminar es una baja lógica**: la confirmación (`Confirmar` con `recuperable`) dice dónde se recupera; un
+  filtro o botón «Eliminados» lista lo eliminado con «Recuperar» (`src/views/empresas/Eliminados.tsx`). Si ya
+  se ha usado, la API responde 409 `en_uso`: la vista enseña el motivo y ofrece la alternativa (suspender,
+  desactivar, dar de baja). Los documentos de conservación obligatoria no se ofrecen para eliminar.
+- **Tablas maestras en los desplegables**: `SelectConAlta` con los nombres de `catalogItems`; «+ Añadir» crea
+  la opción en la API (`catalogos.anadirOpcion`) y el hook traduce nombre ↔ id al guardar.
+- **Campos nuevos antes que la API**: si la web va por delante de la API local, la API rechaza el cuerpo entero
+  («Llaves desconocidas») y `mensajeError` lo muestra como «Disponible próximamente: la API aún no admite …».
+  Para probar en `dev:real`, mejor fusionar en local la rama del backend que trae esos campos.
+- **Resumen en la lista**: `GET /v1/clients` trae (o traerá) `readiness` por cliente; con él, la preparación no
+  pide nada más por fila. Sin él (API antigua), el hook pide contactos, centros y facturación de cada fila.
+- **Ayudas comunes** de los hooks (errores, fechas, direcciones de texto libre ↔ códigos oficiales) en
+  `src/views/comun/datos.ts`.
+
+#### Documentos en local
+
+Para subir y ver documentos con `npm run dev:real`, el navegador tiene que llegar a Storage, que en local
+(`127.0.0.1:54325`) no responde a CORS. Vite reenvía `/storage/v1` a Storage: pon en `apps/api/.env`
+`STORAGE_PUBLIC_URL=http://localhost:5173/storage/v1` y la API firmará las URL por ahí. La subida la hace el
+repositorio (`documents.upload`: URL firmada, `PUT` del fichero y registro), nunca la vista.
+
+#### Pendiente de API
+
+Lo que una pantalla ya enseña y `apps/api` aún no tiene se añade igualmente al contrato (`repositorios.ts`,
+con sus tipos al final de `tipos.ts`, en una forma provisional), con su implementación en memoria. Contra la
+API hay dos opciones, según lo que tenga sentido en real:
+
+- **Mostrarlo como «Disponible próximamente»**: `api.ts` rechaza con `ApiError` `no_disponible` (501) y la
+  pantalla pinta `Proximamente` en su lugar. Es lo que hace Mi ETT con `ettSettings` (datos legales de la
+  ETT, facturación, CCC, servicios, plantillas, portales, actividad, invitaciones, responsables de sucursal y
+  email y departamento de los usuarios). Es lo normal cuando son datos de la propia ETT: unos de ejemplo
+  mezclados con los reales llevarían a error.
+- **Seguir con los datos de ejemplo, avisando**: los datos de ejemplo van en un fichero aparte que importan
+  las dos implementaciones (no en `memoria.ts`, que no entra en la compilación del NAS) y el repositorio
+  lleva `sample: true` para que la pantalla avise. Es lo que hacen el buscador (`search`) y los avisos
+  (`notifications`) de la cabecera, con `src/data/ejemploCabecera.ts`.
+
+Cuando llega la ruta, se cambia la implementación de `api.ts` (y la forma en `tipos.ts`, si hace falta): la
+pantalla no se toca.
+
+Lo que en Empresas sigue sin API, de momento: el acceso de los contactos al Área de empresas (`portalAccess`,
+«Disponible próximamente»). El régimen de IVA de la facturación es un solo desplegable: sin causa especial
+(`vatSpecialCauseId` null) es «Régimen general (21 %)», las causas especiales salen de su tabla maestra y
+«Recargo de equivalencia» es `equivalenceSurcharge`. La lista pide el contacto principal de cada fila (columna
+«Contacto principal»).
+
+Lo que en Mi ETT sigue sin API, de momento: alta e invitación de usuarios y cambio de su rol o sus sucursales
+(la API solo los lista), el email de los usuarios (está en `auth.users`), la matriz de permisos (fija en la
+vista), el logotipo (Storage), la exportación a PDF y el registro de actividad. Las sucursales dadas de baja
+no se ven (la lista solo muestra las activas) y los CCC se asocian a la sucursal por su nombre.
 
 ## api
 
@@ -126,12 +231,17 @@ Todos los módulos siguen estas reglas.
 | 403 | `sin_ett_activa` | El token no trae ETT o el usuario ya no tiene acceso a ella |
 | 403 | `usuario_bloqueado` | Perfil bloqueado o inactivo |
 | 404 | `no_encontrado` | No existe **o es de otra ETT** (nunca se distingue) |
-| 409 | `conflicto` | Duplicado (p. ej. código de sociedad repetido) |
+| 409 | `conflicto` | Duplicado (p. ej. código de sociedad repetido; al restaurar, choca con algo activo) |
+| 409 | `en_uso` | No se puede eliminar porque ya se usa: desactivarlo o suspenderlo |
+| 409 | `conservacion_obligatoria` | Documento de un tipo que exige conservarlo: no se elimina |
 | 422 | `referencia_invalida` | Apunta a un registro que no existe en la ETT activa |
 | 500 | `error_interno` | Cualquier otra cosa (el detalle va solo al log) |
+| 503 | `servicio_no_disponible` | Supabase Storage no responde o la API no lo tiene configurado (documentos) |
 
 Desde el código: `throw new ApiError(status, code, mensaje)`, `notFound()`, `forbidden()`. Los errores de
-Postgres se traducen solos (`23505` → 409, `23503` → 422, `42501` → 403...).
+Postgres se traducen solos (`23505` → 409, `23503` → 422, `42501` → 403...). Las reglas de negocio de los triggers
+con `errcode` `TN409`, `TN422`, `TNUSE` (`en_uso`) o `TNRET` (`conservacion_obligatoria`) llegan con su mensaje (en
+español) y ese estado.
 
 **Paginación**: las listas que pueden crecer aceptan `?limit=` (1–200, por defecto 50) y `?offset=` y devuelven
 
@@ -156,7 +266,7 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 - El superadmin (tabla `platform_admins`) tiene todos los permisos en la ETT activa.
 - Un permiso nuevo se añade en una migración (ver "Reglas para tablas nuevas" en `db/README.md`).
 
-### Rutas de esta fase
+### Rutas
 
 | Ruta | Permiso |
 |---|---|
@@ -170,9 +280,54 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `POST /v1/branches`, `PATCH /v1/branches/{id}` (al marcar una por defecto, la anterior deja de serlo) | `branches.manage` |
 | `GET /v1/roles`, `GET /v1/roles/{id}`, `GET /v1/permissions` | miembro |
 | `GET /v1/memberships`, `GET /v1/memberships/{id}` | `users.manage` |
+| `GET /v1/catalogs/autonomous-communities`, `/provinces?autonomousCommunityCode=`, `/municipalities?provinceCode=&q=` (exige uno de los dos), `/municipalities/{code}`, `/countries?q=`, `/contract-keys?includeInactive=`: catálogos oficiales, de solo lectura | token (aunque no tenga ETT) |
+| `GET`, `POST /v1/addresses`; `GET`, `PATCH`, `DELETE /v1/addresses/{id}`: con los códigos oficiales de municipio, provincia y país | miembro; escribir, `addresses.write` |
+| `/v1/collective-agreements`, `/v1/professional-categories`, `/v1/contract-types`, `/v1/payroll-concepts`: listar (filtros, `?q=`, `?status=`), ver, crear, editar y dar de baja (`DELETE`, baja lógica) | miembro; escribir, `labor_catalogs.manage` |
+| `/v1/clients` (`?q=` busca en código, razón social, nombre comercial y NIF; `?status=`, `?companyId=`, `?branchId=`, `?blocked=`, `?sectorCode=`), `/v1/client-centers?clientId=&branchId=`, `/v1/client-contacts?clientId=&centerId=&suspended=`: listar, ver (cada cliente trae `readiness: { centers, contacts, hasBilling }`, de solo lectura), crear, editar y eliminar (baja lógica recuperable: `?deleted=true` lista solo lo eliminado y `POST /{id}/restore` lo restaura; 409 `en_uso` si ya se ha usado) | miembro; escribir, `clients.manage` en la sucursal del cliente o del centro |
+| `GET`, `PUT /v1/clients/{id}/billing`: facturación del cliente (`PUT` crea o actualiza; devuelve `warnings` si el plazo de pago supera el legal) | `clients.billing.manage` |
+| `GET /v1/cnae?q=&level=section\|division&parentCode=`: actividades CNAE-2009 (sector de los clientes), catálogo oficial | token |
+| `GET /v1/catalog-types`: tipos de tabla maestra (lista cerrada) | token |
+| `/v1/catalog-items?type=` (obligatorio; `?q=`, `?status=`, `?parentId=`): tablas maestras de la ETT. Listar, ver, crear (`type` y `name`; `code` opcional), editar (el tipo no cambia) y dar de baja. Nombre único por tipo sin distinguir mayúsculas (409) | miembro; escribir, `catalogs.manage` |
+| `GET /v1/activity?entityType=&entityId=&includeChildren=`: historial de una ficha, lo último primero, paginado | quien ve la ficha (la facturación, con `clients.billing.manage`) |
+| `POST /v1/documents/uploads`, `POST /v1/documents`, `GET /v1/documents` (`?entityType=&entityId=&typeId=&status=&visibleInPortal=&expiresBefore=&q=&deleted=`), `GET`, `PATCH`, `DELETE /v1/documents/{id}`, `POST /v1/documents/{id}/restore`, `GET /v1/documents/{id}/download`: documentos de clientes y centros (ver "Documentos") | leer, quien ve la ficha; escribir, quien puede editarla (`clients.manage` en su sucursal) |
 
-Fuera de esta fase: alta e invitación de usuarios (necesita la `service_role`), edición de roles y membresías,
-direcciones y borrado.
+Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
+sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
+Opciones de `crud.ts` además de las básicas: `branchColumn` (la lista acepta `?branchId=` con una o varias sucursales
+separadas por comas; hoy en clientes y centros), `createOnly` (campos que no se editan), `columnAliases` (campo de la
+API con otro nombre de columna) y `restorable` (eliminar recuperable: `?deleted=true`, `POST /{id}/restore` y 409
+`en_uso`; el esquema y las columnas tienen que incluir `deletedAt`; hoy en clientes, centros y contactos).
+
+**Filtro por sucursal.** `GET /v1/me` → `branches` son las sucursales con las que puede trabajar el usuario (todas si su
+rol abarca la ETT). La web enseña el filtro «Todas las sucursales» si hay más de una y lo pasa como
+`?branchId=id1,id2`. Ver otras sucursales no está prohibido en todas las listas (los clientes los ven todos): el
+filtro es para trabajar, las RLS siguen mandando.
+
+### Documentos
+
+Los ficheros están en Supabase Storage (bucket privado `documents`, ver `db/README.md`). La API firma las URL con la
+`service_role` y la web sube y descarga directamente contra Storage:
+
+1. `POST /v1/documents/uploads` `{ entityType, entityId, fileName, mimeType, sizeBytes }` → `201 { storagePath,
+   uploadUrl, expiresIn }`. Comprueba que puede editar la ficha (403/404) y que es PDF, JPG o PNG de hasta 10 MB (400).
+   `uploadUrl` caduca a los **60 segundos** (lo fija Storage): pedirla justo antes de subir cada fichero.
+2. `PUT uploadUrl` con el fichero como cuerpo y `Content-Type: <mimeType>` (sin token: la URL ya va firmada).
+3. `POST /v1/documents` `{ entityType, entityId, storagePath, typeId, name, status?, expiresOn?, visibleInPortal?,
+   notes? }` → `201 Document`. Comprueba que el fichero está en Storage (si no, 422) y toma de ahí el tamaño y el tipo.
+   `status` solo `pending` (por defecto) o `draft`.
+
+Después: `PATCH /v1/documents/{id}` cambia tipo, nombre, estado (`"validated"` valida y pone quién y cuándo),
+caducidad, visibilidad y notas; `GET /v1/documents/{id}/download` → `{ url, expiresIn }` (5 minutos; descarga con el
+nombre del documento); `DELETE` lo elimina (baja lógica: el fichero se conserva, sale con `?deleted=true` y se restaura
+con `POST /v1/documents/{id}/restore`) y deja rastro en el historial, salvo que su tipo sea de conservación obligatoria
+(`retentionRequired`: 409 `conservacion_obligatoria`).
+
+Variables: `STORAGE_URL` (desde la API), `STORAGE_PUBLIC_URL` (como lo ve el navegador; por defecto `STORAGE_URL`) y
+`SUPABASE_SERVICE_ROLE_KEY`. Sin ellas la API arranca, pero las rutas de ficheros responden 503. En local, en
+`.env.example` (Storage en `127.0.0.1:54325`); en el NAS, en `infra/nas/docker-compose.override.yml`.
+
+Pendiente: alta e invitación de usuarios (necesita la `service_role`), edición de roles y membresías, y borrado
+de sociedades y sucursales.
 
 ### Tests
 
@@ -184,7 +339,7 @@ sh db/local/reset.sh
 cd apps/api && npm test
 ```
 
-Van contra la base local (Postgres + Auth de `db/local/`, nunca el NAS) con los datos ficticios de
+Van contra la base local (Postgres + Auth + Storage de `db/local/`, nunca el NAS) con los datos ficticios de
 `db/tests/_fixtures.sql` (ETT A y B), que se confirman al empezar y se borran al terminar; la ETT DEMO no se toca.
 Los tokens se firman con el `JWT_SECRET` local y los claims que daría el hook. Comprueban que con un token
 de la ETT A la API nunca devuelve ni modifica nada de la B, que sin token o con un token manipulado responde 401,

@@ -34,6 +34,10 @@ services:
       SUPABASE_JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGINS: https://demo.${DOMAIN}
       PORT: 3000
+      # Documentos: la API firma las URL de Storage con la service_role (la web nunca la tiene).
+      STORAGE_URL: http://storage:5000
+      STORAGE_PUBLIC_URL: https://api.${DOMAIN}/storage/v1
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
 
   # Único servicio expuesto a internet (puerto 443 del router → CADDY_HTTPS_PORT del NAS).
   caddy:
@@ -54,6 +58,7 @@ services:
     volumes:
       - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ../../caddy/site:/srv/demo:ro
+      - ../../caddy/site-ejemplo:/srv/ejemplo:ro
       - caddy-data:/data
       - caddy-config:/config
 
