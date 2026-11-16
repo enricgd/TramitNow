@@ -622,6 +622,24 @@ Centros visibles para cada usuario portal.
 
 ### 04. Ofertas y precios
 
+> **Implementado en la fase 4 de otra forma** (`db/migrations/20261117000100_quotes.sql`, detalle en `db/README.md`,
+> "Fase 4: presupuestos"). Las tablas de abajo son el modelo heredado y quedan como referencia. Lo que cambia:
+>
+> - `offers` → `quotes` (número, sociedad, sucursal, cliente, obsoleto) + `quote_versions` (cada versión es una copia
+>   completa con su estado: borrador, en preparación, enviado, pendiente de firma, aceptado, rechazado con motivo,
+>   sustituido u obsoleto). Los datos del puesto (convenio, categoría, salario, pagas, horas) pasan de la oferta al
+>   puesto: una oferta tiene varios puestos con convenios distintos.
+> - `offer_calculation_settings` → en la versión: margen objetivo (% o €/h), tipos de la Seguridad Social y costes
+>   internos (jsonb, con valor por defecto que cada puesto puede desmarcar o cambiar en % o €/h).
+> - `offer_price_lines` → `quote_positions` (personas, horas, tarifa, margen propio, versión del convenio global usada
+>   y su periodo, mínimo por hora del convenio, campos cambiados a mano) con sus conceptos extra (jsonb; `print`
+>   sustituye a `print_offer`; `print_invoice_cpd`, `print_salary_cpd` y `print_contract` llegarán con Peticiones y
+>   Contratos).
+> - Fuera: `crm_offer_ref`, `is_agrarian`, `ss_regime_id`, `printed`/`printed_at` (el PDF queda como documento),
+>   `part_time_coefficient` y `it_ims_percent` (el AT/EP va en los tipos de la Seguridad Social de la versión).
+> - Nuevo: aprobación del margen por debajo del mínimo (quién y cuándo), salario nunca por debajo del convenio de la
+>   empresa usuaria (art. 11 Ley 14/1994) comprobado en la base de datos, y el cálculo guardado (`calc_*`).
+
 #### offers
 
 Oferta comercial enviada al cliente.
