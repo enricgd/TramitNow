@@ -254,8 +254,11 @@ export type Client = Stamped & {
   sectorCode: string | null;
   /** Convenio por defecto: lo heredan los centros sin convenio propio. */
   defaultAgreementId: string | null;
+  /** Solo lectura, en las listas: centros y contactos activos y si tiene datos de facturación. */
+  readiness?: ClientReadiness;
 } & Deleted;
-export type ClientInput = Partial<Omit<Client, keyof Stamped | 'deletedAt'>>;
+export type ClientReadiness = { centers: number; contacts: number; hasBilling: boolean };
+export type ClientInput = Partial<Omit<Client, keyof Stamped | 'deletedAt' | 'readiness'>>;
 export type ClientCreate = ClientInput & Pick<Client, 'companyId' | 'branchId' | 'code' | 'legalName'>;
 /** `branchId`: una o varias sucursales separadas por comas. `deleted`: solo los eliminados. */
 export type ClientQuery = PageQuery & { q?: string; status?: ClientStatus; companyId?: string; branchId?: string; blocked?: boolean; deleted?: boolean };
@@ -291,7 +294,8 @@ export type ClientCenterInput = Partial<Omit<ClientCenter, keyof Stamped | 'dele
 export type ClientCenterCreate = ClientCenterInput & Pick<ClientCenter, 'clientId' | 'branchId' | 'code' | 'name'>;
 export type ClientCenterQuery = PageQuery & { q?: string; clientId?: string; branchId?: string; deleted?: boolean };
 
-export type ContactRole = 'commercial' | 'requester' | 'operations' | 'billing' | 'hr' | 'prevention' | 'management';
+/** other: «Otro», con su texto en otherRole (obligatorio con este rol; sin él, null). */
+export type ContactRole = 'commercial' | 'requester' | 'operations' | 'billing' | 'hr' | 'prevention' | 'management' | 'other';
 export type ClientContact = Stamped & {
   clientId: string;
   centerId: string | null;
@@ -319,8 +323,11 @@ export type ClientContact = Stamped & {
   otherRole: string | null;
   /** Suspendido: no recibe presupuestos ni avisos. Se reactiva. */
   suspended: boolean;
+  /** Solo lectura: cuándo y quién lo suspendió. */
+  suspendedAt?: string | null;
+  suspendedBy?: string | null;
 } & Deleted;
-export type ClientContactInput = Partial<Omit<ClientContact, keyof Stamped | 'deletedAt'>>;
+export type ClientContactInput = Partial<Omit<ClientContact, keyof Stamped | 'deletedAt' | 'suspendedAt' | 'suspendedBy'>>;
 export type ClientContactCreate = ClientContactInput & Pick<ClientContact, 'clientId' | 'name'>;
 export type ClientContactQuery = PageQuery & { q?: string; clientId?: string; centerId?: string; deleted?: boolean };
 
@@ -353,11 +360,6 @@ export type ClientBilling = Stamped & {
   offerCoefficient: number | null;
   /** Factura de horas: una línea por persona o por concepto (con anexo por persona). */
   invoiceLayout: InvoiceLayout;
-  /**
-   * Régimen de IVA (tabla maestra vat_regime). No está en el contrato de la fase 2: si la API no lo devuelve,
-   * la pantalla lo muestra como «Disponible próximamente».
-   */
-  vatRegimeId?: string | null;
 };
 export type InvoiceLayout = 'by_person' | 'by_concept';
 export type ClientBillingInput = Partial<Omit<ClientBilling, keyof Stamped | 'clientId'>>;
@@ -373,7 +375,7 @@ export type Cnae = { code: string; name: string; level: 'section' | 'division' |
 export type CnaeQuery = { q?: string; level?: 'section' | 'division' };
 
 /** Tablas maestras simples de la ETT (catalog_items): sectores, formas de pago, tipos de documento... */
-export type CatalogItemType = 'payment_method' | 'vat_regime' | 'document_type' | 'sector' | (string & {});
+export type CatalogItemType = 'payment_method' | 'vat_special_cause' | 'document_type' | 'sector' | (string & {});
 export type CatalogItem = Stamped & {
   type: CatalogItemType;
   code: string | null;

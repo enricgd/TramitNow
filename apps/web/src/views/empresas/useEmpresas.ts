@@ -21,6 +21,7 @@ import {
   type ClientBilling,
   type ClientCenter,
   type ClientContact,
+  type ClientReadiness,
   type ContactPortalAccess,
   type ContactRole,
   type InvoiceLayout,
@@ -82,12 +83,9 @@ export type CentroVista = DireccionVista & {
 export type FacturacionVista = {
   paymentMethod: string;
   fixedPayDays: string;
+  /** «Régimen general (21 %)», la causa especial de IVA o «Recargo de equivalencia». */
   vatRegime: string;
-  /** false si la API aún no tiene el régimen de IVA del cliente. */
-  vatRegimeDisponible: boolean;
   facturaDetalle: 'concepto' | 'persona';
-  /** false si la API aún no tiene invoiceLayout (fase 2). */
-  facturaDetalleDisponible: boolean;
   tieneIban: boolean;
   riskLimit: string;
   isComplete: boolean;
@@ -172,7 +170,7 @@ const DESTINATARIO = 'Destinatario de Presupuestos';
 function etiquetasContacto(c: ClientContact): string[] {
   const roles = ROLES.filter(([r]) => c.roles.includes(r)).map(([, t]) => t);
   if (c.validatesHours) roles.push(VALIDA_HORAS);
-  if (c.otherRole) roles.push(c.otherRole);
+  if (c.roles.includes('other') && c.otherRole) roles.push(c.otherRole);
   if (c.isQuoteRecipient) roles.push(DESTINATARIO);
   return roles;
 }
@@ -180,11 +178,10 @@ function etiquetasContacto(c: ClientContact): string[] {
 function rolesDeEtiquetas(types: string[]) {
   const conocidas = new Map(ROLES.map(([r, t]) => [t, r]));
   const otros = types.filter((t) => !conocidas.has(t) && t !== VALIDA_HORAS && t !== DESTINATARIO);
-  return {
-    roles: types.filter((t) => conocidas.has(t)).map((t) => conocidas.get(t)!),
-    validatesHours: types.includes(VALIDA_HORAS),
-    otherRole: otros.length ? otros.join(', ') : null,
-  };
+  const roles = types.filter((t) => conocidas.has(t)).map((t) => conocidas.get(t)!);
+  // «Otro»: el rol other con su texto (la API exige los dos juntos).
+  if (otros.length) roles.push('other');
+  return { roles, validatesHours: types.includes(VALIDA_HORAS), otherRole: otros.length ? otros.join(', ') : null };
 }
 
 // Días fijos de pago: números (31 = último día del mes) ↔ texto de la pantalla.
@@ -205,6 +202,10 @@ function diasDeTexto(texto: string): number[] | null {
   if (unicos.length > 3) throw new ApiError(400, 'validacion', 'Como mucho, tres días fijos de pago');
   return unicos;
 }
+
+// Régimen de IVA en un solo desplegable: sin causa especial es el general; el recargo es equivalenceSurcharge.
+const IVA_GENERAL = 'Régimen general (21 %)';
+const IVA_RECARGO = 'Recargo de equivalencia';
 
 const DISENO_FACTURA: Record<InvoiceLayout, FacturacionVista['facturaDetalle']> = { by_concept: 'concepto', by_person: 'persona' };
 const ESTADOS_DOC: Record<StoredDocument['status'], string> = { validated: 'Validado', pending: 'Pendiente de validar', draft: 'Borrador' };
@@ -230,6 +231,19 @@ function preparacion(contactos: ClientContact[] | null, centros: ClientCenter[] 
   return { readiness, readinessLabel };
 }
 
+/** Preparación con el resumen de GET /v1/clients: contactos y centros activos y si tiene datos de facturación. */
+function preparacionResumen(r: ClientReadiness) {
+  const readiness: Preparacion = { basic: true, quote: r.contacts > 0, operations: r.centers > 0, billing: r.hasBilling };
+  const readinessLabel = !readiness.quote
+    ? 'Alta básica (Falta contacto)'
+    : !readiness.operations
+      ? 'Lista para presupuestar'
+      : readiness.billing
+        ? 'Facturación y Operativa listas'
+        : 'Petición operativa lista';
+  return { readiness, readinessLabel };
+}
+
 // ---------------------------------------------------------------------------
 // Catálogos de la pantalla: responsables, sectores (CNAE), convenios y tablas maestras
 // ---------------------------------------------------------------------------
@@ -238,7 +252,7 @@ type Catalogos = {
   responsables: { id: string; nombre: string }[];
   sectores: { code: string; name: string }[];
   convenios: { id: string; nombre: string }[];
-  items: Record<'payment_method' | 'vat_regime' | 'document_type', CatalogItem[]>;
+  items: Record<'payment_method' | 'vat_special_cause' | 'document_type', CatalogItem[]>;
 };
 
 const lista = <T>(p: Promise<{ data: T[] }>) => p.then((r) => r.data, () => [] as T[]);
@@ -249,18 +263,18 @@ async function cargarCatalogos(r: Repositories): Promise<Catalogos> {
     r.cnae.list({ level: 'division' }).catch(() => []),
     lista(r.collectiveAgreements.list({ status: 'active', limit: 200 })),
     lista(r.catalogItems.list({ type: 'payment_method', status: 'active', limit: 200 })),
-    lista(r.catalogItems.list({ type: 'vat_regime', status: 'active', limit: 200 })),
+    lista(r.catalogItems.list({ type: 'vat_special_cause', status: 'active', limit: 200 })),
     lista(r.catalogItems.list({ type: 'document_type', status: 'active', limit: 200 })),
   ]);
   return {
     responsables: miembros.map((m) => ({ id: m.userId, nombre: m.fullName })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
     sectores: sectores.map((s) => ({ code: s.code, name: s.name })),
     convenios: convenios.map((c) => ({ id: c.id, nombre: c.name })),
-    items: { payment_method: pago, vat_regime: iva, document_type: docs },
+    items: { payment_method: pago, vat_special_cause: iva, document_type: docs },
   };
 }
 
-const VACIO: Catalogos = { responsables: [], sectores: [], convenios: [], items: { payment_method: [], vat_regime: [], document_type: [] } };
+const VACIO: Catalogos = { responsables: [], sectores: [], convenios: [], items: { payment_method: [], vat_special_cause: [], document_type: [] } };
 
 // ---------------------------------------------------------------------------
 // Carga de la lista y de la ficha
@@ -322,14 +336,12 @@ function contactoVista(c: ClientContact, portal: Record<string, ContactPortalAcc
 }
 
 function facturacionVista(b: ClientBilling | null, cat: Catalogos): FacturacionVista {
-  const nombre = (tipo: 'payment_method' | 'vat_regime', id: string | null | undefined) => cat.items[tipo].find((i) => i.id === id)?.name ?? '';
+  const nombre = (tipo: 'payment_method' | 'vat_special_cause', id: string | null | undefined) => cat.items[tipo].find((i) => i.id === id)?.name ?? '';
   return {
     paymentMethod: nombre('payment_method', b?.paymentMethodId),
     fixedPayDays: b ? textoDiasPago(b.fixedPaymentDays) : '',
-    vatRegime: nombre('vat_regime', b?.vatRegimeId),
-    vatRegimeDisponible: !b || 'vatRegimeId' in b,
-    facturaDetalle: DISENO_FACTURA[b?.invoiceLayout ?? 'by_concept'] ?? 'concepto',
-    facturaDetalleDisponible: !b || 'invoiceLayout' in b,
+    vatRegime: !b ? '' : b.equivalenceSurcharge ? IVA_RECARGO : nombre('vat_special_cause', b.vatSpecialCauseId) || IVA_GENERAL,
+    facturaDetalle: DISENO_FACTURA[b?.invoiceLayout ?? 'by_person'] ?? 'persona',
     tieneIban: !!b?.iban,
     riskLimit: b?.riskLimit ? euros(b.riskLimit) : '',
     isComplete: !!b?.paymentMethodId && !!b.iban,
@@ -425,15 +437,18 @@ async function cargarFila(r: Repositories, c: Client, ctx: Contexto): Promise<Em
   if (c.deletedAt) {
     return { ...empresaBase(c, vacia, ctx), ...preparacion(null, null, null), contacts: [], centers: [], billing: facturacionVista(null, ctx.cat), activity: [], documentos: [] };
   }
+  // Con el resumen de la lista (readiness) basta el contacto principal (el primero); con una API sin
+  // resumen, la preparación sale de los contactos, centros y facturación de la fila.
+  const resumen = c.readiness;
   const [contactos, centros, billing, dir] = await Promise.all([
-    r.clientContacts.list({ clientId: c.id, limit: 50 }).then((p) => p.data, () => []),
-    r.clientCenters.list({ clientId: c.id, limit: 50 }).then((p) => p.data, () => []),
-    r.clients.billing(c.id).then((b) => b.billing, () => null),
+    r.clientContacts.list({ clientId: c.id, limit: resumen ? 1 : 50 }).then((p) => p.data, () => []),
+    resumen ? null : r.clientCenters.list({ clientId: c.id, limit: 50 }).then((p) => p.data, () => []),
+    resumen ? null : r.clients.billing(c.id).then((b) => b.billing, () => null),
     direccion(r, c.addressId, ctx.provincias),
   ]);
   return {
     ...empresaBase(c, dir.vista, ctx),
-    ...preparacion(contactos, centros, billing),
+    ...(resumen ? preparacionResumen(resumen) : preparacion(contactos, centros ?? [], billing)),
     contacts: contactos.slice(0, 1).map((x) => contactoVista(x, null)),
     centers: [],
     billing: facturacionVista(billing, ctx.cat),
@@ -446,18 +461,6 @@ async function cargarFila(r: Repositories, c: Client, ctx: Contexto): Promise<Em
 // Hook
 // ---------------------------------------------------------------------------
 
-/**
- * Campos nuevos de la fase 2 (contrato con el backend). Mientras la API no los tenga, rechaza el cuerpo entero
- * («Llaves desconocidas»): se envían solo si tienen valor o si el registro ya los trae.
- */
-const CAMPOS_FASE_2 = ['sectorCode', 'defaultAgreementId', 'validatesHours', 'otherRole', 'suspended'] as const;
-function sinCamposNuevosVacios<T extends object>(datos: T, registro?: object): T {
-  const copia = { ...datos } as Record<string, unknown>;
-  for (const campo of CAMPOS_FASE_2) {
-    if (campo in copia && !copia[campo] && !(registro && campo in registro)) delete copia[campo];
-  }
-  return copia as T;
-}
 
 type Filtros = {
   busqueda: string;
@@ -563,7 +566,7 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
   // opción nueva antes de que la API la devuelva, así que se guarda la promesa por nombre.
   const pendientes = useRef(new Map<string, Promise<CatalogItem>>());
   const anadirOpcion = useCallback(
-    (tipo: 'payment_method' | 'vat_regime' | 'document_type', nombre: string) => {
+    (tipo: 'payment_method' | 'vat_special_cause' | 'document_type', nombre: string) => {
       const clave = `${tipo}:${nombre.toLowerCase()}`;
       const p = repos.catalogItems.create({ type: tipo, name: nombre }).finally(() => catalogos.reload());
       pendientes.current.set(clave, p);
@@ -572,7 +575,7 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
     [catalogos.reload],
   );
   const idOpcion = useCallback(
-    async (tipo: CatalogItemType & ('payment_method' | 'vat_regime' | 'document_type'), nombre: string) => {
+    async (tipo: CatalogItemType & ('payment_method' | 'vat_special_cause' | 'document_type'), nombre: string) => {
       if (!nombre) return null;
       const existente = ctx.cat.items[tipo].find((i) => i.name.toLowerCase() === nombre.toLowerCase());
       if (existente) return existente.id;
@@ -617,7 +620,7 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
     if (esEdicion && ficha) {
       const addressId = await guardarDireccion(ficha.address, dir);
       try {
-        await repos.clients.update(ficha.client.id, sinCamposNuevosVacios({ ...datos, addressId }, ficha.client));
+        await repos.clients.update(ficha.client.id, { ...datos, addressId });
       } catch (e) {
         await quitarDireccionNueva(addressId, ficha.client.addressId);
         throw e;
@@ -632,7 +635,7 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
       for (let intento = 0; ; intento++) {
         try {
           const creada = await repos.clients.create({
-            ...sinCamposNuevosVacios(datos),
+            ...datos,
             companyId: b.companyId,
             branchId: b.id,
             code: await siguienteCodigo(intento),
@@ -679,9 +682,8 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
     const anterior = d.isMain ? ficha.contactos.find((c) => c.isMain && c.id !== d.id) : undefined;
     if (anterior) await repos.clientContacts.update(anterior.id, { isMain: false });
     try {
-      const actual = ficha.contactos.find((c) => c.id === d.id);
-      if (d.id) await repos.clientContacts.update(d.id, sinCamposNuevosVacios(datos, actual));
-      else await repos.clientContacts.create({ ...sinCamposNuevosVacios(datos, ficha.contactos[0]), clientId: ficha.client.id });
+      if (d.id) await repos.clientContacts.update(d.id, datos);
+      else await repos.clientContacts.create({ ...datos, clientId: ficha.client.id });
     } catch (e) {
       if (anterior) await repos.clientContacts.update(anterior.id, { isMain: true }).catch(() => {});
       throw e;
@@ -771,7 +773,9 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
       campo === 'paymentMethod'
         ? { paymentMethodId: await idOpcion('payment_method', valor) }
         : campo === 'vatRegime'
-          ? { vatRegimeId: await idOpcion('vat_regime', valor) }
+          ? valor === IVA_GENERAL || valor === IVA_RECARGO
+            ? { vatSpecialCauseId: null, equivalenceSurcharge: valor === IVA_RECARGO }
+            : { vatSpecialCauseId: await idOpcion('vat_special_cause', valor), equivalenceSurcharge: false }
           : campo === 'fixedPayDays'
             ? { fixedPaymentDays: diasDeTexto(valor) }
             : { invoiceLayout: (valor === 'persona' ? 'by_person' : 'by_concept') as InvoiceLayout };
@@ -828,7 +832,7 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
   // --- Resultado ----------------------------------------------------------------
 
   const cat = ctx.cat;
-  const nombres = (tipo: 'payment_method' | 'vat_regime' | 'document_type') => cat.items[tipo].map((i) => i.name);
+  const nombres = (tipo: 'payment_method' | 'vat_special_cause' | 'document_type') => cat.items[tipo].map((i) => i.name);
   const errorLista = catalogos.error ?? listaData.error;
   const total = listaData.data?.total ?? 0;
 
@@ -857,7 +861,7 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
       convenios: cat.convenios,
       formasPago: nombres('payment_method'),
       diasPago: DIAS_PAGO.map(textoDiasPago),
-      regimenesIva: nombres('vat_regime'),
+      regimenesIva: [IVA_GENERAL, ...nombres('vat_special_cause'), IVA_RECARGO],
       tiposDocumento: nombres('document_type'),
       anadirOpcion,
       /** Usuario de la sesión: responsable por defecto de las empresas nuevas. */

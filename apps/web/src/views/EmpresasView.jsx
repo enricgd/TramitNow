@@ -1156,12 +1156,10 @@ return (
                   <div>
                     <label className="text-slate-500 text-[11px] font-semibold">Cómo quiere las facturas de horas</label>
                     <div className="mt-1">
-                      {currentCompany.billing.facturaDetalleDisponible ? (
-                      <Select value={currentCompany.billing.facturaDetalle || 'concepto'} onChange={(e) => actualizarFacturacion('facturaDetalle', e.target.value)} className="w-full" aria-label="Cómo quiere las facturas de horas">
+                      <Select value={currentCompany.billing.facturaDetalle || 'persona'} onChange={(e) => actualizarFacturacion('facturaDetalle', e.target.value)} className="w-full" aria-label="Cómo quiere las facturas de horas">
                         <option value="concepto">Por concepto: una línea por tipo de hora, con anexo de horas e importe por persona</option>
                         <option value="persona">Por persona: una línea por persona y tipo de hora</option>
                       </Select>
-                      ) : <Badge>Disponible próximamente</Badge>}
                     </div>
                     <p className="mt-1 text-[11px] text-slate-400">Es lo que sale al preparar cada factura en Facturación; allí se puede cambiar en una factura concreta.</p>
                   </div>
@@ -1169,16 +1167,14 @@ return (
                   <div>
                     <label className="text-slate-500 text-[11px] font-semibold">Régimen de IVA aplicable</label>
                     <div className="mt-1">
-                      {currentCompany.billing.vatRegimeDisponible ? (
                       <SelectConAlta
                         value={currentCompany.billing.vatRegime || ''}
                         onChange={(v) => actualizarFacturacion('vatRegime', v)}
                         options={cat.regimenesIva}
-                        onAdd={anadirOpcion('vat_regime')}
+                        onAdd={anadirOpcion('vat_special_cause')}
                         placeholder="Selecciona una opción"
-                        nuevoPlaceholder="Ej. Régimen especial agrario"
+                        nuevoPlaceholder="Otra causa especial de IVA"
                       />
-                      ) : <Badge>Disponible próximamente</Badge>}
                     </div>
                   </div>
                 </div>

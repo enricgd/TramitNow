@@ -104,9 +104,11 @@ Lo que añadió Empresas, para copiarlo en las siguientes:
   desactivar, dar de baja). Los documentos de conservación obligatoria no se ofrecen para eliminar.
 - **Tablas maestras en los desplegables**: `SelectConAlta` con los nombres de `catalogItems`; «+ Añadir» crea
   la opción en la API (`catalogos.anadirOpcion`) y el hook traduce nombre ↔ id al guardar.
-- **Campos nuevos antes que la API**: si el contrato añade campos que la API local aún no tiene, la API rechaza
-  el cuerpo entero («Llaves desconocidas»). El hook envía esos campos solo con valor (`sinCamposNuevosVacios`),
-  y `mensajeError` convierte ese error en «Disponible próximamente: la API aún no admite …».
+- **Campos nuevos antes que la API**: si la web va por delante de la API local, la API rechaza el cuerpo entero
+  («Llaves desconocidas») y `mensajeError` lo muestra como «Disponible próximamente: la API aún no admite …».
+  Para probar en `dev:real`, mejor fusionar en local la rama del backend que trae esos campos.
+- **Resumen en la lista**: `GET /v1/clients` trae (o traerá) `readiness` por cliente; con él, la preparación no
+  pide nada más por fila. Sin él (API antigua), el hook pide contactos, centros y facturación de cada fila.
 - **Ayudas comunes** de los hooks (errores, fechas, direcciones de texto libre ↔ códigos oficiales) en
   `src/views/comun/datos.ts`.
 
@@ -136,10 +138,11 @@ API hay dos opciones, según lo que tenga sentido en real:
 Cuando llega la ruta, se cambia la implementación de `api.ts` (y la forma en `tipos.ts`, si hace falta): la
 pantalla no se toca.
 
-Lo que en Empresas sigue sin API, de momento: el acceso de los contactos al Área de empresas
-(`portalAccess`, «Disponible próximamente») y el régimen de IVA del cliente (`vatRegimeId`, fuera del contrato
-de la fase 2). La lista pide contactos, centros y facturación de cada fila para la preparación y el contacto
-principal; con un resumen en `GET /v1/clients` bastaría una petición.
+Lo que en Empresas sigue sin API, de momento: el acceso de los contactos al Área de empresas (`portalAccess`,
+«Disponible próximamente»). El régimen de IVA de la facturación es un solo desplegable: sin causa especial
+(`vatSpecialCauseId` null) es «Régimen general (21 %)», las causas especiales salen de su tabla maestra y
+«Recargo de equivalencia» es `equivalenceSurcharge`. La lista pide el contacto principal de cada fila (columna
+«Contacto principal»).
 
 Lo que en Mi ETT sigue sin API, de momento: alta e invitación de usuarios y cambio de su rol o sus sucursales
 (la API solo los lista), el email de los usuarios (está en `auth.users`), la matriz de permisos (fija en la

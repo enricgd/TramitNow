@@ -62,12 +62,13 @@ const item = (n: number, type: CatalogItemType, name: string, retentionRequired 
   id: id(n), type, code: null, name, parentId: null, metadata: null, status: 'active', retentionRequired, ...stamp,
 });
 // Los valores de ejemplo de las notas del diseño (formas de pago, IVA y tipos de documento, por confirmar).
+// IVA: sin causa especial es el régimen general (21 %); el recargo de equivalencia es equivalenceSurcharge.
 const catalogItems: CatalogItem[] = [
   ...['Transferencia a 30 días', 'Transferencia a 60 días', 'Recibo SEPA a 30 días', 'Recibo SEPA a 60 días', 'Confirming a 90 días', 'Al contado'].map(
     (n, i) => item(300 + i, 'payment_method', n),
   ),
-  ...['Régimen general 21 %', 'Reducido 10 %', 'Exento', 'Inversión del sujeto pasivo', 'Recargo de equivalencia', 'IGIC (Canarias)'].map((n, i) =>
-    item(310 + i, 'vat_regime', n),
+  ...['Exento', 'Inversión del sujeto pasivo', 'IGIC (Canarias)', 'Operación intracomunitaria'].map((n, i) =>
+    item(310 + i, 'vat_special_cause', n),
   ),
   ...['Acuerdo de confidencialidad', 'CIF', 'Certificado de Hacienda', 'Certificado de la Seguridad Social', 'Escrituras', 'Mandato SEPA', 'Póliza de seguro'].map(
     (n, i) => item(320 + i, 'document_type', n),
@@ -152,6 +153,7 @@ const contact = (n: number, clientId: string, name: string, position: string, da
   id: id(n), clientId, centerId: null, name, position, department: null, phone: null, mobile: null, email: null, roles: [],
   isMain: false, isQuoteRecipient: false, signsCpds: false, documentType: null, documentNumber: null, receivesDigitalSignature: false,
   sendCollectionClaims: false, invoiceSendType: null, sortOrder: null, notes: null, validatesHours: false, otherRole: null,
+  suspendedAt: null, suspendedBy: null,
   suspended: false, deletedAt: null, ...stamp, ...data,
 });
 const contacts: ClientContact[] = [
@@ -180,19 +182,20 @@ const emptyBilling = (clientId: string, n?: number): ClientBilling => ({
   sendInvoicesByPostalMail: false, generateEInvoice: false, fixedInvoiceText: null, fixedInvoiceTextPosition: null,
   vatSpecialCauseId: null, equivalenceSurcharge: false, retentionTypeId: null, riskLimit: null, riskNotes: null,
   accountingAccount: null, supplierReference: null, sellerUserId: null, statisticalSectorId: null,
-  offerMarginPercent: null, offerCoefficient: null, invoiceLayout: 'by_concept', vatRegimeId: null, ...stamp,
+  offerMarginPercent: null, offerCoefficient: null, invoiceLayout: 'by_person', ...stamp,
 });
 const billings: ClientBilling[] = [
   {
     ...emptyBilling(id(100), 130), paymentMethodId: catalogId('payment_method', 'Transferencia a 60 días'), paymentTermDays: 60,
-    fixedPaymentDays: [10, 25], vatRegimeId: catalogId('vat_regime', 'Régimen general 21 %'), riskLimit: 30000,
+    fixedPaymentDays: [10, 25], invoiceLayout: 'by_concept', riskLimit: 30000,
     riskNotes: 'Pendiente scoring de riesgo',
   },
   {
     ...emptyBilling(id(101), 131), paymentMethodId: catalogId('payment_method', 'Confirming a 90 días'), paymentTermDays: 60,
-    vatRegimeId: catalogId('vat_regime', 'Régimen general 21 %'), iban: 'ES0000000000000000000000', riskLimit: 50000,
+    invoiceLayout: 'by_concept', iban: 'ES0000000000000000000000', riskLimit: 50000,
   },
-  { ...emptyBilling(id(103), 132), invoiceLayout: 'by_person' },
+  // Por persona (el valor por defecto) y con recargo de equivalencia, para ver las dos opciones.
+  { ...emptyBilling(id(103), 132), equivalenceSurcharge: true },
 ];
 const LEGAL_MAX_PAYMENT_DAYS = 60;
 const billingResult = (billing: ClientBilling) =>
@@ -297,6 +300,31 @@ function restaurar<T extends { id: string; deletedAt?: string | null; updatedAt:
 }
 const parentOf = (clientId: string) => clientId;
 
+/** Resumen de la lista de clientes (como GET /v1/clients): centros y contactos activos y si tiene facturación. */
+const conResumen = (c: Client): Client => ({
+  ...c,
+  readiness: {
+    centers: vivos(centers).filter((x) => x.clientId === c.id).length,
+    contacts: vivos(contacts).filter((x) => x.clientId === c.id).length,
+    hasBilling: billings.some((b) => b.clientId === c.id),
+  },
+});
+
+/** Un centro o contacto no se restaura con su cliente eliminado (409, como la API). */
+const clienteVivo = (clientId: string) => {
+  if (clients.find((c) => c.id === clientId)?.deletedAt) {
+    throw new ApiError(409, 'conflicto', 'Su empresa está eliminada: recupera antes la empresa');
+  }
+};
+/** otherRole: obligatorio con el rol other y vacío sin él (422, como la API). */
+const comprobarOtro = ({ roles, otherRole }: Pick<Partial<ClientContact>, 'roles' | 'otherRole'>) => {
+  if (!!roles?.includes('other') !== !!otherRole?.trim()) {
+    throw new ApiError(422, 'validacion', 'Con el rol «Otro» hay que escribir qué función tiene (y sin él, nada)');
+  }
+};
+const sello = (data: Partial<ClientContact>) =>
+  data.suspended ? { suspendedAt: new Date().toISOString(), suspendedBy: DEMO_USER.id } : { suspendedAt: null, suspendedBy: null };
+
 /** Convenio efectivo del centro: el propio o el de la empresa. */
 const conConvenio = (c: ClientCenter): ClientCenter => ({
   ...c,
@@ -320,7 +348,7 @@ export function memoryClientRepositories(): Pick<
                 matches(q.q, c.code, c.legalName, c.tradeName, c.taxId),
             ),
             (c) => c.legalName,
-          ),
+          ).map(conResumen),
           q,
         );
       },
@@ -342,8 +370,10 @@ export function memoryClientRepositories(): Pick<
         log('client', clientId, null, 'update', 'Datos de la empresa actualizados');
         return delay(c);
       },
+      // Como la API: sus centros y contactos se eliminan con él y vuelven al restaurarlo.
       async remove(clientId) {
         const c = eliminar(clients, clientId);
+        for (const x of [...vivos(centers), ...vivos(contacts)]) if (x.clientId === clientId) x.deletedAt = c.deletedAt;
         log('client', clientId, null, 'delete', `Empresa eliminada: ${c.legalName}`);
         await delay(null);
       },
@@ -352,6 +382,7 @@ export function memoryClientRepositories(): Pick<
         if (c.taxId && vivos(clients).some((x) => x.companyId === c.companyId && x.taxId === c.taxId)) {
           throw new ApiError(409, 'conflicto', 'Ya hay otra empresa activa con ese NIF');
         }
+        for (const x of [...centers, ...contacts]) if (x.clientId === clientId && x.deletedAt === c.deletedAt) x.deletedAt = null;
         restaurar(clients, clientId);
         log('client', clientId, null, 'restore', `Empresa recuperada: ${c.legalName}`);
         return delay(c);
@@ -405,6 +436,7 @@ export function memoryClientRepositories(): Pick<
       },
       async restore(centerId) {
         const c = find(centers, centerId);
+        clienteVivo(c.clientId);
         if (vivos(centers).some((x) => x.clientId === c.clientId && x.code === c.code)) {
           throw new ApiError(409, 'conflicto', `Ya hay otro centro activo con el código ${c.code}`);
         }
@@ -434,7 +466,8 @@ export function memoryClientRepositories(): Pick<
         if (!data.signsCpds && (data.documentType || data.documentNumber)) {
           throw new ApiError(422, 'validacion', 'Los datos no cumplen las reglas de la base de datos');
         }
-        const created = contact(0, data.clientId, data.name, data.position ?? '', { ...data, id: newId() });
+        comprobarOtro(data);
+        const created = contact(0, data.clientId, data.name, data.position ?? '', { ...data, id: newId(), ...sello(data) });
         contacts.push(created);
         log('client_contact', created.id, data.clientId, 'create', `Nuevo contacto: ${created.name}`);
         return delay(created);
@@ -444,7 +477,8 @@ export function memoryClientRepositories(): Pick<
         if (data.isMain && vivos(contacts).some((c) => c.clientId === actual.clientId && c.isMain && c.id !== contactId)) {
           throw new ApiError(409, 'conflicto', 'El cliente ya tiene un contacto principal');
         }
-        const c = touch(actual, data);
+        comprobarOtro({ roles: data.roles ?? actual.roles, otherRole: data.otherRole === undefined ? actual.otherRole : data.otherRole });
+        const c = touch(actual, { ...data, ...(data.suspended !== undefined && data.suspended !== actual.suspended ? sello(data) : {}) });
         const que = data.suspended === undefined || Object.keys(data).length > 1 ? 'modificado' : data.suspended ? 'suspendido' : 'reactivado';
         log('client_contact', contactId, c.clientId, 'update', `Contacto ${que}: ${c.name}`);
         return delay(c);
@@ -456,6 +490,7 @@ export function memoryClientRepositories(): Pick<
       },
       async restore(contactId) {
         const c = find(contacts, contactId);
+        clienteVivo(c.clientId);
         if (c.isMain && vivos(contacts).some((x) => x.clientId === c.clientId && x.isMain)) {
           throw new ApiError(409, 'conflicto', 'Ya hay otro contacto principal: quita esa marca antes de recuperarlo');
         }
