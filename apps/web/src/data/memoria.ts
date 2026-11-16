@@ -5,6 +5,7 @@ import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import { NOW, checkUniqueCode, delay, find, id, matches, newId, page, stamp, touch } from './memoriaBase';
 import { clientAddresses, memoryClientRepositories } from './memoriaEmpresas';
 import { memoryMiEttRepositories } from './memoriaMiEtt';
+import { memoryQuoteRepositories } from './memoriaPresupuestos';
 import type { CatalogRepository, Repositories } from './repositorios';
 import {
   ApiError,
@@ -258,7 +259,8 @@ const agreements: CollectiveAgreement[] = [
     autonomousCommunityCode: null, provinceCode: null, validFrom: '2025-01-01', validTo: null, notes: null, status: 'active', ...stamp,
   },
 ];
-const categories: ProfessionalCategory[] = [
+// 70-73: las de siempre; 600-607: las de los presupuestos de ejemplo (memoriaPresupuestos.ts), con su nivel.
+const categoriasBase: ProfessionalCategory[] = [
   ['MOZO', 'Mozo de almacén', id(61), '9811', 10],
   ['CARR', 'Carretillero', id(61), '8333', 9],
   ['CAMA', 'Camarero/a', id(60), '5120', 10],
@@ -268,6 +270,24 @@ const categories: ProfessionalCategory[] = [
   agreementLevel: null, cnoCode: cnoCode as string, contributionGroup: contributionGroup as number, statisticalCode: null,
   companyId: null, branchId: null, status: 'active' as Status, ...stamp,
 }));
+const categories: ProfessionalCategory[] = [
+  ...categoriasBase,
+  ...(
+    [
+      ['OPALM', 'Operario/a de almacén', id(62), 'IV', '9811'],
+      ['MOZESP', 'Mozo/a especialista - carretillero/a', id(62), 'III', '8333'],
+      ['MOZALM', 'Mozo/a de almacén', id(62), 'IV', '9811'],
+      ['PREPED', 'Preparador/a de pedidos (picking)', id(62), 'IV', '9811'],
+      ['CAMSAL', 'Camarero/a de sala', id(60), 'II', '5120'],
+      ['AYCOC', 'Ayudante de cocina', id(60), 'III', '9310'],
+      ['COCPAR', 'Cocinero/a de partida', id(60), 'I', '5110'],
+      ['SOLD', 'Soldador/a homologado TIG/MIG', id(63), 'Oficial 1ª', '7312'],
+    ] as const
+  ).map(([code, name, agreementId, agreementLevel, cnoCode], i): ProfessionalCategory => ({
+    id: id(600 + i), code, name, kind: 'category', agreementId, agreementLevel, cnoCode, contributionGroup: null, statisticalCode: null,
+    companyId: null, branchId: null, status: 'active', ...stamp,
+  })),
+];
 // Como al crear una ETT: un tipo por clave oficial activa.
 const contractTypes: ContractType[] = contractKeys
   .filter((k) => k.active)
@@ -311,6 +331,7 @@ function memoryCatalog<T extends { id: string; code: string; name: string; statu
 }
 
 export function memoryRepositories(): Repositories {
+  const miEtt = memoryMiEttRepositories();
   return {
     session: {
       me: () =>
@@ -485,7 +506,8 @@ export function memoryRepositories(): Repositories {
         await delay(null);
       },
     },
-    ...memoryMiEttRepositories(),
+    ...miEtt,
+    ...memoryQuoteRepositories(miEtt.tenantSettings.get),
     search: sampleSearch(false),
     notifications: sampleNotifications(false),
   };

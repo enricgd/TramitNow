@@ -64,6 +64,14 @@ import type {
   NumberSeriesInput,
   NumberSeriesQuery,
   TenantSettings,
+  AgreementSalary,
+  AgreementSalaryQuery,
+  Quote,
+  QuoteInput,
+  QuoteQuery,
+  QuoteReviewItem,
+  QuoteSummary,
+  QuoteVersion,
   ContractKey,
   ContractType,
   ContractTypeQuery,
@@ -244,6 +252,43 @@ export interface Repositories {
   tenantSettings: {
     get(): Promise<TenantSettings>;
     update(data: Partial<TenantSettings>): Promise<TenantSettings>;
+  };
+
+  /**
+   * Presupuestos (fase 4). PROVISIONAL hasta el contrato de apps/api (fase4-backend.md). Los costes los calcula el
+   * servidor: cada presupuesto trae `breakdowns` (por puesto) y `totals`.
+   */
+  quotes: {
+    list(query?: QuoteQuery): Promise<Page<QuoteSummary>>;
+    get(id: string): Promise<Quote>;
+    /** Número nuevo de la serie de presupuestos. */
+    create(data: QuoteInput): Promise<Quote>;
+    /** Solo en borrador o en preparación (si no, 409: hay que crear una versión nueva). */
+    update(id: string, data: Partial<QuoteInput>): Promise<Quote>;
+    /** Borrador ↔ en preparación, y enviado ↔ pendiente de firma (arrastrar en el pipeline). */
+    setStatus(id: string, status: 'draft' | 'in_preparation' | 'sent' | 'pending_signature'): Promise<Quote>;
+    /** Comprobaciones antes de enviar (empresa, contacto, puestos, convenio, coste, margen mínimo). */
+    review(id: string): Promise<QuoteReviewItem[]>;
+    /** Enviar al cliente: 422 `revision_pendiente` si falla alguna comprobación (en `details`). */
+    send(id: string): Promise<Quote>;
+    requestApproval(id: string, reason: string | null): Promise<Quote>;
+    /** Lo resuelve un responsable: aprobar o pedir cambios. */
+    resolveApproval(id: string, approved: boolean): Promise<Quote>;
+    accept(id: string): Promise<Quote>;
+    reject(id: string, data: { reasonId: string | null; reason: string; notes: string | null }): Promise<Quote>;
+    /** Copia completa editable (v + 1); la anterior queda sustituida. */
+    newVersion(id: string): Promise<Quote>;
+    versions(id: string): Promise<QuoteVersion[]>;
+    /** Una versión anterior entera, para comparar. */
+    version(id: string, versionId: string): Promise<Quote>;
+    /** Pasa a obsoleto con motivo y crea uno nuevo copiado (número nuevo). */
+    makeObsolete(id: string, reason: string): Promise<{ obsolete: Quote; created: Quote }>;
+    /** Copia sin empresa (número nuevo). */
+    duplicate(id: string): Promise<Quote>;
+    /** URL temporal del PDF de la propuesta (generado en el servidor) o del escandallo interno. null en la demo. */
+    documentUrl(id: string, kind: 'proposal' | 'cost_sheet'): Promise<string | null>;
+    /** Tabla salarial del convenio para una categoría y nivel (null si no la hay). */
+    agreementSalary(query: AgreementSalaryQuery): Promise<AgreementSalary | null>;
   };
 
   // -------------------------------------------------------------------------

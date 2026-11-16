@@ -264,7 +264,7 @@ const activity: ActivityEntry[] = [
   entrada(1, 'client', id(100), null, 'create', 'Alta rápida completada desde llamada comercial inicial', '2026-04-09T10:15:00.000Z', 'Carlos Mendoza'),
 ];
 let activityN = 100;
-function log(entityType: ActivityEntityType, entityId: string, parent: string | null, action: ActivityEntry['action'], summary: string) {
+export function log(entityType: ActivityEntityType, entityId: string, parent: string | null, action: ActivityEntry['action'], summary: string) {
   activity.unshift(entrada(activityN++, entityType, entityId, parent, action, summary, new Date().toISOString(), DEMO_USER.name));
 }
 

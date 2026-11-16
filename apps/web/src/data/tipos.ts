@@ -400,7 +400,7 @@ export type CatalogItemQuery = PageQuery & { type: CatalogItemType; q?: string; 
 export type CatalogItemCreate = { type: CatalogItemType; name: string; code?: string; parentId?: string; status?: Status };
 
 /** Historial de cambios (GET /v1/activity), lo último primero. */
-export type ActivityEntityType = 'client' | 'client_center' | 'client_contact' | 'client_billing' | 'document';
+export type ActivityEntityType = 'client' | 'client_center' | 'client_contact' | 'client_billing' | 'document' | 'quote';
 export type ActivityEntry = {
   id: string;
   entityType: ActivityEntityType;
@@ -416,7 +416,7 @@ export type ActivityEntry = {
 };
 export type ActivityQuery = PageQuery & { entityType: ActivityEntityType; entityId: string; includeChildren?: boolean };
 
-export type DocumentEntityType = 'client' | 'client_center';
+export type DocumentEntityType = 'client' | 'client_center' | 'quote';
 export type DocumentStatus = 'pending' | 'validated' | 'draft';
 export type StoredDocument = Stamped & {
   entityType: DocumentEntityType;
@@ -653,3 +653,230 @@ export type EttSettings = {
  * `invitedAt`: fecha de la invitación; `lastAccess`: texto del último acceso, null si aún no ha entrado.
  */
 export type ContactPortalAccess = { active: boolean; since: string | null; invitedAt: string | null; lastAccess: string | null; permissions: string[] };
+
+// ---------------------------------------------------------------------------
+// Presupuestos (fase 4). PROVISIONAL: forma propuesta por la web hasta que llegue el contrato de apps/api
+// (nota fase4-backend.md). Al llegar, se ajustan estos tipos, api.ts y el mapeo de usePresupuestos.
+// ---------------------------------------------------------------------------
+
+export type QuoteStatus = 'draft' | 'in_preparation' | 'sent' | 'pending_signature' | 'accepted' | 'rejected' | 'obsolete';
+export type MarginMode = 'percentage' | 'amount';
+/** Cómo se cobra un coste interno: % sobre una base, o importe por hora, mes o jornada. */
+export type QuoteCostKind = 'percentage' | 'per_hour' | 'per_month' | 'per_day';
+export type QuoteCostBase = 'gross_hourly_salary' | 'total_salary_cost' | 'contribution_base' | 'hourly_rate' | 'effective_hours';
+
+/** Coste interno del presupuesto (escandallo): nunca sale en la propuesta. */
+export type QuoteCostConcept = {
+  id: string;
+  name: string;
+  kind: QuoteCostKind;
+  value: number;
+  base: QuoteCostBase;
+  /** Seguridad Social e indemnización: siempre se aplican, con el valor del presupuesto. */
+  legal: boolean;
+  /** Absentismo, EPIs, revisión médica: van en todos los presupuestos (se desmarcan por puesto). */
+  alwaysIncluded: boolean;
+  description: string | null;
+};
+
+/** Concepto extra facturable (hora extra, nocturna...). Siempre queda en la oferta; `showInProposal` decide si se imprime. */
+export type QuoteExtra = {
+  id: string;
+  name: string;
+  /** Salario: hora normal × coeficiente, o `salaryOverride` €/h (extras añadidos a mano). */
+  salaryCoefficient: number | null;
+  salaryOverride: number | null;
+  /** Tarifa: solo uno de los tres; vacíos, el mismo factor tarifa/salario de la hora normal. */
+  rateCoefficient: number | null;
+  rateSurchargePercent: number | null;
+  rateOverride: number | null;
+  showInProposal: boolean;
+  /** Añadido a mano en el puesto. */
+  custom: boolean;
+};
+
+/** Ajuste de un coste interno en un puesto: aplica o no y su valor en % o €/h (solo uno; vacíos = el del presupuesto). */
+export type QuotePositionCost = { conceptId: string; applies: boolean; percent: number | null; amount: number | null };
+
+/** Salario de la tabla del convenio para una categoría y nivel. */
+export type AgreementSalary = {
+  agreementId: string;
+  agreementVersionId: string | null;
+  /** Año de la tabla, para la etiqueta «Tablas 2026». */
+  year: number;
+  baseAnnualSalary: number;
+  monthlyBonus: number;
+  annualPayments: number;
+  annualHours: number;
+  dailyHours: number;
+};
+export type AgreementSalaryQuery = { agreementId: string; categoryId?: string | null; level?: string | null };
+
+export type QuotePosition = {
+  id: string;
+  name: string;
+  agreementId: string | null;
+  /** Versión del convenio cuya tabla se usó. */
+  agreementVersionId: string | null;
+  customAgreement: string | null;
+  categoryId: string | null;
+  customCategory: string | null;
+  level: string | null;
+  customLevel: string | null;
+  baseAnnualSalary: number;
+  monthlyBonus: number;
+  annualPayments: number;
+  annualHours: number;
+  dailyHours: number;
+  partTimeFactor: number;
+  vacationDays: number;
+  /** Campos retributivos cambiados a mano (los demás salen de la tabla del convenio). */
+  manualFields: string[];
+  /** Salario mínimo de la tabla del convenio (null si no hay tabla): por debajo, se bloquea. */
+  agreementMinimumAnnual: number | null;
+  rate: number | null;
+  people: number;
+  hoursPerPerson: number;
+  /** Margen propio: null = el del presupuesto. */
+  marginMode: MarginMode | null;
+  marginPercent: number | null;
+  marginAmount: number | null;
+  costs: QuotePositionCost[];
+  extras: QuoteExtra[];
+  tasks: string | null;
+};
+
+export type QuoteBreakdownLine = { conceptId: string; name: string; amountHour: number; legal: boolean; custom: boolean };
+/** Desglose de un puesto (lo calcula el servidor; en demo, el módulo de cálculo). Importes en €/h salvo los del servicio. */
+export type QuotePositionBreakdown = {
+  salaryHour: number;
+  annualGrossSalary: number;
+  lines: QuoteBreakdownLine[];
+  socialCostHour: number;
+  costHour: number;
+  rate: number;
+  marginHour: number;
+  marginPercent: number;
+  dailyHours: number;
+  dailyRate: number;
+  dailyCost: number;
+  targetMarginMode: MarginMode;
+  targetMarginPercent: number;
+  targetMarginAmount: number;
+  suggestedRate: number;
+  extras: (QuoteExtra & { salaryHour: number; rateHour: number; surchargePercent: number })[];
+  people: number;
+  hoursPerPerson: number;
+  totalHours: number;
+  billing: number;
+  serviceCost: number;
+  serviceMargin: number;
+  /** El salario queda por debajo del de la tabla del convenio: no se puede enviar. */
+  belowAgreement: { minimumAnnual: number; annual: number } | null;
+};
+export type QuoteTotals = {
+  positions: number;
+  people: number;
+  hours: number;
+  billing: number;
+  cost: number;
+  margin: number;
+  marginPercent: number;
+  averageRate: number;
+  averageMarginPercent: number;
+};
+
+export type QuoteApproval = {
+  status: 'pending' | 'approved' | 'changes_requested';
+  reason: string | null;
+  requestedBy: string | null;
+  requestedAt: string | null;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+};
+export type QuoteRejection = { reasonId: string | null; reason: string; notes: string | null; at: string };
+export type QuoteObsolete = { reason: string; at: string; replacedById: string | null; replacedByCode: string | null };
+export type QuoteRequestLink = { code: string; positionId: string; shift: string; places: number };
+
+/** Lo que se edita de un presupuesto (versión actual). */
+export type QuoteInput = {
+  title: string;
+  clientId: string | null;
+  contactId: string | null;
+  /** Copia de los datos del contacto (o texto libre si la empresa aún no tiene contactos). */
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  salesUserId: string | null;
+  issueDate: string;
+  validUntil: string;
+  plannedStartDate: string | null;
+  durationMonths: number | null;
+  currency: string;
+  modality: string | null;
+  vatRate: string | null;
+  paymentMethodId: string | null;
+  paymentMethodText: string | null;
+  replacementGuarantee: string | null;
+  commercialNotes: string | null;
+  marginMode: MarginMode;
+  marginPercent: number;
+  marginAmount: number | null;
+  costConcepts: QuoteCostConcept[];
+  defaultExtras: QuoteExtra[];
+  positions: QuotePosition[];
+};
+
+export type Quote = QuoteInput & {
+  id: string;
+  code: string;
+  versionId: string;
+  versionNumber: number;
+  status: QuoteStatus;
+  branchId: string | null;
+  /** Copia de la empresa al elegirla. */
+  clientName: string | null;
+  clientTaxId: string | null;
+  clientSector: string | null;
+  clientCity: string | null;
+  clientAgreementId: string | null;
+  salesName: string | null;
+  approval: QuoteApproval | null;
+  rejection: QuoteRejection | null;
+  obsolete: QuoteObsolete | null;
+  createdFromId: string | null;
+  createdFromCode: string | null;
+  sentAt: string | null;
+  daysWithoutResponse: number | null;
+  requests: QuoteRequestLink[];
+  breakdowns: Record<string, QuotePositionBreakdown>;
+  totals: QuoteTotals;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Fila del listado. */
+export type QuoteSummary = Pick<
+  Quote,
+  'id' | 'code' | 'versionNumber' | 'status' | 'title' | 'clientId' | 'clientName' | 'salesUserId' | 'salesName' | 'branchId' | 'validUntil' | 'daysWithoutResponse' | 'rejection' | 'updatedAt'
+> & { positions: number; billing: number; averageRate: number; marginPercent: number; /** Peticiones creadas desde el presupuesto. */ requests: number };
+export type QuoteQuery = PageQuery & {
+  q?: string;
+  status?: QuoteStatus;
+  salesUserId?: string;
+  validity?: 'current' | 'soon' | 'expired';
+  branchId?: string;
+};
+
+export type QuoteVersion = {
+  id: string;
+  number: number;
+  status: 'current' | 'superseded';
+  createdAt: string;
+  createdBy: string | null;
+  comment: string | null;
+  totals: QuoteTotals;
+};
+
+/** Comprobación antes de enviar. `kind`: 'error' bloquea; 'approval' necesita el visto bueno de un responsable. */
+export type QuoteReviewItem = { ok: boolean; kind: 'error' | 'approval'; text: string; section: 'client' | 'positions' | 'conditions'; positions?: string[] };
