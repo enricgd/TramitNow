@@ -174,6 +174,8 @@ src/
   lib/db.ts       pool de Postgres y withClaims (transacción con rol y claims)
   lib/context.ts  withUser / withTenant: ETT activa, rol y permisos de la petición
   lib/errors.ts   formato de error
+  lib/storage.ts  Supabase Storage (documentos) con la service_role
+  lib/auth-admin.ts  Supabase Auth con la service_role (invitar usuarios)
   lib/openapi.ts  piezas comunes de las rutas (errores, paginación, parámetros)
   routes/         una por recurso
 test/             vitest contra db/local
@@ -279,10 +281,17 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `GET /v1/branches`, `GET /v1/branches/{id}` | miembro |
 | `POST /v1/branches`, `PATCH /v1/branches/{id}` (al marcar una por defecto, la anterior deja de serlo) | `branches.manage` |
 | `GET /v1/roles`, `GET /v1/roles/{id}`, `GET /v1/permissions` | miembro |
-| `GET /v1/memberships`, `GET /v1/memberships/{id}` | `users.manage` |
+| `GET /v1/memberships`, `GET /v1/memberships/{id}` (con `email`, `lastSignInAt`, `department`, `invitationPending`) | `users.manage` |
+| `POST /v1/memberships` `{ email, fullName, roleId, department?, contexts }`: da de alta e invita (crea la cuenta en Auth si no la tenía; devuelve `inviteUrl` para enviarlo a mano mientras no haya SMTP); `PATCH /v1/memberships/{id}` (rol, estado, departamento, alcance; nadie cambia su propio rol ni se bloquea); `POST /v1/memberships/{id}/resend-invitation`; `DELETE /v1/memberships/{id}/invitation` (revoca; 409 si ya entró) | `users.manage` (503 sin `AUTH_URL`) |
+| `GET`, `PUT /v1/companies/{id}/legal`: datos legales de la sociedad (autorización de ETT, registro, representante, garantía, metadatos del certificado; `warnings` si vencen); `GET`, `PUT /v1/companies/{id}/billing-settings`: facturación emisora | miembro; escribir, `tenant.manage` |
+| `GET`, `PATCH /v1/tenant-settings`: margen mínimo de presupuesto y días sin respuesta | miembro; escribir, `tenant.manage` |
+| `GET /v1/number-series?documentKind=&year=&companyId=`, `POST /v1/number-series`, `PATCH /v1/number-series/{id}`: series (prefijo, cifras y `nextNumber`, nunca hacia atrás) | miembro; escribir, `tenant.manage` |
+| `/v1/contribution-accounts` (`?companyId=&branchId=&staffType=`), `/v1/billable-services`: CCC y servicios que factura la ETT (CRUD con baja lógica) | miembro; escribir, `tenant.manage` |
+| `GET /v1/agreements?q=&scope=&provinceCode=&autonomousCommunityCode=&cnae=`, `GET /v1/agreements/{id}`, `GET /v1/agreement-versions?status=&agreementId=`, `GET /v1/agreement-versions/{id}`: catálogo global de convenios (las ETT ven lo publicado; el equipo de contenidos, todo) | token (aunque no tenga ETT) |
+| `POST /v1/agreement-versions/{id}/review` · `/reject` · `/submit` · `/publish` · `/withdraw`: flujo de revisión a cuatro ojos | equipo de contenidos |
 | `GET /v1/catalogs/autonomous-communities`, `/provinces?autonomousCommunityCode=`, `/municipalities?provinceCode=&q=` (exige uno de los dos), `/municipalities/{code}`, `/countries?q=`, `/contract-keys?includeInactive=`: catálogos oficiales, de solo lectura | token (aunque no tenga ETT) |
 | `GET`, `POST /v1/addresses`; `GET`, `PATCH`, `DELETE /v1/addresses/{id}`: con los códigos oficiales de municipio, provincia y país | miembro; escribir, `addresses.write` |
-| `/v1/collective-agreements`, `/v1/professional-categories`, `/v1/contract-types`, `/v1/payroll-concepts`: listar (filtros, `?q=`, `?status=`), ver, crear, editar y dar de baja (`DELETE`, baja lógica) | miembro; escribir, `labor_catalogs.manage` |
+| `/v1/collective-agreements` (con `globalAgreementId`, el convenio del catálogo), `/v1/professional-categories`, `/v1/contract-types`, `/v1/payroll-concepts`: listar (filtros, `?q=`, `?status=`), ver, crear, editar y dar de baja (`DELETE`, baja lógica) | miembro; escribir, `labor_catalogs.manage` |
 | `/v1/clients` (`?q=` busca en código, razón social, nombre comercial y NIF; `?status=`, `?companyId=`, `?branchId=`, `?blocked=`, `?sectorCode=`), `/v1/client-centers?clientId=&branchId=`, `/v1/client-contacts?clientId=&centerId=&suspended=`: listar, ver (cada cliente trae `readiness: { centers, contacts, hasBilling }`, de solo lectura), crear, editar y eliminar (baja lógica recuperable: `?deleted=true` lista solo lo eliminado y `POST /{id}/restore` lo restaura; 409 `en_uso` si ya se ha usado) | miembro; escribir, `clients.manage` en la sucursal del cliente o del centro |
 | `GET`, `PUT /v1/clients/{id}/billing`: facturación del cliente (`PUT` crea o actualiza; devuelve `warnings` si el plazo de pago supera el legal) | `clients.billing.manage` |
 | `GET /v1/cnae?q=&level=section\|division&parentCode=`: actividades CNAE-2009 (sector de los clientes), catálogo oficial | token |
@@ -326,8 +335,12 @@ Variables: `STORAGE_URL` (desde la API), `STORAGE_PUBLIC_URL` (como lo ve el nav
 `SUPABASE_SERVICE_ROLE_KEY`. Sin ellas la API arranca, pero las rutas de ficheros responden 503. En local, en
 `.env.example` (Storage en `127.0.0.1:54325`); en el NAS, en `infra/nas/docker-compose.override.yml`.
 
-Pendiente: alta e invitación de usuarios (necesita la `service_role`), edición de roles y membresías, y borrado
-de sociedades y sucursales.
+**Usuarios.** El alta e invitación usan Supabase Auth con la misma `service_role` (`src/lib/auth-admin.ts`):
+`AUTH_URL` (GoTrue desde la API: `http://127.0.0.1:9999` en local, `http://auth:9999` en el NAS),
+`INVITE_REDIRECT_URL` (página de la web a la que lleva el enlace) y `AUTH_SENDS_INVITES` (`true` cuando Auth tenga
+SMTP: lo envía Auth y la API devuelve `inviteUrl: null`). Sin `AUTH_URL`, esas rutas responden 503.
+
+Pendiente: edición de roles y borrado de sociedades y sucursales.
 
 ### Tests
 

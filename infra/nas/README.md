@@ -239,6 +239,12 @@ sh infra/nas/deploy-api.sh
 --regenerate` y volver a desplegar la API. Sin esas variables la API arranca igual, pero las rutas de ficheros
 responden `503 servicio_no_disponible`.
 
+**Invitar usuarios (desde la fase 3).** La API da de alta e invita usuarios en Supabase Auth con la misma
+`SERVICE_ROLE_KEY` (variables `AUTH_URL`, `INVITE_REDIRECT_URL` y `AUTH_SENDS_INVITES` del servicio `api` en
+`docker-compose.override.yml`). Llevar el override nuevo al NAS, `sudo sh setup.sh --regenerate` y volver a desplegar
+la API. Mientras no haya SMTP, la respuesta trae el enlace de invitación para enviarlo a mano. La URL de
+`INVITE_REDIRECT_URL` tiene que estar permitida en Auth (`SITE_URL` o la lista de redirecciones).
+
 Si se activan algún día las claves asimétricas de Supabase Auth (`JWT_KEYS`, ES256), la API tendrá que
 verificar con el JWKS en vez de con `JWT_SECRET`.
 
