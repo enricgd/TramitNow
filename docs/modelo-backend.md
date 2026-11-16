@@ -77,6 +77,12 @@ Organizaciones o empresas que usan la plataforma. Es la raíz de aislamiento de 
 
 Notas: No confundir con cliente: tenant es la empresa desde la que se entra al sistema.
 
+> **Mi ETT (fase 3, hecho).** `tenants` gana `quote_min_margin_percent` (NULL = sin mínimo) y
+> `quote_no_response_days` (15), decisiones de presupuestos de la fase 4. Cada sociedad tiene sus datos legales
+> (`company_legal_profiles`: autorización de ETT, registro mercantil, representante, garantía financiera y solo
+> metadatos del certificado digital) y su facturación emisora (`company_billing_settings`), y la ETT sus CCC
+> (`contribution_accounts`) y los servicios que factura (`billable_services`). Detalle en `db/README.md`, "Mi ETT".
+
 #### companies
 
 Empresas legales o empresas de nómina deqntro de un tenant. Puede representar ETT, servicios o merchandising.
@@ -289,6 +295,24 @@ Convenios colectivos usados en cliente, centro, oferta y petición.
 | deleted_at | timestamp |  | Sí | Soft delete. |
 
 Índices/constraints: UNIQUE(tenant_id, code).
+
+> **Fase 3 (hecho).** En la base se llama `collective_agreements` y gana `global_agreement_id` → catálogo global
+> `agreements` (sin `tenant_id`), que mantiene el equipo de contenidos de TramitNOW con versiones
+> (`borrador` → `en_revision` → `publicada` → `retirada`), revisión a cuatro ojos y lo publicado inmutable. Las ETT
+> leen solo lo publicado. Detalle, formato de carga y cargador: `db/README.md`, "Fase 3"; propuesta:
+> `docs/convenios-globales.md`. Las tablas de seguimiento por ETT (`tenant_agreement_*`) llegan con los presupuestos.
+
+#### Catálogo global de convenios (fase 3)
+
+| Tabla | Qué guarda |
+|---|---|
+| agreements | REGCON (único), nombre, ámbito, comunidad o provincia, CNAE, vigencia, convenio al que sustituye. |
+| agreement_publications | Boletín, fecha, número, enlace y tipo de cada publicación oficial. |
+| agreement_versions | Efectos, provisional, publicación, estado, dudas del extractor y quién extrajo, revisó, publicó y retiró. |
+| agreement_categories | Categorías de cada versión (código, nombre, grupo, nivel). |
+| agreement_salary_items | Importes por versión, categoría y concepto, con unidad, salarial/extrasalarial y fuente. |
+| agreement_conditions | Jornada anual, vacaciones, pagas y otras condiciones (jsonb) de cada versión. |
+| platform_content_editors | Equipo de contenidos: rol de plataforma sin acceso a las ETT. |
 
 #### contract_types
 

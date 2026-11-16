@@ -35,7 +35,7 @@ select throws_ok(
        '30000000-0000-0000-0000-0000000000b1') $$,
   '23514', null, 'la sucursal tiene que ser de la sociedad (y de la ETT)');
 select throws_ok(
-  $$ update public.number_series set last_number = 0 $$, '42501', null, 'el contador no se toca a mano');
+  $$ update public.number_series set last_number = 0 $$, 'TN409', null, 'el contador no va nunca hacia atrás');
 select is((select count(*)::int from public.number_series), 5, 'los miembros ven las series de su ETT');
 
 reset role;

@@ -38,6 +38,11 @@ services:
       STORAGE_URL: http://storage:5000
       STORAGE_PUBLIC_URL: https://api.${DOMAIN}/storage/v1
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      # Mi ETT → usuarios: la API invita en Supabase Auth con la misma service_role. Sin SMTP, devuelve el enlace
+      # de invitación para enviarlo a mano; cuando Auth tenga correo saliente, AUTH_SENDS_INVITES: "true".
+      AUTH_URL: http://auth:9999
+      INVITE_REDIRECT_URL: https://demo.${DOMAIN}/
+      AUTH_SENDS_INVITES: "false"
 
   # Único servicio expuesto a internet (puerto 443 del router → CADDY_HTTPS_PORT del NAS).
   caddy:

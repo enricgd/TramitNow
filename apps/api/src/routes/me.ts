@@ -27,6 +27,9 @@ const MeSchema = z
       mustChangePassword: z.boolean(),
     }),
     isSuperadmin: z.boolean(),
+    isContentEditor: z.boolean().openapi({
+      description: 'Del equipo de contenidos de TramitNOW (catálogo global de convenios). No da acceso a ninguna ETT.',
+    }),
     activeTenant: TenantSummarySchema.nullable().openapi({
       description: 'ETT de la sesión (la del token). null si no tiene ninguna o ya no tiene acceso a ella.',
     }),
@@ -76,6 +79,7 @@ export const me = createRouter()
         if (!profile) throw new ApiError(401, 'no_autenticado', 'El usuario de la sesión ya no existe');
 
         const access = await resolveTenant(tx, user.claims);
+        const [editor] = await tx<{ isContentEditor: boolean }[]>`select private.is_content_editor() as is_content_editor`;
         const tenantId = profile.status === 'active' ? access.tenantId : null;
 
         const tenants = await tx<TenantSummary[]>`
@@ -130,6 +134,7 @@ export const me = createRouter()
         return {
           user: { id: user.userId, email: typeof user.claims.email === 'string' ? user.claims.email : null, ...profile },
           isSuperadmin: access.isSuperadmin,
+          isContentEditor: editor?.isContentEditor ?? false,
           activeTenant,
           role,
           permissions,
