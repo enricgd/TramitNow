@@ -362,6 +362,23 @@ Conceptos de nómina/precio: hora normal, horas extra, recargos, tarifas, etc.
 
 ### 03. Clientes, centros, contactos y portal
 
+**Decisiones de la fase 2 (Enric, 2026-11-16).** Implementadas en `db/migrations/20261116*`; el detalle está en
+`db/README.md`, "Fase 2: empresas".
+
+1. Contactos: además de los 7 roles (`commercial`, `requester`, `operations`, `billing`, `hr`, `prevention`,
+   `management`), el rol `other` («Otro») con su texto en `other_role`, y `validates_hours` (valida las horas).
+2. Contactos suspendibles (`suspended`, con quién y cuándo). Los centros no se suspenden: `blocked` es el «Inactivo»
+   de la pantalla.
+3. Eliminar es una baja lógica recuperable (`deleted_at`) en clientes, centros, contactos y documentos: lo eliminado
+   no sale en las listas salvo con un filtro propio y se puede restaurar. Solo se elimina lo que no se ha usado; lo
+   usado se desactiva o se suspende. Los documentos de conservación obligatoria no se eliminan. Eliminar y restaurar
+   quedan en el historial.
+4. Sector del cliente: catálogo común CNAE (`cnae_activities`, global y sin `tenant_id`), no una tabla maestra por ETT.
+5. Convenio por defecto del cliente (`default_agreement_id`), que heredan los centros sin `client_agreement_id`.
+6. Documentos de empresa: los de la fase 1 (tabla `documents`).
+7. Facturación: los días fijos de pago siguen como números (31 = último día del mes); forma de pago e IVA, tablas
+   maestras. Nuevo `invoice_layout`: la factura se imprime por persona (por defecto) o por concepto.
+
 #### clients
 
 Clientes contratantes de la ETT.
@@ -378,6 +395,8 @@ Clientes contratantes de la ETT.
 | tax_id | varchar(30) |  | Sí | CIF/NIF. |
 | client_type_id | uuid | FK | Sí | Tipo cliente. |
 | activity | varchar(250) |  | Sí | Actividad. |
+| sector_code | varchar(4) | FK | Sí | Sector: sección o división CNAE-2009 (`cnae_activities`, global). |
+| default_agreement_id | uuid | FK | Sí | Convenio por defecto; lo heredan los centros sin convenio propio. |
 | start_date | date |  | Sí | Fecha alta. |
 | status | enum(active,blocked,inactive) |  | No | Estado. |
 | blocked | boolean |  | No | Cliente bloqueado. |
@@ -417,7 +436,8 @@ Datos de facturación y riesgo del cliente.
 | copies_count | integer |  | No | Nº copias. |
 | retention_account | varchar(50) |  | Sí | Cuenta retención. |
 | offer_coefficient | numeric(10,4) |  | Sí | Coeficiente oferta. |
-| fixed_payment_days | integer[] |  | Sí | Días de pago. |
+| fixed_payment_days | integer[] |  | Sí | Días de pago (1-31, hasta 3). 31 = último día del mes; si el mes no tiene ese día, su último día. |
+| invoice_layout | enum(by_person,by_concept) |  | No | Cómo se imprime la factura; por defecto por persona. |
 | invoice_type_id | uuid | FK | Sí | Tipo facturación. |
 | invoice_print_model_id | uuid | FK | Sí | Modelo impresión. |
 | vat_special_cause_id | uuid | FK | Sí | IVA especial/causa. |
@@ -479,7 +499,7 @@ Centros de trabajo del cliente.
 | email | varchar(200) |  | Sí | E-mail. |
 | ss_regime_id | uuid | FK | Sí | Régimen SS. |
 | cnae_id | uuid | FK | Sí | CNAE. |
-| client_agreement_id | uuid | FK | Sí | Convenio cliente. |
+| client_agreement_id | uuid | FK | Sí | Convenio cliente. Si es nulo, el del cliente (`clients.default_agreement_id`). |
 | payroll_agreement_id | uuid | FK | Sí | Convenio nómina. |
 | project_code | varchar(50) |  | Sí | Proyecto. |
 | grda_agreement_id | uuid | FK | Sí | Convenio GRDA. |
@@ -510,7 +530,11 @@ Contactos de cliente/centro.
 | phone | varchar(40) |  | Sí | Teléfono. |
 | mobile | varchar(40) |  | Sí | Móvil. |
 | email | varchar(200) |  | Sí | E-mail. |
-| birth_date | date |  | Sí | Fecha nacimiento. |
+| birth_date | date |  | Sí | Fecha nacimiento. (No se implementa: minimización, RGPD.) |
+| roles | text[] |  | No | Para qué se le contacta: los 7 roles y `other`. |
+| other_role | varchar(120) |  | Sí | Texto del rol «Otro»; obligatorio si `roles` lo incluye. |
+| validates_hours | boolean |  | No | Valida las horas de los trabajadores en misión. |
+| suspended | boolean |  | No | Suspendido (con `suspended_at` y `suspended_by`): lo usado no se elimina, se suspende. |
 | signs_cpds | boolean |  | No | Firma CPDs. |
 | receives_digital_signature | boolean |  | No | Recibe firma digital. |
 | invoice_send_type | varchar(50) |  | Sí | Tipo envío factura. |

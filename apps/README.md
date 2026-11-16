@@ -195,14 +195,17 @@ Todos los módulos siguen estas reglas.
 | 403 | `sin_ett_activa` | El token no trae ETT o el usuario ya no tiene acceso a ella |
 | 403 | `usuario_bloqueado` | Perfil bloqueado o inactivo |
 | 404 | `no_encontrado` | No existe **o es de otra ETT** (nunca se distingue) |
-| 409 | `conflicto` | Duplicado (p. ej. código de sociedad repetido) |
+| 409 | `conflicto` | Duplicado (p. ej. código de sociedad repetido; al restaurar, choca con algo activo) |
+| 409 | `en_uso` | No se puede eliminar porque ya se usa: desactivarlo o suspenderlo |
+| 409 | `conservacion_obligatoria` | Documento de un tipo que exige conservarlo: no se elimina |
 | 422 | `referencia_invalida` | Apunta a un registro que no existe en la ETT activa |
 | 500 | `error_interno` | Cualquier otra cosa (el detalle va solo al log) |
 | 503 | `servicio_no_disponible` | Supabase Storage no responde o la API no lo tiene configurado (documentos) |
 
 Desde el código: `throw new ApiError(status, code, mensaje)`, `notFound()`, `forbidden()`. Los errores de
 Postgres se traducen solos (`23505` → 409, `23503` → 422, `42501` → 403...). Las reglas de negocio de los triggers
-con `errcode` `TN409` o `TN422` llegan con su mensaje (en español) y ese estado.
+con `errcode` `TN409`, `TN422`, `TNUSE` (`en_uso`) o `TNRET` (`conservacion_obligatoria`) llegan con su mensaje (en
+español) y ese estado.
 
 **Paginación**: las listas que pueden crecer aceptan `?limit=` (1–200, por defecto 50) y `?offset=` y devuelven
 
@@ -244,18 +247,20 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `GET /v1/catalogs/autonomous-communities`, `/provinces?autonomousCommunityCode=`, `/municipalities?provinceCode=&q=` (exige uno de los dos), `/municipalities/{code}`, `/countries?q=`, `/contract-keys?includeInactive=`: catálogos oficiales, de solo lectura | token (aunque no tenga ETT) |
 | `GET`, `POST /v1/addresses`; `GET`, `PATCH`, `DELETE /v1/addresses/{id}`: con los códigos oficiales de municipio, provincia y país | miembro; escribir, `addresses.write` |
 | `/v1/collective-agreements`, `/v1/professional-categories`, `/v1/contract-types`, `/v1/payroll-concepts`: listar (filtros, `?q=`, `?status=`), ver, crear, editar y dar de baja (`DELETE`, baja lógica) | miembro; escribir, `labor_catalogs.manage` |
-| `/v1/clients` (`?q=` busca en código, razón social, nombre comercial y NIF; `?status=`, `?companyId=`, `?branchId=`, `?blocked=`), `/v1/client-centers?clientId=`, `/v1/client-contacts?clientId=`: listar, ver, crear, editar y dar de baja | miembro; escribir, `clients.manage` en la sucursal del cliente o del centro |
+| `/v1/clients` (`?q=` busca en código, razón social, nombre comercial y NIF; `?status=`, `?companyId=`, `?branchId=`, `?blocked=`, `?sectorCode=`), `/v1/client-centers?clientId=&branchId=`, `/v1/client-contacts?clientId=&centerId=&suspended=`: listar, ver, crear, editar y eliminar (baja lógica recuperable: `?deleted=true` lista solo lo eliminado y `POST /{id}/restore` lo restaura; 409 `en_uso` si ya se ha usado) | miembro; escribir, `clients.manage` en la sucursal del cliente o del centro |
 | `GET`, `PUT /v1/clients/{id}/billing`: facturación del cliente (`PUT` crea o actualiza; devuelve `warnings` si el plazo de pago supera el legal) | `clients.billing.manage` |
+| `GET /v1/cnae?q=&level=section\|division&parentCode=`: actividades CNAE-2009 (sector de los clientes), catálogo oficial | token |
 | `GET /v1/catalog-types`: tipos de tabla maestra (lista cerrada) | token |
 | `/v1/catalog-items?type=` (obligatorio; `?q=`, `?status=`, `?parentId=`): tablas maestras de la ETT. Listar, ver, crear (`type` y `name`; `code` opcional), editar (el tipo no cambia) y dar de baja. Nombre único por tipo sin distinguir mayúsculas (409) | miembro; escribir, `catalogs.manage` |
 | `GET /v1/activity?entityType=&entityId=&includeChildren=`: historial de una ficha, lo último primero, paginado | quien ve la ficha (la facturación, con `clients.billing.manage`) |
-| `POST /v1/documents/uploads`, `POST /v1/documents`, `GET /v1/documents` (`?entityType=&entityId=&typeId=&status=&visibleInPortal=&expiresBefore=&q=`), `GET`, `PATCH`, `DELETE /v1/documents/{id}`, `GET /v1/documents/{id}/download`: documentos de clientes y centros (ver "Documentos") | leer, quien ve la ficha; escribir, quien puede editarla (`clients.manage` en su sucursal) |
+| `POST /v1/documents/uploads`, `POST /v1/documents`, `GET /v1/documents` (`?entityType=&entityId=&typeId=&status=&visibleInPortal=&expiresBefore=&q=&deleted=`), `GET`, `PATCH`, `DELETE /v1/documents/{id}`, `POST /v1/documents/{id}/restore`, `GET /v1/documents/{id}/download`: documentos de clientes y centros (ver "Documentos") | leer, quien ve la ficha; escribir, quien puede editarla (`clients.manage` en su sucursal) |
 
 Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
 sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
 Opciones de `crud.ts` además de las básicas: `branchColumn` (la lista acepta `?branchId=` con una o varias sucursales
-separadas por comas; hoy en clientes y centros), `createOnly` (campos que no se editan) y `columnAliases` (campo de la
-API con otro nombre de columna).
+separadas por comas; hoy en clientes y centros), `createOnly` (campos que no se editan), `columnAliases` (campo de la
+API con otro nombre de columna) y `restorable` (eliminar recuperable: `?deleted=true`, `POST /{id}/restore` y 409
+`en_uso`; el esquema y las columnas tienen que incluir `deletedAt`; hoy en clientes, centros y contactos).
 
 **Filtro por sucursal.** `GET /v1/me` → `branches` son las sucursales con las que puede trabajar el usuario (todas si su
 rol abarca la ETT). La web enseña el filtro «Todas las sucursales» si hay más de una y lo pasa como
@@ -277,8 +282,9 @@ Los ficheros están en Supabase Storage (bucket privado `documents`, ver `db/REA
 
 Después: `PATCH /v1/documents/{id}` cambia tipo, nombre, estado (`"validated"` valida y pone quién y cuándo),
 caducidad, visibilidad y notas; `GET /v1/documents/{id}/download` → `{ url, expiresIn }` (5 minutos; descarga con el
-nombre del documento); `DELETE` lo elimina de verdad (fila y fichero) y deja rastro en el historial, salvo que su tipo
-sea de conservación obligatoria (`retentionRequired`: 409).
+nombre del documento); `DELETE` lo elimina (baja lógica: el fichero se conserva, sale con `?deleted=true` y se restaura
+con `POST /v1/documents/{id}/restore`) y deja rastro en el historial, salvo que su tipo sea de conservación obligatoria
+(`retentionRequired`: 409 `conservacion_obligatoria`).
 
 Variables: `STORAGE_URL` (desde la API), `STORAGE_PUBLIC_URL` (como lo ve el navegador; por defecto `STORAGE_URL`) y
 `SUPABASE_SERVICE_ROLE_KEY`. Sin ellas la API arranca, pero las rutas de ficheros responden 503. En local, en
