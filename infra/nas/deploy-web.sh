@@ -4,9 +4,11 @@
 #
 # Uso:  sh infra/nas/deploy-web.sh                (NAS por defecto: Enric@192.168.2.8)
 #       NAS=usuario@ip sh infra/nas/deploy-web.sh
+#       SSH_KEY=~/.ssh/otra_clave sh infra/nas/deploy-web.sh   (por defecto, la misma que deploy-web-ejemplo.sh)
 set -e
 
 NAS=${NAS:-Enric@192.168.2.8}
+SSH_KEY=${SSH_KEY:-$HOME/.ssh/id_ed25519_enricgd}
 DEST=/volume1/docker/tramitnow/caddy/site
 
 cd "$(dirname "$0")/../../apps/web"
@@ -26,7 +28,7 @@ npm run build
 
 # Se copia con tar por SSH: el rsync de UGOS no permite escribir en /volume1/docker.
 # El contenido se sustituye dentro de la carpeta (no se renombra) porque Caddy la tiene montada.
-COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C dist -czf - . | ssh "$NAS" "
+COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -C dist -czf - . | ssh -i "$SSH_KEY" "$NAS" "
   set -e
   tmp=\$(mktemp -d)
   tar -xzf - -C \"\$tmp\"

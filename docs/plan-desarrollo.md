@@ -187,10 +187,10 @@ ramas, copias de seguridad fuera del NAS y un entorno que no sea el NAS de casa.
 
 | Decisión | Bloquea | Quién |
 |---|---|---|
-| Las 7 del modelo de clientes | Fase 2 | Equipo |
-| Convenios: hacerlo nosotros o licenciar; primeros convenios | Fase 3 | Equipo / negocio |
-| Pagar por debajo de convenio: bloquea o pide aprobación | Fase 4 | Producto |
-| Margen mínimo y días sin respuesta de un presupuesto | Fase 4 | Producto |
+| ~~Las 7 del modelo de clientes~~ (decidido) | Fase 2 | Equipo |
+| ~~Convenios: hacerlo nosotros o licenciar~~ (nosotros); convenios siguientes según los clientes de las primeras ETT | Fase 3 | Equipo / negocio |
+| ~~Pagar por debajo de convenio~~ (se bloquea) | Fase 4 | Producto |
+| ~~Margen mínimo y días sin respuesta~~ (configurable por ETT) | Fase 4 | Producto |
 | Cifrado de datos personales y auditoría de accesos | Fase 6 | Enric |
 | Proveedor de firma electrónica (CPD, contrato, adendas) | Fases 7 y 11 | Enric |
 | Quién prepara los riesgos de cada puesto (PRL) | Fases 7 y 11 | Producto / laboral |
@@ -199,6 +199,21 @@ ramas, copias de seguridad fuera del NAS y un entorno que no sea el NAS de casa.
 | VeriFactu y factura electrónica | Fase 10 | Asesoría |
 | Proveedor de SMS para el portal del trabajador | Fase 11 | Enric |
 | Versión de la web corporativa | Web | Equipo |
+
+### Decisiones tomadas (16/11/2026)
+
+- **Modelo de clientes (fase 2)**: aceptadas las 7 propuestas. Eliminar es una baja lógica recuperable desde un
+  filtro «Eliminados»; lo usado solo se suspende o desactiva. Hecho y desplegado.
+- **Convenios (fase 3)**: los cargamos nosotros (con IA o a mano), como ventaja frente a la competencia. Primeros:
+  el convenio estatal de ETT y dos convenios estatales muy habituales en la puesta a disposición.
+- **Presupuestos (fase 4)**:
+  - Un salario por debajo del convenio de la empresa usuaria **se bloquea siempre** (art. 11 de la Ley 14/1994);
+    no hay aprobación que lo permita.
+  - Un margen por debajo del mínimo pide la aprobación de un responsable.
+  - El coste para el cliente se desglosa: salario de convenio, Seguridad Social de la empresa, parte proporcional
+    de vacaciones y de la indemnización de fin de contrato (12 días por año) y margen.
+  - Margen mínimo y días sin respuesta, configurables por ETT en Mi ETT. Por defecto, sin margen mínimo y aviso a
+    los 15 días.
 
 ## 5. Siguiente paso propuesto
 
