@@ -1,36 +1,37 @@
 // Datos de Presupuestos (PresupuestosView.jsx): listado, ficha, guardado, cambios de estado, versiones, obsoleto,
 // aprobación del margen, documentos y catálogos. La vista solo recibe datos en su forma (mapeo.ts) y funciones.
+// Contrato: fase4-backend.md (rutas /v1/quotes, /v1/quote-versions y /v1/quote-positions).
 //
 // - Listado: el servidor filtra por la sucursal de la cabecera; la búsqueda y los filtros de la vista se aplican en
 //   el navegador (la lista de presupuestos de una sucursal es corta).
-// - Costes: los calcula el servidor (cada presupuesto trae su desglose). Mientras se edita, la vista previa usa el
-//   módulo de cálculo (mapeo.ts → economiaPuesto).
-// - PROVISIONAL: la forma de la API sale de la propuesta de la web hasta que llegue el contrato de la fase 4.
+// - Se edita la versión actual: al guardar se cambia su cabecera y se crean, cambian o quitan los puestos uno a uno.
+// - Costes: los calcula el servidor (cada puesto trae `calculation`). Mientras se edita, la vista previa usa el mismo
+//   módulo de cálculo de la API (mapeo.ts → economiaPuesto).
 import { useCallback, useMemo, useState } from 'react';
 import {
   ApiError,
   repos,
   useData,
+  type AgreementCategory,
   type CatalogItem,
   type Client,
   type ClientContact,
   type CollectiveAgreement,
   type Membership,
-  type ProfessionalCategory,
-  type QuoteStatus,
+  type Quote,
+  type QuoteVersion,
   type Repositories,
   type TenantSettings,
 } from '../../data';
 import { useSesion } from '../../sesion';
 import { esError, fechaHora, mensajeError, vacioANull } from '../comun/datos';
-import { estadoApi, filaVista, presupuestoApi, presupuestoVista, type PresupuestoVista } from './mapeo';
+import { estadoApi, filaVista, presupuestoVista, puestoApi, puestoCambiado, versionApi, type PresupuestoVista, type Resolver } from './mapeo';
 
 export { mensajeError };
-export { economiaPuesto } from './mapeo';
+export { economiaPuesto, conceptosNuevos } from './mapeo';
 
 type Catalogos = {
   convenios: CollectiveAgreement[];
-  categorias: ProfessionalCategory[];
   formasPago: CatalogItem[];
   motivosRechazo: CatalogItem[];
   tiposDocumento: CatalogItem[];
@@ -42,9 +43,8 @@ type Catalogos = {
 
 async function cargarCatalogos(r: Repositories, sucursal: string | null): Promise<Catalogos> {
   const tabla = (type: string) => r.catalogItems.list({ type, status: 'active', limit: 200 }).then((p) => p.data);
-  const [convenios, categorias, formasPago, motivosRechazo, tiposDocumento, empresas, contactos, comerciales, ajustes] = await Promise.all([
+  const [convenios, formasPago, motivosRechazo, tiposDocumento, empresas, contactos, comerciales, ajustes] = await Promise.all([
     r.collectiveAgreements.list({ status: 'active', limit: 200 }).then((p) => p.data),
-    r.professionalCategories.list({ status: 'active', limit: 200 }).then((p) => p.data),
     tabla('payment_method'),
     tabla('quote_rejection_reason'),
     tabla('document_type'),
@@ -54,19 +54,21 @@ async function cargarCatalogos(r: Repositories, sucursal: string | null): Promis
     r.memberships.list({ status: 'active', limit: 200 }).then((p) => p.data, () => [] as Membership[]),
     r.tenantSettings.get(),
   ]);
-  return { convenios, categorias, formasPago, motivosRechazo, tiposDocumento, empresas, contactos, comerciales, ajustes };
+  return { convenios, formasPago, motivosRechazo, tiposDocumento, empresas, contactos, comerciales, ajustes };
 }
 
-const MOTIVOS_RECHAZO = ['Precio', 'Plazo de incorporación', 'Eligió a la competencia', 'Cancela el proyecto', 'Sin respuesta del cliente'];
+const OTRO = { id: 'otro', label: 'Otro / Personalizado...' };
 
 export function usePresupuestos() {
   const { me, sucursal } = useSesion();
   const cat = useData((r) => cargarCatalogos(r, sucursal), [sucursal]);
   const lista = useData((r) => r.quotes.list({ branchId: sucursal ?? undefined, limit: 200 }).then((p) => p.data), [sucursal]);
-  const [motivosNuevos, setMotivosNuevos] = useState<string[]>([]);
+  // Categorías de la tabla de cada convenio (se piden al elegir el convenio en un puesto).
+  const [categorias, setCategorias] = useState<Record<string, AgreementCategory[]>>({});
 
   const c = cat.data;
   const recargarLista = lista.reload;
+  const permisos = me?.permissions ?? [];
 
   // ---- Nombres e ids -------------------------------------------------------
 
@@ -75,31 +77,34 @@ export function usePresupuestos() {
     const yo = me ? [{ id: me.user.id, nombre: me.user.fullName }] : [];
     return [...new Map([...desdeUsuarios, ...yo].map((x) => [x.id, x])).values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [c, me]);
-  const nombres = useMemo(
-    () => ({
-      comercial: (userId: string | null) => comerciales.find((x) => x.id === userId)?.nombre ?? '',
-      formaPago: (id: string | null) => c?.formasPago.find((x) => x.id === id)?.name ?? '',
-    }),
-    [comerciales, c],
-  );
-  const ids = useMemo(() => ({ comercial: (nombre: string) => comerciales.find((x) => x.nombre === nombre)?.id ?? null }), [comerciales]);
 
-  const vista = useCallback((q: Parameters<typeof presupuestoVista>[0]) => presupuestoVista(q, nombres), [nombres]);
+  const resolver: Resolver = useMemo(
+    () => ({
+      empresa: (clientId) => {
+        const e = c?.empresas.find((x) => x.id === clientId);
+        return e && { cif: e.taxId ?? '', sector: e.activity ?? '', ciudad: '', convenio: e.defaultAgreementId ?? '' };
+      },
+      contacto: (contactId) => {
+        const x = c?.contactos.find((y) => y.id === contactId);
+        return x && { nombre: x.name, cargo: x.position ?? '', email: x.email ?? '', telefono: x.phone ?? x.mobile ?? '' };
+      },
+      comercial: (userId) => comerciales.find((x) => x.id === userId)?.nombre ?? '',
+    }),
+    [c, comerciales],
+  );
+  const vista = useCallback((q: Quote, v: QuoteVersion = q.currentVersion) => presupuestoVista(q, v, resolver), [resolver]);
 
   // ---- Catálogos en la forma de la vista ------------------------------------
 
   const catalogos = useMemo(() => {
     if (!c) return undefined;
-    const etiquetaCategoria = (x: ProfessionalCategory) => (x.agreementLevel ? `${x.name} (nivel ${x.agreementLevel})` : x.name);
-    const categorias: Record<string, { id: string; label: string }[]> = {};
-    for (const x of c.categorias) if (x.agreementId) (categorias[x.agreementId] ??= []).push({ id: x.id, label: etiquetaCategoria(x) });
-    for (const k of Object.keys(categorias)) categorias[k].push({ id: 'otro', label: 'Otro / Personalizado...' });
+    const etiqueta = (x: AgreementCategory) => (x.level ? `${x.name} (nivel ${x.level})` : x.name);
     return {
-      convenios: [...c.convenios.map((a) => ({ id: a.id, label: a.name })), { id: 'otro', label: 'Otro / Personalizado...' }],
-      categorias,
-      formasPago: [...c.formasPago.map((f) => ({ id: f.id, label: f.name })), { id: 'otro', label: 'Otro / Personalizado...' }],
+      convenios: [...c.convenios.map((a) => ({ id: a.id, label: a.name })), OTRO],
+      categorias: Object.fromEntries(Object.entries(categorias).map(([k, l]) => [k, [...l.map((x) => ({ id: x.id, label: etiqueta(x) })), OTRO]])),
+      formasPago: [...c.formasPago.map((f) => ({ id: f.id, label: f.name })), OTRO],
       comerciales: comerciales.map((x) => x.nombre),
-      motivosRechazo: [...new Set([...(c.motivosRechazo.length ? c.motivosRechazo.map((m) => m.name) : MOTIVOS_RECHAZO), ...motivosNuevos])],
+      motivosRechazo: c.motivosRechazo.map((m) => m.name),
       empresas: c.empresas.map((e) => ({
         id: e.id,
         nombre: e.legalName,
@@ -118,134 +123,209 @@ export function usePresupuestos() {
       /** Margen mínimo que pide aprobación (null: sin mínimo) y días sin respuesta para avisar. */
       margenMinimo: c.ajustes.quoteMinMarginPercent,
       diasRecordatorio: c.ajustes.quoteNoResponseDays,
+      /** Permisos: crear, editar y enviar; aprobar el margen. */
+      puedeEditar: permisos.includes('quotes.manage'),
+      puedeAprobar: permisos.includes('quotes.approve_margin'),
     };
-  }, [c, comerciales, motivosNuevos]);
+  }, [c, comerciales, categorias, permisos]);
 
   const listado = useMemo(() => (lista.data ?? []).map(filaVista), [lista.data]);
+
+  /** Pide las categorías de un convenio (una vez). */
+  const cargarCategorias = useCallback(
+    async (collectiveAgreementId: string) => {
+      if (!collectiveAgreementId || collectiveAgreementId === 'otro' || categorias[collectiveAgreementId]) return;
+      const l = await repos.quotes.agreementCategories(collectiveAgreementId).catch(() => [] as AgreementCategory[]);
+      setCategorias((x) => ({ ...x, [collectiveAgreementId]: l }));
+    },
+    [categorias],
+  );
 
   // ---- Ficha ---------------------------------------------------------------
 
   /** La ficha completa de un presupuesto: datos, historial, documentos añadidos y versiones anteriores. */
   const abrir = useCallback(
     async (quoteId: string) => {
-      const [q, actividad, documentos, versiones] = await Promise.all([
+      const [q, actividad, documentos] = await Promise.all([
         repos.quotes.get(quoteId),
         repos.activity.list({ entityType: 'quote', entityId: quoteId, limit: 100 }).then((p) => p.data, () => []),
         repos.documents.list({ entityType: 'quote', entityId: quoteId, limit: 100 }).then((p) => p.data, () => []),
-        repos.quotes.versions(quoteId),
       ]);
       const v = vista(q);
       v.auditoria = actividad.map((a) => ({ id: a.id, fecha: fechaHora(a.occurredAt), usuario: a.actorName ?? '—', accion: a.summary, detalle: '' }));
       v.documentosAnadidos = documentos.map((d) => ({
         id: d.id, tipo: d.typeName, nombre: d.name, archivo: d.name, interno: !d.visibleInPortal, fecha: d.uploadedAt.slice(0, 10), autor: d.uploadedByName ?? '—',
       }));
+      // Las categorías de los convenios de sus puestos, para el panel del puesto.
+      new Set(q.currentVersion.positions.map((p) => p.collectiveAgreementId).filter((x): x is string => !!x)).forEach((x) => void cargarCategorias(x));
       const anteriores = await Promise.all(
-        versiones
-          .filter((x) => x.status === 'superseded')
+        q.versions
+          .filter((x) => x.id !== q.currentVersion.id)
           .map(async (x) => ({
-            codigo: `${q.code}-v${x.number}`,
+            codigo: `${q.code}-v${x.versionNumber}`,
             fecha: x.createdAt.slice(0, 10),
-            autor: x.createdBy ?? '—',
+            autor: x.createdByName ?? '—',
             estado: 'Sustituido',
-            comentario: x.comment ?? '',
-            datos: { ...vista(await repos.quotes.version(quoteId, x.id)), estado: 'Sustituido' },
+            comentario: '',
+            datos: vista(q, await repos.quoteVersions.get(x.id)),
           })),
       );
       return { presupuesto: v, versiones: anteriores };
     },
-    [vista],
+    [vista, cargarCategorias],
   );
 
-  // ---- Guardar y estados ---------------------------------------------------
+  // ---- Guardar ---------------------------------------------------------------
 
-  const guardar = useCallback(
-    async (v: PresupuestoVista, estado: string) => {
-      const datos = presupuestoApi(v, ids);
-      let q = v._id ? await repos.quotes.update(v._id, datos) : await repos.quotes.create(datos);
-      const destino = estadoApi(estado);
-      if (destino !== q.status && (destino === 'draft' || destino === 'in_preparation')) q = await repos.quotes.setStatus(q.id, destino);
-      recargarLista();
-      return vista(q);
+  /** Forma de pago «Otro»: se añade a la tabla maestra. */
+  const formaPagoId = useCallback(
+    async (v: PresupuestoVista) => {
+      if (v.formaPago !== 'otro') return v.formaPago || null;
+      const nombre = v.formaPagoCustom.trim();
+      if (!nombre) return null;
+      const existente = c?.formasPago.find((f) => f.name.toLowerCase() === nombre.toLowerCase());
+      if (existente) return existente.id;
+      const creada = await repos.catalogItems.create({ type: 'payment_method', name: nombre });
+      cat.reload();
+      return creada.id;
     },
-    [ids, vista, recargarLista],
+    [c, cat],
   );
 
-  /** Cambia el estado desde el pipeline o la cabecera. Aceptar y rechazar tienen su función. */
+  /**
+   * Guarda el formulario: crea el presupuesto si es nuevo; si no, la empresa (si ha cambiado), la cabecera de la versión y
+   * sus puestos (los nuevos, los cambiados y los quitados respecto a `original`). `estado`: Borrador o En preparación.
+   * Devuelve el id del presupuesto.
+   */
+  const guardar = useCallback(
+    async (v: PresupuestoVista, estado: string, original?: PresupuestoVista) => {
+      const cabecera = versionApi(v, { comercial: (n) => comerciales.find((x) => x.nombre === n)?.id ?? null, formaPago: await formaPagoId(v) });
+      const status = estadoApi(estado) === 'in_preparation' ? 'in_preparation' : 'draft';
+      let quoteId = v._id;
+      let versionId = v._versionId;
+      if (!quoteId) {
+        const q = await repos.quotes.create({ ...cabecera, clientId: v.empresaId || null, branchId: sucursal ?? undefined });
+        quoteId = q.id;
+        versionId = q.currentVersion.id;
+      } else if ((v.empresaId || null) !== (v._clientIdGuardado ?? null)) {
+        await repos.quotes.update(quoteId, { clientId: v.empresaId || null });
+      }
+      const conceptos = v.conceptosEscandallo;
+      const antes = new Set((original?._id === v._id ? original.posiciones : []).map((p) => p.id));
+      const ahora = new Set(v.posiciones.map((p) => p.id));
+      // Primero la cabecera (con los costes internos); después los puestos que se quitan, se cambian y se añaden.
+      await repos.quoteVersions.update(versionId, cabecera);
+      for (const id of antes) if (!ahora.has(id)) await repos.quoteVersions.removePosition(id);
+      for (const p of v.posiciones) {
+        if (!antes.has(p.id)) await repos.quoteVersions.addPosition(versionId, puestoApi(p, conceptos));
+        else if (puestoCambiado(p)) await repos.quoteVersions.updatePosition(p.id, puestoApi(p, conceptos));
+      }
+      await repos.quoteVersions.update(versionId, { status });
+      recargarLista();
+      return quoteId;
+    },
+    [comerciales, formaPagoId, sucursal, recargarLista],
+  );
+
+  // ---- Estados ---------------------------------------------------------------
+
+  const tras = useCallback(
+    async <T,>(promesa: Promise<T>) => {
+      const r = await promesa;
+      recargarLista();
+      return r;
+    },
+    [recargarLista],
+  );
+
+  /** Cambio de estado desde el pipeline o la cabecera (aceptar, pendiente de firma, borrador, en preparación). */
   const cambiarEstado = useCallback(
     async (quoteId: string, estado: string) => {
+      const v = (await repos.quotes.get(quoteId)).currentVersion;
       const s = estadoApi(estado);
-      const q =
-        s === 'accepted'
-          ? await repos.quotes.accept(quoteId)
-          : await repos.quotes.setStatus(quoteId, s as 'draft' | 'in_preparation' | 'sent' | 'pending_signature');
-      recargarLista();
-      return vista(q);
+      if (s === 'accepted') await tras(repos.quoteVersions.accept(v.id));
+      else if (s === 'pending_signature') await tras(repos.quoteVersions.pendingSignature(v.id));
+      else if (s === 'draft' || s === 'in_preparation') await tras(repos.quoteVersions.update(v.id, { status: s }));
+      else if (s === 'sent') throw new ApiError(409, 'conflicto', 'Para enviarlo, ábrelo y usa «Enviar al cliente»: antes se revisa');
+      else throw new ApiError(409, 'conflicto', 'Ese cambio de estado no se puede hacer desde aquí');
+      return (await abrir(quoteId)).presupuesto;
     },
-    [vista, recargarLista],
+    [tras, abrir],
   );
 
   const rechazar = useCallback(
     async (quoteId: string, motivo: string, notas: string) => {
-      const reasonId = c?.motivosRechazo.find((m) => m.name === motivo)?.id ?? null;
-      const q = await repos.quotes.reject(quoteId, { reasonId, reason: motivo, notes: vacioANull(notas) });
-      recargarLista();
-      return vista(q);
+      const v = (await repos.quotes.get(quoteId)).currentVersion;
+      const reasonId = c?.motivosRechazo.find((m) => m.name === motivo)?.id;
+      if (!reasonId) throw new ApiError(422, 'validacion', 'Elige un motivo de la lista');
+      await tras(repos.quoteVersions.reject(v.id, { reasonId, notes: vacioANull(notas) }));
+      return (await abrir(quoteId)).presupuesto;
     },
-    [c, vista, recargarLista],
+    [c, tras, abrir],
   );
 
-  /** Motivo de rechazo nuevo: a la tabla maestra (en real) y a la lista de la pantalla. */
-  const anadirMotivoRechazo = useCallback(async (nombre: string) => {
-    setMotivosNuevos((m) => [...m, nombre]);
-    await repos.catalogItems.create({ type: 'quote_rejection_reason', name: nombre }).catch(() => {});
-  }, []);
-
-  const enviar = useCallback(
-    async (quoteId: string) => {
-      const q = await repos.quotes.send(quoteId);
-      recargarLista();
-      return vista(q);
+  /** Motivo de rechazo nuevo: a la tabla maestra (hace falta catalogs.manage). */
+  const anadirMotivoRechazo = useCallback(
+    async (nombre: string) => {
+      await repos.catalogItems.create({ type: 'quote_rejection_reason', name: nombre });
+      cat.reload();
     },
-    [vista, recargarLista],
+    [cat],
   );
 
-  const pedirAprobacion = useCallback(async (quoteId: string, motivo: string) => vista(await repos.quotes.requestApproval(quoteId, motivo || null)), [vista]);
-  const resolverAprobacion = useCallback(async (quoteId: string, aprobada: boolean) => vista(await repos.quotes.resolveApproval(quoteId, aprobada)), [vista]);
+  /** Acción sobre la versión actual del presupuesto abierto; devuelve la ficha actualizada. */
+  const accion = useCallback(
+    async (v: PresupuestoVista, f: (versionId: string) => Promise<unknown>) => {
+      await tras(f(v._versionId));
+      return (await abrir(v._id)).presupuesto;
+    },
+    [tras, abrir],
+  );
+  const enviar = useCallback((v: PresupuestoVista) => accion(v, (id) => repos.quoteVersions.send(id)), [accion]);
+  const pedirAprobacion = useCallback((v: PresupuestoVista, motivo: string) => accion(v, (id) => repos.quoteVersions.requestApproval(id, motivo || null)), [accion]);
+  const resolverAprobacion = useCallback(
+    (v: PresupuestoVista, aprobada: boolean, notas = '') =>
+      accion(v, (id) => (aprobada ? repos.quoteVersions.approve(id, notas || null) : repos.quoteVersions.rejectApproval(id, notas || 'Revisa el margen de los puestos'))),
+    [accion],
+  );
 
   const nuevaVersion = useCallback(
-    async (quoteId: string) => {
-      await repos.quotes.newVersion(quoteId);
-      recargarLista();
-      return abrir(quoteId);
+    async (v: PresupuestoVista) => {
+      await tras(repos.quoteVersions.newVersion(v._versionId));
+      return abrir(v._id);
     },
-    [abrir, recargarLista],
+    [tras, abrir],
   );
 
   const pasarAObsoleto = useCallback(
     async (quoteId: string, motivo: string) => {
-      const { created } = await repos.quotes.makeObsolete(quoteId, motivo);
-      recargarLista();
-      return vista(created);
+      const { created } = await tras(repos.quotes.makeObsolete(quoteId, motivo));
+      return (await abrir(created.id)).presupuesto;
     },
-    [vista, recargarLista],
+    [tras, abrir],
   );
 
   const duplicar = useCallback(
     async (quoteId: string) => {
-      const q = await repos.quotes.duplicate(quoteId);
-      recargarLista();
-      return vista(q);
+      const q = await tras(repos.quotes.duplicate(quoteId));
+      return (await abrir(q.id)).presupuesto;
     },
-    [vista, recargarLista],
+    [tras, abrir],
   );
 
   // ---- Documentos ----------------------------------------------------------
 
-  /** Abre el PDF de la propuesta o el escandallo interno generados en el servidor. false si no hay (demo). */
-  const abrirDocumento = useCallback(async (quoteId: string, tipo: 'propuesta' | 'escandallo') => {
-    const url = await repos.quotes.documentUrl(quoteId, tipo === 'propuesta' ? 'proposal' : 'cost_sheet');
-    if (url) window.open(url, '_blank', 'noopener');
-    return !!url;
+  /** Genera en el servidor el PDF de la propuesta y lo abre. false si no se puede (demo). */
+  const abrirPropuestaPdf = useCallback(async (v: PresupuestoVista) => {
+    try {
+      const { documentId } = await repos.quoteVersions.proposalPdf(v._versionId);
+      const url = await repos.documents.downloadUrl(documentId);
+      if (url) window.open(url, '_blank', 'noopener');
+      return !!url;
+    } catch (e) {
+      if (esError(e, 'no_disponible')) return false;
+      throw e;
+    }
   }, []);
 
   /** Sube un documento añadido a mano. El tipo se busca (o se crea) en la tabla maestra de tipos de documento. */
@@ -256,10 +336,7 @@ export function usePresupuestos() {
         tipo = await repos.catalogItems.create({ type: 'document_type', name: d.tipo });
         cat.reload();
       }
-      await repos.documents.upload({
-        entityType: 'quote', entityId: quoteId, typeId: tipo.id, name: d.nombre.trim() || d.archivo.name, file: d.archivo,
-        visibleInPortal: !d.interno,
-      });
+      await repos.documents.upload({ entityType: 'quote', entityId: quoteId, typeId: tipo.id, name: d.nombre.trim() || d.archivo.name, file: d.archivo, visibleInPortal: !d.interno });
     },
     [c, cat],
   );
@@ -272,14 +349,27 @@ export function usePresupuestos() {
 
   // ---- Convenio y empresa nueva ----------------------------------------------
 
-  /** Tabla salarial del convenio para la categoría y el nivel del puesto (null si no hay). */
-  const salarioConvenio = useCallback(
-    (agreementId: string, categoryId: string, level: string) =>
-      agreementId && agreementId !== 'otro'
-        ? repos.quotes.agreementSalary({ agreementId, categoryId: categoryId && categoryId !== 'otro' ? categoryId : null, level: level && level !== 'otro' ? level : null })
-        : Promise.resolve(null),
-    [],
-  );
+  /**
+   * Valores del convenio para la categoría de un puesto, en la forma de la vista (null si no hay tabla): salario,
+   * plus, pagas, horas, vacaciones, el mínimo por hora y la vigencia («Tablas 2026»).
+   */
+  const salarioConvenio = useCallback(async (collectiveAgreementId: string, categoryId: string) => {
+    if (!collectiveAgreementId || collectiveAgreementId === 'otro' || !categoryId || categoryId === 'otro') return null;
+    const r = await repos.quotes.agreementDefaults({ collectiveAgreementId, agreementCategoryId: categoryId });
+    const d = r.defaults;
+    if (d.annualBaseSalary == null) return null;
+    const valores: Record<string, number> = { salarioBaseAnual: d.annualBaseSalary, plusConvenioMes: d.monthlyBonus };
+    if (d.annualPayments != null) valores.pagasAnuales = d.annualPayments;
+    if (d.annualHours != null) valores.horasAnuales = d.annualHours;
+    if (d.vacationDays != null) valores.vacacionesDiasAnio = d.vacationDays;
+    return {
+      valores,
+      minimoHora: d.minimumSalaryHour,
+      versionConvenio: r.agreementVersionId,
+      year: (r.effectiveFrom ?? '').slice(0, 4),
+      periodo: r.effectiveFrom ? { from: r.effectiveFrom, to: r.effectiveTo } : null,
+    };
+  }, []);
 
   /**
    * Alta rápida desde el presupuesto: la empresa en borrador (prospect) con lo mínimo y su contacto como destinatario
@@ -310,7 +400,7 @@ export function usePresupuestos() {
       cat.reload();
       return {
         id: empresa.id, nombre: empresa.legalName, cif: empresa.taxId ?? '', sector: d.sector, ciudad: d.ciudad, convenio: empresa.defaultAgreementId ?? '',
-        comercial: me?.user.fullName ?? '',
+        comercial: me?.user.fullName ?? '', nueva: true,
         contactos: [{ id: contacto.id, nombre: contacto.name, cargo: contacto.position ?? '', email: contacto.email ?? '', telefono: contacto.phone ?? '' }],
       };
     },
@@ -327,6 +417,7 @@ export function usePresupuestos() {
     },
     listado,
     catalogos,
+    cargarCategorias,
     abrir,
     guardar,
     cambiarEstado,
@@ -338,7 +429,7 @@ export function usePresupuestos() {
     nuevaVersion,
     pasarAObsoleto,
     duplicar,
-    abrirDocumento,
+    abrirPropuestaPdf,
     anadirDocumento,
     quitarDocumento,
     descargarDocumento,

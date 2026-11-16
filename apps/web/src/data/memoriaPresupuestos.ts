@@ -1,20 +1,18 @@
-// Presupuestos de ejemplo y repositorio en memoria (modo demo). Son los del diseñador (PresupuestosView.jsx), en la
-// forma de la API, y se comportan como ella: estados, versiones, obsoleto, aprobación del margen, revisión antes de
-// enviar y bloqueo por debajo del convenio. Los costes, con el módulo de cálculo (calculoPresupuestos.ts).
+// Presupuestos de ejemplo y repositorios en memoria (modo demo). Son los del diseñador (PresupuestosView.jsx), en la
+// forma del contrato de la fase 4 (fase4-backend.md), y se comportan como la API: versiones, estados, obsoleto,
+// aprobación del margen, revisión al enviar y bloqueo por debajo del convenio. El cálculo es el módulo puro de la API.
 // Todo es ficticio. Sin efectos al cargarse (ver vite.config.ts): los datos se crean la primera vez que se usan.
-import { calcularPuesto, calcularTotales } from './calculoPresupuestos';
+import { DEFAULT_SS_RATES, atEpForCnae, calculateQuote } from './calculoPresupuestos';
 import { delay, id, newId, page } from './memoriaBase';
 import { log } from './memoriaEmpresas';
 import type { Repositories } from './repositorios';
 import {
   ApiError,
-  type AgreementSalary,
   type Quote,
   type QuoteCostConcept,
   type QuoteExtra,
-  type QuoteInput,
   type QuotePosition,
-  type QuoteReviewItem,
+  type QuotePositionInput,
   type QuoteStatus,
   type QuoteSummary,
   type QuoteVersion,
@@ -23,92 +21,113 @@ import {
 
 const NORTE = id(20);
 const BARCELONA = id(21);
-const USUARIOS: Record<string, string> = { [id(250)]: 'Usuario Demo', [id(256)]: 'Elena Navarro', [id(257)]: 'Carlos Mendoza', [id(258)]: 'Laura Vidal' };
+const EG = id(10);
 const ELENA = id(256);
 const CARLOS = id(257);
 const LAURA = id(258);
-const YO = id(250);
+const YO = { id: id(250), name: 'Usuario Demo' };
+const NOMBRES: Record<string, string> = { [YO.id]: YO.name, [ELENA]: 'Elena Navarro', [CARLOS]: 'Carlos Mendoza', [LAURA]: 'Laura Vidal' };
 
-// Convenios (memoria.ts): 60 hostelería, 62 logística de Bizkaia, 63 metal de Madrid. Categorías 600 a 607.
+// Convenios de la ETT (memoria.ts): 60 hostelería, 62 logística de Bizkaia, 63 metal de Madrid.
+// Categorías de sus tablas (memoria.ts, 600 a 607) con su salario de 2026.
 const LOG48 = id(62);
 const HOST = id(60);
 const METAL = id(63);
-
-/** Tablas salariales de ejemplo (2026) por categoría. */
-const TABLAS: Record<string, Omit<AgreementSalary, 'agreementId' | 'agreementVersionId'>> = {
-  [id(600)]: { year: 2026, baseAnnualSalary: 17200, monthlyBonus: 120, annualPayments: 14, annualHours: 1784, dailyHours: 8 },
-  [id(601)]: { year: 2026, baseAnnualSalary: 19450, monthlyBonus: 180, annualPayments: 14, annualHours: 1784, dailyHours: 8 },
-  [id(603)]: { year: 2026, baseAnnualSalary: 17200, monthlyBonus: 120, annualPayments: 14, annualHours: 1784, dailyHours: 8 },
-  [id(602)]: { year: 2026, baseAnnualSalary: 16700, monthlyBonus: 110, annualPayments: 14, annualHours: 1784, dailyHours: 8 },
-  [id(604)]: { year: 2026, baseAnnualSalary: 16200, monthlyBonus: 90, annualPayments: 14, annualHours: 1792, dailyHours: 8 },
-  [id(605)]: { year: 2026, baseAnnualSalary: 15400, monthlyBonus: 80, annualPayments: 14, annualHours: 1792, dailyHours: 8 },
-  [id(606)]: { year: 2026, baseAnnualSalary: 18100, monthlyBonus: 110, annualPayments: 14, annualHours: 1792, dailyHours: 8 },
-  [id(607)]: { year: 2026, baseAnnualSalary: 21500, monthlyBonus: 150, annualPayments: 14, annualHours: 1752, dailyHours: 8 },
+const CONVENIOS: Record<string, string> = {
+  [LOG48]: 'Convenio de logística de Bizkaia (ejemplo)',
+  [HOST]: 'Convenio de hostelería de Cataluña (ejemplo)',
+  [METAL]: 'Convenio del metal de Madrid (ejemplo)',
 };
-const CONVENIO_DE: Record<string, string> = { [id(600)]: LOG48, [id(601)]: LOG48, [id(602)]: LOG48, [id(603)]: LOG48, [id(604)]: HOST, [id(605)]: HOST, [id(606)]: HOST, [id(607)]: METAL };
+type Tabla = { agreement: string; code: string; name: string; level: string; base: number; bonus: number; hours: number };
+const TABLAS: Record<string, Tabla> = {
+  [id(600)]: { agreement: LOG48, code: 'OPALM', name: 'Operario/a de almacén', level: 'IV', base: 17200, bonus: 120, hours: 1784 },
+  [id(601)]: { agreement: LOG48, code: 'MOZESP', name: 'Mozo/a especialista - carretillero/a', level: 'III', base: 19450, bonus: 180, hours: 1784 },
+  [id(602)]: { agreement: LOG48, code: 'MOZALM', name: 'Mozo/a de almacén', level: 'IV', base: 16700, bonus: 110, hours: 1784 },
+  [id(603)]: { agreement: LOG48, code: 'PREPED', name: 'Preparador/a de pedidos (picking)', level: 'IV', base: 17200, bonus: 120, hours: 1784 },
+  [id(604)]: { agreement: HOST, code: 'CAMSAL', name: 'Camarero/a de sala', level: 'II', base: 16200, bonus: 90, hours: 1792 },
+  [id(605)]: { agreement: HOST, code: 'AYCOC', name: 'Ayudante de cocina', level: 'III', base: 15400, bonus: 80, hours: 1792 },
+  [id(606)]: { agreement: HOST, code: 'COCPAR', name: 'Cocinero/a de partida', level: 'I', base: 18100, bonus: 110, hours: 1792 },
+  [id(607)]: { agreement: METAL, code: 'SOLD', name: 'Soldador/a homologado TIG/MIG', level: 'Oficial 1ª', base: 21500, bonus: 150, hours: 1752 },
+};
+const minimoHora = (t: Tabla) => Math.round(((t.base + t.bonus * 12) / t.hours) * 10000) / 10000;
+
+/** Datos de cada empresa de ejemplo (memoriaEmpresas.ts) que el presupuesto necesita. */
+type Empresa = { name: string; branchId: string; cnae: string; agreement: string | null; contact: { id: string; name: string; email: string } | null };
+const EMPRESAS: Record<string, Empresa> = {
+  [id(100)]: { name: 'Trans-Logística Ibérica Norte, S.L.', branchId: NORTE, cnae: '52', agreement: LOG48, contact: { id: id(120), name: 'Marta Gómez Arana', email: 'marta.gomez@translog-norte.example' } },
+  [id(101)]: { name: 'Manufacturas Metálicas del Henares, S.A.', branchId: NORTE, cnae: '25', agreement: METAL, contact: { id: id(122), name: 'Alfonso Serrano', email: 'aserrano@metalhenares.example' } },
+  [id(102)]: { name: 'Mediterránea Agrícola y Envasado, S.L.', branchId: BARCELONA, cnae: '10', agreement: null, contact: null },
+  [id(103)]: { name: 'Hostelería & Eventos Premium BCN, S.L.', branchId: BARCELONA, cnae: '56', agreement: HOST, contact: { id: id(123), name: 'Sergi Pujol', email: 'spujol@premiumeventsbcn.example' } },
+};
+/** Contactos de ejemplo (memoriaEmpresas.ts), para el destinatario de la versión. */
+const CONTACTOS: Record<string, { name: string; email: string }> = Object.fromEntries(
+  [
+    [id(120), 'Marta Gómez Arana', 'marta.gomez@translog-norte.example'],
+    [id(121), 'Javier Ugarte Elorza', 'j.ugarte@translog-norte.example'],
+    [id(122), 'Alfonso Serrano', 'aserrano@metalhenares.example'],
+    [id(123), 'Sergi Pujol', 'spujol@premiumeventsbcn.example'],
+    [id(124), 'Montse Ferrer', 'mferrer@premiumeventsbcn.example'],
+  ].map(([k, name, email]) => [k, { name, email }]),
+);
+const FORMAS_PAGO: Record<string, string> = Object.fromEntries(
+  ['Transferencia a 30 días', 'Transferencia a 60 días', 'Recibo SEPA a 30 días', 'Recibo SEPA a 60 días', 'Confirming a 90 días', 'Al contado'].map((n, i) => [id(300 + i), n]),
+);
+
+/** Motivos de rechazo de la tabla maestra (memoriaEmpresas.ts, ids 700 en adelante; los siembra la migración). */
+export const MOTIVOS_RECHAZO = ['Precio', 'Plazo de incorporación', 'Eligió a la competencia', 'Cancela el proyecto', 'Sin respuesta del cliente'];
 
 const costes = (): QuoteCostConcept[] => [
-  { id: 'c-ss', name: 'Seguridad Social Patronal (Común + AT/EP 4.10% + Desempleo + FOGASA + FP)', kind: 'percentage', value: 32.85, base: 'total_salary_cost', legal: true, alwaysIncluded: false, description: 'Aportación legal obligatoria a la TGSS según tarifa CNAE Transporte y Almacenamiento.' },
-  { id: 'c-indem', name: 'Indemnización Fin de Contrato Puesta a Disposición (12 días/año)', kind: 'percentage', value: 4.54, base: 'total_salary_cost', legal: true, alwaysIncluded: false, description: 'Prorrateo de indemnización legal obligatoria por cese de contrato de puesta a disposición.' },
-  { id: 'c-abs', name: 'Provisión de absentismo y contingencias', kind: 'percentage', value: 2.15, base: 'gross_hourly_salary', legal: false, alwaysIncluded: true, description: 'Cobertura estimada de bajas de corta duración y permisos retribuidos según convenio.' },
-  { id: 'c-epi', name: 'EPIs', kind: 'per_hour', value: 0.18, base: 'effective_hours', legal: false, alwaysIncluded: true, description: 'Equipos de protección individual que necesite el puesto.' },
-  { id: 'c-prl', name: 'Revisión médica inicial y formación PRL', kind: 'per_hour', value: 0.22, base: 'effective_hours', legal: false, alwaysIncluded: true, description: 'Acreditación según Art. 19 LPRL y vigilancia médica para trabajo en altura y almacén.' },
+  { code: 'absenteeism', name: 'Provisión de absentismo y contingencias', mode: 'percent', value: 2.15, required: true, description: 'Cobertura estimada de bajas de corta duración y permisos retribuidos según convenio.' },
+  { code: 'ppe', name: 'EPIs', mode: 'per_hour', value: 0.18, required: true, description: 'Equipos de protección individual que necesite el puesto.' },
+  { code: 'medical', name: 'Revisión médica inicial y formación PRL', mode: 'per_hour', value: 0.22, required: true, description: 'Acreditación según Art. 19 LPRL y vigilancia médica.' },
 ];
-
-const extra = (xid: string, name: string, salaryCoefficient: number, showInProposal = true): QuoteExtra => ({
-  id: xid, name, salaryCoefficient, salaryOverride: null, rateCoefficient: null, rateSurchargePercent: null, rateOverride: null, showInProposal, custom: false,
+const extra = (code: string, name: string, salaryCoefficient: number, print = true): QuoteExtra => ({
+  code, name, salaryCoefficient, salaryPerHour: null, salarySupplementPerHour: null, rateSurchargePercent: null, ratePerHour: null, print, custom: false,
 });
-const extras = (): QuoteExtra[] => [
-  extra('extra', 'Hora extra', 1.5),
-  extra('nocturna', 'Hora nocturna', 1.25),
-  extra('finde', 'Hora de fin de semana', 1.5),
-  extra('festiva', 'Hora festiva', 1.75),
-];
+const extras = (): QuoteExtra[] => [extra('extra', 'Hora extra', 1.5), extra('nocturna', 'Hora nocturna', 1.25), extra('finde', 'Hora de fin de semana', 1.5), extra('festiva', 'Hora festiva', 1.75)];
 
-type Puesto = Partial<QuotePosition> & Pick<QuotePosition, 'name' | 'baseAnnualSalary' | 'monthlyBonus' | 'rate' | 'people'>;
+type Puesto = Partial<QuotePosition> & Pick<QuotePosition, 'name' | 'hourlyRate' | 'people'>;
 function puesto(n: number, categoria: string | null, datos: Puesto): QuotePosition {
-  const tabla = categoria ? TABLAS[categoria] : undefined;
+  const t = categoria ? TABLAS[categoria] : undefined;
   return {
-    id: `pos-${n}`, agreementId: categoria ? CONVENIO_DE[categoria] : null, agreementVersionId: null, customAgreement: null,
-    categoryId: categoria, customCategory: null, level: null, customLevel: null, annualPayments: 14, annualHours: tabla?.annualHours ?? 1784,
-    dailyHours: 8, partTimeFactor: 1, vacationDays: 30, manualFields: [],
-    agreementMinimumAnnual: tabla ? tabla.baseAnnualSalary + tabla.monthlyBonus * 12 : null,
-    hoursPerPerson: 480, marginMode: null, marginPercent: null, marginAmount: null, costs: [], extras: extras(), tasks: null, ...datos,
+    id: `pos-${n}`, sortOrder: n, description: null, collectiveAgreementId: t?.agreement ?? null, collectiveAgreementName: t ? CONVENIOS[t.agreement] : null,
+    agreementCategoryId: categoria, agreementCategoryName: t?.name ?? null, customCategoryName: null, level: t?.level ?? null, agreementVersionId: null, agreementPeriod: t ? { from: '2026-01-01', to: '2026-12-31' } : null,
+    agreementMinimumSalaryHour: t ? minimoHora(t) : null, annualBaseSalary: t?.base ?? 0, monthlyBonus: t?.bonus ?? 0, annualPayments: 14,
+    annualHours: t?.hours ?? 1784, hoursPerDay: 8, vacationDays: 30, vacationDaysType: 'naturales', manualFields: [], hoursPerPerson: 480,
+    margin: null, costs: [], extras: extras(), calculation: null, ...datos,
   };
 }
 
-type Semilla = Partial<Quote> & Pick<Quote, 'code' | 'title' | 'status' | 'clientId' | 'salesUserId' | 'validUntil' | 'positions'> & { enviadoHaceDias?: number };
-
-const CLIENTES: Record<string, Pick<Quote, 'clientName' | 'clientTaxId' | 'clientSector' | 'clientCity' | 'clientAgreementId' | 'branchId' | 'contactId' | 'contactName' | 'contactEmail' | 'contactPhone'>> = {
-  [id(100)]: { clientName: 'Trans-Logística Ibérica Norte, S.L.', clientTaxId: 'B00000101', clientSector: 'Logística y almacén', clientCity: 'Basauri (Bizkaia)', clientAgreementId: LOG48, branchId: NORTE, contactId: id(120), contactName: 'Marta Gómez Arana (Responsable de RRHH y Selección)', contactEmail: 'marta.gomez@translog-norte.example', contactPhone: '+34 600 000 120' },
-  [id(101)]: { clientName: 'Manufacturas Metálicas del Henares, S.A.', clientTaxId: 'A00000102', clientSector: 'Industria metalúrgica', clientCity: 'Alcalá de Henares (Madrid)', clientAgreementId: METAL, branchId: NORTE, contactId: id(122), contactName: 'Alfonso Serrano (Dir. Financiero)', contactEmail: 'aserrano@metalhenares.example', contactPhone: '+34 600 000 122' },
-  [id(102)]: { clientName: 'Mediterránea Agrícola y Envasado, S.L.', clientTaxId: 'B00000103', clientSector: 'Agroalimentario', clientCity: 'Valencia', clientAgreementId: null, branchId: BARCELONA, contactId: null, contactName: null, contactEmail: null, contactPhone: null },
-  [id(103)]: { clientName: 'Hostelería & Eventos Premium BCN, S.L.', clientTaxId: 'B00000104', clientSector: 'Hostelería y eventos', clientCity: 'Barcelona', clientAgreementId: HOST, branchId: BARCELONA, contactId: id(123), contactName: 'Sergi Pujol (Coordinador de Eventos)', contactEmail: 'spujol@premiumeventsbcn.example', contactPhone: '+34 600 000 123' },
-};
-
-const operario = (n = 1, rate = 17.65, people = 8) =>
-  puesto(n, id(600), { name: 'Operario/a de Almacén', baseAnnualSalary: 17200, monthlyBonus: 120, rate, people, tasks: 'Recepción, control de bultos, picking por radiofrecuencia, preparación de pedidos e inventario rotativo.' });
-const carretillero = (n = 2, rate = 19.8, people = 4) =>
+const operario = (n = 1, hourlyRate = 17.65, people = 8) =>
+  puesto(n, id(600), { name: 'Operario/a de Almacén', hourlyRate, people, description: 'Recepción, control de bultos, picking por radiofrecuencia, preparación de pedidos e inventario rotativo.' });
+const carretillero = (n = 2, hourlyRate = 19.8, people = 4) =>
   puesto(n, id(601), {
-    name: 'Mozo/a Especialista — Carretillero/a Frontal/Retráctil', baseAnnualSalary: 19450, monthlyBonus: 180, rate, people,
-    costs: [{ conceptId: 'c-abs', applies: true, percent: 3.2, amount: null }],
-    extras: extras().map((x) => ({ ...x, showInProposal: x.id !== 'festiva' })),
-    tasks: 'Ubicación en altura en estanterías dinámicas (hasta 9m), descarga de trailers y abastecimiento de líneas.',
+    name: 'Mozo/a Especialista — Carretillero/a Frontal/Retráctil', hourlyRate, people,
+    costs: [{ code: 'absenteeism', applies: true, percent: 3.2, perHour: null }],
+    extras: extras().map((x) => ({ ...x, print: x.code !== 'festiva' })),
+    description: 'Ubicación en altura en estanterías dinámicas (hasta 9m), descarga de trailers y abastecimiento de líneas.',
   });
-const envasado = (n: number, name: string, base: number, bonus: number, rate: number, people: number, tasks: string) =>
-  puesto(n, null, { name, customAgreement: 'Convenio comercio y almacenistas alimentación', customCategory: name, baseAnnualSalary: base, monthlyBonus: bonus, rate, people, tasks });
+const envasado = (n: number, name: string, base: number, bonus: number, hourlyRate: number, people: number, description: string) =>
+  puesto(n, null, { name, customCategoryName: name, annualBaseSalary: base, monthlyBonus: bonus, hourlyRate, people, description });
+
+type Semilla = {
+  code: string; clientId: string; status: QuoteStatus; title: string; salesRepId: string; validUntil: string; positions: QuotePosition[];
+  version?: Partial<QuoteVersion>; enviadoHaceDias?: number; anterior?: { positions: QuotePosition[]; validUntil: string };
+};
 
 function semillas(): Semilla[] {
   return [
     {
-      code: 'PRE-2026-0048', versionNumber: 2, title: 'Servicio ETT campaña logística primavera y refuerzo HUB central', status: 'draft',
-      clientId: id(100), salesUserId: ELENA, issueDate: '2026-10-27', validUntil: '2026-11-27', plannedStartDate: '2026-12-01', durationMonths: 3,
-      modality: 'pico_produccion', paymentMethodId: id(301), replacementGuarantee: 'garantia_4h',
-      commercialNotes: 'Se contempla cláusula de absorción por plantilla cliente sin coste de traspaso tras superar las 900 horas efectivas de CPD. La ETT asume la gestión documental completa en CAE y portal de PRL.',
-      positions: [operario(), carretillero()],
+      code: 'PRE-2026-0048', clientId: id(100), status: 'draft', title: 'Servicio ETT campaña logística primavera y refuerzo HUB central', salesRepId: ELENA,
+      validUntil: '2026-11-27', positions: [operario(), carretillero()],
+      version: {
+        issueDate: '2026-10-27', expectedStartDate: '2026-12-01', durationMonths: 3, modality: 'pico_produccion', paymentMethodId: id(301), replacementGuarantee: 'garantia_4h',
+        commercialNotes: 'Se contempla cláusula de absorción por plantilla cliente sin coste de traspaso tras superar las 900 horas efectivas de CPD. La ETT asume la gestión documental completa en CAE y portal de PRL.',
+      },
+      anterior: { positions: [operario(1, 17.2), carretillero(2, 20.4, 3)], validUntil: '2026-11-10' },
     },
     {
-      code: 'PRE-2026-0047', title: 'Refuerzo líneas de envasado y picking alimentario', status: 'in_preparation', clientId: id(102), salesUserId: CARLOS, validUntil: '2026-11-02',
+      code: 'PRE-2026-0047', clientId: id(102), status: 'in_preparation', title: 'Refuerzo líneas de envasado y picking alimentario', salesRepId: CARLOS, validUntil: '2026-11-02',
       positions: [
         envasado(1, 'Operario/a de envasado', 16300, 60, 16.4, 6, 'Envasado y etiquetado en línea.'),
         envasado(2, 'Preparador/a de pedidos', 16500, 60, 16.9, 4, 'Picking de producto fresco.'),
@@ -116,59 +135,44 @@ function semillas(): Semilla[] {
       ],
     },
     {
-      code: 'PRE-2026-0046', title: 'Camareros/as para temporada de congresos', status: 'pending_signature', enviadoHaceDias: 2, clientId: id(103), salesUserId: LAURA, validUntil: '2026-11-10',
+      code: 'PRE-2026-0046', clientId: id(103), status: 'pending_signature', enviadoHaceDias: 2, title: 'Camareros/as para temporada de congresos', salesRepId: LAURA, validUntil: '2026-11-10',
       positions: [
-        puesto(1, id(604), { name: 'Camarero/a de sala', baseAnnualSalary: 16200, monthlyBonus: 90, rate: 17.4, people: 8, tasks: 'Servicio de sala en congresos.' }),
-        puesto(2, id(604), { name: 'Camarero/a de barra', baseAnnualSalary: 16200, monthlyBonus: 90, rate: 17.4, people: 4, tasks: 'Servicio de barra.' }),
+        puesto(1, id(604), { name: 'Camarero/a de sala', hourlyRate: 17.4, people: 8, description: 'Servicio de sala en congresos.' }),
+        puesto(2, id(604), { name: 'Camarero/a de barra', hourlyRate: 17.4, people: 4, description: 'Servicio de barra.' }),
       ],
     },
     {
-      code: 'PRE-2026-0045', title: 'Operarios/as soldadura y mecanizado metal 24/7', status: 'sent', enviadoHaceDias: 6, clientId: id(101), salesUserId: ELENA, validUntil: '2026-11-15',
-      positions: [puesto(1, id(607), { name: 'Soldador/a TIG/MIG', baseAnnualSalary: 21500, monthlyBonus: 150, rate: 22.4, people: 6, tasks: 'Soldadura homologada en turnos rotativos 24/7.' })],
+      code: 'PRE-2026-0045', clientId: id(101), status: 'sent', enviadoHaceDias: 6, title: 'Operarios/as soldadura y mecanizado metal 24/7', salesRepId: ELENA, validUntil: '2026-11-15',
+      positions: [puesto(1, id(607), { name: 'Soldador/a TIG/MIG', hourlyRate: 22.4, people: 6, description: 'Soldadura homologada en turnos rotativos 24/7.' })],
     },
     {
-      code: 'PRE-2026-0042', title: 'Campaña logística otoño HUB central', status: 'accepted', clientId: id(100), salesUserId: ELENA, issueDate: '2026-09-20', validUntil: '2026-10-20',
-      plannedStartDate: '2026-11-03', durationMonths: 3, modality: 'pico_produccion', commercialNotes: 'Campaña de otoño. Turnos de mañana y tarde en el HUB central de Basauri.',
-      positions: [operario(), carretillero()],
-      requests: [
-        { code: 'PET-2026-0048', positionId: 'pos-1', shift: 'Turno de mañana', places: 5 },
-        { code: 'PET-2026-0049', positionId: 'pos-1', shift: 'Turno de tarde', places: 3 },
-        { code: 'PET-2026-0050', positionId: 'pos-2', shift: 'Turno de tarde', places: 4 },
-      ],
+      code: 'PRE-2026-0042', clientId: id(100), status: 'accepted', title: 'Campaña logística otoño HUB central', salesRepId: ELENA, validUntil: '2026-10-20', positions: [operario(), carretillero()],
+      version: { issueDate: '2026-09-20', expectedStartDate: '2026-11-03', durationMonths: 3, modality: 'pico_produccion', commercialNotes: 'Campaña de otoño. Turnos de mañana y tarde en el HUB central de Basauri.' },
     },
     {
-      code: 'PRE-2026-0041', title: 'Servicio ETT camareros/as y cocina fiestas locales', status: 'accepted', clientId: id(103), salesUserId: LAURA, issueDate: '2026-09-15', validUntil: '2026-10-15',
-      plannedStartDate: '2026-10-10', durationMonths: 2, modality: 'pico_produccion', commercialNotes: 'Temporada de congresos y fiestas locales en el recinto de congresos de Barcelona.',
+      code: 'PRE-2026-0041', clientId: id(103), status: 'accepted', title: 'Servicio ETT camareros/as y cocina fiestas locales', salesRepId: LAURA, validUntil: '2026-10-15',
       positions: [
-        puesto(1, id(604), { name: 'Camarero/a de sala', baseAnnualSalary: 16200, monthlyBonus: 90, rate: 18.4, people: 10, tasks: 'Servicio de sala, montaje de mesas y servicio de cócteles y banquetes.' }),
-        puesto(2, id(605), { name: 'Ayudante de cocina', baseAnnualSalary: 15400, monthlyBonus: 80, rate: 17.2, people: 4, tasks: 'Preparación, emplatado y limpieza de cocina.' }),
-        puesto(3, id(606), { name: 'Cocinero/a de partida', baseAnnualSalary: 18100, monthlyBonus: 110, rate: 19.6, people: 2, tasks: 'Elaboración de la partida asignada en banquetes.' }),
-        puesto(4, id(604), { name: 'Camarero/a de barra', baseAnnualSalary: 16200, monthlyBonus: 90, rate: 18.4, people: 3, tasks: 'Servicio de barra en el turno de noche.' }),
+        puesto(1, id(604), { name: 'Camarero/a de sala', hourlyRate: 18.4, people: 10, description: 'Servicio de sala, montaje de mesas y servicio de cócteles y banquetes.' }),
+        puesto(2, id(605), { name: 'Ayudante de cocina', hourlyRate: 17.2, people: 4, description: 'Preparación, emplatado y limpieza de cocina.' }),
+        puesto(3, id(606), { name: 'Cocinero/a de partida', hourlyRate: 19.6, people: 2, description: 'Elaboración de la partida asignada en banquetes.' }),
+        puesto(4, id(604), { name: 'Camarero/a de barra', hourlyRate: 18.4, people: 3, description: 'Servicio de barra en el turno de noche.' }),
       ],
-      requests: [
-        { code: 'PET-2026-0044', positionId: 'pos-1', shift: 'Jornada partida', places: 10 },
-        { code: 'PET-2026-0045', positionId: 'pos-2', shift: 'Jornada partida', places: 4 },
-        { code: 'PET-2026-0046', positionId: 'pos-3', shift: 'Jornada partida', places: 2 },
-        { code: 'PET-2026-0047', positionId: 'pos-4', shift: 'Turno de noche', places: 3 },
-      ],
+      version: { issueDate: '2026-09-15', expectedStartDate: '2026-10-10', durationMonths: 2, modality: 'pico_produccion', commercialNotes: 'Temporada de congresos y fiestas locales en el recinto de congresos de Barcelona.' },
     },
     {
-      code: 'PRE-2026-0038', title: 'Mozos de carga para inventario anual', status: 'rejected', clientId: id(100), salesUserId: CARLOS, validUntil: '2026-10-01',
-      rejection: { reasonId: null, reason: 'Precio', notes: 'Han elegido otra ETT con una tarifa más baja.', at: '2026-09-25T10:00:00.000Z' },
-      positions: [puesto(1, id(600), { name: 'Mozo/a de carga', baseAnnualSalary: 17200, monthlyBonus: 120, rate: 16.2, people: 5, tasks: 'Recuento e inventario anual.' })],
+      code: 'PRE-2026-0038', clientId: id(100), status: 'rejected', title: 'Mozos de carga para inventario anual', salesRepId: CARLOS, validUntil: '2026-10-01',
+      positions: [puesto(1, id(600), { name: 'Mozo/a de carga', hourlyRate: 16.2, people: 5, description: 'Recuento e inventario anual.' })],
+      version: { rejectionReasonId: id(700), rejectionReasonName: 'Precio', rejectionNotes: 'Han elegido otra ETT con una tarifa más baja.', rejectedAt: '2026-09-25T10:00:00.000Z' },
     },
     {
-      code: 'PRE-2026-0033', versionNumber: 2, title: 'Envasado nocturno campaña de cítricos', status: 'accepted', clientId: id(102), salesUserId: CARLOS, issueDate: '2026-08-20',
-      validUntil: '2026-09-05', plannedStartDate: '2026-09-15', durationMonths: 3,
-      commercialNotes: 'El cliente aplazó la campaña después de aceptar: la petición PET-2026-0036 está cancelada.',
+      code: 'PRE-2026-0033', clientId: id(102), status: 'accepted', title: 'Envasado nocturno campaña de cítricos', salesRepId: CARLOS, validUntil: '2026-09-05',
       positions: [envasado(1, 'Operario/a de envasado', 16300, 60, 16.4, 5, 'Envasado y etiquetado en línea, turno de noche.')],
-      requests: [{ code: 'PET-2026-0036', positionId: 'pos-1', shift: 'Turno de noche', places: 5 }],
+      version: { issueDate: '2026-08-20', expectedStartDate: '2026-09-15', durationMonths: 3, commercialNotes: 'El cliente aplazó la campaña después de aceptar: la petición PET-2026-0036 está cancelada.' },
     },
     {
-      code: 'PRE-2026-0029', title: 'Campaña logística verano HUB central', status: 'accepted', clientId: id(100), salesUserId: ELENA, issueDate: '2026-06-01', validUntil: '2026-06-20',
-      plannedStartDate: '2026-07-01', durationMonths: 3, commercialNotes: 'Campaña de verano, ya terminada.',
-      positions: [puesto(1, id(602), { name: 'Mozo/a de almacén', baseAnnualSalary: 16700, monthlyBonus: 110, rate: 16.9, people: 6, tasks: 'Carga, descarga y reposición en la nave 2.' })],
-      requests: [{ code: 'PET-2026-0031', positionId: 'pos-1', shift: 'Turno de mañana', places: 6 }],
+      code: 'PRE-2026-0029', clientId: id(100), status: 'accepted', title: 'Campaña logística verano HUB central', salesRepId: ELENA, validUntil: '2026-06-20',
+      positions: [puesto(1, id(602), { name: 'Mozo/a de almacén', hourlyRate: 16.9, people: 6, description: 'Carga, descarga y reposición en la nave 2.' })],
+      version: { issueDate: '2026-06-01', expectedStartDate: '2026-07-01', durationMonths: 3, commercialNotes: 'Campaña de verano, ya terminada.' },
     },
   ];
 }
@@ -177,258 +181,424 @@ function semillas(): Semilla[] {
 // Estado en memoria (se crea al primer uso)
 // ---------------------------------------------------------------------------
 
-type Guardado = Omit<Quote, 'breakdowns' | 'totals' | 'daysWithoutResponse'>;
-type Registro = { actual: Guardado; anteriores: (Guardado & { comment: string | null; createdBy: string | null })[] };
-let estado: { registros: Registro[]; siguiente: number } | undefined;
+type Cabecera = Omit<Quote, 'currentVersion' | 'versions' | 'status' | 'versionNumber' | 'createdFromCode' | 'replacedByCode' | 'clientAgreementId'> & { updatedAt: string };
+let estado: { cabeceras: Cabecera[]; versiones: QuoteVersion[]; siguiente: number } | undefined;
+let ajustesDe: () => Promise<TenantSettings> = async () => ({ quoteMinMarginPercent: null, quoteNoResponseDays: 15 });
 
-const hoyISO = () => new Date().toISOString().slice(0, 10);
-const haceDias = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+const ahora = () => new Date().toISOString();
+const hoyISO = () => ahora().slice(0, 10);
+const enDias = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 const copia = <T>(x: T): T => structuredClone(x);
 
-function base(s: Semilla): Guardado {
-  const { enviadoHaceDias, ...q } = s;
+function versionNueva(quoteId: string, n: number, datosVersion: Partial<QuoteVersion>, clientId: string | null): QuoteVersion {
   return {
-    id: newId(), versionId: newId(), versionNumber: 1, branchId: null, contactId: null, contactName: null, contactEmail: null, contactPhone: null,
-    clientName: null, clientTaxId: null, clientSector: null, clientCity: null, clientAgreementId: null,
-    salesName: USUARIOS[q.salesUserId ?? ''] ?? null, issueDate: '2026-10-27', plannedStartDate: null, durationMonths: null, currency: 'EUR',
-    modality: null, vatRate: '21', paymentMethodId: null, paymentMethodText: null, replacementGuarantee: null, commercialNotes: null,
-    marginMode: 'percentage', marginPercent: 18, marginAmount: null, costConcepts: costes(), defaultExtras: extras(),
-    approval: null, rejection: null, obsolete: null, createdFromId: null, createdFromCode: null,
-    sentAt: enviadoHaceDias !== undefined ? haceDias(enviadoHaceDias) : ['accepted', 'rejected'].includes(q.status) ? '2026-09-01T10:00:00.000Z' : null,
-    requests: [], createdAt: '2026-10-01T09:00:00.000Z', updatedAt: '2026-10-27T10:00:00.000Z',
-    ...(q.clientId ? CLIENTES[q.clientId] : {}),
-    ...q,
+    id: newId(), quoteId, versionNumber: n, status: 'draft', editable: true, title: null, contactId: clientId ? (EMPRESAS[clientId]?.contact?.id ?? null) : null,
+    contactName: null, contactEmail: null, salesRepId: null, salesRepName: null, issueDate: hoyISO(), validUntil: enDias(30), expectedStartDate: null, durationMonths: null, modality: null, paymentMethodId: null, paymentMethodName: null,
+    vatRate: 21, currency: 'EUR', replacementGuarantee: null, commercialNotes: null, conditions: null, margin: { mode: 'percent', value: 18 },
+    ssRates: { ...DEFAULT_SS_RATES, atEp: atEpForCnae(clientId ? EMPRESAS[clientId]?.cnae : null) }, costConcepts: costes(), defaultExtras: extras(),
+    approvalStatus: null, approvalNotes: null, approvalRequestedAt: null, approvalDecidedAt: null, approvalRequestedByName: null, approvalDecidedByName: null,
+    minMarginPercent: null, sentAt: null, sentByName: null, acceptedAt: null, rejectedAt: null, rejectionReasonId: null, rejectionReasonName: null,
+    rejectionNotes: null, closedAt: null, positions: [], totals: null, issues: [], createdAt: ahora(),
+    createdByName: YO.name, updatedAt: ahora(), ...datosVersion,
   };
 }
 
 function datos() {
   if (!estado) {
-    const registros = semillas().map((s) => ({ actual: base(s), anteriores: [] as Registro['anteriores'] }));
-    // PRE-2026-0048 v1: otras tarifas y un carretillero menos.
-    const r48 = registros[0];
-    r48.anteriores.push({
-      ...copia(r48.actual), versionId: newId(), versionNumber: 1, status: 'sent', validUntil: '2026-11-10', positions: [operario(1, 17.2), carretillero(2, 20.4, 3)],
-      comment: 'Primera propuesta enviada; el cliente pidió ajustar la tarifa del carretillero.', createdBy: 'Elena Navarro', createdAt: '2026-03-10T10:00:00.000Z',
-    });
-    estado = { registros, siguiente: 49 };
+    const cabeceras: Cabecera[] = [];
+    const versiones: QuoteVersion[] = [];
+    for (const s of semillas()) {
+      const quoteId = newId();
+      const e = EMPRESAS[s.clientId];
+      cabeceras.push({
+        id: quoteId, code: s.code, companyId: EG, branchId: e.branchId, clientId: s.clientId, clientName: e.name, createdFromQuoteId: null,
+        replacedByQuoteId: null, obsoleteAt: null, obsoleteReason: null, createdAt: '2026-10-01T09:00:00.000Z', updatedAt: '2026-10-27T10:00:00.000Z',
+      });
+      const comunes = { title: s.title, salesRepId: s.salesRepId, salesRepName: NOMBRES[s.salesRepId], createdByName: NOMBRES[s.salesRepId], createdAt: '2026-10-01T09:00:00.000Z' };
+      let n = 1;
+      if (s.anterior) {
+        versiones.push(versionNueva(quoteId, n++, { ...comunes, ...s.version, status: 'superseded', positions: s.anterior.positions, validUntil: s.anterior.validUntil, sentAt: '2026-03-10T10:00:00.000Z' }, s.clientId));
+      }
+      const enviado = s.enviadoHaceDias !== undefined ? new Date(Date.now() - s.enviadoHaceDias * 86_400_000).toISOString() : ['accepted', 'rejected'].includes(s.status) ? '2026-09-01T10:00:00.000Z' : null;
+      versiones.push(versionNueva(quoteId, n, { ...comunes, ...s.version, status: s.status, positions: s.positions, validUntil: s.validUntil, sentAt: enviado }, s.clientId));
+    }
+    // Cada puesto con su id (como en la base de datos), también entre versiones.
+    for (const v of versiones) v.positions = v.positions.map((p) => ({ ...p, id: newId() }));
+    estado = { cabeceras, versiones, siguiente: 49 };
   }
   return estado;
 }
 
-function registro(quoteId: string): Registro {
-  const r = datos().registros.find((x) => x.actual.id === quoteId);
-  if (!r) throw new ApiError(404, 'no_encontrado', 'El presupuesto no existe o no tienes acceso');
-  return r;
+const cabecera = (quoteId: string) => {
+  const c = datos().cabeceras.find((x) => x.id === quoteId);
+  if (!c) throw new ApiError(404, 'no_encontrado', 'El presupuesto no existe o no tienes acceso');
+  return c;
+};
+const versionesDe = (quoteId: string) => datos().versiones.filter((v) => v.quoteId === quoteId).sort((a, b) => b.versionNumber - a.versionNumber);
+const actual = (quoteId: string) => versionesDe(quoteId)[0];
+function version(versionId: string) {
+  const v = datos().versiones.find((x) => x.id === versionId);
+  if (!v) throw new ApiError(404, 'no_encontrado', 'Esa versión no existe');
+  return v;
+}
+function puestoDe(positionId: string) {
+  for (const v of datos().versiones) {
+    const p = v.positions.find((x) => x.id === positionId);
+    if (p) return { v, p };
+  }
+  throw new ApiError(404, 'no_encontrado', 'El puesto no existe');
 }
 
-let ajustesDe: () => Promise<TenantSettings> = async () => ({ quoteMinMarginPercent: null, quoteNoResponseDays: 15 });
+/** Los costes internos de cada puesto, ya resueltos (el valor del puesto o el del presupuesto). */
+function costesDe(v: QuoteVersion, p: QuotePosition) {
+  return v.costConcepts.flatMap((c) => {
+    const a = p.costs.find((x) => x.code === c.code);
+    if (a && !a.applies) return [];
+    if (a?.percent != null) return [{ code: c.code, name: c.name, mode: 'percent' as const, value: a.percent }];
+    if (a?.perHour != null) return [{ code: c.code, name: c.name, mode: 'per_hour' as const, value: a.perHour }];
+    return [{ code: c.code, name: c.name, mode: c.mode, value: c.value }];
+  });
+}
 
-const margenDe = (q: Pick<Quote, 'marginMode' | 'marginPercent' | 'marginAmount'>) =>
-  q.marginMode === 'amount' ? { mode: 'amount' as const, value: q.marginAmount ?? 0 } : { mode: 'percentage' as const, value: q.marginPercent };
-
-/** Lo que devuelve la API: con el desglose de cada puesto, los totales y los días sin respuesta. */
-function completo(q: Guardado): Quote {
-  const breakdowns = Object.fromEntries(q.positions.map((p) => [p.id, calcularPuesto(p, q.costConcepts, margenDe(q))]));
-  const esperando = q.sentAt && (q.status === 'sent' || q.status === 'pending_signature');
+/** La versión como la devuelve la API: con el cálculo de cada puesto y los totales. */
+function calculada(v: QuoteVersion, minimo: number | null): QuoteVersion {
+  const r = calculateQuote({ margin: v.margin, ssRates: v.ssRates, minMarginPercent: minimo, positions: v.positions.map((p) => ({ ...p, costs: costesDe(v, p) })) });
+  const contacto = v.contactId ? CONTACTOS[v.contactId] : undefined;
+  const { averageCost: _coste, ...totals } = r.totals;
   return {
-    ...copia(q),
-    breakdowns,
-    totals: calcularTotales(Object.values(breakdowns)),
-    daysWithoutResponse: esperando ? Math.floor((Date.now() - new Date(q.sentAt!).getTime()) / 86_400_000) : null,
+    ...copia(v),
+    editable: EDITABLES.includes(v.status),
+    contactName: contacto?.name ?? null,
+    contactEmail: contacto?.email ?? null,
+    paymentMethodName: v.paymentMethodId ? (FORMAS_PAGO[v.paymentMethodId] ?? null) : null,
+    minMarginPercent: minimo,
+    positions: v.positions.map((p, i) => ({ ...copia(p), calculation: r.positions[i] })),
+    totals,
+    issues: r.issues,
+  };
+}
+const minimo = async () => (await ajustesDe()).quoteMinMarginPercent;
+
+async function completo(quoteId: string): Promise<Quote> {
+  const c = cabecera(quoteId);
+  const m = await minimo();
+  const vs = versionesDe(quoteId).map((v) => calculada(v, m));
+  const codigo = (qid: string | null) => (qid ? (datos().cabeceras.find((x) => x.id === qid)?.code ?? null) : null);
+  const { updatedAt: _u, ...cab } = copia(c);
+  return {
+    ...cab,
+    clientAgreementId: c.clientId ? (EMPRESAS[c.clientId]?.agreement ?? null) : null,
+    status: vs[0].status,
+    versionNumber: vs[0].versionNumber,
+    createdFromCode: codigo(c.createdFromQuoteId),
+    replacedByCode: codigo(c.replacedByQuoteId),
+    currentVersion: vs[0],
+    versions: vs.map((v) => ({
+      id: v.id, versionNumber: v.versionNumber, status: v.status, issueDate: v.issueDate, validUntil: v.validUntil, createdAt: v.createdAt,
+      createdByName: v.createdByName, revenue: v.totals!.revenue, averageRate: v.totals!.averageRate, marginPercent: v.totals!.marginPercent,
+    })),
   };
 }
 
-function resumen(q: Quote): QuoteSummary {
+async function resumen(q: Quote): Promise<QuoteSummary> {
+  const { quoteNoResponseDays } = await ajustesDe();
+  const v = q.currentVersion;
+  const t = v.totals!;
+  const esperando = v.sentAt && (v.status === 'sent' || v.status === 'pending_signature');
+  const dias = esperando ? Math.floor((Date.now() - new Date(v.sentAt!).getTime()) / 86_400_000) : null;
+  const { currentVersion: _v, versions: _vs, ...cab } = q;
   return {
-    id: q.id, code: q.code, versionNumber: q.versionNumber, status: q.status, title: q.title, clientId: q.clientId, clientName: q.clientName,
-    salesUserId: q.salesUserId, salesName: q.salesName, branchId: q.branchId, validUntil: q.validUntil, daysWithoutResponse: q.daysWithoutResponse,
-    rejection: q.rejection, updatedAt: q.updatedAt, positions: q.positions.length, billing: q.totals.billing, averageRate: q.totals.averageRate,
-    marginPercent: q.totals.averageMarginPercent, requests: q.requests.length,
+    ...cab, title: v.title, salesRepId: v.salesRepId, salesRepName: v.salesRepName, issueDate: v.issueDate, validUntil: v.validUntil,
+    positionsCount: v.positions.length, people: t.people, hours: t.hours, revenue: t.revenue, averageRate: t.averageRate, marginPercent: t.marginPercent,
+    sentAt: v.sentAt, daysWithoutResponse: dias, noResponse: dias !== null && dias >= quoteNoResponseDays, approvalStatus: v.approvalStatus,
+    rejectionReasonName: v.rejectionReasonName,
   };
 }
 
 const EDITABLES: QuoteStatus[] = ['draft', 'in_preparation'];
-const ESTADO_TEXTO: Record<QuoteStatus, string> = {
-  draft: 'Borrador', in_preparation: 'En preparación', sent: 'Enviado', pending_signature: 'Pendiente de firma', accepted: 'Aceptado', rejected: 'Rechazado', obsolete: 'Obsoleto',
-};
-function cambiar(r: Registro, cambios: Partial<Guardado>, resumenActividad: string) {
-  Object.assign(r.actual, cambios, { updatedAt: new Date().toISOString() });
-  log('quote', r.actual.id, null, 'update', resumenActividad);
-  return delay(completo(r.actual));
+function editable(v: QuoteVersion) {
+  if (!EDITABLES.includes(v.status)) throw new ApiError(409, 'conflicto', 'Esta versión ya está cerrada: crea una versión nueva para cambiarla');
+}
+function tocar(v: QuoteVersion, cambios: Partial<QuoteVersion>, texto: string) {
+  Object.assign(v, cambios, { updatedAt: ahora() });
+  cabecera(v.quoteId).updatedAt = v.updatedAt;
+  log('quote', v.quoteId, null, 'update', texto);
+}
+const conCalculo = async (v: QuoteVersion) => delay(calculada(v, await minimo()));
+
+/** Como el servidor: los campos que no coinciden con la tabla del convenio son los cambiados a mano. */
+function marcarManuales(p: QuotePosition) {
+  const t = p.agreementCategoryId ? TABLAS[p.agreementCategoryId] : undefined;
+  const tabla: Partial<QuotePosition> = t ? { annualBaseSalary: t.base, monthlyBonus: t.bonus, annualHours: t.hours } : {};
+  p.manualFields = (Object.keys(tabla) as (keyof QuotePosition)[]).filter((k) => p[k] !== tabla[k]);
 }
 
-async function revisar(q: Quote): Promise<QuoteReviewItem[]> {
-  const { quoteMinMarginPercent: minimo } = await ajustesDe();
-  const b = q.positions.map((p) => q.breakdowns[p.id]);
-  const nombres = (f: (i: number) => boolean) => q.positions.filter((_, i) => f(i)).map((p) => p.name);
-  const bajoConvenio = nombres((i) => !!b[i].belowAgreement);
-  const bajoCoste = nombres((i) => b[i].rate > 0 && b[i].marginHour < 0);
-  const bajoMinimo = minimo === null ? [] : nombres((i) => b[i].marginHour >= 0 && b[i].marginPercent < minimo);
-  const aprobado = q.approval?.status === 'approved';
-  return [
-    { ok: !!q.clientId, kind: 'error', text: 'Empresa elegida', section: 'client' },
-    { ok: !!q.contactName && !!q.contactEmail, kind: 'error', text: 'Contacto con email para enviar la propuesta', section: 'client' },
-    { ok: !!q.salesUserId, kind: 'error', text: 'Comercial responsable', section: 'client' },
-    { ok: !!q.validUntil && q.validUntil >= hoyISO(), kind: 'error', text: 'Fecha de validez futura', section: 'client' },
-    { ok: q.positions.length > 0, kind: 'error', text: 'Al menos un puesto', section: 'positions' },
-    { ok: q.positions.every((p) => (p.rate ?? 0) > 0), kind: 'error', text: 'Todos los puestos tienen tarifa', section: 'positions' },
-    {
-      ok: bajoConvenio.length === 0, kind: 'error', section: 'positions', positions: bajoConvenio,
-      text: bajoConvenio.length ? `Salario por debajo del convenio: ${bajoConvenio.join(', ')}. No se puede pagar menos que el convenio de la empresa usuaria (art. 11 de la Ley 14/1994).` : 'Ningún salario por debajo del convenio',
-    },
-    { ok: bajoCoste.length === 0, kind: 'error', section: 'positions', positions: bajoCoste, text: bajoCoste.length ? `Tarifa por debajo del coste: ${bajoCoste.join(', ')}` : 'Ninguna tarifa por debajo del coste' },
-    {
-      ok: bajoMinimo.length === 0 || aprobado, kind: 'approval', section: 'positions', positions: bajoMinimo,
-      text: minimo === null
-        ? 'Sin margen mínimo en esta ETT'
-        : bajoMinimo.length
-          ? `Margen por debajo del ${minimo} %: ${bajoMinimo.join(', ')}${aprobado ? ' (aprobado por un responsable)' : ''}`
-          : `Margen de todos los puestos ≥ ${minimo} %`,
-    },
-  ];
+/** El salario por hora no puede quedar por debajo del convenio (art. 11 de la Ley 14/1994): siempre 422. */
+function comprobarConvenio(p: QuotePosition) {
+  const s = (p.annualBaseSalary + (p.monthlyBonus ?? 0) * 12) / p.annualHours;
+  if (p.agreementMinimumSalaryHour != null && s < p.agreementMinimumSalaryHour - 0.005) {
+    throw new ApiError(
+      422,
+      'salario_bajo_convenio',
+      `${p.name}: el salario (${s.toFixed(2)} €/h) queda por debajo del convenio de la empresa usuaria (${p.agreementMinimumSalaryHour.toFixed(2)} €/h). No se puede pagar menos.`,
+    );
+  }
 }
 
-function nuevoCodigo() {
-  const e = datos();
-  return `PRE-${new Date().getFullYear()}-${String(e.siguiente++).padStart(4, '0')}`;
+function crear(clientId: string | null, branchId: string | null, datosVersion: Partial<QuoteVersion>, createdFrom: string | null = null): string {
+  const quoteId = newId();
+  const e = clientId ? EMPRESAS[clientId] : undefined;
+  const code = `PRE-${new Date().getFullYear()}-${String(datos().siguiente++).padStart(4, '0')}`;
+  datos().cabeceras.unshift({
+    id: quoteId, code, companyId: EG, branchId: branchId ?? e?.branchId ?? NORTE, clientId, clientName: e?.name ?? null,
+    createdFromQuoteId: createdFrom, replacedByQuoteId: null, obsoleteAt: null, obsoleteReason: null, createdAt: ahora(), updatedAt: ahora(),
+  });
+  const v = versionNueva(quoteId, 1, datosVersion, clientId);
+  v.positions = v.positions.map((p, i) => ({ ...copia(p), id: newId(), sortOrder: i + 1 }));
+  datos().versiones.push(v);
+  log('quote', quoteId, null, 'create', `Presupuesto ${code} creado`);
+  return quoteId;
 }
 
-function crearDesde(datosNuevos: Partial<Guardado>): Guardado {
-  const ahora = new Date().toISOString();
-  const q: Guardado = {
-    // Validez por defecto: 30 días.
-    ...base({ code: nuevoCodigo(), title: '', status: 'draft', clientId: null, salesUserId: null, validUntil: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10), positions: [] }),
-    issueDate: hoyISO(), createdAt: ahora, updatedAt: ahora, ...datosNuevos,
+/** Lo que se copia al duplicar, al crear uno nuevo desde un obsoleto y en una versión nueva. */
+function copiable(v: QuoteVersion): Partial<QuoteVersion> {
+  const c = copia(v);
+  return {
+    title: c.title, expectedStartDate: c.expectedStartDate, durationMonths: c.durationMonths, modality: c.modality, paymentMethodId: c.paymentMethodId,
+    vatRate: c.vatRate, currency: c.currency, replacementGuarantee: c.replacementGuarantee, commercialNotes: c.commercialNotes, conditions: c.conditions,
+    margin: c.margin, ssRates: c.ssRates, costConcepts: c.costConcepts, defaultExtras: c.defaultExtras, positions: c.positions.map((p) => ({ ...p, calculation: null })),
   };
-  if (q.clientId && CLIENTES[q.clientId]) Object.assign(q, { ...CLIENTES[q.clientId], ...pick(datosNuevos, ['contactId', 'contactName', 'contactEmail', 'contactPhone']) });
-  q.salesName = q.salesUserId ? (USUARIOS[q.salesUserId] ?? null) : null;
-  datos().registros.unshift({ actual: q, anteriores: [] });
-  log('quote', q.id, null, 'create', `Presupuesto ${q.code} creado`);
-  return q;
 }
-const pick = <T extends object>(o: T, keys: (keyof T)[]) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]])) as Partial<T>;
 
-/** Lo que se copia al duplicar o al crear uno nuevo desde un obsoleto. */
-const COPIABLES: (keyof QuoteInput)[] = [
-  'title', 'plannedStartDate', 'durationMonths', 'currency', 'modality', 'vatRate', 'paymentMethodId', 'paymentMethodText', 'replacementGuarantee',
-  'commercialNotes', 'marginMode', 'marginPercent', 'marginAmount', 'costConcepts', 'defaultExtras', 'positions',
-];
+/** Puesto nuevo: lo que no se envía de salario, horas y vacaciones sale del convenio; los extras, de la versión. */
+function posicion(datosPuesto: QuotePositionInput, n: number, v: QuoteVersion): QuotePosition {
+  const categoria = datosPuesto.agreementCategoryId ?? null;
+  if (!categoria && (datosPuesto.annualBaseSalary == null || !datosPuesto.annualHours)) {
+    throw new ApiError(422, 'validacion', 'Sin tabla de convenio, el salario base anual y las horas anuales son obligatorios');
+  }
+  return {
+    ...puesto(n, categoria && TABLAS[categoria] ? categoria : null, { name: '', hourlyRate: null, people: 1, extras: copia(v.defaultExtras) }),
+    ...copia(datosPuesto),
+    id: newId(),
+    calculation: null,
+  };
+}
 
-export function memoryQuoteRepositories(ajustes: () => Promise<TenantSettings>): Pick<Repositories, 'quotes'> {
+export function memoryQuoteRepositories(ajustes: () => Promise<TenantSettings>): Pick<Repositories, 'quotes' | 'quoteVersions'> {
   ajustesDe = ajustes;
   return {
     quotes: {
       async list(q = {}) {
         const hoy = hoyISO();
-        const pronto = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+        const pronto = enDias(7);
         const texto = q.q?.toLowerCase().trim();
-        const lista = datos()
-          .registros.map((r) => completo(r.actual))
-          .filter(
-            (x) =>
-              (!texto || `${x.code} ${x.clientName ?? ''} ${x.title}`.toLowerCase().includes(texto)) &&
-              (!q.status || x.status === q.status) &&
-              (!q.salesUserId || x.salesUserId === q.salesUserId) &&
-              (!q.branchId || x.branchId === q.branchId) &&
-              (!q.validity ||
-                (q.validity === 'expired' ? x.validUntil < hoy : q.validity === 'soon' ? x.validUntil >= hoy && x.validUntil <= pronto : x.validUntil >= hoy)),
-          )
-          .map(resumen);
+        const todos = await Promise.all(datos().cabeceras.map(async (c) => resumen(await completo(c.id))));
+        const lista = todos.filter(
+          (x) =>
+            (!texto || `${x.code} ${x.clientName ?? ''} ${x.title ?? ''}`.toLowerCase().includes(texto)) &&
+            (!q.status || x.status === q.status) &&
+            (!q.salesRepId || x.salesRepId === q.salesRepId) &&
+            (!q.clientId || x.clientId === q.clientId) &&
+            (!q.branchId || x.branchId === q.branchId) &&
+            (!q.noResponse || x.noResponse) &&
+            (!q.validity ||
+              (q.validity === 'expired'
+                ? (x.validUntil ?? '') < hoy
+                : q.validity === 'expiring'
+                  ? !!x.validUntil && x.validUntil >= hoy && x.validUntil <= pronto
+                  : (x.validUntil ?? '') >= hoy)),
+        );
         return page(lista, q);
       },
-      get: async (quoteId) => delay(completo(registro(quoteId).actual)),
-      async create(data) {
-        return delay(completo(crearDesde(copia(data))), 300);
+      get: async (quoteId) => delay(await completo(quoteId)),
+      async create({ clientId = null, branchId = null, status: _status, ...datosVersion }) {
+        return delay(await completo(crear(clientId, branchId, datosVersion as Partial<QuoteVersion>)), 300);
       },
       async update(quoteId, data) {
-        const r = registro(quoteId);
-        if (!EDITABLES.includes(r.actual.status)) throw new ApiError(409, 'conflicto', 'Este presupuesto ya se ha enviado: crea una versión nueva para cambiarlo');
-        const cambios: Partial<Guardado> = copia(data);
-        if (data.clientId && data.clientId !== r.actual.clientId && CLIENTES[data.clientId]) Object.assign(cambios, { ...CLIENTES[data.clientId], ...pick(data, ['contactId', 'contactName', 'contactEmail', 'contactPhone']) });
-        if (data.salesUserId !== undefined) cambios.salesName = data.salesUserId ? (USUARIOS[data.salesUserId] ?? null) : null;
-        // Un cambio en lo económico anula la aprobación del margen.
-        if (data.positions || data.costConcepts || data.marginPercent !== undefined || data.marginAmount !== undefined) cambios.approval = null;
-        return cambiar(r, cambios, 'Presupuesto modificado');
-      },
-      async setStatus(quoteId, status) {
-        const r = registro(quoteId);
-        const desde = r.actual.status;
-        const permitido = (EDITABLES.includes(desde) && EDITABLES.includes(status)) || (['sent', 'pending_signature'].includes(desde) && ['sent', 'pending_signature'].includes(status));
-        if (!permitido) throw new ApiError(409, 'conflicto', status === 'sent' ? 'Para enviarlo, usa «Enviar al cliente»: antes se revisa' : 'Ese cambio de estado no se puede hacer');
-        return cambiar(r, { status }, `Pasa a «${ESTADO_TEXTO[status]}»`);
-      },
-      review: async (quoteId) => delay(await revisar(completo(registro(quoteId).actual))),
-      async send(quoteId) {
-        const r = registro(quoteId);
-        if (!EDITABLES.includes(r.actual.status)) throw new ApiError(409, 'conflicto', 'Solo se envía un presupuesto en borrador o en preparación');
-        const fallos = (await revisar(completo(r.actual))).filter((i) => !i.ok);
-        if (fallos.length) throw new ApiError(422, 'revision_pendiente', 'El presupuesto no se puede enviar todavía', fallos.map((i) => ({ path: i.section, message: i.text })));
-        return cambiar(r, { status: 'sent', sentAt: new Date().toISOString() }, `Enviado a ${r.actual.contactEmail}`);
-      },
-      async requestApproval(quoteId, reason) {
-        const r = registro(quoteId);
-        return cambiar(r, { approval: { status: 'pending', reason, requestedBy: USUARIOS[YO], requestedAt: new Date().toISOString(), resolvedBy: null, resolvedAt: null } }, 'Aprobación del margen pedida');
-      },
-      async resolveApproval(quoteId, approved) {
-        const r = registro(quoteId);
-        if (r.actual.approval?.status !== 'pending') throw new ApiError(409, 'conflicto', 'No hay ninguna aprobación pendiente');
-        return cambiar(
-          r,
-          { approval: { ...r.actual.approval, status: approved ? 'approved' : 'changes_requested', resolvedBy: USUARIOS[YO], resolvedAt: new Date().toISOString() } },
-          approved ? 'Margen aprobado' : 'Se piden cambios en el margen',
-        );
-      },
-      async accept(quoteId) {
-        const r = registro(quoteId);
-        if (!['sent', 'pending_signature'].includes(r.actual.status)) throw new ApiError(409, 'conflicto', 'Solo se acepta un presupuesto enviado');
-        return cambiar(r, { status: 'accepted' }, 'Aceptado por el cliente');
-      },
-      async reject(quoteId, data) {
-        const r = registro(quoteId);
-        if (!['sent', 'pending_signature'].includes(r.actual.status)) throw new ApiError(409, 'conflicto', 'Solo se rechaza un presupuesto enviado');
-        return cambiar(r, { status: 'rejected', rejection: { ...data, at: new Date().toISOString() } }, `Rechazado: ${data.reason}`);
-      },
-      async newVersion(quoteId) {
-        const r = registro(quoteId);
-        if (r.actual.status === 'obsolete') throw new ApiError(409, 'conflicto', 'Un presupuesto obsoleto ya no cambia');
-        r.anteriores.unshift({ ...copia(r.actual), comment: 'Sustituida por una versión nueva.', createdBy: USUARIOS[YO] });
-        return cambiar(
-          r,
-          { versionId: newId(), versionNumber: r.actual.versionNumber + 1, status: 'draft', approval: null, rejection: null, sentAt: null, requests: [] },
-          `Versión ${r.actual.versionNumber + 1} creada`,
-        );
-      },
-      async versions(quoteId) {
-        const r = registro(quoteId);
-        const v = (q: Guardado, status: QuoteVersion['status'], comment: string | null, createdBy: string | null): QuoteVersion => ({
-          id: q.versionId, number: q.versionNumber, status, createdAt: q.createdAt, createdBy, comment, totals: completo(q).totals,
-        });
-        return delay([v(r.actual, 'current', null, r.actual.salesName), ...r.anteriores.map((a) => v(a, 'superseded', a.comment, a.createdBy))]);
-      },
-      async version(quoteId, versionId) {
-        const r = registro(quoteId);
-        const q = r.actual.versionId === versionId ? r.actual : r.anteriores.find((a) => a.versionId === versionId);
-        if (!q) throw new ApiError(404, 'no_encontrado', 'Esa versión no existe');
-        return delay(completo(q));
-      },
-      async makeObsolete(quoteId, reason) {
-        const r = registro(quoteId);
-        if (r.actual.status === 'obsolete') throw new ApiError(409, 'conflicto', 'Ya está obsoleto');
-        const nuevo = crearDesde({
-          ...copia(pick(r.actual, [...COPIABLES, 'clientId', 'contactId', 'contactName', 'contactEmail', 'contactPhone', 'salesUserId'])),
-          createdFromId: r.actual.id, createdFromCode: r.actual.code,
-        });
-        const obsoleto = await cambiar(r, { status: 'obsolete', obsolete: { reason, at: new Date().toISOString(), replacedById: nuevo.id, replacedByCode: nuevo.code } }, `Pasa a obsoleto: ${reason}`);
-        return { obsolete: obsoleto, created: completo(nuevo) };
+        const c = cabecera(quoteId);
+        const vs = versionesDe(quoteId);
+        if (vs.length > 1 || vs[0].status !== 'draft') throw new ApiError(409, 'conflicto', 'La empresa solo se cambia en un presupuesto con una única versión en borrador');
+        if (data.clientId !== undefined) {
+          const e = data.clientId ? EMPRESAS[data.clientId] : undefined;
+          Object.assign(c, { clientId: data.clientId, clientName: e?.name ?? null });
+          // El contacto pasa al destinatario de presupuestos del cliente nuevo.
+          vs[0].contactId = e?.contact?.id ?? null;
+          if (e) vs[0].ssRates = { ...vs[0].ssRates, atEp: atEpForCnae(e.cnae) };
+        }
+        if (data.branchId) c.branchId = data.branchId;
+        c.updatedAt = ahora();
+        return delay(await completo(quoteId));
       },
       async duplicate(quoteId) {
-        const r = registro(quoteId);
-        return delay(completo(crearDesde({ ...copia(pick(r.actual, COPIABLES)), title: `${r.actual.title} (copia)` })));
+        const v = actual(quoteId);
+        return delay(await completo(crear(null, cabecera(quoteId).branchId, { ...copiable(v), title: `${v.title ?? ''} (copia)` })));
       },
-      documentUrl: async () => delay(null),
-      async agreementSalary(q) {
-        const t = q.categoryId ? TABLAS[q.categoryId] : undefined;
-        return delay(t && CONVENIO_DE[q.categoryId!] === q.agreementId ? { ...t, agreementId: q.agreementId, agreementVersionId: null } : null);
+      async makeObsolete(quoteId, reason) {
+        const c = cabecera(quoteId);
+        const v = actual(quoteId);
+        if (v.status === 'obsolete') throw new ApiError(409, 'conflicto', 'Ya está obsoleto');
+        const nuevo = crear(c.clientId, c.branchId, { ...copiable(v), contactId: v.contactId, salesRepId: v.salesRepId, salesRepName: v.salesRepName }, quoteId);
+        Object.assign(c, { obsoleteAt: ahora(), obsoleteReason: reason, replacedByQuoteId: nuevo });
+        tocar(v, { status: 'obsolete' }, `Pasa a obsoleto: ${reason}`);
+        return { obsolete: await completo(quoteId), created: await completo(nuevo) };
+      },
+      async agreementCategories(collectiveAgreementId) {
+        return delay(
+          Object.entries(TABLAS)
+            .filter(([, t]) => t.agreement === collectiveAgreementId)
+            .map(([k, t]) => ({ id: k, code: t.code, name: t.name, group: null, level: t.level })),
+        );
+      },
+      async agreementDefaults(q) {
+        const t = q.agreementCategoryId ? TABLAS[q.agreementCategoryId] : undefined;
+        const ok = !!t && t.agreement === q.collectiveAgreementId;
+        return delay({
+          agreementVersionId: null,
+          effectiveFrom: ok ? '2026-01-01' : null,
+          effectiveTo: ok ? '2026-12-31' : null,
+          defaults: {
+            annualBaseSalary: ok ? t.base : null, monthlyBonus: ok ? t.bonus : 0, annualPayments: ok ? 14 : null, annualHours: ok ? t.hours : null,
+            vacationDays: ok ? 30 : null, vacationDaysType: ok ? 'naturales' : null, minimumSalaryHour: ok ? minimoHora(t) : null, extras: [],
+          },
+        });
+      },
+    },
+    quoteVersions: {
+      get: async (versionId) => conCalculo(version(versionId)),
+      async update(versionId, { status, ...data }) {
+        const v = version(versionId);
+        editable(v);
+        const cambios: Partial<QuoteVersion> = copia(data);
+        if (data.salesRepId !== undefined) cambios.salesRepName = data.salesRepId ? (NOMBRES[data.salesRepId] ?? null) : null;
+        // Un cambio en lo económico anula la aprobación del margen.
+        if (data.costConcepts && v.costConcepts.some((c) => c.required && !data.costConcepts!.some((x) => x.code === c.code))) {
+          throw new ApiError(422, 'validacion', 'Absentismo, EPIs y revisión médica van siempre en el presupuesto: si un puesto no los necesita, desmárcalos en ese puesto');
+        }
+        if (data.margin || data.costConcepts || data.ssRates) Object.assign(cambios, { approvalStatus: null, approvalNotes: null });
+        if (status) cambios.status = status;
+        tocar(v, cambios, status && status !== v.status ? `Pasa a «${status === 'draft' ? 'Borrador' : 'En preparación'}»` : 'Presupuesto modificado');
+        return conCalculo(v);
+      },
+      async addPosition(versionId, data) {
+        const v = version(versionId);
+        editable(v);
+        if (!data.name?.trim()) throw new ApiError(422, 'validacion', 'El puesto necesita un nombre');
+        const p = posicion(data, v.positions.length + 1, v);
+        comprobarConvenio(p);
+        marcarManuales(p);
+        v.positions.push(p);
+        tocar(v, { approvalStatus: null }, `Puesto añadido: ${p.name}`);
+        return conCalculo(v);
+      },
+      async updatePosition(positionId, data) {
+        const { v, p } = puestoDe(positionId);
+        editable(v);
+        const nuevo: QuotePosition = { ...p, ...copia(data) };
+        if (data.agreementCategoryId !== undefined) {
+          const t = data.agreementCategoryId ? TABLAS[data.agreementCategoryId] : undefined;
+          Object.assign(nuevo, {
+            agreementMinimumSalaryHour: t ? minimoHora(t) : null, agreementPeriod: t ? { from: '2026-01-01', to: '2026-12-31' } : null,
+            agreementCategoryName: t?.name ?? null, collectiveAgreementName: t ? CONVENIOS[t.agreement] : null,
+          });
+        }
+        comprobarConvenio(nuevo);
+        marcarManuales(nuevo);
+        Object.assign(p, nuevo);
+        tocar(v, { approvalStatus: null }, `Puesto modificado: ${p.name}`);
+        return conCalculo(v);
+      },
+      async removePosition(positionId) {
+        const { v, p } = puestoDe(positionId);
+        editable(v);
+        v.positions = v.positions.filter((x) => x.id !== positionId);
+        tocar(v, {}, `Puesto quitado: ${p.name}`);
+        return conCalculo(v);
+      },
+      async resetPositionFromAgreement(positionId, fields) {
+        const { v, p } = puestoDe(positionId);
+        editable(v);
+        const t = p.agreementCategoryId ? TABLAS[p.agreementCategoryId] : undefined;
+        if (!t) throw new ApiError(409, 'conflicto', 'Este puesto no tiene tabla de convenio');
+        const valores: Partial<QuotePosition> = { annualBaseSalary: t.base, monthlyBonus: t.bonus, annualHours: t.hours, annualPayments: 14 };
+        const campos = fields ?? Object.keys(valores);
+        for (const k of campos) if (k in valores) Object.assign(p, { [k]: valores[k as keyof typeof valores] });
+        p.manualFields = p.manualFields.filter((f) => !campos.includes(f));
+        tocar(v, {}, `Puesto ${p.name}: valores del convenio`);
+        return conCalculo(v);
+      },
+      async requestApproval(versionId, notes) {
+        const v = version(versionId);
+        editable(v);
+        tocar(v, { approvalStatus: 'pending', approvalNotes: notes ?? null, approvalRequestedAt: ahora() }, 'Aprobación del margen pedida');
+        return conCalculo(v);
+      },
+      async approve(versionId, notes) {
+        const v = version(versionId);
+        if (v.approvalStatus !== 'pending') throw new ApiError(409, 'conflicto', 'No hay ninguna aprobación pendiente');
+        tocar(v, { approvalStatus: 'approved', approvalNotes: notes ?? v.approvalNotes, approvalDecidedAt: ahora() }, 'Margen aprobado');
+        return conCalculo(v);
+      },
+      async rejectApproval(versionId, notes) {
+        const v = version(versionId);
+        if (v.approvalStatus !== 'pending') throw new ApiError(409, 'conflicto', 'No hay ninguna aprobación pendiente');
+        tocar(v, { approvalStatus: 'rejected', approvalNotes: notes, approvalDecidedAt: ahora() }, 'Se piden cambios en el margen');
+        return conCalculo(v);
+      },
+      async send(versionId) {
+        const v = version(versionId);
+        editable(v);
+        const c = cabecera(v.quoteId);
+        const r = calculada(v, await minimo());
+        const faltan = (
+          [
+            [!c.clientId, 'clientId', 'Falta la empresa'],
+            [!v.contactId, 'contactId', 'Falta el contacto con email'],
+            [!v.salesRepId, 'salesRepId', 'Falta el comercial'],
+            [!v.validUntil || v.validUntil < hoyISO(), 'validUntil', 'La validez tiene que ser futura'],
+            [v.positions.length === 0, 'positions', 'Falta al menos un puesto'],
+            [v.positions.some((p) => p.hourlyRate == null), 'positions', 'Todos los puestos necesitan tarifa'],
+            [r.positions.some((p) => p.calculation!.issues.includes('rate_below_cost')), 'positions', 'Hay tarifas por debajo del coste'],
+          ] as const
+        ).filter(([falla]) => falla);
+        if (faltan.length) throw new ApiError(422, 'validacion', 'El presupuesto no se puede enviar todavía', faltan.map(([, path, message]) => ({ path, message })));
+        r.positions.forEach(comprobarConvenio);
+        if (r.positions.some((p) => p.calculation!.issues.includes('margin_below_minimum')) && v.approvalStatus !== 'approved') {
+          throw new ApiError(409, 'requiere_aprobacion', 'Hay puestos con el margen por debajo del mínimo de la ETT: hace falta la aprobación de un responsable');
+        }
+        tocar(v, { status: 'sent', sentAt: ahora() }, 'Enviado al cliente');
+        return conCalculo(v);
+      },
+      async pendingSignature(versionId) {
+        const v = version(versionId);
+        if (v.status !== 'sent') throw new ApiError(409, 'conflicto', 'Solo pasa a pendiente de firma un presupuesto enviado');
+        tocar(v, { status: 'pending_signature' }, 'Pendiente de firma');
+        return conCalculo(v);
+      },
+      async accept(versionId) {
+        const v = version(versionId);
+        if (!['sent', 'pending_signature'].includes(v.status)) throw new ApiError(409, 'conflicto', 'Solo se acepta un presupuesto enviado');
+        tocar(v, { status: 'accepted', acceptedAt: ahora() }, 'Aceptado por el cliente');
+        return conCalculo(v);
+      },
+      async reject(versionId, { reasonId, notes }) {
+        const v = version(versionId);
+        if (!['sent', 'pending_signature'].includes(v.status)) throw new ApiError(409, 'conflicto', 'Solo se rechaza un presupuesto enviado');
+        const i = MOTIVOS_RECHAZO.findIndex((_, k) => id(700 + k) === reasonId);
+        const nombre = i >= 0 ? MOTIVOS_RECHAZO[i] : 'Otro motivo';
+        tocar(v, { status: 'rejected', rejectedAt: ahora(), rejectionReasonId: reasonId, rejectionReasonName: nombre, rejectionNotes: notes ?? null }, `Rechazado: ${nombre}`);
+        return conCalculo(v);
+      },
+      async newVersion(versionId) {
+        const v = version(versionId);
+        if (['obsolete', 'superseded', 'accepted'].includes(v.status)) throw new ApiError(409, 'conflicto', 'No se crea una versión nueva de un presupuesto aceptado, obsoleto o sustituido');
+        const nueva = versionNueva(v.quoteId, v.versionNumber + 1, { ...copiable(v), contactId: v.contactId, salesRepId: v.salesRepId, salesRepName: v.salesRepName, validUntil: v.validUntil }, null);
+        nueva.positions = nueva.positions.map((p) => ({ ...p, id: newId() }));
+        tocar(v, { status: 'superseded' }, `Versión ${nueva.versionNumber} creada`);
+        datos().versiones.push(nueva);
+        return conCalculo(nueva);
+      },
+      async proposalPdf() {
+        throw new ApiError(501, 'no_disponible', 'En la demo no se genera el PDF: mira la vista previa.');
       },
     },
   };

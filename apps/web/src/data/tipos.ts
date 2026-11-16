@@ -1,4 +1,6 @@
 // Datos tal como los devuelve apps/api (ver su /openapi.json). Si cambia un esquema allí, cambia aquí.
+import type { AgreementDefaults, Margin as QuoteMargin, PositionIssue, PositionResult, QuoteTotals, SocialSecurityRates } from './calculoPresupuestos';
+export type { AgreementDefaults, QuoteMargin, PositionIssue, PositionResult, QuoteTotals, SocialSecurityRates };
 
 export type Status = 'active' | 'inactive';
 export type UserStatus = 'active' | 'blocked' | 'inactive';
@@ -167,6 +169,8 @@ export type CollectiveAgreement = Stamped & {
   /** Código REGCON (14 dígitos). */
   officialCode: string | null;
   scope: 'state' | 'regional' | 'provincial' | 'local' | 'company' | 'other';
+  /** Convenio del catálogo global de TramitNOW (tablas salariales). */
+  globalAgreementId?: string | null;
   autonomousCommunityCode: string | null;
   provinceCode: string | null;
   validFrom: string | null;
@@ -655,228 +659,203 @@ export type EttSettings = {
 export type ContactPortalAccess = { active: boolean; since: string | null; invitedAt: string | null; lastAccess: string | null; permissions: string[] };
 
 // ---------------------------------------------------------------------------
-// Presupuestos (fase 4). PROVISIONAL: forma propuesta por la web hasta que llegue el contrato de apps/api
-// (nota fase4-backend.md). Al llegar, se ajustan estos tipos, api.ts y el mapeo de usePresupuestos.
+// Presupuestos (fase 4): contrato de fase4-backend.md (PROVISIONAL en el backend: puede cambiar).
+// El cálculo es el módulo puro de la API (apps/api/src/calc/quote.ts), que la web importa tal cual.
 // ---------------------------------------------------------------------------
 
-export type QuoteStatus = 'draft' | 'in_preparation' | 'sent' | 'pending_signature' | 'accepted' | 'rejected' | 'obsolete';
-export type MarginMode = 'percentage' | 'amount';
-/** Cómo se cobra un coste interno: % sobre una base, o importe por hora, mes o jornada. */
-export type QuoteCostKind = 'percentage' | 'per_hour' | 'per_month' | 'per_day';
-export type QuoteCostBase = 'gross_hourly_salary' | 'total_salary_cost' | 'contribution_base' | 'hourly_rate' | 'effective_hours';
 
-/** Coste interno del presupuesto (escandallo): nunca sale en la propuesta. */
-export type QuoteCostConcept = {
-  id: string;
-  name: string;
-  kind: QuoteCostKind;
-  value: number;
-  base: QuoteCostBase;
-  /** Seguridad Social e indemnización: siempre se aplican, con el valor del presupuesto. */
-  legal: boolean;
-  /** Absentismo, EPIs, revisión médica: van en todos los presupuestos (se desmarcan por puesto). */
-  alwaysIncluded: boolean;
-  description: string | null;
-};
+export type QuoteStatus = 'draft' | 'in_preparation' | 'sent' | 'pending_signature' | 'accepted' | 'rejected' | 'superseded' | 'obsolete';
+export type QuoteApprovalStatus = 'pending' | 'approved' | 'rejected';
 
-/** Concepto extra facturable (hora extra, nocturna...). Siempre queda en la oferta; `showInProposal` decide si se imprime. */
+/** Coste interno del presupuesto (absentismo, EPIs, revisión médica...): % sobre el salario por hora o €/h. */
+export type QuoteCostConcept = { code: string; name: string; mode: 'percent' | 'per_hour'; value: number; required: boolean; description: string | null };
+/** Coste interno aplicado a un puesto: vacíos = el valor del presupuesto. */
+export type QuotePositionCost = { code: string; applies: boolean; percent: number | null; perHour: number | null };
+/** Concepto extra (hora extra, nocturna...). Siempre queda en la oferta; `print` decide si sale en la propuesta. */
 export type QuoteExtra = {
-  id: string;
+  code: string;
   name: string;
-  /** Salario: hora normal × coeficiente, o `salaryOverride` €/h (extras añadidos a mano). */
   salaryCoefficient: number | null;
-  salaryOverride: number | null;
-  /** Tarifa: solo uno de los tres; vacíos, el mismo factor tarifa/salario de la hora normal. */
-  rateCoefficient: number | null;
+  salaryPerHour: number | null;
+  salarySupplementPerHour: number | null;
+  /** Tarifa: solo uno de los dos; ninguno = el mismo factor tarifa/salario que la hora normal. */
   rateSurchargePercent: number | null;
-  rateOverride: number | null;
-  showInProposal: boolean;
-  /** Añadido a mano en el puesto. */
+  ratePerHour: number | null;
+  print: boolean;
   custom: boolean;
+  /** Mínimo del convenio para el salario de este extra (solo lectura). */
+  agreementMinimumSalaryHour?: number | null;
 };
-
-/** Ajuste de un coste interno en un puesto: aplica o no y su valor en % o €/h (solo uno; vacíos = el del presupuesto). */
-export type QuotePositionCost = { conceptId: string; applies: boolean; percent: number | null; amount: number | null };
-
-/** Salario de la tabla del convenio para una categoría y nivel. */
-export type AgreementSalary = {
-  agreementId: string;
-  agreementVersionId: string | null;
-  /** Año de la tabla, para la etiqueta «Tablas 2026». */
-  year: number;
-  baseAnnualSalary: number;
-  monthlyBonus: number;
-  annualPayments: number;
-  annualHours: number;
-  dailyHours: number;
-};
-export type AgreementSalaryQuery = { agreementId: string; categoryId?: string | null; level?: string | null };
 
 export type QuotePosition = {
   id: string;
+  sortOrder: number;
   name: string;
-  agreementId: string | null;
-  /** Versión del convenio cuya tabla se usó. */
-  agreementVersionId: string | null;
-  customAgreement: string | null;
-  categoryId: string | null;
-  customCategory: string | null;
+  description: string | null;
+  collectiveAgreementId: string | null;
+  collectiveAgreementName: string | null;
+  /** Categoría de la tabla del convenio global (agreement_categories). */
+  agreementCategoryId: string | null;
+  agreementCategoryName: string | null;
+  customCategoryName: string | null;
   level: string | null;
-  customLevel: string | null;
-  baseAnnualSalary: number;
+  agreementVersionId: string | null;
+  agreementPeriod: { from: string; to: string | null } | null;
+  /** Salario mínimo por hora del convenio de la empresa usuaria: por debajo, 422 `salario_bajo_convenio`. */
+  agreementMinimumSalaryHour: number | null;
+  annualBaseSalary: number;
   monthlyBonus: number;
-  annualPayments: number;
+  annualPayments: number | null;
   annualHours: number;
-  dailyHours: number;
-  partTimeFactor: number;
+  hoursPerDay: number;
   vacationDays: number;
-  /** Campos retributivos cambiados a mano (los demás salen de la tabla del convenio). */
+  vacationDaysType: 'naturales' | 'laborables';
+  /** Campos cambiados a mano (los demás salen del convenio). */
   manualFields: string[];
-  /** Salario mínimo de la tabla del convenio (null si no hay tabla): por debajo, se bloquea. */
-  agreementMinimumAnnual: number | null;
-  rate: number | null;
   people: number;
   hoursPerPerson: number;
-  /** Margen propio: null = el del presupuesto. */
-  marginMode: MarginMode | null;
-  marginPercent: number | null;
-  marginAmount: number | null;
+  hourlyRate: number | null;
+  /** null: el margen del presupuesto. */
+  margin: QuoteMargin | null;
   costs: QuotePositionCost[];
   extras: QuoteExtra[];
-  tasks: string | null;
+  /** Lo calcula el servidor al guardar. */
+  calculation: PositionResult | null;
 };
-
-export type QuoteBreakdownLine = { conceptId: string; name: string; amountHour: number; legal: boolean; custom: boolean };
-/** Desglose de un puesto (lo calcula el servidor; en demo, el módulo de cálculo). Importes en €/h salvo los del servicio. */
-export type QuotePositionBreakdown = {
-  salaryHour: number;
-  annualGrossSalary: number;
-  lines: QuoteBreakdownLine[];
-  socialCostHour: number;
-  costHour: number;
-  rate: number;
-  marginHour: number;
-  marginPercent: number;
-  dailyHours: number;
-  dailyRate: number;
-  dailyCost: number;
-  targetMarginMode: MarginMode;
-  targetMarginPercent: number;
-  targetMarginAmount: number;
-  suggestedRate: number;
-  extras: (QuoteExtra & { salaryHour: number; rateHour: number; surchargePercent: number })[];
-  people: number;
-  hoursPerPerson: number;
-  totalHours: number;
-  billing: number;
-  serviceCost: number;
-  serviceMargin: number;
-  /** El salario queda por debajo del de la tabla del convenio: no se puede enviar. */
-  belowAgreement: { minimumAnnual: number; annual: number } | null;
-};
-export type QuoteTotals = {
-  positions: number;
-  people: number;
-  hours: number;
-  billing: number;
-  cost: number;
-  margin: number;
-  marginPercent: number;
-  averageRate: number;
-  averageMarginPercent: number;
-};
-
-export type QuoteApproval = {
-  status: 'pending' | 'approved' | 'changes_requested';
-  reason: string | null;
-  requestedBy: string | null;
-  requestedAt: string | null;
-  resolvedBy: string | null;
-  resolvedAt: string | null;
-};
-export type QuoteRejection = { reasonId: string | null; reason: string; notes: string | null; at: string };
-export type QuoteObsolete = { reason: string; at: string; replacedById: string | null; replacedByCode: string | null };
-export type QuoteRequestLink = { code: string; positionId: string; shift: string; places: number };
-
-/** Lo que se edita de un presupuesto (versión actual). */
-export type QuoteInput = {
-  title: string;
-  clientId: string | null;
-  contactId: string | null;
-  /** Copia de los datos del contacto (o texto libre si la empresa aún no tiene contactos). */
-  contactName: string | null;
-  contactEmail: string | null;
-  contactPhone: string | null;
-  salesUserId: string | null;
-  issueDate: string;
-  validUntil: string;
-  plannedStartDate: string | null;
-  durationMonths: number | null;
-  currency: string;
-  modality: string | null;
-  vatRate: string | null;
-  paymentMethodId: string | null;
-  paymentMethodText: string | null;
-  replacementGuarantee: string | null;
-  commercialNotes: string | null;
-  marginMode: MarginMode;
-  marginPercent: number;
-  marginAmount: number | null;
-  costConcepts: QuoteCostConcept[];
-  defaultExtras: QuoteExtra[];
-  positions: QuotePosition[];
-};
-
-export type Quote = QuoteInput & {
-  id: string;
-  code: string;
-  versionId: string;
-  versionNumber: number;
-  status: QuoteStatus;
-  branchId: string | null;
-  /** Copia de la empresa al elegirla. */
-  clientName: string | null;
-  clientTaxId: string | null;
-  clientSector: string | null;
-  clientCity: string | null;
-  clientAgreementId: string | null;
-  salesName: string | null;
-  approval: QuoteApproval | null;
-  rejection: QuoteRejection | null;
-  obsolete: QuoteObsolete | null;
-  createdFromId: string | null;
-  createdFromCode: string | null;
-  sentAt: string | null;
-  daysWithoutResponse: number | null;
-  requests: QuoteRequestLink[];
-  breakdowns: Record<string, QuotePositionBreakdown>;
-  totals: QuoteTotals;
-  createdAt: string;
-  updatedAt: string;
-};
-
-/** Fila del listado. */
-export type QuoteSummary = Pick<
-  Quote,
-  'id' | 'code' | 'versionNumber' | 'status' | 'title' | 'clientId' | 'clientName' | 'salesUserId' | 'salesName' | 'branchId' | 'validUntil' | 'daysWithoutResponse' | 'rejection' | 'updatedAt'
-> & { positions: number; billing: number; averageRate: number; marginPercent: number; /** Peticiones creadas desde el presupuesto. */ requests: number };
-export type QuoteQuery = PageQuery & {
-  q?: string;
-  status?: QuoteStatus;
-  salesUserId?: string;
-  validity?: 'current' | 'soon' | 'expired';
-  branchId?: string;
-};
+/** Lo que se envía de un puesto (la versión del convenio y los campos cambiados a mano los decide el servidor). */
+export type QuotePositionInput = Partial<
+  Omit<
+    QuotePosition,
+    'id' | 'calculation' | 'agreementPeriod' | 'agreementMinimumSalaryHour' | 'collectiveAgreementName' | 'agreementCategoryName' | 'agreementVersionId' | 'manualFields'
+  >
+>;
 
 export type QuoteVersion = {
   id: string;
-  number: number;
-  status: 'current' | 'superseded';
+  quoteId: string;
+  versionNumber: number;
+  status: QuoteStatus;
+  /** Solo la versión actual en borrador o en preparación. */
+  editable: boolean;
+  title: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  salesRepId: string | null;
+  salesRepName: string | null;
+  issueDate: string;
+  validUntil: string | null;
+  expectedStartDate: string | null;
+  durationMonths: number | null;
+  modality: string | null;
+  paymentMethodId: string | null;
+  paymentMethodName: string | null;
+  vatRate: number;
+  currency: string;
+  replacementGuarantee: string | null;
+  commercialNotes: string | null;
+  conditions: string | null;
+  margin: QuoteMargin;
+  ssRates: SocialSecurityRates;
+  costConcepts: QuoteCostConcept[];
+  defaultExtras: QuoteExtra[];
+  approvalStatus: QuoteApprovalStatus | null;
+  approvalNotes: string | null;
+  approvalRequestedAt: string | null;
+  approvalDecidedAt: string | null;
+  approvalRequestedByName: string | null;
+  approvalDecidedByName: string | null;
+  /** Margen mínimo de la ETT cuando se calculó (null: sin mínimo). */
+  minMarginPercent: number | null;
+  sentAt: string | null;
+  sentByName: string | null;
+  acceptedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReasonId: string | null;
+  rejectionReasonName: string | null;
+  rejectionNotes: string | null;
+  closedAt: string | null;
+  positions: QuotePosition[];
+  totals: Omit<QuoteTotals, 'averageCost'> | null;
+  issues: { position: number; issue: PositionIssue }[];
   createdAt: string;
-  createdBy: string | null;
-  comment: string | null;
-  totals: QuoteTotals;
+  createdByName: string | null;
+  updatedAt: string;
+};
+/** Lo que se cambia de la cabecera de una versión (en borrador o en preparación). */
+export type QuoteVersionInput = Partial<
+  Pick<
+    QuoteVersion,
+    | 'title' | 'contactId' | 'salesRepId' | 'issueDate' | 'validUntil' | 'expectedStartDate' | 'durationMonths' | 'modality' | 'paymentMethodId'
+    | 'vatRate' | 'currency' | 'replacementGuarantee' | 'commercialNotes' | 'conditions' | 'margin' | 'ssRates' | 'costConcepts' | 'defaultExtras'
+  >
+> & { status?: 'draft' | 'in_preparation' };
+
+export type QuoteVersionSummary = {
+  id: string; versionNumber: number; status: QuoteStatus; issueDate: string; validUntil: string | null; createdAt: string; createdByName: string | null;
+  revenue: number; averageRate: number; marginPercent: number;
 };
 
-/** Comprobación antes de enviar. `kind`: 'error' bloquea; 'approval' necesita el visto bueno de un responsable. */
-export type QuoteReviewItem = { ok: boolean; kind: 'error' | 'approval'; text: string; section: 'client' | 'positions' | 'conditions'; positions?: string[] };
+/** Cabecera del presupuesto (la de la fila del listado sin lo de la versión), con su versión actual y las anteriores. */
+export type Quote = Pick<
+  QuoteSummary,
+  | 'id' | 'code' | 'companyId' | 'branchId' | 'clientId' | 'clientName' | 'clientAgreementId' | 'status' | 'versionNumber' | 'createdFromQuoteId'
+  | 'createdFromCode' | 'replacedByQuoteId' | 'replacedByCode' | 'obsoleteAt' | 'obsoleteReason' | 'createdAt'
+> & { currentVersion: QuoteVersion; versions: QuoteVersionSummary[] };
+export type QuoteCreate = QuoteVersionInput & { clientId?: string | null; branchId?: string | null };
+
+/** Fila del listado. */
+export type QuoteSummary = {
+  id: string;
+  code: string;
+  companyId: string;
+  branchId: string;
+  clientId: string | null;
+  clientName: string | null;
+  clientAgreementId: string | null;
+  status: QuoteStatus;
+  versionNumber: number;
+  createdFromQuoteId: string | null;
+  createdFromCode: string | null;
+  replacedByQuoteId: string | null;
+  replacedByCode: string | null;
+  obsoleteAt: string | null;
+  obsoleteReason: string | null;
+  createdAt: string;
+  title: string | null;
+  salesRepId: string | null;
+  salesRepName: string | null;
+  issueDate: string;
+  validUntil: string | null;
+  positionsCount: number;
+  people: number;
+  hours: number;
+  revenue: number;
+  averageRate: number;
+  marginPercent: number;
+  approvalStatus: QuoteApprovalStatus | null;
+  sentAt: string | null;
+  daysWithoutResponse: number | null;
+  noResponse: boolean;
+  rejectionReasonName: string | null;
+};
+export type QuoteQuery = PageQuery & {
+  q?: string;
+  status?: QuoteStatus;
+  salesRepId?: string;
+  clientId?: string;
+  branchId?: string;
+  validity?: 'valid' | 'expiring' | 'expired';
+  noResponse?: boolean;
+};
+
+/** Valores de un puesto que salen de la tabla del convenio (GET /v1/quote-agreement-defaults). */
+export type QuoteAgreementDefaults = {
+  agreementVersionId: string | null;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  defaults: AgreementDefaults;
+};
+export type QuoteAgreementDefaultsQuery = { collectiveAgreementId: string; agreementCategoryId?: string | null; date?: string };
+/** Categoría de la tabla de un convenio (la de su versión vigente). */
+export type AgreementCategory = { id: string; code: string; name: string; group: string | null; level: string | null };

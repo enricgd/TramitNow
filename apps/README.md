@@ -68,9 +68,9 @@ reload();
   En el NAS, `VITE_API_URL` en `.env.production.local`.
 - Cuando la API gane una ruta, se añade al contrato y a las dos implementaciones.
 
-Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`) y Empresas
-(`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**). El
-resto de pantallas aún usan los datos de ejemplo que llevan dentro.
+Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`), Empresas
+(`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**) y
+Presupuestos (`src/views/presupuestos/`). El resto de pantallas aún usan los datos de ejemplo que llevan dentro.
 
 #### Conectar una pantalla
 
@@ -161,6 +161,20 @@ web comprueba el enlace con Supabase Auth (`verifyOtp` con el `token_hash`), gua
 (`updateUser`) y entra. El enlace vale una vez. En local, la API necesita `AUTH_URL`, `INVITE_REDIRECT_URL` y
 `AUTH_SENDS_INVITES=false` en `apps/api/.env` (ver `.env.example`). En el modo demo el enlace abre la misma
 página y entra sin red.
+
+#### Presupuestos en la web
+
+- `src/views/presupuestos/usePresupuestos.ts` (datos y acciones) y `mapeo.ts` (la forma de la API ↔ la del diseño). La
+  vista guarda la versión actual: la cabecera con `PATCH /v1/quote-versions/{id}` y los puestos uno a uno (nuevos,
+  cambiados y quitados). Los estados, la aprobación, la versión nueva, el obsoleto y el PDF son acciones de la versión.
+- **Cálculo**: `src/data/calculoPresupuestos.ts` reexporta `apps/api/src/calc/quote.ts` (sin copiarlo). Lo usan el modo
+  demo y la vista previa mientras se edita; al abrir, se pinta lo que ha calculado el servidor (`calculation`).
+- Los costes legales (Seguridad Social e indemnización) se enseñan como dos conceptos del escandallo, pero salen de
+  `ssRates` y de la ley: no se editan en la pantalla. Los demás costes internos van en % sobre el salario por hora o €/h.
+- Ver costes y margen y aprobar: en real, quien tiene `quotes.approve_margin` lo ve como dirección; el resto, como
+  comercial (en la demo, el selector «Ver como»).
+- Aún sin hacer: crear peticiones desde un aceptado (fase 5), enviar por correo o a firma, recordatorios y el escandallo
+  en Excel («Disponible próximamente» en real).
 
 ## api
 

@@ -1,7 +1,7 @@
 # Empresas y Presupuestos: el circuito de un cliente nuevo ya no se corta
 
 - **Fecha**: 2026-11-11
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-16)
 - **Rama y commits**: `design`, 803cc05
 - **Cómo verlo**: `npm --prefix apps/web run dev`.
   - Empresas → abrir una empresa → «Crear presupuesto».

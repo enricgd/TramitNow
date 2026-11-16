@@ -75,6 +75,13 @@ const catalogItems: CatalogItem[] = [
   ),
   // Los contratos se conservan: no se pueden eliminar.
   item(329, 'document_type', 'Contrato', true),
+  // Presupuestos (los siembra la migración de la fase 4 en cada ETT). Los motivos, 700 en adelante (memoriaPresupuestos.ts).
+  ...['Precio', 'Plazo de incorporación', 'Eligió a la competencia', 'Cancela el proyecto', 'Sin respuesta del cliente'].map((n, i) =>
+    item(700 + i, 'quote_rejection_reason', n),
+  ),
+  ...['Propuesta de presupuesto', 'Presupuesto firmado por el cliente', 'Condiciones o pliego del cliente', 'Correo del cliente'].map((n, i) =>
+    item(710 + i, 'document_type', n),
+  ),
 ];
 const catalogId = (type: CatalogItemType, name: string) => catalogItems.find((i) => i.type === type && i.name === name)!.id;
 

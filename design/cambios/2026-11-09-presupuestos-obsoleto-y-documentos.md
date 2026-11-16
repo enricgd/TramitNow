@@ -1,7 +1,7 @@
 # Presupuestos: pasar a obsoleto y crear uno nuevo, y añadir documentos
 
 - **Fecha**: 2026-11-09
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-16)
 - **Rama y commits**: `design`, a968296
 - **Cómo verlo**: `npm --prefix apps/web run dev` → Presupuestos.
   - En la lista, el icono del archivador de cada fila.

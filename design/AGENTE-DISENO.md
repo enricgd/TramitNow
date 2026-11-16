@@ -134,10 +134,12 @@ Cada vista guarda sus datos al principio del fichero, en constantes como `INITIA
 `INITIAL_POSICIONES`, `INITIAL_EXPEDIENTES` o `initialCompanyData`. Mientras no haya backend, ahí es donde
 se cambian o se añaden.
 
-Las pantallas ya conectadas a datos reales (la cabecera, Mi ETT y Empresas, de momento) ya no los llevan
-dentro: los cargan con un hook (`src/cabecera/useCabecera.ts`, `src/views/mi-ett/useMiEtt.ts`,
-`src/views/empresas/useEmpresas.ts`) y sus datos de ejemplo están en `src/data/memoria.ts`,
-`src/data/memoriaEmpresas.ts`, `src/data/memoriaMiEtt.ts` y `src/data/ejemploCabecera.ts`. En esas pantallas, los cambios de diseño se
+Las pantallas ya conectadas a datos reales (la cabecera, Mi ETT, Empresas y Presupuestos, de momento) ya no los
+llevan dentro: los cargan con un hook (`src/cabecera/useCabecera.ts`, `src/views/mi-ett/useMiEtt.ts`,
+`src/views/empresas/useEmpresas.ts`, `src/views/presupuestos/usePresupuestos.ts`) y sus datos de ejemplo están en
+`src/data/memoria.ts`, `src/data/memoriaEmpresas.ts`, `src/data/memoriaMiEtt.ts`, `src/data/memoriaPresupuestos.ts` y
+`src/data/ejemploCabecera.ts`. Los costes de los presupuestos los calcula el módulo de la API
+(`apps/api/src/calc/quote.ts`): no se calculan en la vista. En esas pantallas, los cambios de diseño se
 hacen en la vista como siempre; si hace falta un dato nuevo, añádelo a esos ficheros con la misma forma y
 anótalo en la nota. No vuelvas a poner datos dentro de la vista ni llames a `repos` desde ella.
 

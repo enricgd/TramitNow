@@ -11,7 +11,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
     } from 'lucide-react';
 import { Page, PageHeader, Card, KpiTile, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Segmented, Tabs, CAMPO, Modal, Drawer, Confirmar, Notice, EmptyState, CargandoPagina, ErrorCarga } from '../ui';
 import { CLAVE_PRESUPUESTO_EMPRESA, recogerTraspaso } from './traspasos';
-import { usePresupuestos, economiaPuesto, mensajeError } from './presupuestos/usePresupuestos';
+import { usePresupuestos, economiaPuesto, conceptosNuevos, mensajeError } from './presupuestos/usePresupuestos';
 import { DEMO } from '../modo';
 
 // Los datos (presupuestos, empresas, convenios, comerciales...) llegan de presupuestos/usePresupuestos.ts, en modo
@@ -51,12 +51,10 @@ import { DEMO } from '../modo';
 { id: 'sin_garantia', label: 'Sin garantía extendida (condiciones estándar ETT)' },
 { id: 'otro', label: 'Otro / Personalizado...' }
       ],
+      // Los costes internos van en % sobre el salario por hora o en €/h (los que calcula la API).
       tiposConcepto: [
-{ id: 'porcentaje', label: 'Porcentaje (%) sobre Base' },
-{ id: 'fijo_hora', label: 'Importe fijo por hora (€/h)' },
-{ id: 'fijo_mes', label: 'Importe fijo mensual (€/mes)' },
-{ id: 'fijo_jornada', label: 'Importe fijo por jornada (€/día)' },
-{ id: 'otro', label: 'Otro / Personalizado...' }
+{ id: 'porcentaje', label: 'Porcentaje (%) sobre el salario por hora' },
+{ id: 'fijo_hora', label: 'Importe fijo por hora (€/h)' }
       ],
       basesCalculo: [
 { id: 'salario_bruto_hora', label: 'Salario bruto por hora' },
@@ -142,77 +140,11 @@ import { DEMO } from '../modo';
         margenObjetivo: 18,
         extrasDefecto: copiarExtras(EXTRAS_DEFECTO),
         posiciones: [],
-        conceptosEscandallo: JSON.parse(JSON.stringify(CONCEPTOS_DEFECTO)),
+        conceptosEscandallo: conceptosNuevos(),
         auditoria: [],
         documentosAnadidos: [],
       };
     }
-
-    // ==========================================
-    // COSTES INTERNOS DE CADA PRESUPUESTO NUEVO
-    // Los legales (Seguridad Social e indemnización) se aplican siempre; los «recomendados» van en todos los
-    // presupuestos y se desmarcan por puesto.
-    // ==========================================
-    const CONCEPTOS_DEFECTO = [
-{
-  id: 'c-ss',
-  nombre: 'Seguridad Social Patronal (Común + AT/EP 4.10% + Desempleo + FOGASA + FP)',
-  tipo: 'porcentaje',
-  tipoCustom: '',
-  valor: 32.85,
-  baseCalculo: 'coste_salarial_total',
-  baseCalculoCustom: '',
-  esObligatorioLegal: true,
-  descripcion: 'Aportación legal obligatoria a la TGSS según tarifa CNAE Transporte y Almacenamiento.'
-},
-{
-  id: 'c-indem',
-  nombre: 'Indemnización Fin de Contrato Puesta a Disposición (12 días/año)',
-  tipo: 'porcentaje',
-  tipoCustom: '',
-  valor: 4.54,
-  baseCalculo: 'coste_salarial_total',
-  baseCalculoCustom: '',
-  esObligatorioLegal: true,
-  descripcion: 'Prorrateo de indemnización legal obligatoria por cese de contrato de puesta a disposición.'
-},
-{
-  id: 'c-abs',
-  recomendado: true,
-  nombre: 'Provisión de absentismo y contingencias',
-  tipo: 'porcentaje',
-  tipoCustom: '',
-  valor: 2.15,
-  baseCalculo: 'salario_bruto_hora',
-  baseCalculoCustom: '',
-  esObligatorioLegal: false,
-  descripcion: 'Cobertura estimada de bajas de corta duración y permisos retribuidos según convenio.'
-},
-{
-  id: 'c-epi',
-  recomendado: true,
-  nombre: 'EPIs',
-  tipo: 'fijo_hora',
-  tipoCustom: '',
-  valor: 0.18,
-  baseCalculo: 'horas_reales_efectivas',
-  baseCalculoCustom: '',
-  esObligatorioLegal: false,
-  descripcion: 'Equipos de protección individual que necesite el puesto.'
-},
-{
-  id: 'c-prl',
-  recomendado: true,
-  nombre: 'Revisión médica inicial y formación PRL',
-  tipo: 'fijo_hora',
-  tipoCustom: '',
-  valor: 0.22,
-  baseCalculo: 'horas_reales_efectivas',
-  baseCalculoCustom: '',
-  esObligatorioLegal: false,
-  descripcion: 'Acreditación según Art. 19 LPRL y vigilancia médica para trabajo en altura y almacén.'
-}
-      ];
 
     const TURNOS_PETICION = ['Turno de mañana', 'Turno de tarde', 'Turno de noche', 'Jornada partida'];
 
@@ -303,16 +235,16 @@ import { DEMO } from '../modo';
       const solicitarAprobacion = async () => {
         const motivo = revisarPresupuesto(datosActivos).find(i => i.tipo === 'aprobacion' && !i.ok)?.texto || '';
         setModalRevision(false);
-        ponerAbierto(await ejecutar(() => pres.pedirAprobacion(presupuesto._id, motivo), 'Aprobación pedida a un responsable. Lo verá en su panel de Inicio.', 'info'));
+        ponerAbierto(await ejecutar(() => pres.pedirAprobacion(presupuesto, motivo), 'Aprobación pedida a un responsable. Lo verá en su panel de Inicio.', 'info'));
       };
 
       const resolverAprobacion = async (aprobada) => {
-        ponerAbierto(await ejecutar(() => pres.resolverAprobacion(presupuesto._id, aprobada), aprobada ? 'Margen aprobado: ya se puede enviar al cliente.' : 'Se piden cambios al comercial.', aprobada ? 'exito' : 'info'));
+        ponerAbierto(await ejecutar(() => pres.resolverAprobacion(presupuesto, aprobada), aprobada ? 'Margen aprobado: ya se puede enviar al cliente.' : 'Se piden cambios al comercial.', aprobada ? 'exito' : 'info'));
       };
 
       const enviarAlCliente = async () => {
         setModalRevision(false);
-        ponerAbierto(await ejecutar(() => pres.enviar(presupuesto._id), `Propuesta enviada a ${datosActivos.emailContacto}.`));
+        ponerAbierto(await ejecutar(() => pres.enviar(presupuesto), `Propuesta enviada a ${datosActivos.emailContacto}.`));
       };
 
       const abrirCrearPeticiones = () => {
@@ -445,6 +377,9 @@ import { DEMO } from '../modo';
 
       // Rol de usuario (Dirección con costes/márgenes, Comercial con datos sensibles ocultos/limitados)
       const [rolUsuario, setRolUsuario] = useState('direccion'); // 'direccion' | 'comercial'
+      // En real, el rol sale de los permisos: quien puede aprobar el margen (quotes.approve_margin) lo ve como dirección.
+      const puedeAprobar = DEMO || !!pres.catalogos?.puedeAprobar;
+      useEffect(() => { if (!DEMO && pres.catalogos) setRolUsuario(pres.catalogos.puedeAprobar ? 'direccion' : 'comercial'); }, [pres.catalogos?.puedeAprobar]);
 
       // Estado del presupuesto principal
       const [presupuesto, setPresupuesto] = useState(presupuestoVacio);
@@ -468,32 +403,33 @@ import { DEMO } from '../modo';
       const [modalConfirmarConvenio, setModalConfirmarConvenio] = useState(null);
       const [modalNuevaVersionAbierto, setModalNuevaVersionAbierto] = useState(false);
 
-      // Parámetros retributivos del puesto: salen de la tabla del convenio (convenio + categoría + nivel). Al abrir el
-      // panel solo se lee la tabla (etiqueta «Del convenio» y mínimo); al cambiar convenio, categoría o nivel, se
-      // vuelven a cargar los campos que no se hayan cambiado a mano.
-      const CAMPOS_CONVENIO = { salarioBaseAnual: 'baseAnnualSalary', plusConvenioMes: 'monthlyBonus', pagasAnuales: 'annualPayments', horasAnuales: 'annualHours', horasDiaCalculo: 'dailyHours' };
+      // Parámetros retributivos del puesto: salen de la tabla del convenio (convenio + categoría). Al abrir el panel solo
+      // se lee la tabla (etiqueta «Del convenio» y mínimo); al cambiar convenio o categoría, se vuelven a cargar los
+      // campos que no se hayan cambiado a mano. Las categorías salen de la tabla vigente del convenio.
       const [tablaConvenio, setTablaConvenio] = useState(null);
       const ultimaTabla = useRef('');
-      const claveTabla = posicionEnEdicion ? `${posicionEnEdicion.convenio}|${posicionEnEdicion.categoria}|${posicionEnEdicion.grupoNivel}` : '';
+      const claveTabla = posicionEnEdicion ? `${posicionEnEdicion.convenio}|${posicionEnEdicion.categoria}` : '';
+      useEffect(() => { if (posicionEnEdicion?.convenio) pres.cargarCategorias(posicionEnEdicion.convenio); }, [posicionEnEdicion?.convenio]);
       useEffect(() => {
         if (!posicionEnEdicion) { ultimaTabla.current = ''; return; }
         const abriendoPuesto = !ultimaTabla.current.startsWith(`${posicionEnEdicion.id}#`);
         ultimaTabla.current = `${posicionEnEdicion.id}#${claveTabla}`;
         let vigente = true;
-        pres.salarioConvenio(posicionEnEdicion.convenio, posicionEnEdicion.categoria, posicionEnEdicion.grupoNivel).then((t) => {
+        pres.salarioConvenio(posicionEnEdicion.convenio, posicionEnEdicion.categoria).then((t) => {
           if (!vigente) return;
           setTablaConvenio(t);
           setPosicionEnEdicion(prev => {
             if (!prev) return prev;
             const manuales = prev.camposManuales || [];
-            const valores = !t || abriendoPuesto ? {} : Object.fromEntries(Object.entries(CAMPOS_CONVENIO).filter(([k]) => !manuales.includes(k)).map(([k, api]) => [k, t[api]]));
-            return { ...prev, ...valores, minimoConvenio: t ? t.baseAnnualSalary + t.monthlyBonus * 12 : null, versionConvenio: t?.agreementVersionId ?? null };
+            const valores = !t || abriendoPuesto ? {} : Object.fromEntries(Object.entries(t.valores).filter(([k]) => !manuales.includes(k)));
+            return { ...prev, ...valores, minimoConvenioHora: t?.minimoHora ?? null, versionConvenio: t?.versionConvenio ?? null, periodoConvenio: t?.periodo ?? null };
           });
         }, () => vigente && setTablaConvenio(null));
         return () => { vigente = false; };
       }, [claveTabla, posicionEnEdicion?.id]);
       const cambiarRetribucion = (campo, valor) => setPosicionEnEdicion(prev => ({ ...prev, [campo]: valor, camposManuales: [...new Set([...(prev.camposManuales || []), campo])] }));
-      const volverAlConvenio = () => tablaConvenio && setPosicionEnEdicion(prev => ({ ...prev, ...Object.fromEntries(Object.entries(CAMPOS_CONVENIO).map(([k, api]) => [k, tablaConvenio[api]])), camposManuales: [] }));
+      const volverAlConvenio = () => tablaConvenio && setPosicionEnEdicion(prev => ({ ...prev, ...tablaConvenio.valores, camposManuales: [] }));
+      const salarioHoraDe = (p) => ((Number(p.salarioBaseAnual) || 0) + (Number(p.plusConvenioMes) || 0) * 12) / (Number(p.horasAnuales) || 1784);
 
       // Toast feedback
       const [toast, setToast] = useState(null);
@@ -591,7 +527,7 @@ if (presupuesto.estado === 'Enviado a Cliente' || presupuesto.estado === 'Pendie
 
       // Crear nueva versión editable a partir de uno cerrado (la API guarda la anterior entera, para comparar)
       const handleCrearNuevaVersion = async () => {
-        const r = await ejecutar(() => pres.nuevaVersion(presupuesto._id), (x) => `Nueva versión editable creada: ${x.presupuesto.codigoVersion}`);
+        const r = await ejecutar(() => pres.nuevaVersion(presupuesto), (x) => `Nueva versión editable creada: ${x.presupuesto.codigoVersion}`);
         setModalNuevaVersionAbierto(false);
         if (!r) return;
         setPresupuesto(r.presupuesto);
@@ -688,9 +624,10 @@ setModalResumenCambiosAbierto(true);
       const handleConfirmarGuardar = async (guardarComoBorrador = false) => {
         setEstadoGuardado('guardando');
         const estado = guardarComoBorrador ? 'Borrador' : (estaCompleto ? 'En preparación' : 'Borrador');
-        const guardado = await ejecutar(() => pres.guardar(formularioPresupuesto, estado), (d) => (esNuevo ? `Presupuesto ${d.id} creado.` : 'Presupuesto guardado y registrado en el historial.'));
-        if (!guardado) { setEstadoGuardado('error'); return; }
-        const { presupuesto: d, versiones: v } = await pres.abrir(guardado._id);
+        const quoteId = await ejecutar(() => pres.guardar(formularioPresupuesto, estado, presupuesto));
+        if (!quoteId) { setEstadoGuardado('error'); return; }
+        const { presupuesto: d, versiones: v } = await pres.abrir(quoteId);
+        mostrarToast(esNuevo || !presupuesto._id ? `Presupuesto ${d.id} creado.` : 'Presupuesto guardado y registrado en el historial.', 'exito');
         setPresupuesto(d);
         setFormularioPresupuesto(d);
         setVersiones(v);
@@ -730,7 +667,7 @@ if (pos) {
     nombre: '',
     convenio: formularioPresupuesto.convenioEmpresa || presupuesto.convenioEmpresa || 'otro',
     convenioCustom: '',
-    categoria: (CATALOGOS.categorias[formularioPresupuesto.convenioEmpresa] || CATALOGOS.categorias.default)[0].id,
+    categoria: (CATALOGOS.categorias[formularioPresupuesto.convenioEmpresa] || CATALOGOS.categorias.default)[0].id, // 'otro' hasta que lleguen las de su convenio
     categoriaCustom: '',
     grupoNivel: 'g4',
     grupoNivelCustom: '',
@@ -759,9 +696,9 @@ if (!posData.nombre || !posData.tarifaHoraOfertada) {
   return;
 }
 // Por debajo del convenio de la empresa usuaria no se puede pagar (art. 11 de la Ley 14/1994): no hay aprobación que lo permita
-const anual = (Number(posData.salarioBaseAnual) || 0) + (Number(posData.plusConvenioMes) || 0) * 12;
-if (posData.minimoConvenio != null && anual + 0.005 < posData.minimoConvenio) {
-  mostrarToast(`El salario (${eurosTotal(anual)} al año) está por debajo del convenio (${eurosTotal(posData.minimoConvenio)}). Súbelo: no se puede pagar menos que el convenio.`, 'error');
+const porHora = salarioHoraDe(posData);
+if (posData.minimoConvenioHora != null && porHora + 0.005 < posData.minimoConvenioHora) {
+  mostrarToast(`El salario (${euros(porHora)}) está por debajo del convenio (${euros(posData.minimoConvenioHora)}). Súbelo: no se puede pagar menos que el convenio.`, 'error');
   return;
 }
 
@@ -820,6 +757,10 @@ mostrarToast('Posición eliminada del presupuesto.', 'info');
       // GESTIÓN DE CONCEPTOS DE ESCANDALLO
       // ==========================================
       const handleAbrirDrawerConcepto = (concepto = null) => {
+if (concepto?.esObligatorioLegal) {
+  mostrarToast('La Seguridad Social y la indemnización las fija la ley: los tipos de cotización son los de la ETT y el AT/EP sale del CNAE del cliente.', 'info');
+  return;
+}
 if (!modoEdicion) {
   setFormularioPresupuesto(JSON.parse(JSON.stringify(presupuesto)));
   setModoEdicion(true);
@@ -903,7 +844,7 @@ return datosActivos.posiciones.map(pos => ({
 
       // Render de etiqueta de estado
       // Demo: ver el presupuesto como dirección (con costes) o como comercial (sin costes).
-      const selectorRol = (
+      const selectorRol = DEMO && (
         <Select value={rolUsuario} onChange={(e) => setRolUsuario(e.target.value)} aria-label="Ver como">
           <option value="direccion">Ver como dirección</option>
           <option value="comercial">Ver como comercial</option>
@@ -935,10 +876,12 @@ return datosActivos.posiciones.map(pos => ({
       }
       // Lo que aún no se hace de verdad (correo saliente, firma electrónica): en real, «Disponible próximamente».
       const soloDemo = (mensajeDemo, que) => mostrarToast(DEMO ? mensajeDemo : `Disponible próximamente: ${que}.`, DEMO ? 'exito' : 'info');
+      // La propuesta en PDF la genera el servidor; el escandallo en Excel aún no.
       const descargarGenerado = async (tipo) => {
         if (!presupuesto._id) { mostrarToast('Guarda el presupuesto para generar sus documentos.', 'info'); return; }
-        const hay = await ejecutar(() => pres.abrirDocumento(presupuesto._id, tipo));
-        if (hay === false) mostrarToast(tipo === 'propuesta' ? 'En la demo no se genera el PDF: mira la vista previa.' : 'En la demo no se genera el escandallo.', 'info');
+        if (tipo !== 'propuesta') { mostrarToast('Disponible próximamente: el escandallo interno en Excel.', 'info'); return; }
+        const hay = await ejecutar(() => pres.abrirPropuestaPdf(presupuesto));
+        if (hay === false) mostrarToast('En la demo no se genera el PDF: mira la vista previa.', 'info');
       };
       const descargarAnadido = async (d) => {
         const hay = await ejecutar(() => pres.descargarDocumento(d.id));
@@ -1189,7 +1132,7 @@ return datosActivos.posiciones.map(pos => ({
         <Notice tone="warning" icon={AlertTriangle}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span><strong>Pendiente de aprobación de dirección.</strong> {datosActivos.aprobacion.motivo}</span>
-            {rolUsuario === 'direccion' ? (
+            {rolUsuario === 'direccion' && puedeAprobar ? (
               <span className="flex items-center gap-2">
                 <Button size="sm" onClick={() => resolverAprobacion(false)}>Pedir cambios</Button>
                 <Button size="sm" variant="primary" icon={Check} onClick={() => resolverAprobacion(true)}>Aprobar</Button>
@@ -2407,13 +2350,13 @@ return datosActivos.posiciones.map(pos => ({
               <h4 className="font-semibold text-slate-800 text-xs">Parámetros retributivos de convenio</h4>
               {tablaConvenio ? (
                 (posicionEnEdicion.camposManuales || []).length === 0
-                  ? <Badge tone="success">Del convenio · Tablas {tablaConvenio.year}</Badge>
+                  ? <Badge tone="success">Del convenio{tablaConvenio.year ? ` · Tablas ${tablaConvenio.year}` : ''}</Badge>
                   : <button type="button" onClick={volverAlConvenio} className="text-[11px] font-medium text-indigo-700 hover:underline">Volver a los valores del convenio (tablas {tablaConvenio.year})</button>
               ) : <span className="text-[11px] text-slate-500">Sin tabla salarial para esta categoría y nivel: rellénalos a mano.</span>}
             </div>
-            {posicionEnEdicion.minimoConvenio != null && (Number(posicionEnEdicion.salarioBaseAnual) || 0) + (Number(posicionEnEdicion.plusConvenioMes) || 0) * 12 + 0.005 < posicionEnEdicion.minimoConvenio && (
+            {posicionEnEdicion.minimoConvenioHora != null && salarioHoraDe(posicionEnEdicion) + 0.005 < posicionEnEdicion.minimoConvenioHora && (
               <Notice tone="danger" icon={AlertTriangle}>
-                Por debajo del convenio: el mínimo es {eurosTotal(posicionEnEdicion.minimoConvenio)} al año (salario base y pluses). No se puede pagar menos que el convenio de la empresa usuaria, ni con aprobación.
+                Por debajo del convenio: el mínimo es {euros(posicionEnEdicion.minimoConvenioHora)} (salario base y pluses entre las horas anuales); ahora son {euros(salarioHoraDe(posicionEnEdicion))}. No se puede pagar menos que el convenio de la empresa usuaria, ni con aprobación.
               </Notice>
             )}
             
@@ -2840,10 +2783,10 @@ return datosActivos.posiciones.map(pos => ({
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) setModalDocumento(m => ({ ...m, archivo: f })); }}
         >
-          <input type="file" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) setModalDocumento(m => ({ ...m, archivo: f })); e.target.value = ''; }} />
+          <input type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) setModalDocumento(m => ({ ...m, archivo: f })); e.target.value = ''; }} />
           {modalDocumento.archivo
             ? <><CheckCircle2 className="w-5 h-5 mx-auto mb-1" />{modalDocumento.archivo.name} (pulsa para cambiarlo)</>
-            : <><Upload className="w-5 h-5 mx-auto mb-1" />Arrastra el archivo aquí o pulsa para elegirlo (PDF, Word, Excel, imagen o correo)</>}
+            : <><Upload className="w-5 h-5 mx-auto mb-1" />Arrastra el archivo aquí o pulsa para elegirlo (PDF, JPG o PNG, hasta 10 MB)</>}
         </label>
         <label className="flex items-center gap-2 text-slate-600">
           <input type="checkbox" checked={modalDocumento.interno} onChange={(e) => setModalDocumento(m => ({ ...m, interno: e.target.checked }))} className="accent-indigo-600" />
@@ -2895,7 +2838,7 @@ return datosActivos.posiciones.map(pos => ({
       const t = eco.tarifaPVP || 0;
       const ancho = (v) => (t > 0 ? `${Math.max(0, (v / t) * 100)}%` : '0%');
       const filas = [
-        { id: 'salario', nombre: 'Salario bruto', valor: eco.salarioBrutoHora, color: 'bg-indigo-500' },
+        { id: 'salario', nombre: 'Salario de convenio', valor: eco.salarioConvenioHora ?? eco.salarioBrutoHora, color: 'bg-indigo-500' },
         ...eco.desgloseConceptos.map(c => ({ id: c.id, nombre: c.propio ? `${c.nombre} (propio del puesto)` : c.nombre, valor: c.importeHora, color: c.esLegal ? 'bg-amber-500' : 'bg-amber-300', interno: true })),
       ];
       const margenNegativo = eco.margenEuroHora < 0;
@@ -2954,7 +2897,7 @@ return datosActivos.posiciones.map(pos => ({
                 </table>
               )}
               {margenNegativo && <Notice tone="danger" icon={AlertTriangle}>La tarifa no cubre el coste: se pierde dinero en este puesto.</Notice>}
-              {eco.bajoConvenio && <Notice tone="danger" icon={AlertTriangle}>Salario por debajo del convenio (mínimo {euros(eco.bajoConvenio.minimumAnnual)} al año): no se puede enviar hasta subirlo.</Notice>}
+              {eco.bajoConvenio && <Notice tone="danger" icon={AlertTriangle}>Salario por debajo del convenio (mínimo {euros(eco.bajoConvenio.minimoHora)}): no se puede enviar hasta subirlo.</Notice>}
               {!margenNegativo && eco.tarifaSugerida > 0 && Math.abs(eco.tarifaSugerida - t) >= 0.01 && (
                 <p className="text-[11px] text-slate-500">
                   Con el margen objetivo ({pct(eco.margenObjetivo)}) la tarifa sería <strong className="text-slate-700">{euros(eco.tarifaSugerida)}</strong>.
