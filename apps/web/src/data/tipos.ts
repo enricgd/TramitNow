@@ -920,7 +920,7 @@ export type ServiceRequestSummary = {
   cancelReason: string | null;
   preCpdStatus: PreCpdStatus;
   createdAt: string;
-  /** Centro de trabajo (nombre de la ficha del cliente o el texto escrito). Pendiente en la API: hasta entonces, solo en la ficha. */
+  /** Centro de trabajo de la ficha del cliente (null si la petición no tiene). */
   clientCenterName?: string | null;
 };
 
@@ -1132,9 +1132,9 @@ export type CandidateSummary = {
   activeApplications: number;
   /**
    * Candidatura que se enseña en la lista («Petición o misión»): la confirmada o en misión y, si no hay, la activa más
-   * reciente. Pendiente en la API: hasta entonces, solo en la ficha.
+   * reciente (sin plaza hasta que se propone). null si no hay o si quien mira no ve la petición.
    */
-  currentApplication?: { requestCode: string; slotNumber: number | null; positionName: string; clientName: string; stage: ApplicationStage; stageChangedAt: string } | null;
+  currentApplication?: { applicationId: string; requestId: string; requestCode: string; slotNumber: number | null; positionName: string; clientName: string; stage: ApplicationStage; stageChangedAt: string } | null;
   experienceYears: number | null;
   lastContactAt: string | null;
   anonymized?: boolean;

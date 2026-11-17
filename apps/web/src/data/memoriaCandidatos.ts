@@ -265,7 +265,7 @@ function candidaturaActual(e: Estado, candidateId: string): CandidateSummary['cu
   const suyas = e.candidaturas.filter((a) => a.candidateId === candidateId && !['discarded', 'withdrawn', 'finished', 'left'].includes(a.stage))
     .sort((a, b) => b.stageChangedAt.localeCompare(a.stageChangedAt));
   const a = suyas.find((x) => x.stage === 'on_mission' || x.stage === 'confirmed') ?? suyas[0];
-  return a ? { requestCode: a.requestCode, slotNumber: a.slotNumber, positionName: a.positionName, clientName: a.clientName, stage: a.stage, stageChangedAt: a.stageChangedAt } : null;
+  return a ? { applicationId: a.id, requestId: a.requestId, requestCode: a.requestCode, slotNumber: a.slotNumber, positionName: a.positionName, clientName: a.clientName, stage: a.stage, stageChangedAt: a.stageChangedAt } : null;
 }
 
 async function ficha(e: Estado, r: Registro): Promise<Candidate> {
