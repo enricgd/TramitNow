@@ -347,6 +347,26 @@ export function memoryCandidateRepositories(
         log('candidate', r.id, null, 'update', 'Datos actualizados');
         return ficha(e, r);
       },
+      async facets() {
+        const e = await datos();
+        const vivos = e.candidatos.filter((r) => !r.anonymizedAt);
+        const filas = await Promise.all(vivos.map((r) => resumen(e, r)));
+        const cuenta = (pred: (r: Registro) => boolean) => vivos.filter(pred).length;
+        const byStatus: Record<string, number> = {};
+        for (const r of vivos) byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
+        return delay({
+          total: vivos.length,
+          byStatus,
+          documentAlerts: filas.filter((f) => f.documentAlerts.expired + f.documentAlerts.expiring > 0).length,
+          poolConsentExpired: filas.filter((f) => f.poolConsent.state === 'expired').length,
+          profiles: e.items.filter((x) => x.catalog === 'candidate_profile')
+            .map((x) => ({ id: x.id, name: x.name, group: x.group, count: cuenta((r) => r.mainProfileId === x.id || r.otherProfileIds.includes(x.id)) }))
+            .filter((x) => x.count > 0),
+          attributes: e.items.filter((x) => x.catalog !== 'candidate_profile')
+            .map((x) => ({ id: x.id, catalog: x.catalog, name: x.name, group: x.group, count: cuenta((r) => r.licenseIds.includes(x.id) || r.skillIds.includes(x.id) || r.languages.some((l) => l.id === x.id)) }))
+            .filter((x) => x.count > 0),
+        });
+      },
       async checkDuplicate({ idDocumentType, idDocumentNumber }) {
         const e = await datos();
         const v = idDocumentNumber.toUpperCase().replace(/[\s-]/g, '');

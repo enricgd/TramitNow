@@ -1257,6 +1257,15 @@ export type CandidateSensitive = {
   health?: { disabilityPercent: number | null; adaptations: string | null; notes: string | null; legalBasis: string | null } | null;
 };
 export type SensitiveField = 'idDocument' | 'ssNumber' | 'iban' | 'health';
+/** Recuentos de la bolsa para los indicadores y los filtros (GET /v1/candidate-facets). */
+export type CandidateFacets = {
+  total: number;
+  byStatus: Record<string, number>;
+  documentAlerts: number;
+  poolConsentExpired: number;
+  profiles: { id: string; name: string; group: string | null; count: number }[];
+  attributes: { id: string; catalog: CandidateCatalog; name: string; group: string | null; count: number }[];
+};
 export type PrivacyNotice = { id: string; purpose: 'talent_pool' | 'health_data'; version: string; text: string; createdAt: string };
 
 export type ContactChannel = 'phone' | 'email' | 'whatsapp' | 'sms' | 'in_person' | 'other';

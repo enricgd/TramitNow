@@ -110,6 +110,7 @@ import type {
   CandidateSensitive,
   CandidateSummary,
   PrivacyNotice,
+  CandidateFacets,
   ContactChannel,
   SensitiveField,
   RequestSource,
@@ -342,6 +343,8 @@ export interface Repositories {
     get(id: string): Promise<Candidate>;
     create(data: CandidateCreate): Promise<Candidate>;
     update(id: string, data: CandidateInput): Promise<Candidate>;
+    /** Recuentos de toda la bolsa (por estado, perfil y carné, habilidad o idioma). */
+    facets(): Promise<CandidateFacets>;
     checkDuplicate(data: { idDocumentType: string; idDocumentNumber: string }): Promise<{ valid: boolean; duplicate: { id: string; code: string; name: string } | null }>;
     /** Valores completos (personal_data.view, auditado). No guardarlos. */
     sensitive(id: string, fields: SensitiveField[]): Promise<CandidateSensitive>;

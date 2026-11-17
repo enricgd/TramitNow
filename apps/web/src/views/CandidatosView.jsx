@@ -552,6 +552,11 @@ export default function CandidatosView() {
     };
 
     // Calculate filtered candidates
+    // Los filtros van al servidor (la bolsa puede ser grande); la búsqueda, un momento después de dejar de escribir
+    useEffect(() => {
+        const t = setTimeout(() => can.filtrar({ q: searchQuery, estado: statusFilter, origen: sourceFilter, perfil: categoryFilter, atributo: skillFilter, vista: savedPreset }), 300);
+        return () => clearTimeout(t);
+    }, [searchQuery, statusFilter, sourceFilter, categoryFilter, skillFilter, savedPreset, can.catalogos]);
     // Búsqueda exacta por DNI o NIE: la hace la API (sin descifrar) y lo encontrado se añade a la lista si no estaba
     const [porDocumento, setPorDocumento] = useState([]);
     useEffect(() => {
@@ -567,22 +572,9 @@ export default function CandidatosView() {
     }, [searchQuery]);
     const filteredCandidates = useMemo(() => {
         return candidates.filter(can => {
-            // Search query
-            if (searchQuery.trim()) {
-                const q = searchQuery.toLowerCase();
-                const matchName = `${can.name} ${can.lastName}`.toLowerCase().includes(q);
-                // El DNI llega tapado: lo busca la API por su huella (porDocumento)
-                const matchDni = porDocumento.includes(can._id);
-                const matchPhone = can.phone.toLowerCase().includes(q);
-                const matchEmail = can.email.toLowerCase().includes(q);
-                const matchCity = can.city.toLowerCase().includes(q);
-                const matchCategory = can.category.toLowerCase().includes(q);
-                const matchSkills = can.skills.some(s => s.toLowerCase().includes(q));
-                const matchSinonimos = textoBuscable(can, catalogos).includes(normalizarTexto(q));
-                if (!matchName && !matchDni && !matchPhone && !matchEmail && !matchCity && !matchCategory && !matchSkills && !matchSinonimos) {
-                    return false;
-                }
-            }
+            // La búsqueda (también por sinónimos), el perfil y los carnés los filtra el servidor (can.filtrar).
+            // El DNI llega tapado: lo busca la API por su huella (porDocumento).
+            if (/^[XYZ]?\d{7,8}[A-Z]$/i.test(searchQuery.trim()) && !porDocumento.includes(can._id)) return false;
 
             // Preset filters
             if (savedPreset === 'AVAILABLE_NOW' && can.status !== 'Disponible') return false;
@@ -600,16 +592,6 @@ export default function CandidatosView() {
             if (docFilter === 'DOC_ALERT' && (can.dniStatus === 'OK' && can.nssStatus === 'OK' && docsPorRenovar(can).length === 0)) return false;
             if (docFilter === 'RGPD_ALERT' && (can.rgpdStatus === 'Vigente')) return false;
 
-            // Category
-            if (categoryFilter !== 'ALL' && can.category !== categoryFilter && !(can.otherProfiles || []).includes(categoryFilter)) return false;
-
-            // Carné, habilidad o idioma
-            if (skillFilter !== 'ALL') {
-                const [tipo, valor] = skillFilter.split(':');
-                if (tipo === 'carne' && !(can.drivingLicenses || []).includes(valor)) return false;
-                if (tipo === 'habilidad' && !(can.skills || []).includes(valor)) return false;
-                if (tipo === 'idioma' && !(can.languages || []).some(l => l.startsWith(`${valor} (`))) return false;
-            }
 
             return true;
         });
@@ -888,7 +870,7 @@ export default function CandidatosView() {
             <Page>
                 <PageHeader
                     title="Candidatos"
-                    count={candidates.length}
+                    count={can.facetas?.total ?? candidates.length}
                     subtitle="Personas disponibles, en selección o en misión, con su documentación y RGPD."
                     actions={
                         <>
@@ -900,18 +882,18 @@ export default function CandidatosView() {
 
                 {/* Indicadores: también son los filtros rápidos */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <KpiTile label="Todos" value={candidates.length} active={savedPreset === 'ALL'} onClick={() => aplicarVista('ALL')} />
+                    <KpiTile label="Todos" value={can.facetas?.total ?? candidates.length} active={savedPreset === 'ALL'} onClick={() => aplicarVista('ALL')} />
                     <KpiTile
                         label="Disponibles ya"
                         tone="success"
-                        value={candidates.filter(c => c.status === 'Disponible').length}
+                        value={can.facetas?.disponibles ?? candidates.filter(c => c.status === 'Disponible').length}
                         active={savedPreset === 'AVAILABLE_NOW'}
                         onClick={() => aplicarVista('AVAILABLE_NOW')}
                     />
                     <KpiTile
                         label="En misión"
                         tone="info"
-                        value={candidates.filter(c => c.status === 'Asignado/En misión').length}
+                        value={can.facetas?.enMision ?? candidates.filter(c => c.status === 'Asignado/En misión').length}
                         active={savedPreset === 'ASSIGNED'}
                         onClick={() => aplicarVista('ASSIGNED')}
                     />
@@ -937,7 +919,7 @@ export default function CandidatosView() {
                             <option value="ALL">Todos los perfiles</option>
                             {[...new Set(catalogos.perfiles.map(p => p.grupo))].map(g => {
                                 const delGrupo = catalogos.perfiles.filter(p => p.grupo === g)
-                                    .map(p => ({ p, n: candidates.filter(c => c.category === p.nombre || (c.otherProfiles || []).includes(p.nombre)).length }))
+                                    .map(p => ({ p, n: can.facetas?.perfiles[p.nombre] ?? 0 }))
                                     .filter(x => x.n > 0);
                                 return delGrupo.length > 0 && (
                                     <optgroup key={g} label={g}>
@@ -949,13 +931,13 @@ export default function CandidatosView() {
                         <Select value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)} aria-label="Carnés, habilidades e idiomas">
                             <option value="ALL">Carnés, habilidades e idiomas</option>
                             <optgroup label="Permisos y carnés">
-                                {catalogos.carnes.filter(x => candidates.some(c => (c.drivingLicenses || []).includes(x.nombre))).map(x => <option key={x.nombre} value={`carne:${x.nombre}`}>{x.nombre}</option>)}
+                                {catalogos.carnes.filter(x => can.facetas?.atributos[`carne:${x.nombre}`]).map(x => <option key={x.nombre} value={`carne:${x.nombre}`}>{x.nombre} ({can.facetas.atributos[`carne:${x.nombre}`]})</option>)}
                             </optgroup>
                             <optgroup label="Habilidades">
-                                {catalogos.habilidades.filter(x => candidates.some(c => (c.skills || []).includes(x.nombre))).map(x => <option key={x.nombre} value={`habilidad:${x.nombre}`}>{x.nombre}</option>)}
+                                {catalogos.habilidades.filter(x => can.facetas?.atributos[`habilidad:${x.nombre}`]).map(x => <option key={x.nombre} value={`habilidad:${x.nombre}`}>{x.nombre} ({can.facetas.atributos[`habilidad:${x.nombre}`]})</option>)}
                             </optgroup>
                             <optgroup label="Idiomas">
-                                {catalogos.idiomas.filter(i => candidates.some(c => (c.languages || []).some(l => l.startsWith(`${i} (`)))).map(i => <option key={i} value={`idioma:${i}`}>{i}</option>)}
+                                {catalogos.idiomas.filter(i => can.facetas?.atributos[`idioma:${i}`]).map(i => <option key={i} value={`idioma:${i}`}>{i} ({can.facetas.atributos[`idioma:${i}`]})</option>)}
                             </optgroup>
                         </Select>
                         <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>

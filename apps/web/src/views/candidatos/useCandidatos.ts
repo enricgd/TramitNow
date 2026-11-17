@@ -5,18 +5,19 @@
 // - La bolsa es común a toda la ETT; las peticiones del asistente, las de la sucursal de la cabecera.
 // - Lo sensible llega enmascarado. `revelar` pide el valor a la API (queda auditado) y lo devuelve: no se guarda en
 //   ningún estado de aquí, ni en caché ni en localStorage.
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ApiError,
   repos,
   useData,
   type CandidateCatalog,
   type CandidateCatalogItem,
+  type CandidateQuery,
   type CatalogItem,
   type Repositories,
   type ServiceRequestSummary,
 } from '../../data';
-import { canalApi, codigoDeTipo, origenApi } from '../../data/candidatosValores';
+import { ESTADO_CANDIDATO, canalApi, clave, codigoDeTipo, origenApi } from '../../data/candidatosValores';
 import { useSesion } from '../../sesion';
 import { esError, fechaHora, mensajeError } from '../comun/datos';
 import { ESTADOS as ESTADOS_PETICION } from '../peticiones/mapeo';
@@ -74,13 +75,53 @@ export function useCandidatos() {
   const { me, sucursal } = useSesion();
   const permisos = me?.permissions ?? [];
   const cat = useData(cargarCatalogos, []);
-  const lista = useData((r) => r.candidates.list({ limit: 200 }).then((p) => p.data.map((x) => candidatoVista(x))), []);
+  // La bolsa puede ser grande: los filtros los aplica el servidor (filtrar) y los recuentos salen de las facetas
+  const [consulta, setConsulta] = useState<CandidateQuery>({});
+  const lista = useData((r) => r.candidates.list({ ...consulta, limit: 200 }).then((p) => ({ filas: p.data.map((x) => candidatoVista(x)), total: p.pagination.total })), [JSON.stringify(consulta)]);
+  const fac = useData((r) => r.candidates.facets().catch(() => null), []);
   const pets = useData(
     (r) => r.requests.list({ branchId: sucursal ?? undefined, status: 'active', limit: 200 }).then((p) => p.data, () => [] as ServiceRequestSummary[]),
     [sucursal],
   );
 
   const c = cat.data;
+
+  /** Recuentos para los indicadores y los desplegables, en los nombres de la vista. */
+  const facetas = useMemo(() => {
+    const f = fac.data;
+    if (!f) return null;
+    const PREFIJO: Record<string, string> = { license: 'carne', skill: 'habilidad', language: 'idioma' };
+    return {
+      total: f.total,
+      disponibles: f.byStatus.available ?? 0,
+      enMision: f.byStatus.in_mission ?? 0,
+      conAlertas: f.documentAlerts,
+      perfiles: Object.fromEntries(f.profiles.map((x) => [x.name, x.count])) as Record<string, number>,
+      atributos: Object.fromEntries(f.attributes.map((x) => [`${PREFIJO[x.catalog]}:${x.name}`, x.count])) as Record<string, number>,
+    };
+  }, [fac.data]);
+
+  /**
+   * Filtros de la vista → consulta al servidor: búsqueda (también por sinónimos), estado, origen, perfil, carné,
+   * habilidad o idioma. «Disponibles ya» y «En misión» son estados. Los de documentación siguen en la vista.
+   */
+  const filtrar = useCallback(
+    (f: { q: string; estado: string; origen: string; perfil: string; atributo: string; vista: string }) => {
+      const estado = f.vista === 'AVAILABLE_NOW' ? 'available' : f.vista === 'ASSIGNED' ? 'in_mission' : f.estado !== 'ALL' ? clave(ESTADO_CANDIDATO, f.estado) : undefined;
+      const [tipo, nombre] = f.atributo !== 'ALL' ? f.atributo.split(':') : [];
+      const lista = tipo === 'carne' ? c?.carnes : tipo === 'habilidad' ? c?.habilidades : tipo === 'idioma' ? c?.idiomas : undefined;
+      const q = f.q.trim();
+      const siguiente: CandidateQuery = {
+        ...(q && !/^[XYZ]?\d{7,8}[A-Z]$/i.test(q) ? { q } : {}),
+        ...(estado ? { status: estado } : {}),
+        ...(f.origen !== 'ALL' ? { source: origenApi(f.origen) } : {}),
+        ...(f.perfil !== 'ALL' ? { profileId: c?.perfiles.find((x) => x.name === f.perfil)?.id } : {}),
+        ...(lista ? { attributeId: lista.find((x) => x.name === nombre)?.id } : {}),
+      };
+      setConsulta((prev) => (JSON.stringify(prev) === JSON.stringify(siguiente) ? prev : siguiente));
+    },
+    [c],
+  );
   const catalogos = useMemo(() => (c ? catalogosVista(c) : undefined), [c]);
   const peticiones = useMemo(() => (pets.data ?? []).map((x) => peticionVista(x)), [pets.data]);
   const peticionesInfo = useMemo(
@@ -139,7 +180,7 @@ export function useCandidatos() {
     },
     [tipoPorTypeId],
   );
-  const recargarFicha = (v: CandidatoVista) => abrir(v).then((x) => (lista.reload(), x));
+  const recargarFicha = (v: CandidatoVista) => abrir(v).then((x) => (lista.reload(), fac.reload(), x));
 
   const guardar = useCallback(
     async (seccion: 'personal' | 'profesional' | 'disponibilidad', d: CandidatoVista, original: CandidatoVista) => {
@@ -305,10 +346,14 @@ export function useCandidatos() {
   }, []);
 
   return {
-    listado: lista.data,
+    listado: lista.data?.filas,
+    /** Cuántos cumplen los filtros (puede haber más de los que se traen). */
+    totalFiltrado: lista.data?.total ?? 0,
+    facetas,
+    filtrar,
     cargando: lista.loading || cat.loading,
     error: lista.error ? mensajeError(lista.error) : cat.error ? mensajeError(cat.error) : null,
-    recargar: lista.reload,
+    recargar: () => { lista.reload(); fac.reload(); },
     catalogos,
     peticiones,
     peticionesInfo,

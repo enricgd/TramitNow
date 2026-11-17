@@ -205,6 +205,7 @@ export function apiRepositories(): Repositories {
       get: (id) => get(`/candidates/${id}`),
       create: (body) => request('POST', '/candidates', { body }),
       update: (id, body) => request('PATCH', `/candidates/${id}`, { body }),
+      facets: () => get('/candidate-facets'),
       checkDuplicate: (body) => request('POST', '/candidates/check-duplicate', { body }),
       sensitive: (id, fields) => get(`/candidates/${id}/sensitive`, { fields: fields.join(',') }),
       anonymize: (id, reason) => request('POST', `/candidates/${id}/anonymize`, { body: { reason } }),
