@@ -28,6 +28,7 @@ import { me } from './routes/me.js';
 import { memberships } from './routes/memberships.js';
 import { billableServices, contributionAccounts, miEtt } from './routes/mi-ett.js';
 import { quotes } from './routes/quotes.js';
+import { requests } from './routes/requests.js';
 import { roles } from './routes/roles.js';
 
 // Mensajes de validación en español.
@@ -100,6 +101,7 @@ export function createApp(options: {
   app.route('/v1', contributionAccounts);
   app.route('/v1', billableServices);
   app.route('/v1', quotes);
+  app.route('/v1', requests);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
     type: 'http',

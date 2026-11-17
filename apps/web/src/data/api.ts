@@ -3,7 +3,7 @@
 import { supabase } from '../auth/session';
 import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import type { CatalogRepository, Repositories } from './repositorios';
-import { ApiError, type DocumentUpload, type StoredDocument } from './tipos';
+import { ApiError, type DocumentUpload, type RequestUseCase, type ServiceRequest, type StoredDocument } from './tipos';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -198,6 +198,21 @@ export function apiRepositories(): Repositories {
       newVersion: (id) => request('POST', `/quote-versions/${id}/new-version`),
       proposalPdf: (id) => request('POST', `/quote-versions/${id}/proposal-pdf`),
     },
+    requests: {
+      list: (query) => get('/requests', query),
+      get: (id) => get(`/requests/${id}`),
+      create: (body) => request('POST', '/requests', { body }),
+      createFromQuoteVersion: (versionId, requests) =>
+        request<{ data: ServiceRequest[] }>('POST', `/quote-versions/${versionId}/requests`, { body: { requests } }).then((r) => r.data),
+      update: (id, body) => request('PATCH', `/requests/${id}`, { body }),
+      duplicate: (id, body) => request('POST', `/requests/${id}/duplicate`, { body }),
+      sources: (query) => get('/request-sources', query),
+      // El contrato no dice si va en { data }: se aceptan las dos formas.
+      useCases: () => get<RequestUseCase[] | { data: RequestUseCase[] }>('/request-use-cases').then((r) => (Array.isArray(r) ? r : r.data)),
+      generatePreCpd: (id) => request('POST', `/requests/${id}/pre-cpd`),
+      markPreCpdSent: (id, body = {}) => request('POST', `/requests/${id}/pre-cpd/sent`, { body }),
+      markPreCpdReviewed: (id) => request('POST', `/requests/${id}/pre-cpd/reviewed`),
+    },
     tenantSettings: {
       get: () => get('/tenant-settings'),
       update: (body) => request('PATCH', '/tenant-settings', { body }),
@@ -209,5 +224,6 @@ export function apiRepositories(): Repositories {
     notifications: sampleNotifications(true),
     ettSettings: { get: notAvailable, update: notAvailable },
     portalAccess: { list: notAvailable, save: notAvailable, revoke: notAvailable },
+    requestSelection: { get: notAvailable },
   };
 }

@@ -21,7 +21,7 @@ describe('rol seleccion (sucursal A1)', () => {
     const res = await call('GET', '/v1/me', { token: seleccion });
     expect(res.status).toBe(200);
     expect(res.body.role).toMatchObject({ code: 'seleccion', scope: 'branch' });
-    expect(res.body.permissions).toEqual(['addresses.write', 'module.seleccion']);
+    expect(res.body.permissions).toEqual(['addresses.write', 'module.seleccion', 'requests.manage']);
     expect(res.body.branches.map((b: { id: string }) => b.id)).toEqual([BRANCH.A1]);
   });
 

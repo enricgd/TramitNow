@@ -137,7 +137,7 @@ const BreakdownLineSchema = z.object({
   custom: z.boolean().openapi({ description: 'Coste interno con valor propio del puesto' }),
 });
 const PositionIssue = z.enum(['salary_below_agreement', 'extra_below_agreement', 'rate_below_cost', 'margin_below_minimum', 'no_rate']);
-const PositionCalcSchema = z
+export const PositionCalcSchema = z
   .object({
     grossSalaryHour: z.number().openapi({ description: 'Salario por hora con vacaciones: el de la propuesta' }),
     salaryHour: z.number(),
@@ -584,15 +584,21 @@ function hideCosts(v: Version): Version {
     positions: v.positions.map((p) => ({
       ...p,
       costs: [],
-      calculation: p.calculation && {
-        ...p.calculation,
-        ssHour: null, ssRatePercent: null, severanceHour: null, internalCostsHour: null, costHour: null,
-        marginHour: null, marginPercent: null, cost: null, marginTotal: null,
-        breakdown: p.calculation.breakdown.filter((l) => l.kind === 'salary' || l.kind === 'vacation'),
-      },
+      calculation: hideCalculationCosts(p.calculation),
     })),
   };
 }
+
+/** El cálculo de un puesto sin coste, Seguridad Social, indemnización, costes internos ni margen. */
+export function hideCalculationCosts(calc: PositionCalc | null): PositionCalc | null {
+  return calc && {
+    ...calc,
+    ssHour: null, ssRatePercent: null, severanceHour: null, internalCostsHour: null, costHour: null,
+    marginHour: null, marginPercent: null, cost: null, marginTotal: null,
+    breakdown: calc.breakdown.filter((l) => l.kind === 'salary' || l.kind === 'vacation'),
+  };
+}
+export type PositionCalc = z.infer<typeof PositionCalcSchema>;
 
 async function loadVersion(tx: Tx, ctx: TenantContext, versionId: string): Promise<Version> {
   const v = await loadVersionFull(tx, ctx.tenantId, versionId);

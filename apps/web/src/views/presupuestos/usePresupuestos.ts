@@ -19,13 +19,15 @@ import {
   type CollectiveAgreement,
   type Membership,
   type Quote,
+  type ServiceRequestSummary,
   type QuoteVersion,
   type Repositories,
   type TenantSettings,
 } from '../../data';
 import { useSesion } from '../../sesion';
 import { esError, fechaHora, mensajeError, vacioANull } from '../comun/datos';
-import { estadoApi, filaVista, presupuestoVista, puestoApi, puestoCambiado, versionApi, type PresupuestoVista, type Resolver } from './mapeo';
+import { horarioDeTurno } from '../../data/turnos';
+import { estadoApi, filaVista, peticionesDe, presupuestoVista, puestoApi, puestoCambiado, resumenPeticiones, versionApi, type PresupuestoVista, type Resolver } from './mapeo';
 
 export { mensajeError };
 export { economiaPuesto, conceptosNuevos } from './mapeo';
@@ -63,6 +65,8 @@ export function usePresupuestos() {
   const { me, sucursal } = useSesion();
   const cat = useData((r) => cargarCatalogos(r, sucursal), [sucursal]);
   const lista = useData((r) => r.quotes.list({ branchId: sucursal ?? undefined, limit: 200 }).then((p) => p.data), [sucursal]);
+  // Peticiones de la sucursal (fase 5): las de cada presupuesto aceptado. Sin permiso para verlas, ninguna.
+  const peticiones = useData((r) => r.requests.list({ branchId: sucursal ?? undefined, limit: 200 }).then((p) => p.data, () => [] as ServiceRequestSummary[]), [sucursal]);
   // Categorías de la tabla de cada convenio (se piden al elegir el convenio en un puesto).
   const [categorias, setCategorias] = useState<Record<string, AgreementCategory[]>>({});
 
@@ -130,7 +134,21 @@ export function usePresupuestos() {
     };
   }, [c, comerciales, categorias, permisos]);
 
-  const listado = useMemo(() => (lista.data ?? []).map(filaVista), [lista.data]);
+  const listado = useMemo(
+    () => (lista.data ?? []).map((q) => ({ ...filaVista(q), peticionCreada: resumenPeticiones(peticionesDe(q.id, peticiones.data ?? [])) })),
+    [lista.data, peticiones.data],
+  );
+  /** Añade a la vista las peticiones creadas desde el presupuesto. */
+  const conPeticiones = useCallback(
+    async (v: PresupuestoVista, desdeServidor = false) => {
+      const l = desdeServidor
+        ? await repos.requests.list({ quoteId: v._id, limit: 200 }).then((p) => p.data, () => [] as ServiceRequestSummary[])
+        : (peticiones.data ?? []);
+      const creadas = peticionesDe(v._id, l, v.posiciones);
+      return Object.assign(v, { peticionesCreadas: creadas, peticionCreada: resumenPeticiones(creadas) });
+    },
+    [peticiones.data],
+  );
 
   /** Pide las categorías de un convenio (una vez). */
   const cargarCategorias = useCallback(
@@ -171,9 +189,10 @@ export function usePresupuestos() {
             datos: vista(q, await repos.quoteVersions.get(x.id)),
           })),
       );
+      if (v.estado === 'Firmado / Aceptado') await conPeticiones(v, true);
       return { presupuesto: v, versiones: anteriores };
     },
-    [vista, cargarCategorias],
+    [vista, cargarCategorias, conPeticiones],
   );
 
   // ---- Guardar ---------------------------------------------------------------
@@ -361,6 +380,35 @@ export function usePresupuestos() {
     },
     [c, cat],
   );
+  // ---- Peticiones (fase 5) -------------------------------------------------------
+
+  /**
+   * «Crear peticiones» del presupuesto aceptado: una por fila del reparto (puesto, turno y plazas), todas con el mismo
+   * inicio y, si el presupuesto tiene duración, el fin que sale de ella. Devuelve la vista con las peticiones creadas.
+   */
+  const crearPeticiones = useCallback(
+    async (v: PresupuestoVista, reparto: { posId: string; turno: string; plazas: number }[], inicio: string) => {
+      const meses = Number(v.duracionMeses) || 0;
+      let fin: string | null = null;
+      if (meses > 0) {
+        const f = new Date(`${inicio}T00:00:00`);
+        f.setMonth(f.getMonth() + meses);
+        f.setDate(f.getDate() - 1);
+        fin = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+      }
+      const creadas = await repos.requests.createFromQuoteVersion(
+        v._versionId,
+        reparto.map((r) => {
+          const t = horarioDeTurno(r.turno);
+          return { quotePositionId: r.posId, positionsCount: Number(r.plazas), startDate: inicio || null, endDate: fin, shiftName: t.name, workdayType: t.workdayType, schedule: t.days };
+        }),
+      );
+      peticiones.reload();
+      return { creadas: creadas.map((x) => x.code), presupuesto: await conPeticiones({ ...v }, true) };
+    },
+    [conPeticiones, peticiones],
+  );
+
   const quitarDocumento = useCallback(async (documentId: string) => repos.documents.remove(documentId), []);
   const descargarDocumento = useCallback(async (documentId: string) => {
     const url = await repos.documents.downloadUrl(documentId);
@@ -430,6 +478,7 @@ export function usePresupuestos() {
 
   const error = cat.error ?? lista.error;
   return {
+    crearPeticiones,
     estado: c && lista.data ? ('listo' as const) : error ? ('error' as const) : ('cargando' as const),
     error: error ? mensajeError(error) : undefined,
     reintentar: () => {

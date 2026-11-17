@@ -751,6 +751,34 @@ Líneas de precio/concepto de oferta.
 
 ### 05. Peticiones ETT, publicación web y asignaciones
 
+> **Implementado en la fase 5 de otra forma** (`db/migrations/20261117000300_requests.sql`, detalle en `db/README.md`,
+> "Fase 5: peticiones"). Las tablas de abajo son el modelo heredado y quedan como referencia. Lo que cambia:
+>
+> - `ett_requests` → `requests`: siempre de **un puesto** de una versión aceptada del presupuesto (`quote_position_id`),
+>   con las condiciones copiadas (convenio, versión y periodo, categoría, salario, tarifa, extras y cálculo). Estados de
+>   la pantalla (nueva, en difusión, en selección, cubierta, en curso, cerrada, cancelada con motivo). Fuera los
+>   contadores `workers_*`: salen de las plazas.
+> - `ett_request_contract_data` → en `requests`: horario semanal (jsonb) y horas, jornada, tareas, cualificación,
+>   riesgos, EPIs, carnés, supuesto de utilización y justificación. Categoría y convenio vienen del presupuesto.
+> - `ett_request_price_lines` → los conceptos extra copiados (`requests.extras`).
+> - `ett_request_assignments` → `request_slots` (una fila por plaza). Candidatos y personas, en la fase 6.
+> - `ett_request_web_publications` y `ett_request_characteristics`: no se han hecho (portales de empleo, fuera de alcance).
+> - Nuevo: CPD previo (PDF, estado generado, enviado o revisado, y desactualizado); `legal_checks`, reservado para el
+>   art. 8 de la Ley 14/1994.
+>
+> Decisiones de la fase 5 (17/11/2026):
+>
+> - **Salario y tablas nuevas del convenio (art. 11 Ley 14/1994)**: la petición no se recalcula, pero se compara con
+>   cada versión publicada del convenio vigente en sus fechas (`private.request_agreement_periods`). Si en algún tramo el
+>   convenio pide más, se avisa del tramo y no se genera el CPD previo (422 `salario_bajo_convenio`), igual que en la
+>   fase 4: no hay aprobación que lo permita. Tablas con efectos después del fin no cuentan. Si la categoría no se
+>   puede emparejar por código, se avisa sin bloquear.
+> - **Riesgos del puesto** (RD 216/1999, art. 2): el texto es obligatorio para generar el CPD previo. `hazardous_work`
+>   marca si el puesto está en la lista de trabajos especialmente peligrosos; solo se guarda, el control es parte de la
+>   decisión pendiente del art. 8.
+> - **Pantalla**: estados libres (como el pipeline) y motivo al cancelar; plazas por encima de las personas del
+>   presupuesto, solo aviso; supuestos de utilización, lista [verificar].
+
 #### ett_requests
 
 Petición de ETT derivada o no de una oferta.

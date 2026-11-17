@@ -1,7 +1,7 @@
 # Peticiones: una petición = un puesto, listado con pipeline y crear peticiones desde el presupuesto
 
 - **Fecha**: 2026-10-28
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-17)
 - **Rama y commits**: `design`, 93edb75
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/peticiones. Para crear peticiones desde
   un presupuesto: #/presupuestos → vista pipeline → arrastrar PRE-2026-0048 a Aceptado → "Aceptar y crear peticiones".

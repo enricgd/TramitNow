@@ -1,7 +1,7 @@
 # Peticiones: reparto del puesto, en la petición y en el presupuesto aceptado
 
 - **Fecha**: 2026-10-28
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-17)
 - **Rama y commits**: `design`, 9b10001
 - **Cómo verlo**:
   - Petición: http://localhost:5173/#/peticiones → PET-2026-0048 → Resumen.

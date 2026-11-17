@@ -70,7 +70,8 @@ reload();
 
 Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`), Empresas
 (`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**) y
-Presupuestos (`src/views/presupuestos/`). El resto de pantallas aún usan los datos de ejemplo que llevan dentro.
+Presupuestos (`src/views/presupuestos/`) y Peticiones (`src/views/peticiones/`). El resto de pantallas aún usan los datos
+de ejemplo que llevan dentro.
 
 #### Conectar una pantalla
 
@@ -173,8 +174,23 @@ página y entra sin red.
   `ssRates` y de la ley: no se editan en la pantalla. Los demás costes internos van en % sobre el salario por hora o €/h.
 - Ver costes y margen y aprobar: en real, quien tiene `quotes.approve_margin` lo ve como dirección; el resto, como
   comercial (en la demo, el selector «Ver como»).
-- Aún sin hacer: crear peticiones desde un aceptado (fase 5), enviar por correo o a firma, recordatorios y el escandallo
-  en Excel («Disponible próximamente» en real).
+- En un presupuesto aceptado, «Crear peticiones» las crea con `POST /v1/quote-versions/{id}/requests` y cada puesto enseña
+  sus peticiones (con enlace a `#/peticiones/PET…`).
+- Aún sin hacer: enviar por correo o a firma, recordatorios y el escandallo en Excel («Disponible próximamente» en real).
+
+#### Peticiones en la web
+
+- `src/views/peticiones/usePeticiones.ts` y `mapeo.ts`, con el contrato de la fase 5 (`/v1/requests`,
+  `/v1/request-sources`...). En la vista cada petición va por su código; `#/peticiones/PET…` abre una directamente.
+- La ficha trae el reparto del puesto (`distribution`) y las condiciones copiadas del presupuesto, que no se cambian. Lo
+  que el CPD previo necesita (centro, firmante, supuesto, tareas, riesgos, EPIs, carnés, fechas) se completa en la
+  ventana «Datos del servicio».
+- CPD previo sin firma electrónica: se genera en el servidor (PDF), se envía a mano y se marca como enviado y revisado.
+  Si faltan datos, la ficha enseña las comprobaciones que fallan.
+- Plazas con personas, candidatos, CPD de cada persona y portales son de las fases 6 y 7: en la demo salen de
+  `src/data/memoriaPeticionesSeleccion.js` (`repos.requestSelection`, sin ruta en la API); en real, las plazas por cubrir
+  y un texto de «llega con…».
+- Los turnos de serie (mañana, tarde, noche y partida) están en `src/data/turnos.ts`.
 
 ## api
 
@@ -329,6 +345,8 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `GET /v1/quotes` (`?q=&status=&salesRepId=&clientId=&branchId=&validity=valid\|expiring\|expired&noResponse=`), `GET /v1/quotes/{id}`, `GET /v1/quote-versions/{id}`, `GET /v1/quote-agreement-defaults?collectiveAgreementId=&agreementCategoryId=&date=`: presupuestos, versiones y tablas del convenio para un puesto | `module.comercial` o `quotes.manage`, en la sucursal del presupuesto |
 | `POST /v1/quotes`, `PATCH /v1/quotes/{id}`, `POST /v1/quotes/{id}/duplicate`, `POST /v1/quotes/{id}/obsolete`, `PATCH /v1/quote-versions/{id}`, `POST /v1/quote-versions/{id}/positions`, `PATCH`, `DELETE /v1/quote-positions/{id}`, `POST /v1/quote-positions/{id}/reset-from-agreement`, `GET /v1/quote-versions/{id}/review`, `POST /v1/quote-versions/{id}/request-approval` · `/send` · `/pending-signature` · `/accept` · `/reject` · `/new-version` · `/proposal-pdf` (ver "Presupuestos") | `quotes.manage` |
 | `POST /v1/quote-versions/{id}/approve` · `/reject-approval`: aprobar el margen por debajo del mínimo o pedir cambios | `quotes.approve_margin` |
+| `GET /v1/requests` (`?q=&status=…\|active&clientId=&quoteId=&responsibleUserId=&branchId=&startingSoon=`), `GET /v1/requests/{id}`, `GET /v1/request-use-cases`: peticiones y supuestos de utilización | `requests.manage`, `module.comercial`, `module.seleccion` o `module.laboral`, en la sucursal |
+| `GET /v1/request-sources`, `POST /v1/requests`, `POST /v1/quote-versions/{id}/requests`, `PATCH /v1/requests/{id}`, `POST /v1/requests/{id}/duplicate`, `POST /v1/requests/{id}/pre-cpd` · `/pre-cpd/sent` · `/pre-cpd/reviewed` (ver "Peticiones") | `requests.manage` |
 
 Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
 sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
@@ -369,6 +387,26 @@ de `tsconfig` a `../api/src/calc/quote.ts`). Está en `apps/api` porque es quien
 imagen de la API solo copia esa carpeta; si mañana hay más código compartido, se mueve a un paquete propio. Los tipos
 de la Seguridad Social (`DEFAULT_SS_RATES`) y el AT/EP por CNAE (`AT_EP_BY_CNAE`) son de 2026 y están marcados
 [verificar].
+
+### Peticiones
+
+Una petición es un puesto de una versión aceptada de un presupuesto: la base de datos copia sus condiciones y su
+cálculo, que no cambian aunque el presupuesto cambie después (`conditions` en la respuesta; costes y margen a null sin
+`quotes.view_costs`).
+
+- **Crear**: `GET /v1/request-sources` es el buscador de «Nueva petición» (presupuestos aceptados, con las personas de
+  cada puesto que aún no están en peticiones). `POST /v1/requests` crea una; `POST /v1/quote-versions/{id}/requests`,
+  varias a la vez («Crear peticiones» con «Dividir»); `POST /v1/requests/{id}/duplicate`, otra del mismo puesto con otro
+  horario. Si las plazas superan a las personas del presupuesto, solo se avisa.
+- **Horario**: siete días `{ weekday, working, start, end, breakMinutes }`; la API calcula las horas (un turno que acaba
+  antes de empezar pasa la medianoche) y `weeklyHours`. `src/lib/requests.ts` es puro, como `calc/quote.ts`.
+- **Ficha**: `GET /v1/requests/{id}` trae el reparto del puesto (`distribution`), las plazas, el CPD previo con sus
+  comprobaciones (`preCpd.checks`), el convenio vigente (`agreementCheck`) y el presupuesto firmado
+  (`signedQuoteDocument`: el subido como «Presupuesto firmado por el cliente» o, si no hay, la última propuesta).
+- **CPD previo**: `pre-cpd` genera el PDF (pdf-lib) y lo guarda como documento de la petición; `pre-cpd/sent` y
+  `pre-cpd/reviewed` lo marcan a mano. Errores: 409 `cpd_incompleto` (con un `details` por cada comprobación que bloquea)
+  y 422 `salario_bajo_convenio` si el convenio vigente pide más que el salario copiado (art. 11 de la Ley 14/1994). El
+  supuesto de utilización es obligatorio; la lista (`GET /v1/request-use-cases`) está marcada [verificar].
 
 ### Documentos
 

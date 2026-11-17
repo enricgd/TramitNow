@@ -25,6 +25,7 @@ export const errorCodes = [
   'servicio_no_disponible',
   'salario_bajo_convenio',
   'requiere_aprobacion',
+  'cpd_incompleto',
 ] as const;
 export type ErrorCode = (typeof errorCodes)[number];
 
