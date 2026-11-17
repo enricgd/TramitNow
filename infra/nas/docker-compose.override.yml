@@ -43,6 +43,11 @@ services:
       AUTH_URL: http://auth:9999
       INVITE_REDIRECT_URL: https://demo.${DOMAIN}/
       AUTH_SENDS_INVITES: "false"
+      # Cifrado de datos personales (DNI/NIE, Seguridad Social, IBAN, salud). Las claves van en el .env del NAS, nunca
+      # en git ni en la base de datos (infra/nas/README.md, «Claves de datos personales»).
+      PERSONAL_DATA_KEYS: ${PERSONAL_DATA_KEYS}
+      PERSONAL_DATA_KEY_ID: ${PERSONAL_DATA_KEY_ID:-}
+      PERSONAL_DATA_HMAC_KEY: ${PERSONAL_DATA_HMAC_KEY}
 
   # Único servicio expuesto a internet (puerto 443 del router → CADDY_HTTPS_PORT del NAS).
   caddy:

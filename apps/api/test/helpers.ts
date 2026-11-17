@@ -56,6 +56,12 @@ export const app = createApp({
       redirectUrl: 'http://localhost:5173/',
       sendsEmail: false,
     },
+    // Claves SOLO de desarrollo (las de apps/api/.env.example).
+    personalData: {
+      keys: { v1: Buffer.from('ISTPEa5/czJfRyVopjcEP8N/4Ns7x5lm7oIiA6A3piA=', 'base64') },
+      currentKeyId: 'v1',
+      hmacKey: Buffer.from('6Uobx0vqGNcFRr3H/rVbqd0ZBoIrAYjc++Cl0VbV4bo=', 'base64'),
+    },
   },
   log: false,
 });

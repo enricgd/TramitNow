@@ -1,6 +1,7 @@
 // Configuración desde variables de entorno. Falla al arrancar si falta algo obligatorio.
 
 import type { AuthAdminConfig } from './lib/auth-admin.js';
+import { type PersonalDataConfig, loadPersonalDataConfig } from './lib/personal-data.js';
 import type { StorageConfig } from './lib/storage.js';
 
 export interface Config {
@@ -19,6 +20,8 @@ export interface Config {
   storage?: StorageConfig;
   /** Supabase Auth con la service_role (alta e invitación de usuarios). Sin él, esas rutas responden 503. */
   authAdmin?: AuthAdminConfig;
+  /** Claves de cifrado de datos personales. Sin ellas, las rutas de datos sensibles responden 503. */
+  personalData?: PersonalDataConfig;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -48,6 +51,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dbPoolMax: Number(env.DB_POOL_MAX || 10),
     storage: loadStorageConfig(env),
     authAdmin: loadAuthAdminConfig(env),
+    personalData: loadPersonalDataConfig(env),
   };
 }
 

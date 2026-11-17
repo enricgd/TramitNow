@@ -7,10 +7,16 @@ import type { AuthVariables, Claims } from './auth.js';
 import { type Tx, type Sql, withClaims } from './db.js';
 import { ApiError, forbidden } from './errors.js';
 import type { AuthAdmin } from './auth-admin.js';
+import type { PersonalData } from './personal-data.js';
 import type { Storage } from './storage.js';
 
 export type AppEnv = {
-  Variables: AuthVariables & { sql: Sql; storage: Storage | undefined; authAdmin: AuthAdmin | undefined };
+  Variables: AuthVariables & {
+    sql: Sql;
+    storage: Storage | undefined;
+    authAdmin: AuthAdmin | undefined;
+    personalData: PersonalData | undefined;
+  };
 };
 
 export interface UserContext {

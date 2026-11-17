@@ -12,6 +12,7 @@ import type { AppEnv } from './lib/context.js';
 import type { Sql } from './lib/db.js';
 import { AuthAdmin } from './lib/auth-admin.js';
 import { Storage } from './lib/storage.js';
+import { PersonalData } from './lib/personal-data.js';
 import { ApiError, errorBody, handleError } from './lib/errors.js';
 import { activity } from './routes/activity.js';
 import { agreements } from './routes/agreements.js';
@@ -29,6 +30,8 @@ import { memberships } from './routes/memberships.js';
 import { billableServices, contributionAccounts, miEtt } from './routes/mi-ett.js';
 import { quotes } from './routes/quotes.js';
 import { requests } from './routes/requests.js';
+import { candidates } from './routes/candidates.js';
+import { applications } from './routes/applications.js';
 import { roles } from './routes/roles.js';
 
 // Mensajes de validación en español.
@@ -38,12 +41,13 @@ export const API_VERSION = '0.1.0';
 
 export function createApp(options: {
   sql: Sql;
-  config: Pick<Config, 'jwtSecret' | 'jwtAudience' | 'corsOrigins' | 'storage' | 'authAdmin'>;
+  config: Pick<Config, 'jwtSecret' | 'jwtAudience' | 'corsOrigins' | 'storage' | 'authAdmin' | 'personalData'>;
   log?: boolean;
 }) {
   const { sql, config } = options;
   const storage = config.storage ? new Storage(config.storage) : undefined;
   const authAdmin = config.authAdmin ? new AuthAdmin(config.authAdmin) : undefined;
+  const personalData = config.personalData ? new PersonalData(config.personalData) : undefined;
   const app = new OpenAPIHono<AppEnv>();
 
   app.onError(handleError);
@@ -71,6 +75,7 @@ export function createApp(options: {
     c.set('sql', sql);
     c.set('storage', storage);
     c.set('authAdmin', authAdmin);
+    c.set('personalData', personalData);
     await next();
   });
 
@@ -102,6 +107,8 @@ export function createApp(options: {
   app.route('/v1', billableServices);
   app.route('/v1', quotes);
   app.route('/v1', requests);
+  app.route('/v1', candidates);
+  app.route('/v1', applications);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
     type: 'http',
