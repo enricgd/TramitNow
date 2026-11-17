@@ -203,10 +203,18 @@ describe('candidaturas y plazas', () => {
     expect(conf.body.stage).toBe('confirmed');
     req = await call('GET', `/v1/requests/${requestId}`, { token: seleccion });
     expect(req.body.slots).toMatchObject({ covered: 1, filled: 1 });
+    const row = async () => (await call('GET', '/v1/candidates?limit=200', { token: seleccion })).body.data
+      .find((c: { id: string }) => c.id === candidateId);
+    // La confirmada (o en misión) va por delante; si no hay, la activa más reciente.
+    expect((await row()).currentApplication).toMatchObject({
+      applicationId: appId, requestId, requestCode: req.body.code, slotNumber: 1, positionName: req.body.positionName,
+      clientName: req.body.clientName, stage: 'confirmed',
+    });
     const fewer = await call('PATCH', `/v1/requests/${requestId}`, { token: admin, body: { positionsCount: 0 } });
     expect(fewer.status).toBe(400);
     const rel = await call('POST', `/v1/applications/${appId}/release`, { token: seleccion });
     expect(rel.body).toMatchObject({ stage: 'interview', slotId: null });
+    expect((await row()).currentApplication).toMatchObject({ applicationId: appId, stage: 'interview', slotNumber: null });
     req = await call('GET', `/v1/requests/${requestId}`, { token: seleccion });
     expect(req.body.slots).toMatchObject({ open: 2, filled: 0 });
     const list = await call('GET', `/v1/applications?requestId=${requestId}`, { token: seleccion });
@@ -286,7 +294,17 @@ describe('aceptación de la candidatura, contactos y filtros', () => {
     const privacy = ids(await call('GET', '/v1/candidates?documents=privacy_pending&limit=200', { token: seleccion }));
     expect(privacy).toContain(candidateId);
     expect(privacy).not.toContain(full.body.id);
+    // Un documento caducado (aquí un curso de PRL) también deja la documentación pendiente.
+    await adminSql`
+      insert into public.documents (tenant_id, entity_type, entity_id, type_id, name, storage_path, mime_type, size_bytes, status, expires_on)
+      select ${T.A}, 'candidate', ${full.body.id}, id, 'Curso PRL ficticio.pdf', ${`${T.A}/candidate/${full.body.id}/prl.pdf`}, 'application/pdf', 100,
+             'validated', current_date - 1
+      from public.catalog_items where tenant_id = ${T.A} and catalog = 'document_type' and code = 'candidate_prl'
+    `;
+    expect(ids(await call('GET', '/v1/candidates?documents=ok&limit=200', { token: seleccion }))).not.toContain(full.body.id);
+    expect(ids(await call('GET', '/v1/candidates?documents=pending&limit=200', { token: seleccion }))).toContain(full.body.id);
     const facets = (await call('GET', '/v1/candidate-facets', { token: seleccion })).body;
+    expect(facets.documentation.ok + facets.documentation.pending).toBe(facets.total);
     for (const [key, filter] of [['ok', 'ok'], ['pending', 'pending'], ['idOrSsPending', 'id_or_ss_pending'], ['privacyPending', 'privacy_pending']]) {
       const total = (await call('GET', `/v1/candidates?documents=${filter}&limit=1`, { token: seleccion })).body.pagination.total;
       expect(facets.documentation[key!]).toBe(total);
