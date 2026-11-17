@@ -253,6 +253,10 @@ describe('aceptación de la candidatura, contactos y filtros', () => {
     expect(list.body.data[0]).toHaveProperty('experienceYears');
     const expired = await call('GET', '/v1/candidates?poolConsent=expired', { token: seleccion });
     expect(expired.body.data.map((c: { id: string }) => c.id)).toContain(candidateId);
+    const facets = await call('GET', '/v1/candidate-facets', { token: seleccion });
+    expect(facets.status).toBe(200);
+    expect(facets.body.profiles.find((p: { name: string }) => p.name === 'Carretillero/a')?.count).toBeGreaterThanOrEqual(1);
+    expect(facets.body.poolConsentExpired).toBeGreaterThanOrEqual(1);
   });
 });
 
