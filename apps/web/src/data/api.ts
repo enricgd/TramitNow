@@ -212,6 +212,7 @@ export function apiRepositories(): Repositories {
       exportData: (id) => get(`/candidates/${id}/export`),
       addConsent: (id, body) => request('POST', `/candidates/${id}/consents`, { body }),
       withdrawConsent: (consentId) => request('POST', `/candidate-consents/${consentId}/withdraw`),
+      publishPrivacyNotice: (body) => request('POST', '/privacy-notices', { body }),
       privacyNotices: (purpose) => get<PrivacyNotice[] | { data: PrivacyNotice[] }>('/privacy-notices', { purpose }).then((r) => (Array.isArray(r) ? r : r.data)),
       contacts: (id) => get<CandidateContact[] | { data: CandidateContact[] }>(`/candidates/${id}/contacts`).then((r) => (Array.isArray(r) ? r : r.data)),
       addContact: (id, body) => request<CandidateContact[] | { data: CandidateContact[] }>('POST', `/candidates/${id}/contacts`, { body }).then((r) => (Array.isArray(r) ? r : r.data)),

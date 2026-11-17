@@ -629,6 +629,8 @@ export type TenantSettings = {
   /** Fase 6: meses de vigencia del consentimiento de bolsa y días de aviso antes de caducar un documento. */
   candidatePoolRetentionMonths?: number;
   candidateDocumentNoticeDays?: number;
+  /** Meses que se conserva la auditoría de accesos. */
+  accessLogRetentionMonths?: number;
 };
 
 /** Para dar de alta un usuario: el alcance es la lista de sociedades y sucursales (branchId null: toda la sociedad). */
@@ -1266,7 +1268,7 @@ export type CandidateFacets = {
   profiles: { id: string; name: string; group: string | null; count: number }[];
   attributes: { id: string; catalog: CandidateCatalog; name: string; group: string | null; count: number }[];
 };
-export type PrivacyNotice = { id: string; purpose: 'talent_pool' | 'health_data'; version: string; text: string; createdAt: string };
+export type PrivacyNotice = { id: string; purpose: 'talent_pool' | 'health_data'; version: string; text: string; createdAt: string; createdByName?: string | null };
 
 export type ContactChannel = 'phone' | 'email' | 'whatsapp' | 'sms' | 'in_person' | 'other';
 /** Contacto registrado con la persona (GET/POST /candidates/{id}/contacts). */

@@ -25,9 +25,17 @@ import {
   type CandidateSummary,
   type IdDocumentKind,
   type LanguageLevel,
+  type PrivacyNotice,
 } from './tipos';
 
 const YO = { id: id(250), name: 'Usuario Demo' };
+/** Textos de privacidad publicados (en la demo, uno de ejemplo: no es un texto legal). */
+const textos: PrivacyNotice[] = [
+  {
+    id: id(780), purpose: 'talent_pool', version: '2026-01 (ejemplo)', createdAt: '2026-01-12T10:00:00.000Z', createdByName: 'Begoña Arrieta Lasa',
+    text: 'TEXTO DE EJEMPLO, NO VÁLIDO: lo redacta la asesoría de la ETT. Al aceptar, la persona consiente que ETT Global guarde su currículum y sus datos de contacto en su bolsa de candidatos para ofrecerle otros puestos durante el plazo indicado, y puede retirarlo cuando quiera.',
+  },
+];
 const ahora = () => new Date().toISOString();
 const copia = <T>(x: T): T => structuredClone(x);
 const normal = (t = '') => t.toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
@@ -420,7 +428,14 @@ export function memoryCandidateRepositories(
         log('candidate', r.id, null, 'update', `Consentimiento ${d.purpose === 'talent_pool' ? 'de bolsa' : 'de salud'} registrado`);
         return ficha(e, r);
       },
-      privacyNotices: async (purpose) => delay([{ id: id(780 + (purpose === 'talent_pool' ? 0 : 1)), purpose, version: '1', text: 'Texto de privacidad de ejemplo.', createdAt: '2026-01-01T10:00:00.000Z' }]),
+      privacyNotices: async (purpose) => delay(textos.filter((t) => t.purpose === purpose)),
+      async publishPrivacyNotice(d) {
+        if (!d.version.trim() || !d.text.trim()) throw new ApiError(422, 'validacion', 'La versión y el texto son obligatorios');
+        if (textos.some((t) => t.purpose === d.purpose && t.version === d.version.trim())) throw new ApiError(409, 'conflicto', 'Ya hay una versión con ese nombre');
+        const t: PrivacyNotice = { id: newId(), purpose: d.purpose, version: d.version.trim(), text: d.text.trim(), createdAt: new Date().toISOString(), createdByName: YO.name };
+        textos.unshift(t);
+        return delay(t);
+      },
       async withdrawConsent(consentId) {
         const e = await datos();
         const r = e.candidatos.find((x) => x.consents.some((c) => c.id === consentId));

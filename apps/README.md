@@ -147,7 +147,9 @@ Lo que en Empresas sigue sin API, de momento: el acceso de los contactos al Áre
 Mi ETT, con API: datos legales (`companyLegal`) y facturación (`companyBilling`) de cada sociedad, series de
 facturas y rectificativas del año (`numberSeries`; si no existen, se crean al guardar), CCC
 (`contributionAccounts`), servicios que factura la ETT (`billableServices`; el código se genera del nombre),
-ajustes de presupuestos (`tenantSettings`, en la pestaña Facturación) y usuarios con alta, invitación, nuevo
+ajustes de presupuestos (`tenantSettings`, en la pestaña Facturación), la pestaña «Protección de datos» (versiones del
+texto de privacidad de la bolsa con `privacyNotices`/`publishPrivacyNotice`, y los plazos de consentimiento, aviso de
+documentos y auditoría en `tenantSettings`) y usuarios con alta, invitación, nuevo
 enlace, revocación, rol, departamento, estado y sucursal (`memberships`). La forma de pago «Otra…» se añade a la
 tabla maestra `payment_method`. Lo que sigue sin API: plantillas, portales, historial de Mi ETT, responsable de
 cada sucursal, logotipo, matriz de permisos (fija en la vista) y exportación a PDF. Las sucursales dadas de baja

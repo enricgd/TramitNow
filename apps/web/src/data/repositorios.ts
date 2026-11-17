@@ -356,6 +356,8 @@ export interface Repositories {
     addConsent(id: string, data: { purpose: 'talent_pool' | 'health_data'; noticeId: string; givenAt?: string; channel: CandidateConsent['channel']; documentId?: string | null }): Promise<Candidate>;
     /** Textos de privacidad publicados (el último, el vigente). */
     privacyNotices(purpose: 'talent_pool' | 'health_data'): Promise<PrivacyNotice[]>;
+    /** Publica una versión nueva (privacy.manage). Lo publicado no se cambia. */
+    publishPrivacyNotice(data: { purpose: 'talent_pool' | 'health_data'; version: string; text: string }): Promise<PrivacyNotice>;
     withdrawConsent(consentId: string): Promise<CandidateConsent>;
     /** Historial de contactos, lo último primero. */
     contacts(id: string): Promise<CandidateContact[]>;
