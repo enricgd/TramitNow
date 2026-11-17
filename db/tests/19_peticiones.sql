@@ -1,7 +1,7 @@
 -- Peticiones: solo de presupuestos aceptados, condiciones copiadas e inmutables, plazas que siguen al número,
 -- cancelación con motivo, cerrada o cancelada solo se reabre, CPD previo desactualizado al cambiar, convenio vigente
 -- (art. 11), historial, documentos y RLS. Datos inventados (REGCON 99999999999961).
-select plan(25);
+select plan(26);
 
 -- ---------------------------------------------------------------------------
 -- Preparación (como postgres): convenio publicado, cliente con centro y firmante, presupuesto aceptado.
@@ -154,9 +154,14 @@ select set_eq(
        and summary in ('Cancelada: El cliente aplaza la campaña', 'Pasa a en selección', 'CPD previo generado') $$,
   $$ values ('CPD previo generado'), ('Cancelada: El cliente aplaza la campaña'), ('Pasa a en selección') $$,
   'el historial cuenta los cambios de estado y del CPD');
-select is((select minimum_salary_hour from private.request_current_agreement('10000000-0000-0000-0000-00000000000a', '87000000-0000-0000-0000-0000000000c1')),
-          12.3429::numeric, 'el mínimo del convenio vigente para la misma categoría');
-
+select results_eq(
+  $$ select effective_from, effective_to, category_matched, minimum_salary_hour
+     from private.request_agreement_periods('10000000-0000-0000-0000-00000000000a', '87000000-0000-0000-0000-0000000000c1') $$,
+  $$ values ('2026-01-01'::date, null::date, true, 12.3429::numeric) $$,
+  'el convenio vigente en las fechas de la petición, con el mínimo de la misma categoría');
+update public.requests set hazardous_work = true where id = '87000000-0000-0000-0000-0000000000c1';
+select ok((select hazardous_work from public.requests where id = '87000000-0000-0000-0000-0000000000c1'),
+          'se guarda si es un trabajo especialmente peligroso');
 select lives_ok(
   $$ insert into public.documents (tenant_id, entity_type, entity_id, type_id, name, storage_path, mime_type, size_bytes)
      values ('10000000-0000-0000-0000-00000000000a', 'request', '87000000-0000-0000-0000-0000000000c1',

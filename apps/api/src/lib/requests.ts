@@ -126,6 +126,8 @@ export interface PreCpdInput {
   ettRepresentativeName: string | null;
   ettRepresentativeIdNumber: string | null;
   belowAgreement: boolean;
+  /** Alguna versión del convenio en las fechas de la petición no tiene la categoría (o el puesto no tiene categoría). */
+  agreementCategoryUnmatched: boolean;
   clientSignerContactId: string | null;
   positionsCount: number;
   quotePeople: number | null;
@@ -166,7 +168,9 @@ export function preCpdChecks(r: PreCpdInput): PreCpdCheck[] {
     check('ett_representative', filled(r.ettRepresentativeName) && filled(r.ettRepresentativeIdNumber), true,
       'Representante legal de la ETT con su documento (Mi ETT → Datos legales)', 'ettRepresentative'),
     check('salary_agreement', !r.belowAgreement, true,
-      'Salario no inferior al convenio publicado vigente (art. 11 de la Ley 14/1994)', 'salaryHour'),
+      'Salario no inferior al convenio vigente en las fechas de la petición (art. 11 de la Ley 14/1994)', 'salaryHour'),
+    check('agreement_category', !r.agreementCategoryUnmatched, false,
+      'Categoría del convenio comprobable en todas las tablas vigentes en las fechas de la petición', 'salaryHour'),
     check('end_date', r.endDate !== null, false, 'Fecha de fin prevista', 'endDate'),
     check('duration', durationOk, false,
       useCase?.maxMonths ? `Duración dentro de lo habitual del supuesto (${useCase.maxMonths} meses)` : 'Duración dentro de lo habitual del supuesto',

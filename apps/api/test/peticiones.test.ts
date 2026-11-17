@@ -174,7 +174,8 @@ describe('crear peticiones', () => {
     expect(res.body.code).toMatch(/^PET\d{4}-\d{5}$/);
     expect(res.body).toMatchObject({
       status: 'new', positionName: 'Mozo de almacén', positionsCount: 3, branchId: BRANCH.A1, responsibleUserId: USER.selA,
-      clientSignerContactId: CONTACT, clientSignerContactName: 'Firmante Ficticio', tasks: 'Carga, descarga y preparación de pedidos',
+      clientSignerContactId: CONTACT, clientSignerContactName: 'Firmante Ficticio', clientSignerContactEmail: 'firmante@example.test',
+      quoteVersionId: versionId, quoteTitle: 'Campaña ficticia de peticiones', hazardousWork: false, tasks: 'Carga, descarga y preparación de pedidos',
       weeklyHours: 37.5, slots: { open: 3, filled: 0 }, preCpdStatus: 'pending', legalChecks: null,
     });
     expect(res.body.schedule).toHaveLength(7);
@@ -276,9 +277,12 @@ describe('CPD previo', () => {
     const upd = await call('PATCH', `/v1/requests/${requestId}`, {
       token: seleccion,
       body: { clientCenterId: CENTER, useCase: 'production_unforeseen', useCaseJustification: 'Pico de pedidos ficticio de campaña',
-        risks: 'Manipulación manual de cargas; tráfico de carretillas', ppe: 'Calzado de seguridad', endDate: '2027-02-28' },
+        risks: 'Manipulación manual de cargas; tráfico de carretillas', ppe: 'Calzado de seguridad', endDate: '2027-02-28',
+        hazardousWork: true },
     });
     expect(upd.status).toBe(200);
+    expect(upd.body.hazardousWork).toBe(true);
+    expect(upd.body.quoteAcceptedAt).toBeTruthy();
     expect(upd.body.preCpd.checks.filter((c: { ok: boolean; blocking: boolean }) => c.blocking && !c.ok)).toEqual([]);
     const res = await call('POST', `/v1/requests/${requestId}/pre-cpd`, { token: seleccion });
     expect(res.status).toBe(201);
@@ -309,11 +313,32 @@ describe('CPD previo', () => {
     );
   });
 
-  it('si las tablas nuevas del convenio suben el mínimo, avisa y no deja generar el CPD (art. 11)', async () => {
+  it('tablas nuevas con efectos después del fin no cuentan; si la petición cruza el cambio, se avisa del tramo', async () => {
+    await loadVersion('p3', '2026-10-01', '2027-06-01', 1700);
+    const before = await call('GET', `/v1/requests/${requestId}`, { token: seleccion });
+    expect(before.body.agreementCheck).toMatchObject({ belowAgreement: false, categoryUnmatched: false });
+    expect(before.body.agreementCheck.periods.map((p: { from: string }) => p.from)).toEqual(['2026-01-01']);
+    const longer = await call('PATCH', `/v1/requests/${requestId}`, { token: seleccion, body: { endDate: '2027-07-31' } });
+    expect(longer.body.agreementCheck.belowAgreement).toBe(true);
+    expect(longer.body.agreementCheck.periods).toEqual([
+      expect.objectContaining({ from: '2026-01-01', to: '2027-05-31', belowAgreement: false }),
+      expect.objectContaining({ from: '2027-06-01', to: null, belowAgreement: true }),
+    ]);
+    const pdf = await call('POST', `/v1/requests/${requestId}/pre-cpd`, { token: seleccion });
+    expect(pdf.status).toBe(422);
+    expect(pdf.body.error.code).toBe('salario_bajo_convenio');
+    expect(pdf.body.error.message).toContain('01/06/2027');
+    await call('PATCH', `/v1/requests/${requestId}`, { token: seleccion, body: { endDate: '2027-02-28' } });
+  });
+
+  it('si las tablas vigentes en sus fechas suben el mínimo, avisa y no deja generar el CPD (art. 11)', async () => {
     await loadVersion('p2', '2026-07-01', '2026-07-01', 1600);
     const res = await call('GET', `/v1/requests/${requestId}`, { token: seleccion });
-    expect(res.body.agreementCheck).toMatchObject({ belowAgreement: true, currentPeriod: { from: '2026-07-01', to: null } });
-    expect(res.body.agreementCheck.currentMinimumSalaryHour).toBeGreaterThan(res.body.conditions.salaryHour);
+    expect(res.body.agreementCheck.belowAgreement).toBe(true);
+    expect(res.body.agreementCheck.periods).toEqual([
+      expect.objectContaining({ from: '2026-07-01', to: '2027-05-31', belowAgreement: true }),
+    ]);
+    expect(res.body.agreementCheck.periods[0].minimumSalaryHour).toBeGreaterThan(res.body.conditions.salaryHour);
     // La petición conserva lo del presupuesto.
     expect(res.body.conditions.salaryHour).toBeCloseTo(12.3429, 3);
     const pdf = await call('POST', `/v1/requests/${requestId}/pre-cpd`, { token: seleccion });
@@ -330,7 +355,7 @@ describe('duplicar, permisos y aislamiento', () => {
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
       status: 'new', preCpdStatus: 'pending', shiftName: 'Turno de tarde', weeklyHours: 8, clientCenterId: CENTER,
-      useCase: 'production_unforeseen', quotePositionId: positionId,
+      useCase: 'production_unforeseen', quotePositionId: positionId, hazardousWork: true,
     });
     expect(res.body.id).not.toBe(requestId);
   });

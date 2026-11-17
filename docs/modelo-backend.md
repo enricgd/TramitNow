@@ -765,6 +765,19 @@ Líneas de precio/concepto de oferta.
 > - `ett_request_web_publications` y `ett_request_characteristics`: no se han hecho (portales de empleo, fuera de alcance).
 > - Nuevo: CPD previo (PDF, estado generado, enviado o revisado, y desactualizado); `legal_checks`, reservado para el
 >   art. 8 de la Ley 14/1994.
+>
+> Decisiones de la fase 5 (17/11/2026):
+>
+> - **Salario y tablas nuevas del convenio (art. 11 Ley 14/1994)**: la petición no se recalcula, pero se compara con
+>   cada versión publicada del convenio vigente en sus fechas (`private.request_agreement_periods`). Si en algún tramo el
+>   convenio pide más, se avisa del tramo y no se genera el CPD previo (422 `salario_bajo_convenio`), igual que en la
+>   fase 4: no hay aprobación que lo permita. Tablas con efectos después del fin no cuentan. Si la categoría no se
+>   puede emparejar por código, se avisa sin bloquear.
+> - **Riesgos del puesto** (RD 216/1999, art. 2): el texto es obligatorio para generar el CPD previo. `hazardous_work`
+>   marca si el puesto está en la lista de trabajos especialmente peligrosos; solo se guarda, el control es parte de la
+>   decisión pendiente del art. 8.
+> - **Pantalla**: estados libres (como el pipeline) y motivo al cancelar; plazas por encima de las personas del
+>   presupuesto, solo aviso; supuestos de utilización, lista [verificar].
 
 #### ett_requests
 

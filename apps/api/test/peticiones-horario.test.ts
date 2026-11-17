@@ -36,7 +36,7 @@ describe('comprobaciones del CPD previo', () => {
   const base = {
     useCase: 'production_unforeseen', useCaseJustification: 'Campaña', clientCenterId: 'c', startDate: '2026-12-01',
     endDate: '2027-02-28', weeklyHours: 37.5, tasks: 'Tareas', risks: 'Riesgos', ettAuthorizationNumber: '1',
-    ettRepresentativeName: 'Rep', ettRepresentativeIdNumber: '00000000T', belowAgreement: false, clientSignerContactId: 's',
+    ettRepresentativeName: 'Rep', ettRepresentativeIdNumber: '00000000T', belowAgreement: false, agreementCategoryUnmatched: false, clientSignerContactId: 's',
     positionsCount: 2, quotePeople: 4, peopleInRequests: 4,
   };
 

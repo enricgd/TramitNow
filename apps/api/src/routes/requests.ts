@@ -90,6 +90,9 @@ const serviceFields = {
   qualification: nullableText(5000),
   risks: nullableText(5000).openapi({ description: 'Riesgos del puesto (RD 216/1999, art. 2)' }),
   ppe: nullableText(2000).openapi({ description: 'EPIs' }),
+  hazardousWork: z.boolean().openapi({
+    description: 'Trabajo especialmente peligroso (art. 8 Ley 14/1994, RD 216/1999). Solo se guarda: el control está pendiente de decidir',
+  }),
   requiredLicenses: nullableText(2000),
   useCase: UseCase.nullable(),
   useCaseJustification: nullableText(5000),
@@ -207,6 +210,12 @@ const RequestSchema = z
     clientCenterName: z.string().nullable(),
     clientSignerContactId: z.guid().nullable(),
     clientSignerContactName: z.string().nullable(),
+    clientSignerContactEmail: z.string().nullable(),
+    clientSignerContactPhone: z.string().nullable(),
+    quoteVersionId: z.guid(),
+    quoteTitle: z.string().nullable(),
+    quoteAcceptedAt: Timestamp.nullable(),
+    hazardousWork: z.boolean(),
     orderReference: z.string().nullable(),
     notes: z.string().nullable(),
     tasks: z.string().nullable(),
@@ -227,13 +236,22 @@ const RequestSchema = z
     conditions: ConditionsSchema,
     agreementCheck: z
       .object({
-        currentVersionId: z.guid(),
-        currentPeriod: z.object({ from: z.string(), to: z.string().nullable() }),
-        currentMinimumSalaryHour: z.number().nullable(),
-        belowAgreement: z.boolean(),
+        belowAgreement: z.boolean().openapi({ description: 'En algún tramo el convenio pide más que el salario copiado: bloquea el CPD' }),
+        categoryUnmatched: z.boolean().openapi({ description: 'En algún tramo la categoría no está (por código): avisa, no bloquea' }),
+        periods: z.array(z.object({
+          versionId: z.guid(),
+          from: z.string(),
+          to: z.string().nullable(),
+          categoryMatched: z.boolean(),
+          minimumSalaryHour: z.number().nullable(),
+          belowAgreement: z.boolean(),
+        })),
       })
       .nullable()
-      .openapi({ description: 'El salario copiado frente a la versión publicada vigente del convenio (misma categoría)' }),
+      .openapi({
+        description: 'El salario copiado frente a cada versión publicada del convenio vigente en las fechas de la petición ' +
+          '(sin inicio, desde hoy; sin fin, sin límite). null si la petición no tiene convenio enlazado al catálogo global',
+      }),
     distribution: z.object({
       quotePeople: z.number().int().nullable(),
       inRequests: z.number().int().openapi({ description: 'Plazas del puesto en peticiones no canceladas' }),
@@ -354,6 +372,12 @@ interface DetailRow extends RequestSummary {
   clientSignerContactId: string | null;
   clientSignerContactName: string | null;
   clientSignerContactPosition: string | null;
+  clientSignerContactEmail: string | null;
+  clientSignerContactPhone: string | null;
+  quoteVersionId: string;
+  quoteTitle: string | null;
+  quoteAcceptedAt: string | null;
+  hazardousWork: boolean;
   orderReference: string | null;
   notes: string | null;
   tasks: string | null;
@@ -415,6 +439,8 @@ async function loadDetail(tx: Tx, tenantId: string, id: string) {
            nullif(concat_ws(', ', nullif(concat_ws(' ', a.street_type, a.street, a.number, a.door), ''),
                             nullif(concat_ws(' ', a.postal_code, a.city), '')), '') as client_center_address,
            r.client_signer_contact_id, ct.name as client_signer_contact_name, ct.position as client_signer_contact_position,
+           ct.email as client_signer_contact_email, coalesce(ct.phone, ct.mobile) as client_signer_contact_phone,
+           r.quote_version_id, qv.title as quote_title, qv.accepted_at as quote_accepted_at, r.hazardous_work,
            r.order_reference, r.notes, r.tasks, r.qualification, r.risks, r.ppe, r.required_licenses, r.use_case,
            r.use_case_justification, r.workday_type, r.schedule, r.weekly_hours::float8 as weekly_hours, r.cancelled_at,
            r.closed_at, cb.full_name as created_by_name, r.updated_at, r.position_description, r.collective_agreement_id,
@@ -439,24 +465,34 @@ async function loadDetail(tx: Tx, tenantId: string, id: string) {
     left join public.client_centers cc on cc.tenant_id = r.tenant_id and cc.id = r.client_center_id
     left join public.addresses a on a.tenant_id = cc.tenant_id and a.id = cc.address_id
     left join public.client_contacts ct on ct.tenant_id = r.tenant_id and ct.id = r.client_signer_contact_id
+    join public.quote_versions qv on qv.tenant_id = r.tenant_id and qv.id = r.quote_version_id
     left join public.profiles cb on cb.id = r.created_by
     left join public.profiles gb on gb.id = r.pre_cpd_generated_by
     left join public.profiles sb on sb.id = r.pre_cpd_sent_by
   `;
   if (!row) throw notFound('La petición no existe');
 
-  const [current] = await tx<{ versionId: string; effectiveFrom: string; effectiveTo: string | null; minimumSalaryHour: number | null }[]>`
-    select version_id, to_char(effective_from, 'YYYY-MM-DD') as effective_from, to_char(effective_to, 'YYYY-MM-DD') as effective_to,
-           minimum_salary_hour::float8 as minimum_salary_hour
-    from private.request_current_agreement(${tenantId}, ${id})
+  const periods = await tx<{ versionId: string; from: string; to: string | null; categoryMatched: boolean; minimumSalaryHour: number | null }[]>`
+    select version_id, to_char(effective_from, 'YYYY-MM-DD') as from, to_char(effective_to, 'YYYY-MM-DD') as to,
+           category_matched, minimum_salary_hour::float8 as minimum_salary_hour
+    from private.request_agreement_periods(${tenantId}, ${id})
   `;
-  const agreementCheck = current
-    ? {
-        currentVersionId: current.versionId,
-        currentPeriod: { from: current.effectiveFrom, to: current.effectiveTo },
-        currentMinimumSalaryHour: current.minimumSalaryHour,
-        belowAgreement: current.minimumSalaryHour !== null && row.salaryHour < current.minimumSalaryHour - 0.005,
-      }
+  const [linked] = await tx<{ linked: boolean }[]>`
+    select ca.global_agreement_id is not null as linked from public.collective_agreements ca
+    where ca.tenant_id = ${tenantId} and ca.id = ${row.collectiveAgreementId}
+  `;
+  const agreementCheck = linked?.linked
+    ? (() => {
+        const list = periods.map((p) => ({
+          ...p,
+          belowAgreement: p.minimumSalaryHour !== null && row.salaryHour < p.minimumSalaryHour - 0.005,
+        }));
+        return {
+          belowAgreement: list.some((p) => p.belowAgreement),
+          categoryUnmatched: row.agreementCategoryCode === null || list.some((p) => !p.categoryMatched),
+          periods: list,
+        };
+      })()
     : null;
 
   // Reparto del puesto: peticiones del mismo puesto y de los otros puestos del presupuesto (no canceladas).
@@ -508,6 +544,7 @@ async function loadDetail(tx: Tx, tenantId: string, id: string) {
     ettRepresentativeName: row.ettRepresentativeName,
     ettRepresentativeIdNumber: row.ettRepresentativeIdNumber,
     belowAgreement: agreementCheck?.belowAgreement ?? false,
+    agreementCategoryUnmatched: agreementCheck ? agreementCheck.categoryUnmatched : row.agreementCategoryCode === null,
     clientSignerContactId: row.clientSignerContactId,
     positionsCount: row.positionsCount,
     quotePeople: row.quotePeople,
@@ -529,6 +566,12 @@ function present(d: Detail, ctx: TenantContext): RequestOut {
     clientCenterName: r.clientCenterName,
     clientSignerContactId: r.clientSignerContactId,
     clientSignerContactName: r.clientSignerContactName,
+    clientSignerContactEmail: r.clientSignerContactEmail,
+    clientSignerContactPhone: r.clientSignerContactPhone,
+    quoteVersionId: r.quoteVersionId,
+    quoteTitle: r.quoteTitle,
+    quoteAcceptedAt: r.quoteAcceptedAt,
+    hazardousWork: r.hazardousWork,
     orderReference: r.orderReference,
     notes: r.notes,
     tasks: r.tasks,
@@ -599,7 +642,7 @@ function serviceColumns(tx: Tx, body: ServiceBody & { status?: string; cancelRea
   const out: Record<string, unknown> = {};
   const simple = ['positionsCount', 'startDate', 'endDate', 'shiftName', 'workdayType', 'clientCenterId', 'clientSignerContactId',
     'responsibleUserId', 'branchId', 'orderReference', 'notes', 'tasks', 'qualification', 'risks', 'ppe', 'requiredLicenses',
-    'useCase', 'useCaseJustification', 'status', 'cancelReason'] as const;
+    'hazardousWork', 'useCase', 'useCaseJustification', 'status', 'cancelReason'] as const;
   for (const key of simple) if (body[key] !== undefined) out[key] = body[key];
   if (body.schedule !== undefined) {
     const { days, weeklyHours } = normalizeSchedule(body.schedule as ScheduleDay[]);
@@ -926,7 +969,7 @@ export const requests = createRouter()
       const request = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
         const [src] = await tx<(ServiceBody & { quotePositionId: string; schedule: ScheduleDay[] })[]>`
           select quote_position_id, branch_id, client_center_id, client_signer_contact_id, responsible_user_id,
-                 order_reference, notes, tasks, qualification, risks, ppe, required_licenses, use_case,
+                 order_reference, notes, tasks, qualification, risks, ppe, required_licenses, hazardous_work, use_case,
                  use_case_justification, workday_type, shift_name, schedule,
                  to_char(start_date, 'YYYY-MM-DD') as start_date, to_char(end_date, 'YYYY-MM-DD') as end_date
           from public.requests where tenant_id = ${ctx.tenantId} and id = ${id}
@@ -971,10 +1014,11 @@ export const requests = createRouter()
         requireOpen(r.status);
         const failed = d.checks.filter((x: PreCpdCheck) => x.blocking && !x.ok);
         if (failed.some((x) => x.code === 'salary_agreement')) {
+          const first = d.agreementCheck!.periods.find((p) => p.belowAgreement)!;
           throw new ApiError(422, 'salario_bajo_convenio',
-            `El salario de la petición (${r.salaryHour.toFixed(2)} €/h) queda por debajo del convenio vigente ` +
-            `(${d.agreementCheck?.currentMinimumSalaryHour?.toFixed(2)} €/h). La ley no lo permite (art. 11 de la Ley 14/1994): ` +
-            'crea una versión nueva del presupuesto');
+            `El salario de la petición (${r.salaryHour.toFixed(2)} €/h) queda por debajo del convenio vigente desde el ` +
+            `${first.from.split('-').reverse().join('/')} (${first.minimumSalaryHour!.toFixed(2)} €/h). La ley no lo permite ` +
+            '(art. 11 de la Ley 14/1994): crea una versión nueva del presupuesto');
         }
         if (failed.length) {
           throw new ApiError(409, 'cpd_incompleto', 'Faltan datos para generar el CPD previo',

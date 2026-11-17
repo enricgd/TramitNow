@@ -546,7 +546,8 @@ categorías del convenio global (`agreement_category_id`), que encaja mejor con 
 
 ## Fase 5: peticiones
 
-Migración `20261117000300_requests.sql`; pantalla `apps/web/src/views/PeticionesView.jsx` y notas
+Migraciones `20261117000300_requests.sql` y `20261117000400_requests_agreement_periods.sql`; pantalla
+`apps/web/src/views/PeticionesView.jsx` y notas
 `design/cambios/2026-10-28-peticiones-*`, `2026-11-09-peticiones-buscador-y-documentos.md` y
 `2026-11-09-reunion-cpd-presupuestos.md`. Tests: `db/tests/19_peticiones.sql`, `apps/api/test/peticiones.test.ts` y
 `apps/api/test/peticiones-horario.test.ts`.
@@ -567,9 +568,14 @@ Reglas en la base de datos:
 - **CPD previo**: `pre_cpd_status` (`pending`, `generated`, `sent`, `reviewed`; enviado y revisado se marcan a mano,
   sin firma electrónica). Si después de generarlo cambia algo de lo que sale en él (centro, fechas, plazas, horario,
   tareas, riesgos, supuesto...), `pre_cpd_outdated` pasa a true. Las comprobaciones para generarlo están en la API.
-- **Art. 11 de la Ley 14/1994 con tablas nuevas**: la petición conserva el salario del presupuesto, pero
-  `private.request_current_agreement()` da el mínimo de la versión publicada vigente para la misma categoría (por
-  código). Si queda por encima del salario copiado, la API lo avisa y no deja generar el CPD.
+- **Art. 11 de la Ley 14/1994 con tablas nuevas** (`20261117000400_requests_agreement_periods.sql`): la petición
+  conserva el salario del presupuesto, pero `private.request_agreement_periods()` da cada versión publicada del convenio
+  vigente en las fechas de la petición (sin inicio, desde hoy; sin fin, sin límite; cada versión rige hasta el día
+  antes de la siguiente) con el mínimo de la misma categoría (por código). Si en algún tramo el mínimo supera el
+  salario copiado, la API avisa del tramo y no deja generar el CPD (422 `salario_bajo_convenio`). Tablas con efectos
+  después del fin no cuentan. Si la categoría no está en alguna versión, avisa sin bloquear.
+- `hazardous_work`: si el puesto está en la lista de trabajos especialmente peligrosos. Solo se guarda; el control va
+  con la decisión pendiente del art. 8.
 - Quien tiene `requests.manage` ve los presupuestos **aceptados** de su sucursal (para elegir el puesto), aunque no
   tenga `module.comercial` (`private.quote_visible_for_requests`, en la RLS de `quotes`).
 - Documentos: `documents.entity_type` admite `request`. Tipos de serie nuevos (`private.seed_request_catalogs`): «CPD
