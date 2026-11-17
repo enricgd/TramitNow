@@ -48,10 +48,10 @@ export interface ProposalData {
   };
 }
 
-const PAGE = { width: 595.28, height: 841.89, margin: 50 };
-const INK = rgb(0.1, 0.12, 0.16);
-const MUTED = rgb(0.4, 0.43, 0.48);
-const LINE = rgb(0.82, 0.84, 0.87);
+export const PAGE = { width: 595.28, height: 841.89, margin: 50 };
+export const INK = rgb(0.1, 0.12, 0.16);
+export const MUTED = rgb(0.4, 0.43, 0.48);
+export const LINE = rgb(0.82, 0.84, 0.87);
 
 /** Lo que no cabe en WinAnsi se cambia por «?» (las fuentes estándar del PDF no lo tienen). */
 const WIN_ANSI_EXTRA = new Set('€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ');
@@ -66,10 +66,10 @@ export function pdfSafe(text: string): string {
     .join('');
 }
 
-const euro = (n: number) => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
-const fecha = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '—');
+export const euro = (n: number) => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+export const fecha = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '—');
 
-class Writer {
+export class Writer {
   page!: PDFPage;
   y = 0;
   constructor(
