@@ -70,8 +70,8 @@ reload();
 
 Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`), Empresas
 (`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**) y
-Presupuestos (`src/views/presupuestos/`) y Peticiones (`src/views/peticiones/`). El resto de pantallas aún usan los datos
-de ejemplo que llevan dentro.
+Presupuestos (`src/views/presupuestos/`), Peticiones (`src/views/peticiones/`) y Candidatos (`src/views/candidatos/`). El
+resto de pantallas aún usan los datos de ejemplo que llevan dentro.
 
 #### Conectar una pantalla
 
@@ -191,6 +191,23 @@ página y entra sin red.
   `src/data/memoriaPeticionesSeleccion.js` (`repos.requestSelection`, sin ruta en la API); en real, las plazas por cubrir
   y un texto de «llega con…».
 - Los turnos de serie (mañana, tarde, noche y partida) están en `src/data/turnos.ts`.
+- Plazas y embudo (fase 6): contra la API salen de las candidaturas (`/v1/applications`): proponer reserva una plaza,
+  «Confirmar» la cubre (a mano, hasta que haya portal de empresas) y «Retirar» la libera. Bajas, CPD de cada persona y
+  portales siguen para la fase 7.
+
+#### Candidatos en la web
+
+- `src/views/candidatos/useCandidatos.ts` y `mapeo.ts`, con el contrato de la fase 6 (`/v1/candidates`,
+  `/v1/candidate-catalog`, `/v1/applications`, `/v1/access-log`). Los valores de la API y su texto en la pantalla están
+  en `src/data/candidatosValores.ts`.
+- **Datos sensibles** (documento de identidad, NSS, IBAN): llegan tapados. «ver» (`DatoSensible` en la vista) los pide
+  a `/v1/candidates/{id}/sensitive`, que lo registra, y solo los enseña mientras están a la vista: no se guardan en el
+  estado, en caché ni en `localStorage`. Al editar, solo se envían si se escribe un valor nuevo.
+- Abrir la ficha queda en la auditoría; la lista no. La pestaña «Accesos» sale con `privacy.audit`; «Eliminar»
+  (supresión: la API anonimiza) y «Exportar datos» (JSON), con `privacy.manage`.
+- Documentos: los de siempre con `entityType: 'candidate'`, caducidad, validar, rechazar con motivo y aviso de
+  renovación (el correo real, más adelante). Subir el consentimiento firmado registra el consentimiento de bolsa.
+- La bolsa es de toda la ETT; las peticiones del asistente «Asignar a petición», las de la sucursal de la cabecera.
 
 ## api
 

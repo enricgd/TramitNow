@@ -1,7 +1,7 @@
 # Candidatos: candidaturas con el modelo de una petición, un puesto
 
 - **Fecha**: 2026-10-29
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-17)
 - **Rama y commits**: `design`, 327c0f6
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/candidatos.
   - Ficha de Elena Sánchez Pascual → «Candidaturas» → «Proponer al cliente».

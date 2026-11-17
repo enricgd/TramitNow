@@ -1,7 +1,7 @@
 # Ficha del candidato: «Otros» en carnés, sin perfiles secundarios y perfil principal en desplegable
 
 - **Fecha**: 2026-11-10
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-17)
 - **Rama y commits**: `design`, f1047ba
 - **Cómo verlo**: `npm --prefix apps/web run dev` → Candidatos → un candidato → pestaña «Perfil y carnés» → «Editar».
 

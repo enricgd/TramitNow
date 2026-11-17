@@ -134,12 +134,14 @@ Cada vista guarda sus datos al principio del fichero, en constantes como `INITIA
 `INITIAL_POSICIONES`, `INITIAL_EXPEDIENTES` o `initialCompanyData`. Mientras no haya backend, ahí es donde
 se cambian o se añaden.
 
-Las pantallas ya conectadas a datos reales (la cabecera, Mi ETT, Empresas, Presupuestos y Peticiones, de momento) ya no
-los llevan dentro: los cargan con un hook (`src/cabecera/useCabecera.ts`, `src/views/mi-ett/useMiEtt.ts`,
-`src/views/empresas/useEmpresas.ts`, `src/views/presupuestos/usePresupuestos.ts`, `src/views/peticiones/usePeticiones.ts`)
-y sus datos de ejemplo están en `src/data/memoria.ts`, `src/data/memoriaEmpresas.ts`, `src/data/memoriaMiEtt.ts`,
-`src/data/memoriaPresupuestos.ts`, `src/data/memoriaPeticiones.ts` y `src/data/ejemploCabecera.ts`. Las plazas con
-personas, los candidatos y los portales de Peticiones (aún sin backend) están en `src/data/memoriaPeticionesSeleccion.js`. Los costes de los presupuestos los calcula el módulo de la API
+Las pantallas ya conectadas a datos reales (la cabecera, Mi ETT, Empresas, Presupuestos, Peticiones y Candidatos, de
+momento) ya no los llevan dentro: los cargan con un hook (`src/cabecera/useCabecera.ts`, `src/views/mi-ett/useMiEtt.ts`,
+`src/views/empresas/useEmpresas.ts`, `src/views/presupuestos/usePresupuestos.ts`, `src/views/peticiones/usePeticiones.ts`,
+`src/views/candidatos/useCandidatos.ts`) y sus datos de ejemplo están en `src/data/memoria.ts`,
+`src/data/memoriaEmpresas.ts`, `src/data/memoriaMiEtt.ts`, `src/data/memoriaPresupuestos.ts`,
+`src/data/memoriaPeticiones.ts`, `src/data/memoriaCandidatosEjemplo.js` (los candidatos, en tu forma de siempre) y
+`src/data/ejemploCabecera.ts`. La selección de ejemplo de Peticiones (plazas con personas, embudo y portales) está en
+`src/data/memoriaPeticionesSeleccion.js`. Los DNI de ejemplo son inventados y con su letra correcta (`00000101D`). Los costes de los presupuestos los calcula el módulo de la API
 (`apps/api/src/calc/quote.ts`): no se calculan en la vista. En esas pantallas, los cambios de diseño se
 hacen en la vista como siempre; si hace falta un dato nuevo, añádelo a esos ficheros con la misma forma y
 anótalo en la nota. No vuelvas a poner datos dentro de la vista ni llames a `repos` desde ella.
