@@ -70,7 +70,8 @@ reload();
 
 Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`), Empresas
 (`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**) y
-Presupuestos (`src/views/presupuestos/`). El resto de pantallas aún usan los datos de ejemplo que llevan dentro.
+Presupuestos (`src/views/presupuestos/`) y Peticiones (`src/views/peticiones/`). El resto de pantallas aún usan los datos
+de ejemplo que llevan dentro.
 
 #### Conectar una pantalla
 
@@ -173,8 +174,23 @@ página y entra sin red.
   `ssRates` y de la ley: no se editan en la pantalla. Los demás costes internos van en % sobre el salario por hora o €/h.
 - Ver costes y margen y aprobar: en real, quien tiene `quotes.approve_margin` lo ve como dirección; el resto, como
   comercial (en la demo, el selector «Ver como»).
-- Aún sin hacer: crear peticiones desde un aceptado (fase 5), enviar por correo o a firma, recordatorios y el escandallo
-  en Excel («Disponible próximamente» en real).
+- En un presupuesto aceptado, «Crear peticiones» las crea con `POST /v1/quote-versions/{id}/requests` y cada puesto enseña
+  sus peticiones (con enlace a `#/peticiones/PET…`).
+- Aún sin hacer: enviar por correo o a firma, recordatorios y el escandallo en Excel («Disponible próximamente» en real).
+
+#### Peticiones en la web
+
+- `src/views/peticiones/usePeticiones.ts` y `mapeo.ts`, con el contrato de la fase 5 (`/v1/requests`,
+  `/v1/request-sources`...). En la vista cada petición va por su código; `#/peticiones/PET…` abre una directamente.
+- La ficha trae el reparto del puesto (`distribution`) y las condiciones copiadas del presupuesto, que no se cambian. Lo
+  que el CPD previo necesita (centro, firmante, supuesto, tareas, riesgos, EPIs, carnés, fechas) se completa en la
+  ventana «Datos del servicio».
+- CPD previo sin firma electrónica: se genera en el servidor (PDF), se envía a mano y se marca como enviado y revisado.
+  Si faltan datos, la ficha enseña las comprobaciones que fallan.
+- Plazas con personas, candidatos, CPD de cada persona y portales son de las fases 6 y 7: en la demo salen de
+  `src/data/memoriaPeticionesSeleccion.js` (`repos.requestSelection`, sin ruta en la API); en real, las plazas por cubrir
+  y un texto de «llega con…».
+- Los turnos de serie (mañana, tarde, noche y partida) están en `src/data/turnos.ts`.
 
 ## api
 

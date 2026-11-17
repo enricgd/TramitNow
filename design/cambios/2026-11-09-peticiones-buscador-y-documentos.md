@@ -1,7 +1,7 @@
 # Buscador de presupuestos al crear una petición, crear peticiones al aceptar y documentos del servicio
 
 - **Fecha**: 2026-11-09
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-17)
 - **Rama y commits**: `design`, beef34d
 - **Cómo verlo**: `npm --prefix apps/web run dev`.
   - Peticiones → «Nueva petición».

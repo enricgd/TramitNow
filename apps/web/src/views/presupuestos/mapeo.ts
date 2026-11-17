@@ -398,11 +398,11 @@ export function versionApi(v: PresupuestoVista, ids: { comercial: (nombre: strin
 
 /** Una petición creada desde el presupuesto (fase 5): código, puesto, turno y plazas. */
 export type PeticionCreada = { codigo: string; posId: string; turno: string; plazas: number };
-/** Resumen de las peticiones para el indicador: «PET-2026-0052» o «PET-2026-0052 a 0054». */
+/** Resumen de las peticiones para el indicador: «PET2026-00052» o «PET2026-00052 a 00054». */
 export function resumenPeticiones(l: PeticionCreada[]) {
   if (!l.length) return undefined;
   const c = [...l.map((x) => x.codigo)].sort();
-  return c.length === 1 ? c[0] : `${c[0]} a ${c[c.length - 1].slice(-4)}`;
+  return c.length === 1 ? c[0] : `${c[0]} a ${c[c.length - 1].split('-').pop()}`;
 }
 /**
  * Las peticiones no canceladas de un presupuesto. El puesto va por `quotePositionId` o, si la fila no lo trae, por el

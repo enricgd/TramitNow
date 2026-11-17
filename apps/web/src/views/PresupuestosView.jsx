@@ -270,7 +270,7 @@ import { DEMO } from '../modo';
         setPresupuesto(prev => ({ ...prev, peticionCreada: d.peticionCreada, peticionesCreadas: d.peticionesCreadas }));
         setFormularioPresupuesto(prev => ({ ...prev, peticionCreada: d.peticionCreada, peticionesCreadas: d.peticionesCreadas }));
         setModalPeticion(false);
-        mostrarToast(`${creadas.length === 1 ? 'Creada la petición' : `Creadas ${creadas.length} peticiones:`} ${creadas.length === 1 ? creadas[0] : `${creadas[0]} a ${creadas[creadas.length - 1].slice(-4)}`}. Cada una con un solo puesto.`, 'exito');
+        mostrarToast(`${creadas.length === 1 ? 'Creada la petición' : `Creadas ${creadas.length} peticiones:`} ${creadas.length === 1 ? creadas[0] : `${creadas[0]} a ${creadas[creadas.length - 1].split('-').pop()}`}. Cada una con un solo puesto.`, 'exito');
       };
 
       // Duplicar: copia puestos, costes y condiciones; la empresa se elige de nuevo

@@ -955,7 +955,9 @@ export default function PeticionesView() {
                                 </div>
                             </div>
 
-                            {peticionesFiltradas.length === 0 ? (
+                            {peticiones.length === 0 ? (
+                                <EmptyState icon={FileText} title="Aún no hay peticiones" text="Se crean desde un presupuesto aceptado: con «Nueva petición» o con «Crear peticiones» en el presupuesto." />
+                            ) : peticionesFiltradas.length === 0 ? (
                                 <EmptyState icon={Search} title="No hay peticiones con estos filtros" action={<Button onClick={limpiarFiltros}>Limpiar filtros</Button>} />
                             ) : vistaListado === 'pipeline' ? (
                                 <div className="p-3">
@@ -1001,7 +1003,7 @@ export default function PeticionesView() {
                                                                     <div className="text-[11px] text-slate-500">{p.presupuestoOrigen}</div>
                                                                 </td>
                                                                 <td className="py-2.5 px-3 whitespace-nowrap">
-                                                                    <div className="text-slate-700">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</div>
+                                                                    <div className="text-slate-700">{fechaCorta(p.inicio) || "sin inicio"} a {fechaCorta(p.fin) || "sin fin"}</div>
                                                                     {ESTADOS_ACTIVOS.includes(p.estado) && dias >= 0 && dias <= 7 && cubiertas < p.solicitados && (
                                                                         <div className="text-[11px] text-amber-700">Empieza en {dias} {dias === 1 ? 'día' : 'días'}</div>
                                                                     )}
@@ -1044,7 +1046,7 @@ export default function PeticionesView() {
                                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                     <span className="inline-flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-slate-400" />{peticion.clienteNombre}</span>
                                     <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" />{peticion.centroTrabajo}</span>
-                                    <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />{fechaCorta(peticion.inicio)} a {fechaCorta(peticion.fin)}</span>
+                                    <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />{fechaCorta(peticion.inicio) || "sin inicio"} a {fechaCorta(peticion.fin) || "sin fin"}</span>
                                     <button type="button" onClick={() => { window.location.hash = `#/presupuestos/${peticion.presupuesto}`; }} className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline">
                                         <FileText className="w-3.5 h-3.5" />Presupuesto {peticion.presupuestoOrigen}
                                     </button>
@@ -1188,7 +1190,7 @@ export default function PeticionesView() {
                                                                     <div className="font-medium text-slate-900">{p.turnoNombre}{actual && <span className="ml-2 text-[11px] font-normal text-indigo-700">esta petición</span>}</div>
                                                                     <div className="text-[11px] text-slate-500">{p.id}</div>
                                                                 </td>
-                                                                <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</td>
+                                                                <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{fechaCorta(p.inicio) || "sin inicio"} a {fechaCorta(p.fin) || "sin fin"}</td>
                                                                 <td className="py-2.5 px-4 text-slate-700 whitespace-nowrap">{p.solicitados} plazas · {plazas[p.id] ? cubiertasDe(plazas[p.id]) : p.cubiertas} cubiertas</td>
                                                                 <td className="py-2.5 px-4 text-right"><Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge></td>
                                                             </tr>
@@ -2114,7 +2116,8 @@ export default function PeticionesView() {
                                             ? { id: peticion.presupuestoFirmado.documentId, nombre: peticion.presupuestoFirmado.nombre, texto: `Presupuesto firmado por el cliente el ${fechaCorta(peticion.presupuestoFirmado.fecha)} · sale solo del presupuesto aceptado`, icono: FileSignature, presupuesto: true }
                                             : { nombre: `Presupuesto ${peticion.presupuestoOrigen}`, texto: 'Aún no hay presupuesto firmado ni propuesta en PDF: súbelo en Presupuestos → Documentos', icono: FileSignature, sinArchivo: true },
                                         ...(docsServicio[peticion.id] || []).map(d => ({ id: d.id, nombre: d.nombre, texto: `${d.tipo} · subido el ${fechaCorta(d.fecha)} por ${d.autor}`, icono: Paperclip, subido: true })),
-                                        { nombre: `CPD_previo_${peticion.id}.pdf`, texto: 'Condiciones de la puesta a disposición para la empresa', icono: FileText, cpd: true },
+                                        // El CPD previo generado ya está entre los documentos; si aún no hay, se genera desde aquí
+                                        !(docsServicio[peticion.id] || []).some(d => d.tipo.startsWith('CPD previo')) && { nombre: `CPD_previo_${peticion.id}.pdf`, texto: 'Condiciones de la puesta a disposición para la empresa · se genera al descargarlo', icono: FileText, cpd: true },
                                         DEMO && { nombre: `Riesgos_PRL_${peticion.perfil}.pdf`, texto: `Información de riesgos del puesto: ${peticion.puesto.toLowerCase()}`, icono: ShieldCheck },
                                     ].filter(Boolean).map(doc => (
                                         <div key={doc.nombre} className="p-3 rounded-lg border border-slate-200 flex items-center justify-between gap-3 hover:bg-slate-50">

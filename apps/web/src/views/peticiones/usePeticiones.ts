@@ -83,6 +83,13 @@ export function usePeticiones() {
     [ett],
   );
 
+  /** El historial de la petición, lo último primero. */
+  const actividadDe = (requestId: string) =>
+    repos.activity.list({ entityType: 'request', entityId: requestId, limit: 100 }).then(
+      (p) => p.data.map((a) => ({ id: a.id, fecha: fechaHora(a.occurredAt), usuario: a.actorName ?? '—', texto: a.summary })),
+      () => [],
+    );
+
   /** La petición en la forma de la vista, con el email y el teléfono del firmante sacados de sus contactos si hace falta. */
   const vistaFicha = (r: ServiceRequest, contactos: ClientContact[]): PeticionVista => {
     const firmante = contactos.find((c) => c.id === r.clientSignerContactId);
@@ -99,7 +106,7 @@ export function usePeticiones() {
       const r = await repos.requests.get(requestId);
       const [documentos, actividad, datos, centros, contactos] = await Promise.all([
         repos.documents.list({ entityType: 'request', entityId: r.id, limit: 100 }).then((p) => p.data.map(documentoVista), () => []),
-        repos.activity.list({ entityType: 'request', entityId: r.id, limit: 100 }).then((p) => p.data, () => []),
+        actividadDe(r.id),
         datosEtt(r.companyId),
         repos.clientCenters.list({ clientId: r.clientId, limit: 200 }).then((p) => p.data, () => [] as ClientCenter[]),
         repos.clientContacts.list({ clientId: r.clientId, limit: 200 }).then((p) => p.data, () => [] as ClientContact[]),
@@ -108,7 +115,7 @@ export function usePeticiones() {
         peticion: vistaFicha(r, contactos),
         horario: horarioVista(r),
         documentos,
-        actividad: actividad.map((a) => ({ id: a.id, fecha: fechaHora(a.occurredAt), usuario: a.actorName ?? '—', texto: a.summary })),
+        actividad,
         ett: datos,
         centros: centros.filter((c) => !c.deletedAt).map((c) => ({ id: c.id, nombre: c.name })),
         contactos: contactos.filter((c) => !c.suspended && !c.deletedAt).map((c) => ({ id: c.id, nombre: c.name, cargo: c.position ?? '', firma: c.signsCpds })),
@@ -122,7 +129,10 @@ export function usePeticiones() {
   const conRecarga = useCallback(<T,>(p: Promise<T>) => p.then((x) => (recargar(), x)), [recargar]);
   /** Cambia la petición y devuelve la ficha nueva (con los contactos que ya tenía). */
   const cambiar = useCallback(
-    (f: Ficha, data: ServiceRequestInput) => conRecarga(repos.requests.update(f.peticion._id, data).then((r) => ({ ...f, peticion: vistaFicha(r, f._contactos), horario: horarioVista(r) }))),
+    (f: Ficha, data: ServiceRequestInput) =>
+      conRecarga(
+        repos.requests.update(f.peticion._id, data).then(async (r) => ({ ...f, peticion: vistaFicha(r, f._contactos), horario: horarioVista(r), actividad: await actividadDe(r.id) })),
+      ),
     [conRecarga],
   );
 
@@ -215,7 +225,7 @@ export function usePeticiones() {
         (estado === 'enviado'
           ? repos.requests.markPreCpdSent(f.peticion._id, { sentTo: f.peticion.emailContacto || null })
           : repos.requests.markPreCpdReviewed(f.peticion._id)
-        ).then((r) => ({ ...f, peticion: vistaFicha(r, f._contactos) })),
+        ).then(async (r) => ({ ...f, peticion: vistaFicha(r, f._contactos), actividad: await actividadDe(r.id) })),
       ),
     [conRecarga],
   );
