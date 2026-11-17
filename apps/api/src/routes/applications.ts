@@ -57,6 +57,9 @@ export const ApplicationSchema = z
     slotNumber: z.number().int().nullable(),
     notes: z.string().nullable(),
     discardReason: z.string().nullable(),
+    candidateAcceptedAt: Timestamp.nullable().openapi({ description: 'Aceptó presentarse a esta petición (base precontractual)' }),
+    candidateAcceptedChannel: z.enum(['phone', 'email', 'whatsapp', 'sms', 'in_person', 'other']).nullable(),
+    candidateAcceptedByName: z.string().nullable(),
     stageChangedAt: Timestamp,
     stageChangedByName: z.string().nullable(),
     createdAt: Timestamp,
@@ -81,7 +84,8 @@ export async function loadApplications(
            a.request_id, r.code as request_code, r.status as request_status, r.position_name, r.shift_name,
            cl.legal_name as client_name, cc.name as client_center_name, to_char(r.start_date, 'YYYY-MM-DD') as start_date,
            a.stage, a.stage in ('registered', 'preselected', 'interview', 'proposed', 'confirmed') as active, a.origin,
-           a.legal_basis, a.source, a.slot_id, s.slot_number, a.notes, a.discard_reason, a.stage_changed_at,
+           a.legal_basis, a.source, a.slot_id, s.slot_number, a.notes, a.discard_reason, a.candidate_accepted_at,
+           a.candidate_accepted_channel, ab.full_name as candidate_accepted_by_name, a.stage_changed_at,
            p.full_name as stage_changed_by_name, a.created_at
     from public.applications a
     join public.candidates c on c.tenant_id = a.tenant_id and c.id = a.candidate_id
@@ -90,6 +94,7 @@ export async function loadApplications(
     left join public.client_centers cc on cc.tenant_id = r.tenant_id and cc.id = r.client_center_id
     left join public.request_slots s on s.tenant_id = a.tenant_id and s.id = a.slot_id
     left join public.profiles p on p.id = a.stage_changed_by
+    left join public.profiles ab on ab.id = a.candidate_accepted_by
     where ${where}
     order by a.created_at desc, a.id
   `;
@@ -98,10 +103,10 @@ export async function loadApplications(
 
 /** Lo que conviene comprobar antes de proponer (avisa, no bloquea: el contrato lo exigirá en la fase 7). */
 async function requirements(tx: Tx, tenantId: string, applicationId: string) {
-  const [r] = await tx<{ hasId: boolean; idExpired: boolean; origin: string; poolConsent: boolean; licensesText: string | null }[]>`
+  const [r] = await tx<{ hasId: boolean; idExpired: boolean; origin: string; accepted: boolean; poolConsent: boolean; licensesText: string | null }[]>`
     select c.id_document_number_enc is not null as has_id,
            coalesce(c.id_document_expires_on < coalesce(rq.start_date, current_date), false) as id_expired,
-           a.origin, private.candidate_has_consent(a.tenant_id, a.candidate_id, 'talent_pool') as pool_consent,
+           a.origin, a.candidate_accepted_at is not null as accepted, private.candidate_has_consent(a.tenant_id, a.candidate_id, 'talent_pool') as pool_consent,
            rq.required_licenses as licenses_text
     from public.applications a
     join public.candidates c on c.tenant_id = a.tenant_id and c.id = a.candidate_id
@@ -110,7 +115,14 @@ async function requirements(tx: Tx, tenantId: string, applicationId: string) {
   `;
   return [
     { code: 'id_document', ok: r!.hasId && !r!.idExpired, message: r!.hasId ? (r!.idExpired ? 'El documento de identidad caduca antes del inicio' : 'Documento de identidad vigente') : 'Falta el documento de identidad' },
-    { code: 'legal_basis', ok: r!.origin === 'applied' || r!.poolConsent, message: r!.origin === 'applied' ? 'Se inscribió en la oferta (medidas precontractuales)' : 'Consentimiento de la bolsa vigente' },
+    {
+      code: 'legal_basis',
+      ok: r!.origin === 'applied' || r!.accepted || r!.poolConsent,
+      message: r!.origin === 'applied' ? 'Se inscribió en la oferta (medidas precontractuales)'
+        : r!.accepted ? 'Aceptó presentarse a esta petición (medidas precontractuales)'
+        : r!.poolConsent ? 'Consentimiento de la bolsa vigente'
+        : 'Sin consentimiento de la bolsa ni aceptación de la candidatura: no se puede proponer',
+    },
     { code: 'client_data_transfer', ok: true, message: 'Comunicar sus datos a la empresa usuaria al proponerla [verificar con la asesoría]' },
     { code: 'licenses', ok: !r!.licensesText, message: r!.licensesText ? `Comprueba los carnés que pide la petición: ${r!.licensesText}` : 'La petición no pide carnés' },
   ];
@@ -175,7 +187,8 @@ export const applications = createRouter()
       summary: 'Añadir una persona a una petición',
       description:
         'Empieza en `registered` (o la etapa de selección indicada). `origin: applied` si se inscribió ella (medidas ' +
-        'precontractuales); `sourced` si la ETT la saca de la bolsa: exige su consentimiento de la bolsa vigente (409). ' +
+        'precontractuales); `sourced` si la ETT la saca de la bolsa: exige su consentimiento de la bolsa vigente o ' +
+        '`candidateAcceptance` (aceptó presentarse a esta petición); si no, 409. ' +
         '409 también si ya está en esa petición o la petición está cerrada o cancelada.',
       security: bearerSecurity,
       request: {
@@ -186,6 +199,11 @@ export const applications = createRouter()
           stage: z.enum(['registered', 'preselected', 'interview']).optional(),
           source: Source.nullable().optional(),
           notes: nullableText(2000).optional(),
+          candidateAcceptance: z.strictObject({
+            at: z.iso.datetime({ offset: true }).optional(),
+            channel: z.enum(['phone', 'email', 'whatsapp', 'sms', 'in_person', 'other']),
+          }).optional()
+            .openapi({ description: 'La persona (contactada por la ETT) aceptó presentarse: base precontractual sin consentimiento de la bolsa' }),
         }).openapi('ApplicationCreate')),
       },
       responses: { 201: jsonContent(ApplicationWithChecks, 'Candidatura'), ...errorResponses(400, 401, 403, 404, 409, 422) },
@@ -205,6 +223,8 @@ export const applications = createRouter()
             tenantId: ctx.tenantId, candidateId: body.candidateId, requestId: body.requestId, origin: body.origin,
             legalBasis: body.origin === 'applied' ? 'precontractual' : 'consent', stage: body.stage ?? 'registered',
             source: body.source ?? null, notes: body.notes ?? null,
+            candidateAcceptedAt: body.candidateAcceptance ? (body.candidateAcceptance.at ?? new Date().toISOString()) : null,
+            candidateAcceptedChannel: body.candidateAcceptance?.channel ?? null,
           })} returning id
         `;
         return one(tx, ctx.tenantId, row!.id, true);
@@ -245,6 +265,26 @@ export const applications = createRouter()
           await tx`update public.applications set ${tx(patch as Record<string, never>)} where tenant_id = ${ctx.tenantId} and id = ${id}`;
         }
         return one(tx, ctx.tenantId, id);
+      });
+      return c.json(app, 200);
+    },
+  )
+  .openapi(
+    action('candidate-acceptance', 'Anotar que acepta presentarse',
+      'La ETT la contactó y la persona acepta presentarse a esta petición: cuándo (por defecto, ahora) y por qué canal. ' +
+      'Es base precontractual (sin consentimiento de la bolsa). Se anota una vez.',
+      z.strictObject({
+        at: z.iso.datetime({ offset: true }).optional(),
+        channel: z.enum(['phone', 'email', 'whatsapp', 'sms', 'in_person', 'other']),
+      }).openapi('ApplicationCandidateAcceptance')),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json' as never) as { at?: string; channel: string };
+      const app = await withTenant(c, {}, async (tx, ctx) => {
+        await findApplication(tx, ctx, id);
+        await tx`update public.applications set candidate_accepted_at = ${body.at ?? new Date().toISOString()},
+                 candidate_accepted_channel = ${body.channel} where tenant_id = ${ctx.tenantId} and id = ${id}`;
+        return one(tx, ctx.tenantId, id, true);
       });
       return c.json(app, 200);
     },

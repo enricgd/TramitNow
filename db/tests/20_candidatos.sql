@@ -1,7 +1,7 @@
 -- Candidatos: huella única por ETT, consentimientos que no cambian, salud solo con base legal, candidaturas y plazas,
 -- anonimizar, auditoría de accesos que no se puede cambiar ni borrar, y RLS. Datos inventados (los «cifrados» son
 -- textos de prueba con el formato de la API: aquí no hay claves).
-select plan(32);
+select plan(34);
 
 select ok(exists (select 1 from public.role_permissions rp join public.roles r on r.id = rp.role_id
                   where r.code = 'seleccion' and rp.permission_code = 'candidates.manage'
@@ -109,6 +109,13 @@ select lives_ok(
   'si se inscribe ella, sí');
 select is((select legal_basis::text from public.applications where id = '8b000000-0000-0000-0000-0000000000a1'), 'precontractual',
           'la base legal la decide la base de datos por el origen');
+update public.applications set candidate_accepted_at = now(), candidate_accepted_channel = 'phone'
+where id = '8b000000-0000-0000-0000-0000000000a1';
+select is((select candidate_accepted_by from public.applications where id = '8b000000-0000-0000-0000-0000000000a1'),
+          'a0000000-0000-0000-0000-000000000002'::uuid, 'la aceptación de la candidatura guarda quién la anotó');
+select throws_ok(
+  $$ update public.applications set candidate_accepted_channel = 'email' where id = '8b000000-0000-0000-0000-0000000000a1' $$,
+  'TN409', null, 'y no se cambia');
 update public.applications set stage = 'proposed',
   slot_id = (select id from public.request_slots where request_id = '87000000-0000-0000-0000-0000000000d1' and slot_number = 1)
 where id = '8b000000-0000-0000-0000-0000000000a1';

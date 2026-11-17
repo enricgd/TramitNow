@@ -595,7 +595,8 @@ curso) o del puesto (actividades del RD 216/1999, anexo), irán en `clients` y e
 
 ## Fase 6: candidatos y selección
 
-Migración `20261117000500_candidates.sql`; pantalla `apps/web/src/views/CandidatosView.jsx` y notas
+Migraciones `20261117000500_candidates.sql` y `20261117000600_candidates_followup.sql`; pantalla
+`apps/web/src/views/CandidatosView.jsx` y notas
 `design/cambios/*candidat*`. Tests: `db/tests/20_candidatos.sql`, `apps/api/test/candidatos.test.ts` y
 `apps/api/test/datos-personales.test.ts`.
 
@@ -606,6 +607,7 @@ Migración `20261117000500_candidates.sql`; pantalla `apps/web/src/views/Candida
 | `privacy_notices` | Textos legales de la ETT por finalidad (`talent_pool`, `health_data`) y versión. No cambian: para cambiar el texto, otra versión |
 | `candidate_consents` | Consentimientos con la versión del texto, la fecha, el canal y el documento firmado. La bolsa caduca a `tenants.candidate_pool_retention_months` (24 [verificar]). Solo se retiran; lo demás no cambia (prueba de la base legal) |
 | `applications` | Candidaturas (persona × petición, única): `registered`, `preselected`, `interview`, `proposed` (reserva una plaza), `confirmed` (la cubre), `discarded`, `withdrawn`; `on_mission`, `finished` y `left` reservadas para la fase 7. Base legal por el origen: `applied` → medidas precontractuales; `sourced` (de la bolsa) → consentimiento vigente, si no `TN409` |
+| `candidate_contacts` | Historial de contactos (canal, resultado, nota, próxima acción, petición). Actualiza `candidates.last_contact_at`; no se cambian ni se borran (salvo al anonimizar) |
 | `access_log` | Auditoría de accesos a datos personales: abrir la ficha, ver un dato sensible, descargar un documento del candidato, exportar y anonimizar. Solo se añade (`private.log_access`) |
 
 **Datos personales cifrados (decisión del 17/11/2026).** El número del documento de identidad, el de la Seguridad
@@ -619,13 +621,18 @@ Reglas en la base de datos:
 
 - Huella del documento única por ETT; el texto cifrado tiene que tener el formato de la API (un DNI en claro no entra).
 - Salud solo con base legal (`explicit_consent`, con un consentimiento `health_data` vigente, o `labor_obligation`).
+- **Base legal de la candidatura**: `applied` (se inscribió) o `sourced` con la **aceptación de la candidatura**
+  anotada (la ETT la contactó y aceptó presentarse a esa petición: cuándo, canal y quién) son medidas precontractuales;
+  `sourced` sin ella necesita el consentimiento de la bolsa vigente, al crearla y al proponerla al cliente (`TN409`).
 - Candidaturas: la plaza la mueve la base de datos (reservada al proponer, cubierta al confirmar, por cubrir al
   descartar, retirar o liberar). Una persona ocupa como mucho una plaza a la vez. No se crean en peticiones cerradas o
   canceladas ni de personas anonimizadas.
 - **Supresión**: `private.anonymize_candidate()` (`privacy.manage`). Sustituye o borra los datos personales y la huella
   (la persona puede volver a darse de alta), borra sus documentos salvo los de conservación obligatoria (devuelve las
   rutas para que la API borre los ficheros), saca sus candidaturas abiertas y vacía los valores de su historial. Se
-  conservan la auditoría y los consentimientos. No se puede con una plaza confirmada.
+  conservan la auditoría y los consentimientos. No se puede con una plaza confirmada. Punto previsto para la fase 7:
+  `private.candidate_legal_retention()` (hoy no devuelve nada) dirá qué obliga a conservar la ley laboral y de la
+  Seguridad Social a quien haya tenido contrato.
 - **Auditoría**: nadie la cambia; borrar solo lo que ha pasado `tenants.access_log_retention_months` (24 [verificar])
   y nunca con la sesión de la API (`private.purge_access_log()`, para una tarea programada con postgres) o al borrar la
   ETT entera. La leen `privacy.audit`.
@@ -812,7 +819,9 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 - Fase 6: plazos de conservación (bolsa y auditoría, 24 meses) y lista de supuestos [verificar] con la asesoría; si
   comunicar los datos al cliente al proponer necesita algo más que las medidas precontractuales [verificar]. Tareas
   programadas: avisos de caducidad de documentos y de consentimientos, purga de la auditoría
-  (`private.purge_access_log()`) y anonimización de los candidatos con el plazo cumplido (hoy, uno a uno). Volver a
+  (`private.purge_access_log()`) y anonimización automática al caducar el consentimiento de la bolsa (hoy se revisan con
+  `GET /v1/candidates?poolConsent=expired` o `GET /v1/privacy/retention` y se anonimizan uno a uno). Fase 7: rellenar
+  `private.candidate_legal_retention()` con los plazos de conservación de contratos y nóminas [verificar]. Volver a
   cifrar con la clave nueva al rotar. Envío real de correos. Datos de los trabajadores (fase 7) con el mismo cifrado.
 - Más catálogos oficiales globales: ocupaciones CNO-11 (y el código de 8 dígitos del SEPE para Contrat@),
   grupos y clases de la CNAE (hoy solo secciones y divisiones, en `cnae_activities`), regímenes de la Seguridad Social, tipos de documento de identidad (`client_centers.cnae_code` y

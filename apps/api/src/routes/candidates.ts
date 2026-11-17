@@ -140,6 +140,7 @@ const listFields = {
   source: Source,
   mainProfile: ProfileRef.nullable(),
   otherProfileNames: z.array(z.string()),
+  experienceYears: z.number().int().nullable(),
   idDocument: z.object({
     type: IdDocumentType.nullable(),
     masked: z.string().nullable().openapi({ example: '•••••123X' }),
@@ -220,6 +221,10 @@ const ListQuery = PaginationQuery.extend({
   profileId: z.guid().optional(),
   attributeId: z.string().regex(/^[0-9a-f-]{36}(,[0-9a-f-]{36})*$/i, 'Uno o varios id separados por comas').optional(),
   documents: z.enum(['alerts', 'missing']).optional(),
+  poolConsent: z.enum(['valid', 'expiring', 'expired', 'none']).optional()
+    .openapi({ description: 'Consentimiento de la bolsa: expired (caducado o retirado) para revisarlos y anonimizarlos' }),
+  idDocumentNumber: z.string().trim().min(3).max(20).optional()
+    .openapi({ description: 'Búsqueda exacta por DNI, NIE o pasaporte (por la huella; sin clave de cifrado, 503)' }),
   anonymized: z.enum(['true', 'false']).transform((v) => v === 'true').optional()
     .openapi({ description: 'true: solo los anonimizados. Por defecto, los demás' }),
 });
@@ -273,13 +278,32 @@ const DocumentAlertSchema = z
   })
   .openapi('CandidateDocumentAlert');
 
+
+const ContactChannel = z.enum(['phone', 'email', 'whatsapp', 'sms', 'in_person', 'other']);
+const ContactSchema = z
+  .object({
+    id: z.guid(), contactedAt: Timestamp, channel: ContactChannel, result: z.string().nullable(), note: z.string().nullable(),
+    nextAction: z.string().nullable(), requestId: z.guid().nullable(), requestCode: z.string().nullable(),
+    createdByName: z.string().nullable(),
+  })
+  .openapi('CandidateContact');
+const loadContacts = (tx: Tx, tenantId: string, candidateId: string) => tx<z.infer<typeof ContactSchema>[]>`
+  select k.id, k.contacted_at, k.channel, k.result, k.note, k.next_action, k.request_id, r.code as request_code,
+         p.full_name as created_by_name
+  from public.candidate_contacts k
+  left join public.requests r on r.tenant_id = k.tenant_id and r.id = k.request_id
+  left join public.profiles p on p.id = k.created_by
+  where k.tenant_id = ${tenantId} and k.candidate_id = ${candidateId}
+  order by k.contacted_at desc
+`;
+
 // ---------------------------------------------------------------------------
 // Lectura
 // ---------------------------------------------------------------------------
 interface SummaryRow {
   id: string; code: string; firstName: string; lastName: string | null; phone: string | null; email: string | null;
   city: string | null; provinceCode: string | null; status: Summary['status']; source: Summary['source'];
-  mainProfile: Summary['mainProfile']; otherProfileNames: string[] | null; idDocumentType: Summary['idDocument']['type'];
+  mainProfile: Summary['mainProfile']; otherProfileNames: string[] | null; experienceYears: number | null; idDocumentType: Summary['idDocument']['type'];
   idDocumentHint: string | null; hasIdDocument: boolean; idDocumentExpiresOn: string | null; ssNumberHint: string | null;
   ibanHint: string | null; poolExpiresAt: string | null; poolState: Summary['poolConsent']['state'];
   docsExpired: number; docsExpiring: number; activeApplications: number; lastContactAt: string | null;
@@ -292,7 +316,7 @@ const summarySelect = (tx: Tx, tenantId: string) => tx`
          (select array_agg(i.name order by i.name) from public.candidate_attributes a
           join public.catalog_items i on i.tenant_id = a.tenant_id and i.id = a.item_id
           where a.tenant_id = c.tenant_id and a.candidate_id = c.id and a.catalog = 'candidate_profile') as other_profile_names,
-         c.id_document_type, c.id_document_hint, c.id_document_number_enc is not null as has_id_document,
+         c.experience_years, c.id_document_type, c.id_document_hint, c.id_document_number_enc is not null as has_id_document,
          to_char(c.id_document_expires_on, 'YYYY-MM-DD') as id_document_expires_on, c.ss_number_hint, c.iban_hint,
          pc.expires_at as pool_expires_at,
          case when pc.id is null then 'none'
@@ -324,6 +348,7 @@ function presentSummary(r: SummaryRow): Summary {
     id: r.id, code: r.code, firstName: r.firstName, lastName: r.lastName, phone: r.phone, email: r.email, city: r.city,
     provinceCode: r.provinceCode, status: r.status, source: r.source, mainProfile: r.mainProfile,
     otherProfileNames: r.otherProfileNames ?? [],
+    experienceYears: r.experienceYears,
     idDocument: {
       type: r.idDocumentType,
       masked: mask(r.idDocumentHint),
@@ -586,11 +611,16 @@ export const candidates = createRouter()
         for (const id of q.attributeId?.split(',') ?? []) {
           conds.push(tx`exists (select 1 from public.candidate_attributes a where a.tenant_id = c.tenant_id and a.candidate_id = c.id and a.item_id = ${id})`);
         }
+        if (q.idDocumentNumber) {
+          const fp = requirePersonalData(c.get('personalData')).fingerprint(ctx.tenantId, normalizeIdNumber(q.idDocumentNumber));
+          conds.push(tx`c.id_document_fingerprint = ${fp}`);
+        }
         const where = conds.reduce((acc, cond) => tx`${acc} and ${cond}`);
+        const pool = q.poolConsent ? tx`x.pool_state = ${q.poolConsent}` : tx`true`;
         const docs = q.documents === 'alerts'
           ? tx`(x.docs_expired > 0 or x.docs_expiring > 0 or x.id_document_expires_on < to_char(current_date, 'YYYY-MM-DD'))`
           : q.documents === 'missing' ? tx`(not x.has_id_document or x.pool_state in ('none', 'expired'))` : tx`true`;
-        const base = tx`select * from (${summarySelect(tx, ctx.tenantId)} and ${where}) x where ${docs}`;
+        const base = tx`select * from (${summarySelect(tx, ctx.tenantId)} and ${where}) x where ${docs} and ${pool}`;
         const rows = await tx<SummaryRow[]>`${base} order by x.created_at desc, x.code desc limit ${q.limit} offset ${q.offset}`;
         const [count] = await tx<{ total: number }[]>`select count(*)::int as total from (${base}) s`;
         return { data: rows.map(presentSummary), pagination: { limit: q.limit, offset: q.offset, total: count?.total ?? 0 } };
@@ -1118,5 +1148,61 @@ export const candidates = createRouter()
       });
       return result.status === 201 ? c.json(result.item, 201) : c.json(result.item, 200);
     },
+  )
+  .openapi(
+    createRoute({
+      method: 'get',
+      path: '/candidates/{id}/contacts',
+      tags,
+      summary: 'Historial de contactos',
+      security: bearerSecurity,
+      request: { params: IdParams },
+      responses: { 200: jsonContent(listOf(ContactSchema), 'Contactos'), ...errorResponses(400, 401, 403, 404) },
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const data = await withTenant(c, {}, async (tx, ctx) => {
+        const [exists] = await tx`select 1 from public.candidates where tenant_id = ${ctx.tenantId} and id = ${id}`;
+        if (!exists) throw notFound('El candidato no existe');
+        return [...(await loadContacts(tx, ctx.tenantId, id))];
+      });
+      return c.json({ data }, 200);
+    },
+  )
+  .openapi(
+    createRoute({
+      method: 'post',
+      path: '/candidates/{id}/contacts',
+      tags,
+      summary: 'Registrar un contacto',
+      description: `Requiere \`${MANAGE}\`. Canal, resultado, nota, próxima acción y, si es por una petición, cuál. Actualiza el último contacto. No se cambian ni se borran.`,
+      security: bearerSecurity,
+      request: {
+        params: IdParams,
+        body: jsonBody(z.strictObject({
+          contactedAt: z.iso.datetime({ offset: true }).optional(),
+          channel: ContactChannel,
+          result: nullableText(120).optional(),
+          note: nullableText(4000).optional(),
+          nextAction: nullableText(250).optional(),
+          requestId: z.guid().nullable().optional(),
+        }).openapi('CandidateContactCreate')),
+      },
+      responses: { 201: jsonContent(listOf(ContactSchema), 'Contactos'), ...errorResponses(400, 401, 403, 404, 409) },
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const data = await withTenant(c, { permission: MANAGE }, async (tx, ctx) => {
+        const [exists] = await tx`select 1 from public.candidates where tenant_id = ${ctx.tenantId} and id = ${id}`;
+        if (!exists) throw notFound('El candidato no existe');
+        await tx`insert into public.candidate_contacts ${tx({
+          tenantId: ctx.tenantId, candidateId: id, channel: body.channel, result: body.result ?? null, note: body.note ?? null,
+          nextAction: body.nextAction ?? null, requestId: body.requestId ?? null,
+          ...(body.contactedAt ? { contactedAt: body.contactedAt } : {}),
+        } as never)}`;
+        return [...(await loadContacts(tx, ctx.tenantId, id))];
+      });
+      return c.json({ data }, 201);
+    },
   );
-

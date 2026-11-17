@@ -105,6 +105,8 @@ const CreateSchema = z
     ...editableFields,
     status: z.enum(['pending', 'draft']).default('pending').openapi({ description: 'Al subir: pendiente de validar o borrador' }),
     visibleInPortal: z.boolean().default(false),
+    replacesDocumentId: z.guid().optional()
+      .openapi({ description: '«Renovar»: el documento anterior de la misma ficha queda eliminado (baja recuperable) y lo sustituye este' }),
   })
   .partial({ expiresOn: true, notes: true })
   .openapi('DocumentCreate');
@@ -240,7 +242,17 @@ export const documents = createRouter()
           mimeType: info.mimeType,
           sizeBytes: info.size,
         };
+        if (body.replacesDocumentId) {
+          const [old] = await tx`
+            select 1 from public.documents where tenant_id = ${ctx.tenantId} and id = ${body.replacesDocumentId}
+              and entity_type = ${body.entityType} and entity_id = ${body.entityId} and deleted_at is null
+          `;
+          if (!old) throw new ApiError(422, 'referencia_invalida', 'El documento que se renueva tiene que ser de la misma ficha');
+        }
         const [created] = await tx<{ id: string }[]>`insert into public.documents ${tx(values)} returning id`;
+        if (body.replacesDocumentId) {
+          await tx`update public.documents set deleted_at = now() where tenant_id = ${ctx.tenantId} and id = ${body.replacesDocumentId}`;
+        }
         return findDocument(tx, ctx.tenantId, created!.id);
       });
       return c.json(row, 201);

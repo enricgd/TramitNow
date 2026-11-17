@@ -213,6 +213,49 @@ describe('candidaturas y plazas', () => {
   });
 });
 
+describe('aceptación de la candidatura, contactos y filtros', () => {
+  it('sin consentimiento de la bolsa, la ETT anota que la persona acepta presentarse', async () => {
+    const third = await call('POST', '/v1/candidates', { token: seleccion, body: { firstName: 'Persona', lastName: 'Ficticia Cuatro', experienceYears: 3 } });
+    const no = await call('POST', '/v1/applications', { token: seleccion, body: { candidateId: third.body.id, requestId, origin: 'sourced' } });
+    expect(no.status).toBe(409);
+    const yes = await call('POST', '/v1/applications', {
+      token: seleccion, body: { candidateId: third.body.id, requestId, origin: 'sourced', candidateAcceptance: { channel: 'phone' } },
+    });
+    expect(yes.status).toBe(201);
+    expect(yes.body).toMatchObject({ legalBasis: 'precontractual', candidateAcceptedChannel: 'phone' });
+    expect(yes.body.candidateAcceptedAt).toBeTruthy();
+  });
+
+  it('si retira el consentimiento, no se propone hasta anotar que acepta', async () => {
+    const cand = await call('GET', `/v1/candidates/${candidateId}`, { token: seleccion });
+    const pool = cand.body.consents.find((x: { purpose: string }) => x.purpose === 'talent_pool');
+    await call('POST', `/v1/candidate-consents/${pool.id}/withdraw`, { token: seleccion });
+    const [app] = cand.body.applications;
+    expect(app.legalBasis).toBe('consent');
+    const no = await call('POST', `/v1/applications/${app.id}/propose`, { token: seleccion, body: {} });
+    expect(no.status).toBe(409);
+    const acc = await call('POST', `/v1/applications/${app.id}/candidate-acceptance`, { token: seleccion, body: { channel: 'email' } });
+    expect(acc.body.legalBasis).toBe('precontractual');
+    expect((await call('POST', `/v1/applications/${app.id}/candidate-acceptance`, { token: seleccion, body: { channel: 'email' } })).status).toBe(409);
+    expect((await call('POST', `/v1/applications/${app.id}/propose`, { token: seleccion, body: {} })).status).toBe(200);
+    await call('POST', `/v1/applications/${app.id}/release`, { token: seleccion });
+  });
+
+  it('contactos, último contacto y filtros por consentimiento y por documento exacto', async () => {
+    const res = await call('POST', `/v1/candidates/${otherId}/contacts`, {
+      token: seleccion, body: { channel: 'phone', result: 'Interesada', nextAction: 'Entrevista', requestId },
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data[0]).toMatchObject({ channel: 'phone', result: 'Interesada', requestId });
+    const list = await call('GET', '/v1/candidates?idDocumentNumber=y1234567x', { token: seleccion });
+    expect(list.body.data.map((c: { id: string }) => c.id)).toEqual([otherId]);
+    expect(list.body.data[0].lastContactAt).toBeTruthy();
+    expect(list.body.data[0]).toHaveProperty('experienceYears');
+    const expired = await call('GET', '/v1/candidates?poolConsent=expired', { token: seleccion });
+    expect(expired.body.data.map((c: { id: string }) => c.id)).toContain(candidateId);
+  });
+});
+
 describe('derechos RGPD y aislamiento', () => {
   it('exportar trae todo descifrado y queda auditado', async () => {
     expect((await call('GET', `/v1/candidates/${candidateId}/export`, { token: seleccion })).status).toBe(403);
