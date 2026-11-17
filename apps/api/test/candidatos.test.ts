@@ -258,6 +258,39 @@ describe('aceptación de la candidatura, contactos y filtros', () => {
     expect(facets.body.profiles.find((p: { name: string }) => p.name === 'Carretillero/a')?.count).toBeGreaterThanOrEqual(1);
     expect(facets.body.poolConsentExpired).toBeGreaterThanOrEqual(1);
   });
+  it('filtros de documentación y RGPD sin descifrar, con los mismos recuentos que el listado', async () => {
+    const full = await call('POST', '/v1/candidates', {
+      token: seleccion,
+      body: { firstName: 'Persona', lastName: 'Ficticia Completa', idDocumentType: 'dni', idDocumentNumber: '87654321X',
+        idDocumentExpiresOn: '2031-01-01', ssNumber: '280000000138' },
+    });
+    const notices = await call('GET', '/v1/privacy-notices?purpose=talent_pool', { token: seleccion });
+    const notice = notices.body.data.find((n: { version: string }) => n.version === 'TEST-1');
+    await call('POST', `/v1/candidates/${full.body.id}/consents`, { token: seleccion, body: { purpose: 'talent_pool', noticeId: notice.id, channel: 'paper' } });
+    const ids = (r: { body: { data: { id: string }[] } }) => r.body.data.map((c) => c.id);
+    // Sin el documento escaneado, el DNI sigue pendiente.
+    expect(ids(await call('GET', '/v1/candidates?documents=id_or_ss_pending&limit=200', { token: seleccion }))).toContain(full.body.id);
+    await adminSql`
+      insert into public.documents (tenant_id, entity_type, entity_id, type_id, name, storage_path, mime_type, size_bytes, status)
+      select ${T.A}, 'candidate', ${full.body.id}, id, 'DNI ficticio.pdf', ${`${T.A}/candidate/${full.body.id}/dni.pdf`}, 'application/pdf', 100, 'validated'
+      from public.catalog_items where tenant_id = ${T.A} and catalog = 'document_type' and code = 'candidate_id_document'
+    `;
+    const ok = ids(await call('GET', '/v1/candidates?documents=ok&limit=200', { token: seleccion }));
+    expect(ok).toContain(full.body.id);
+    expect(ok).not.toContain(candidateId);
+    const pending = ids(await call('GET', '/v1/candidates?documents=pending&limit=200', { token: seleccion }));
+    expect(pending).toEqual(expect.arrayContaining([candidateId, otherId]));
+    expect(pending).not.toContain(full.body.id);
+    expect(ids(await call('GET', '/v1/candidates?documents=id_or_ss_pending&limit=200', { token: seleccion }))).toContain(otherId);
+    const privacy = ids(await call('GET', '/v1/candidates?documents=privacy_pending&limit=200', { token: seleccion }));
+    expect(privacy).toContain(candidateId);
+    expect(privacy).not.toContain(full.body.id);
+    const facets = (await call('GET', '/v1/candidate-facets', { token: seleccion })).body;
+    for (const [key, filter] of [['ok', 'ok'], ['pending', 'pending'], ['idOrSsPending', 'id_or_ss_pending'], ['privacyPending', 'privacy_pending']]) {
+      const total = (await call('GET', `/v1/candidates?documents=${filter}&limit=1`, { token: seleccion })).body.pagination.total;
+      expect(facets.documentation[key!]).toBe(total);
+    }
+  });
 });
 
 describe('derechos RGPD y aislamiento', () => {

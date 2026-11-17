@@ -220,7 +220,12 @@ const ListQuery = PaginationQuery.extend({
   source: Source.optional(),
   profileId: z.guid().optional(),
   attributeId: z.string().regex(/^[0-9a-f-]{36}(,[0-9a-f-]{36})*$/i, 'Uno o varios id separados por comas').optional(),
-  documents: z.enum(['alerts', 'missing']).optional(),
+  documents: z.enum(['alerts', 'missing', 'ok', 'pending', 'id_or_ss_pending', 'privacy_pending']).optional()
+    .openapi({
+      description: 'alerts: documentos caducados o por caducar; missing: sin documento de identidad o sin consentimiento de bolsa; ' +
+        'ok: documentación y RGPD correctos; pending: documentación o RGPD pendiente; id_or_ss_pending: DNI o NSS pendiente ' +
+        '(sin número, sin el documento escaneado o caducado); privacy_pending: sin consentimiento de bolsa vigente. Sin descifrar nada',
+    }),
   poolConsent: z.enum(['valid', 'expiring', 'expired', 'none']).optional()
     .openapi({ description: 'Consentimiento de la bolsa: expired (caducado o retirado) para revisarlos y anonimizarlos' }),
   idDocumentNumber: z.string().trim().min(3).max(20).optional()
@@ -304,7 +309,7 @@ interface SummaryRow {
   id: string; code: string; firstName: string; lastName: string | null; phone: string | null; email: string | null;
   city: string | null; provinceCode: string | null; status: Summary['status']; source: Summary['source'];
   mainProfile: Summary['mainProfile']; otherProfileNames: string[] | null; experienceYears: number | null; idDocumentType: Summary['idDocument']['type'];
-  idDocumentHint: string | null; hasIdDocument: boolean; idDocumentExpiresOn: string | null; ssNumberHint: string | null;
+  idDocumentHint: string | null; hasIdDocument: boolean; hasIdScan: boolean; idDocumentExpiresOn: string | null; ssNumberHint: string | null;
   ibanHint: string | null; poolExpiresAt: string | null; poolState: Summary['poolConsent']['state'];
   docsExpired: number; docsExpiring: number; activeApplications: number; lastContactAt: string | null;
   anonymized: boolean; createdAt: string;
@@ -317,6 +322,9 @@ const summarySelect = (tx: Tx, tenantId: string) => tx`
           join public.catalog_items i on i.tenant_id = a.tenant_id and i.id = a.item_id
           where a.tenant_id = c.tenant_id and a.candidate_id = c.id and a.catalog = 'candidate_profile') as other_profile_names,
          c.experience_years, c.id_document_type, c.id_document_hint, c.id_document_number_enc is not null as has_id_document,
+         exists (select 1 from public.documents d join public.catalog_items dt on dt.tenant_id = d.tenant_id and dt.id = d.type_id
+                 where d.tenant_id = c.tenant_id and d.entity_type = 'candidate' and d.entity_id = c.id and d.deleted_at is null
+                   and d.status <> 'rejected' and dt.code = 'candidate_id_document') as has_id_scan,
          to_char(c.id_document_expires_on, 'YYYY-MM-DD') as id_document_expires_on, c.ss_number_hint, c.iban_hint,
          pc.expires_at as pool_expires_at,
          case when pc.id is null then 'none'
@@ -450,6 +458,38 @@ async function loadCandidate(tx: Tx, tenantId: string, id: string): Promise<Cand
     applications: await loadApplications(tx, tenantId, { candidateId: id }),
     missing,
   };
+}
+
+
+// ---------------------------------------------------------------------------
+// Estado de la documentación (sin descifrar: campos vacíos, documentos que faltan, caducidades y consentimiento)
+// ---------------------------------------------------------------------------
+type DocsFilter = 'alerts' | 'missing' | 'ok' | 'pending' | 'id_or_ss_pending' | 'privacy_pending';
+const SQL_ID_OR_SS_PENDING = (tx: Tx) =>
+  tx`(not x.has_id_document or not x.has_id_scan or x.id_document_expires_on < to_char(current_date, 'YYYY-MM-DD') or x.ss_number_hint is null)`;
+const SQL_PRIVACY_PENDING = (tx: Tx) => tx`(x.pool_state in ('none', 'expired'))`;
+function documentsCondition(tx: Tx, filter: DocsFilter) {
+  switch (filter) {
+    case 'alerts':
+      return tx`(x.docs_expired > 0 or x.docs_expiring > 0 or x.id_document_expires_on < to_char(current_date, 'YYYY-MM-DD'))`;
+    case 'missing':
+      return tx`(not x.has_id_document or x.pool_state in ('none', 'expired'))`;
+    case 'id_or_ss_pending':
+      return SQL_ID_OR_SS_PENDING(tx);
+    case 'privacy_pending':
+      return SQL_PRIVACY_PENDING(tx);
+    case 'pending':
+      return tx`(${SQL_ID_OR_SS_PENDING(tx)} or ${SQL_PRIVACY_PENDING(tx)})`;
+    case 'ok':
+      return tx`(not ${SQL_ID_OR_SS_PENDING(tx)} and not ${SQL_PRIVACY_PENDING(tx)} and x.docs_expired = 0)`;
+  }
+}
+/** Lo mismo en la API, para los recuentos. */
+function documentsState(r: SummaryRow) {
+  const today = new Date().toISOString().slice(0, 10);
+  const idOrSsPending = !r.hasIdDocument || !r.hasIdScan || (r.idDocumentExpiresOn !== null && r.idDocumentExpiresOn < today) || r.ssNumberHint === null;
+  const privacyPending = r.poolState === 'none' || r.poolState === 'expired';
+  return { idOrSsPending, privacyPending, pending: idOrSsPending || privacyPending, ok: !idOrSsPending && !privacyPending && r.docsExpired === 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -617,9 +657,7 @@ export const candidates = createRouter()
         }
         const where = conds.reduce((acc, cond) => tx`${acc} and ${cond}`);
         const pool = q.poolConsent ? tx`x.pool_state = ${q.poolConsent}` : tx`true`;
-        const docs = q.documents === 'alerts'
-          ? tx`(x.docs_expired > 0 or x.docs_expiring > 0 or x.id_document_expires_on < to_char(current_date, 'YYYY-MM-DD'))`
-          : q.documents === 'missing' ? tx`(not x.has_id_document or x.pool_state in ('none', 'expired'))` : tx`true`;
+        const docs = q.documents ? documentsCondition(tx, q.documents) : tx`true`;
         const base = tx`select * from (${summarySelect(tx, ctx.tenantId)} and ${where}) x where ${docs} and ${pool}`;
         const rows = await tx<SummaryRow[]>`${base} order by x.created_at desc, x.code desc limit ${q.limit} offset ${q.offset}`;
         const [count] = await tx<{ total: number }[]>`select count(*)::int as total from (${base}) s`;
@@ -1222,6 +1260,12 @@ export const candidates = createRouter()
           byStatus: z.record(z.string(), z.number().int()),
           documentAlerts: z.number().int().openapi({ description: 'Con documentos caducados o por caducar' }),
           poolConsentExpired: z.number().int(),
+          documentation: z.object({
+            ok: z.number().int().openapi({ description: 'Documentación y RGPD correctos (documents=ok)' }),
+            pending: z.number().int().openapi({ description: 'Documentación o RGPD pendiente (documents=pending)' }),
+            idOrSsPending: z.number().int().openapi({ description: 'DNI o NSS pendiente (documents=id_or_ss_pending)' }),
+            privacyPending: z.number().int().openapi({ description: 'RGPD pendiente (documents=privacy_pending)' }),
+          }),
           profiles: z.array(z.object({ id: z.guid(), name: z.string(), group: z.string().nullable(), count: z.number().int() })),
           attributes: z.array(z.object({ id: z.guid(), catalog: CatalogKind, name: z.string(), group: z.string().nullable(), count: z.number().int() })),
         }).openapi('CandidateFacets'), 'Recuentos'),
@@ -1256,6 +1300,15 @@ export const candidates = createRouter()
           byStatus,
           documentAlerts: rows.filter((r) => r.docsExpired > 0 || r.docsExpiring > 0 || (r.idDocumentExpiresOn !== null && r.idDocumentExpiresOn < today)).length,
           poolConsentExpired: rows.filter((r) => r.poolState === 'expired').length,
+          documentation: (() => {
+            const states = rows.map(documentsState);
+            return {
+              ok: states.filter((x) => x.ok).length,
+              pending: states.filter((x) => x.pending).length,
+              idOrSsPending: states.filter((x) => x.idOrSsPending).length,
+              privacyPending: states.filter((x) => x.privacyPending).length,
+            };
+          })(),
           profiles: [...profiles],
           attributes: [...attributes],
         };
