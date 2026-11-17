@@ -1205,4 +1205,61 @@ export const candidates = createRouter()
       });
       return c.json({ data }, 201);
     },
+  )
+  .openapi(
+    createRoute({
+      method: 'get',
+      path: '/candidate-facets',
+      tags,
+      summary: 'Recuentos para los filtros del listado',
+      description:
+        'Cuántos candidatos (no anonimizados) hay por estado, por perfil (principal u otro) y por carné, habilidad o idioma, ' +
+        'y los indicadores de la cabecera. Solo salen los valores que tiene alguien. Para buscar en el servidor sin traer toda la bolsa.',
+      security: bearerSecurity,
+      responses: {
+        200: jsonContent(z.object({
+          total: z.number().int(),
+          byStatus: z.record(z.string(), z.number().int()),
+          documentAlerts: z.number().int().openapi({ description: 'Con documentos caducados o por caducar' }),
+          poolConsentExpired: z.number().int(),
+          profiles: z.array(z.object({ id: z.guid(), name: z.string(), group: z.string().nullable(), count: z.number().int() })),
+          attributes: z.array(z.object({ id: z.guid(), catalog: CatalogKind, name: z.string(), group: z.string().nullable(), count: z.number().int() })),
+        }).openapi('CandidateFacets'), 'Recuentos'),
+        ...errorResponses(401, 403),
+      },
+    }),
+    async (c) => {
+      const out = await withTenant(c, {}, async (tx, ctx) => {
+        const rows = await tx<SummaryRow[]>`${summarySelect(tx, ctx.tenantId)} and c.anonymized_at is null`;
+        const byStatus: Record<string, number> = {};
+        for (const r of rows) byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
+        const profiles = await tx<{ id: string; name: string; group: string | null; count: number }[]>`
+          select i.id, i.name, i.group_name as group, count(distinct c.id)::int as count
+          from public.candidates c
+          join public.catalog_items i on i.tenant_id = c.tenant_id and i.catalog = 'candidate_profile'
+            and (i.id = c.main_profile_id or exists (select 1 from public.candidate_attributes a
+                 where a.tenant_id = c.tenant_id and a.candidate_id = c.id and a.item_id = i.id))
+          where c.tenant_id = ${ctx.tenantId} and c.anonymized_at is null
+          group by i.id, i.name, i.group_name order by i.group_name nulls last, i.name
+        `;
+        const attributes = await tx<{ id: string; catalog: 'license' | 'skill' | 'language'; name: string; group: string | null; count: number }[]>`
+          select i.id, i.catalog, i.name, i.group_name as group, count(distinct a.candidate_id)::int as count
+          from public.candidate_attributes a
+          join public.candidates c on c.tenant_id = a.tenant_id and c.id = a.candidate_id and c.anonymized_at is null
+          join public.catalog_items i on i.tenant_id = a.tenant_id and i.id = a.item_id
+          where a.tenant_id = ${ctx.tenantId} and a.catalog <> 'candidate_profile'
+          group by i.id, i.catalog, i.name, i.group_name order by i.catalog, i.name
+        `;
+        const today = new Date().toISOString().slice(0, 10);
+        return {
+          total: rows.length,
+          byStatus,
+          documentAlerts: rows.filter((r) => r.docsExpired > 0 || r.docsExpiring > 0 || (r.idDocumentExpiresOn !== null && r.idDocumentExpiresOn < today)).length,
+          poolConsentExpired: rows.filter((r) => r.poolState === 'expired').length,
+          profiles: [...profiles],
+          attributes: [...attributes],
+        };
+      });
+      return c.json(out, 200);
+    },
   );
