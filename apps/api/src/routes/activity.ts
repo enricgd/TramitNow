@@ -6,7 +6,7 @@ import { withTenant } from '../lib/context.js';
 import { PaginationQuery, Timestamp, bearerSecurity, createRouter, errorResponses, jsonContent, paginated } from '../lib/openapi.js';
 
 export const ActivityEntityType = z
-  .enum(['client', 'client_center', 'client_contact', 'client_billing', 'document', 'quote', 'quote_version', 'quote_position', 'request'])
+  .enum(['client', 'client_center', 'client_contact', 'client_billing', 'document', 'quote', 'quote_version', 'quote_position', 'request', 'candidate', 'application'])
   .openapi({ description: 'Tipo de entidad' });
 
 const ActivitySchema = z

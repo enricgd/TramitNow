@@ -1,7 +1,7 @@
 # Candidatos: ver y comprobar documentos, datos que faltan, experiencia y relación con la ETT
 
 - **Fecha**: 2026-10-29
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-17)
 - **Rama y commits**: `design`, 5e74a67
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/candidatos.
   - Ficha de Mohamed El Amrani: datos que faltan y NIE caducado.

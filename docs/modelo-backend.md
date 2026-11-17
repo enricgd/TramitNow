@@ -938,6 +938,32 @@ Notas: Puede disparar eventos de comunicación y generación documental.
 
 ### 06. Candidatos, trabajadores y documentos
 
+> **Candidatos implementados en la fase 6 de otra forma** (`db/migrations/20261117000500_candidates.sql`, detalle en
+> `db/README.md`, "Fase 6: candidatos y selección"). Las tablas de abajo quedan como referencia. Lo que cambia:
+>
+> - `candidates`: bolsa común de la ETT, única por la huella HMAC del documento. Documento, Seguridad Social, IBAN y
+>   salud **cifrados por la API** (AES-256-GCM, decisión del 17/11/2026), con sus cuatro últimos para enmascarar.
+>   Perfiles, carnés, habilidades e idiomas pasan a tablas maestras con sinónimos (`candidate_attributes`).
+> - Nuevo: `privacy_notices` y `candidate_consents` (bolsa y salud, con la versión del texto aceptado), `applications`
+>   (candidaturas por petición, ligadas a sus plazas) y `access_log` (auditoría de accesos, solo se añade).
+> - Supresión = anonimizar (`private.anonymize_candidate`), no borrar.
+> - `workers` (trabajadores, contratos): fase 7, con el mismo cifrado.
+>
+> Decisiones de la fase 6 (17/11/2026):
+>
+> - **Bolsa común a la ETT**; consentimiento de la bolsa de 24 meses por defecto, configurable [verificar].
+> - **Proponer al cliente**: con base precontractual (se inscribió, o la ETT la contactó y aceptó presentarse a esa
+>   petición, anotado con fecha, canal y quién) o con el consentimiento de la bolsa vigente; si no, 409. Comunicar los
+>   datos a la empresa usuaria: solo aviso [verificar].
+> - **«Eliminar» = anonimizar**, solo con `privacy.manage` (administrador); el resto, «descartado». Los consentimientos
+>   caducados se revisan con un filtro; la anonimización automática, más adelante. Desde la fase 7, quien haya tenido
+>   contrato conservará lo que obligan la ley laboral y la de la Seguridad Social (`private.candidate_legal_retention`).
+> - **Salud y discapacidad**: bloque cifrado con base legal obligatoria; los reconocimientos médicos son documentos con
+>   descarga auditada.
+> - **Exportación** (derecho de acceso) con `privacy.manage`, auditada.
+> - Etapas de la candidatura: registered, preselected, interview, proposed, confirmed, discarded y withdrawn;
+>   on_mission, finished y left para la fase 7.
+
 #### candidates
 
 Candidatos/personas disponibles para asignación.

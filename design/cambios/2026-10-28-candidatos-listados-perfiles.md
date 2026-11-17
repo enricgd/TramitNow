@@ -1,7 +1,7 @@
 # Candidatos: listados homogéneos de perfiles, carnés, habilidades e idiomas, y filtro por perfil
 
 - **Fecha**: 2026-10-28
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-17)
 - **Rama y commits**: `design`, b785057
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/candidatos:
   - Filtros "Todos los perfiles" y "Carnés, habilidades e idiomas".

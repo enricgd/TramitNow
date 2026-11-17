@@ -26,6 +26,8 @@ const DIAS_AVISO = 60;
 
 export default function FichaEttView() {
     const [activeTab, setActiveTab] = useState('resumen');
+    // Publicar una versión nueva del texto de privacidad: { version, texto, confirmar }
+    const [textoNuevo, setTextoNuevo] = useState(null);
     const miEtt = useMiEtt();
     const { company, branches, ccc, users, templates, activity, portales, setPortales, servicios, setServicios, hayAjustes } = miEtt;
     const [cccEdicion, setCccEdicion] = useState(null); // { id?, numero, provincia, tipo, sucursalId }
@@ -170,6 +172,7 @@ export default function FichaEttView() {
                             { id: 'usuarios', label: 'Usuarios y roles', count: users.length },
                             { id: 'plantillas', label: 'Plantillas', count: hayAjustes ? templates.length : undefined },
                             { id: 'portales', label: 'Portales' },
+                            { id: 'privacidad', label: 'Protección de datos', alert: miEtt.privacidad.textos.length === 0 },
                             { id: 'actividad', label: 'Actividad' },
                         ]}
                     />
@@ -1053,6 +1056,76 @@ export default function FichaEttView() {
                         </div>
                     )}
 
+                    {/* PROTECCIÓN DE DATOS: texto de privacidad de la bolsa de candidatos (versiones) y plazos (fase 6) */}
+                    {activeTab === 'privacidad' && (() => {
+                        const pv = miEtt.privacidad;
+                        const vigente = pv.textos[0];
+                        return (
+                            <div className="space-y-6 fade-in">
+                                <Card className="p-5 space-y-3">
+                                    <SectionTitle actions={pv.puedeGestionar && <Button size="sm" variant="primary" icon={Plus} onClick={() => setTextoNuevo({ version: '', texto: vigente?.texto ?? '', confirmar: false })}>Publicar versión nueva</Button>}>
+                                        Texto de privacidad de la bolsa de candidatos
+                                    </SectionTitle>
+                                    <p className="text-xs text-slate-500 -mt-1">
+                                        Es lo que acepta cada persona para que la ETT guarde sus datos y le ofrezca otros puestos. Cada consentimiento queda unido a la versión que aceptó, por eso lo publicado no se cambia: para corregirlo, se publica una versión nueva. Lo redacta la asesoría de la ETT.
+                                    </p>
+                                    {!vigente ? (
+                                        <Notice tone="warning" icon={AlertTriangle}>
+                                            Aún no hay ningún texto publicado: sin él no se puede registrar el consentimiento de nadie ni sacar a nadie de la bolsa para una petición.{!pv.puedeGestionar && ' Lo publica quien tiene permiso de protección de datos.'}
+                                        </Notice>
+                                    ) : (
+                                        <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                                            {pv.textos.map((t, i) => (
+                                                <details key={t.id} className="group p-3 text-xs" open={i === 0}>
+                                                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
+                                                        <span className="flex items-center gap-2">
+                                                            <span className="font-medium text-slate-900">Versión {t.version}</span>
+                                                            {i === 0 ? <Badge tone="success" dot>Vigente</Badge> : <Badge tone="neutral">Anterior</Badge>}
+                                                        </span>
+                                                        <span className="text-[11px] text-slate-500">Publicada el {t.fecha} por {t.autor}</span>
+                                                    </summary>
+                                                    <p className="mt-2 whitespace-pre-line text-slate-700">{t.texto}</p>
+                                                </details>
+                                            ))}
+                                        </div>
+                                    )}
+                                </Card>
+
+                                {pv.hayPlazos && (
+                                    <Card className="p-5 space-y-3" key={`privacidad-${pv.mesesConsentimiento}-${pv.diasAvisoDocumentos}-${pv.mesesAuditoria}`}>
+                                        <SectionTitle>Plazos</SectionTitle>
+                                        <p className="text-xs text-slate-500 -mt-1">Valen para toda la ETT.</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl">
+                                            <Field label="Duración del consentimiento de bolsa" hint="Pasado este plazo hay que pedirlo de nuevo o anonimizar los datos.">
+                                                <span className="flex items-center gap-1.5">
+                                                    <TextInput id="privacidad-mesesConsentimiento" type="number" min="1" max="120" defaultValue={pv.mesesConsentimiento} disabled={!pv.puedeGestionar} className="w-24!" />
+                                                    <span className="text-slate-500 text-xs">meses</span>
+                                                </span>
+                                            </Field>
+                                            <Field label="Aviso de documentos que caducan" hint="Días antes de caducar un documento del candidato.">
+                                                <span className="flex items-center gap-1.5">
+                                                    <TextInput id="privacidad-diasAvisoDocumentos" type="number" min="1" max="365" defaultValue={pv.diasAvisoDocumentos} disabled={!pv.puedeGestionar} className="w-24!" />
+                                                    <span className="text-slate-500 text-xs">días</span>
+                                                </span>
+                                            </Field>
+                                            <Field label="Conservación de la auditoría de accesos" hint="Quién ha visto los datos de cada persona.">
+                                                <span className="flex items-center gap-1.5">
+                                                    <TextInput id="privacidad-mesesAuditoria" type="number" min="12" max="120" defaultValue={pv.mesesAuditoria} disabled={!pv.puedeGestionar} className="w-24!" />
+                                                    <span className="text-slate-500 text-xs">meses</span>
+                                                </span>
+                                            </Field>
+                                        </div>
+                                        {pv.puedeGestionar && (
+                                            <div className="flex justify-end">
+                                                <Button size="sm" variant="primary" icon={Save} disabled={isSaving} onClick={() => guardar(() => miEtt.guardarPrivacidad(leerCampos('privacidad-', ['mesesConsentimiento', 'diasAvisoDocumentos', 'mesesAuditoria'])), 'Plazos de protección de datos guardados')}>Guardar</Button>
+                                            </div>
+                                        )}
+                                    </Card>
+                                )}
+                            </div>
+                        );
+                    })()}
+
                     {/* 7. ACTIVIDAD TAB */}
                     {activeTab === 'actividad' && !hayAjustes && (
                         <div className="fade-in"><Proximamente titulo="Registro de actividad">El historial de cambios de la ETT llegará con el historial de actividad común a todas las fichas (fase 1 del plan).</Proximamente></div>
@@ -1309,6 +1382,48 @@ export default function FichaEttView() {
                     </div>
                 </Modal>
             )}
+            {/* PUBLICAR UNA VERSIÓN NUEVA DEL TEXTO DE PRIVACIDAD (con confirmación: lo publicado no se cambia) */}
+            {textoNuevo && !textoNuevo.confirmar && (
+                <Modal
+                    title="Publicar versión nueva del texto de privacidad"
+                    subtitle="Bolsa de candidatos"
+                    onClose={() => setTextoNuevo(null)}
+                    size="max-w-2xl"
+                    footer={<>
+                        <Button onClick={() => setTextoNuevo(null)}>Cancelar</Button>
+                        <Button variant="primary" disabled={!textoNuevo.version.trim() || !textoNuevo.texto.trim()} onClick={() => setTextoNuevo(t => ({ ...t, confirmar: true }))}>Revisar y publicar</Button>
+                    </>}
+                >
+                    <div className="space-y-3 text-xs">
+                        <Field label="Nombre de la versión" hint="Por ejemplo, la fecha: 2026-11.">
+                            <TextInput value={textoNuevo.version} onChange={(e) => setTextoNuevo(t => ({ ...t, version: e.target.value }))} placeholder="2026-11" />
+                        </Field>
+                        <Field label="Texto" hint="El que redacte la asesoría de la ETT. Es lo que acepta cada persona.">
+                            <textarea rows={10} value={textoNuevo.texto} onChange={(e) => setTextoNuevo(t => ({ ...t, texto: e.target.value }))} className="w-full rounded-lg border border-slate-200 p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </Field>
+                    </div>
+                </Modal>
+            )}
+            {textoNuevo?.confirmar && (
+                <Modal
+                    title={`¿Publicar la versión ${textoNuevo.version.trim()}?`}
+                    onClose={() => setTextoNuevo(t => ({ ...t, confirmar: false }))}
+                    size="max-w-md"
+                    footer={<>
+                        <Button onClick={() => setTextoNuevo(t => ({ ...t, confirmar: false }))}>Volver</Button>
+                        <Button variant="primary" disabled={isSaving} onClick={async () => {
+                            const t = textoNuevo;
+                            if (await guardar(() => miEtt.publicarTextoPrivacidad(t.version, t.texto), `Versión ${t.version.trim()} publicada`)) setTextoNuevo(null);
+                        }}>Publicar</Button>
+                    </>}
+                >
+                    <div className="space-y-3 text-xs text-slate-600">
+                        <p>Pasa a ser la versión vigente: los consentimientos que se registren a partir de ahora quedarán unidos a ella. Los anteriores siguen con la versión que aceptaron.</p>
+                        <Notice tone="warning" icon={AlertTriangle}>Una vez publicada no se puede editar ni borrar. Para corregirla habrá que publicar otra versión.</Notice>
+                    </div>
+                </Modal>
+            )}
+
             {cccAEliminar && (
                 <Confirmar title={`Eliminar el CCC ${cccAEliminar.numero}`} onClose={() => setCccAEliminar(null)} onConfirm={() => {
                     const fila = cccAEliminar;

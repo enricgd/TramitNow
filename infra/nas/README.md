@@ -248,6 +248,39 @@ la API. Mientras no haya SMTP, la respuesta trae el enlace de invitación para e
 el enlace como `<INVITE_REDIRECT_URL>verify?token=<hashed_token>&type=invite`, y la página `/verify` de la web lo
 canjea con `verifyOtp`. Por eso no hace falta añadir esa URL a las redirecciones permitidas de Auth.
 
+### Claves de datos personales (desde la fase 6)
+
+La API cifra el DNI o NIE, el número de la Seguridad Social, el IBAN y los datos de salud con AES-256-GCM. Las claves
+van solo en `proyecto/.env` del NAS: nunca en git ni en la base de datos. Sin ellas la API arranca, pero las rutas
+que guardan o enseñan esos datos responden `503 servicio_no_disponible`.
+
+1. Genera dos claves en el NAS (cada una, 32 bytes en base64):
+
+   ```bash
+   ssh Enric@192.168.2.8
+   openssl rand -base64 32
+   openssl rand -base64 32
+   ```
+
+2. Apúntalas en `proyecto/.env`, en el bloque de TramitNOW (`sudo nano proyecto/.env`):
+
+   ```
+   # Cifrado de datos personales: «vN:<clave>» separadas por comas; se cifra con la última (o PERSONAL_DATA_KEY_ID)
+   PERSONAL_DATA_KEYS=v1:LA_PRIMERA_CLAVE
+   # Huella del DNI/NIE para encontrar duplicados
+   PERSONAL_DATA_HMAC_KEY=LA_SEGUNDA_CLAVE
+   ```
+
+3. Lleva el override nuevo al NAS, `sudo sh setup.sh --regenerate` y vuelve a desplegar la API.
+
+**Guarda una copia de las dos claves fuera del NAS** (gestor de contraseñas): sin ellas, los datos cifrados no se
+pueden recuperar, ni siquiera desde una copia de seguridad de la base de datos.
+
+**Rotar la clave de cifrado.** Añade una nueva al final (`PERSONAL_DATA_KEYS=v1:…,v2:…`) y vuelve a desplegar: lo
+nuevo se cifra con `v2` y lo antiguo se sigue leyendo con `v1` (el prefijo del dato dice cuál). Para retirar `v1`,
+antes hay que volver a cifrar con `v2` lo que quede (tarea pendiente; ver `db/README.md`). La clave HMAC no se rota sin
+recalcular todas las huellas.
+
 Si se activan algún día las claves asimétricas de Supabase Auth (`JWT_KEYS`, ES256), la API tendrá que
 verificar con el JWKS en vez de con `JWT_SECRET`.
 

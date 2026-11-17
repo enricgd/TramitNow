@@ -3,7 +3,7 @@
 import { supabase } from '../auth/session';
 import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import type { CatalogRepository, Repositories } from './repositorios';
-import { ApiError, type DocumentUpload, type RequestUseCase, type ServiceRequest, type StoredDocument } from './tipos';
+import { ApiError, type DocumentUpload, type Application, type CandidateCatalogItem, type CandidateContact, type PrivacyNotice, type RequestUseCase, type ServiceRequest, type StoredDocument } from './tipos';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -142,6 +142,8 @@ export function apiRepositories(): Repositories {
       ...crud('/documents'),
       upload: uploadDocument,
       downloadUrl: (id) => get<{ url: string }>(`/documents/${id}/download`).then((r) => r.url),
+      reject: (id, reason) => request('POST', `/documents/${id}/reject`, { body: { reason } }),
+      renewalNotice: (id) => request('POST', `/documents/${id}/renewal-notice`),
     },
     memberships: {
       list: (query) => get('/memberships', query),
@@ -197,6 +199,38 @@ export function apiRepositories(): Repositories {
       reject: (id, body) => request('POST', `/quote-versions/${id}/reject`, { body }),
       newVersion: (id) => request('POST', `/quote-versions/${id}/new-version`),
       proposalPdf: (id) => request('POST', `/quote-versions/${id}/proposal-pdf`),
+    },
+    candidates: {
+      list: (query) => get('/candidates', query),
+      get: (id) => get(`/candidates/${id}`),
+      create: (body) => request('POST', '/candidates', { body }),
+      update: (id, body) => request('PATCH', `/candidates/${id}`, { body }),
+      facets: () => get('/candidate-facets'),
+      checkDuplicate: (body) => request('POST', '/candidates/check-duplicate', { body }),
+      sensitive: (id, fields) => get(`/candidates/${id}/sensitive`, { fields: fields.join(',') }),
+      anonymize: (id, reason) => request('POST', `/candidates/${id}/anonymize`, { body: { reason } }),
+      exportData: (id) => get(`/candidates/${id}/export`),
+      addConsent: (id, body) => request('POST', `/candidates/${id}/consents`, { body }),
+      withdrawConsent: (consentId) => request('POST', `/candidate-consents/${consentId}/withdraw`),
+      publishPrivacyNotice: (body) => request('POST', '/privacy-notices', { body }),
+      privacyNotices: (purpose) => get<PrivacyNotice[] | { data: PrivacyNotice[] }>('/privacy-notices', { purpose }).then((r) => (Array.isArray(r) ? r : r.data)),
+      contacts: (id) => get<CandidateContact[] | { data: CandidateContact[] }>(`/candidates/${id}/contacts`).then((r) => (Array.isArray(r) ? r : r.data)),
+      addContact: (id, body) => request<CandidateContact[] | { data: CandidateContact[] }>('POST', `/candidates/${id}/contacts`, { body }).then((r) => (Array.isArray(r) ? r : r.data)),
+    },
+    candidateCatalog: {
+      list: (catalog, q) => get<CandidateCatalogItem[] | { data: CandidateCatalogItem[] }>('/candidate-catalog', { catalog, q }).then((r) => (Array.isArray(r) ? r : r.data)),
+      create: (body) => request('POST', '/candidate-catalog', { body }),
+    },
+    applications: {
+      list: (query) => get<Application[] | { data: Application[] }>('/applications', query).then((r) => (Array.isArray(r) ? r : r.data)),
+      create: (body) => request('POST', '/applications', { body }),
+      update: (id, body) => request('PATCH', `/applications/${id}`, { body }),
+      propose: (id, slotId) => request('POST', `/applications/${id}/propose`, { body: slotId ? { slotId } : {} }),
+      confirm: (id) => request('POST', `/applications/${id}/confirm`),
+      release: (id) => request('POST', `/applications/${id}/release`),
+    },
+    accessLog: {
+      list: (query) => get('/access-log', query),
     },
     requests: {
       list: (query) => get('/requests', query),

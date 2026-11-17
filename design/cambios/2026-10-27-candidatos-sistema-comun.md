@@ -1,7 +1,7 @@
 # Candidatos: piloto del sistema visual común
 
 - **Fecha**: 2026-10-27
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-17)
 - **Rama y commits**: `design`, c36fd59
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/candidatos. Abrir una ficha (icono del ojo),
   "Asignar", "Contactar", "Importar de portales" y "Nuevo candidato".

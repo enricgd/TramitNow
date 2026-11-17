@@ -32,6 +32,7 @@ import {
   type Province,
   type Repositories,
   type Role,
+  type PrivacyNotice,
   type TenantSettings,
 } from '../../data';
 import { useSesion } from '../../sesion';
@@ -152,6 +153,8 @@ type Carga = {
   provincias: Province[];
   /** null si aún no hay API (modo real). */
   ajustes: EttSettings | null;
+  /** Versiones publicadas del texto de privacidad de la bolsa de candidatos (lo último primero). */
+  textosPrivacidad: PrivacyNotice[];
 };
 
 async function cargar(r: Repositories): Promise<Carga> {
@@ -177,6 +180,10 @@ async function cargar(r: Repositories): Promise<Carga> {
       r.collectiveAgreements.list({ limit: 200 }).then((p) => p.data),
       r.catalogs.autonomousCommunities().catch(() => [] as AutonomousCommunity[]),
     ]);
+  const textosPrivacidad = await r.candidates.privacyNotices('talent_pool').then(
+    (l) => [...l].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    () => [] as PrivacyNotice[],
+  );
 
   const activas = sociedades.filter((c) => c.status === 'active');
   const [legales, facturaciones] = await Promise.all([
@@ -208,6 +215,7 @@ async function cargar(r: Repositories): Promise<Carga> {
     comunidades,
     provincias: todasProvincias,
     ajustes,
+    textosPrivacidad,
   };
 }
 
@@ -615,6 +623,35 @@ export function useMiEtt() {
     [reload],
   );
 
+  // ---- Protección de datos (fase 6) ----------------------------------------
+
+  /** Plazos de la bolsa de candidatos: consentimiento, aviso de documentos y conservación de la auditoría. */
+  const guardarPrivacidad = useCallback(
+    async (valores: { mesesConsentimiento: string; diasAvisoDocumentos: string; mesesAuditoria: string }) => {
+      const entero = (v: string, min: number, max: number, que: string) => {
+        const n = Number(v);
+        if (!Number.isInteger(n) || n < min || n > max) throw new ApiError(400, 'validacion', `${que}: de ${min} a ${max}`);
+        return n;
+      };
+      await repos.tenantSettings.update({
+        candidatePoolRetentionMonths: entero(valores.mesesConsentimiento, 1, 120, 'Meses del consentimiento'),
+        candidateDocumentNoticeDays: entero(valores.diasAvisoDocumentos, 1, 365, 'Días de aviso de documentos'),
+        accessLogRetentionMonths: entero(valores.mesesAuditoria, 12, 120, 'Meses de la auditoría'),
+      });
+      reload();
+    },
+    [reload],
+  );
+  /** Publica una versión nueva del texto de privacidad de la bolsa. No se puede cambiar después. */
+  const publicarTextoPrivacidad = useCallback(
+    async (version: string, texto: string) => {
+      if (!version.trim() || !texto.trim()) throw new ApiError(400, 'validacion', 'Pon el nombre de la versión y el texto');
+      await repos.candidates.publishPrivacyNotice({ purpose: 'talent_pool', version: version.trim(), text: texto.trim() });
+      reload();
+    },
+    [reload],
+  );
+
   /** Crea (id null) o edita una sucursal. `valores` usa las claves de SucursalVista, más `companyId` al crearla. */
   const guardarSucursal = useCallback(
     async (id: string | null, valores: Partial<Record<keyof SucursalVista, string | boolean>>) => {
@@ -810,6 +847,17 @@ export function useMiEtt() {
       margenMinimo: data?.presupuestos.quoteMinMarginPercent == null ? '' : String(data.presupuestos.quoteMinMarginPercent),
       diasSinRespuesta: String(data?.presupuestos.quoteNoResponseDays ?? 15),
     },
+    /** Protección de datos: plazos (null si la API no los da) y versiones del texto de privacidad de la bolsa. */
+    privacidad: {
+      mesesConsentimiento: String(data?.presupuestos.candidatePoolRetentionMonths ?? 24),
+      diasAvisoDocumentos: String(data?.presupuestos.candidateDocumentNoticeDays ?? 30),
+      mesesAuditoria: String(data?.presupuestos.accessLogRetentionMonths ?? 24),
+      hayPlazos: data?.presupuestos.candidatePoolRetentionMonths !== undefined,
+      textos: (data?.textosPrivacidad ?? []).map((t) => ({ id: t.id, version: t.version, texto: t.text, fecha: fechaHora(t.createdAt), autor: t.createdByName ?? '—' })),
+      puedeGestionar: (me?.permissions ?? []).includes('privacy.manage'),
+    },
+    guardarPrivacidad,
+    publicarTextoPrivacidad,
     templates: ajustes?.templates ?? [],
     activity: actividad,
     servicios,

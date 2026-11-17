@@ -593,6 +593,62 @@ decidir.** Bloquea las fases 7 a 9. La columna `requests.legal_checks` (jsonb, s
 el resultado de esos controles; si hacen falta datos del cliente (despidos en los 12 meses anteriores, huelga en
 curso) o del puesto (actividades del RD 216/1999, anexo), irán en `clients` y en la petición.
 
+## Fase 6: candidatos y selección
+
+Migraciones `20261117000500_candidates.sql` y `20261117000600_candidates_followup.sql`; pantalla
+`apps/web/src/views/CandidatosView.jsx` y notas
+`design/cambios/*candidat*`. Tests: `db/tests/20_candidatos.sql`, `apps/api/test/candidatos.test.ts` y
+`apps/api/test/datos-personales.test.ts`.
+
+| Tabla | Qué |
+|---|---|
+| `candidates` | La persona, en la **bolsa común de la ETT** (no por sucursal; `branch_id` solo dice quién la dio de alta). Número de la serie `candidate` (CAN2026-00001). Única en la ETT por `id_document_fingerprint`. Datos personales, perfil principal, experiencia y formación (jsonb), disponibilidad (turnos, incorporación, distancia), estado, origen y anonimización (quién, cuándo, motivo) |
+| `candidate_attributes` | Otros perfiles (para buscar), carnés, habilidades e idiomas con nivel (Nativo, C2…A1), de las tablas maestras |
+| `privacy_notices` | Textos legales de la ETT por finalidad (`talent_pool`, `health_data`) y versión. No cambian: para cambiar el texto, otra versión |
+| `candidate_consents` | Consentimientos con la versión del texto, la fecha, el canal y el documento firmado. La bolsa caduca a `tenants.candidate_pool_retention_months` (24 [verificar]). Solo se retiran; lo demás no cambia (prueba de la base legal) |
+| `applications` | Candidaturas (persona × petición, única): `registered`, `preselected`, `interview`, `proposed` (reserva una plaza), `confirmed` (la cubre), `discarded`, `withdrawn`; `on_mission`, `finished` y `left` reservadas para la fase 7. Base legal por el origen: `applied` → medidas precontractuales; `sourced` (de la bolsa) → consentimiento vigente, si no `TN409` |
+| `candidate_contacts` | Historial de contactos (canal, resultado, nota, próxima acción, petición). Actualiza `candidates.last_contact_at`; no se cambian ni se borran (salvo al anonimizar) |
+| `access_log` | Auditoría de accesos a datos personales: abrir la ficha, ver un dato sensible, descargar un documento del candidato, exportar y anonimizar. Solo se añade (`private.log_access`) |
+
+**Datos personales cifrados (decisión del 17/11/2026).** El número del documento de identidad, el de la Seguridad
+Social, el IBAN y los datos de salud o discapacidad los cifra la API con AES-256-GCM (`apps/api/src/lib/personal-data.ts`)
+y la base de datos solo guarda el texto cifrado (`*_enc`, con el prefijo de la versión de la clave: `v1:…`), los cuatro
+últimos caracteres para enmascarar (`*_hint`) y, del documento, una huella HMAC por ETT para encontrar duplicados sin
+descifrar. La base de datos no tiene las claves: no puede validar la letra del DNI ni descifrar nada. Nombre, teléfono,
+email y localidad van en claro, con índice para buscar.
+
+Reglas en la base de datos:
+
+- Huella del documento única por ETT; el texto cifrado tiene que tener el formato de la API (un DNI en claro no entra).
+- Salud solo con base legal (`explicit_consent`, con un consentimiento `health_data` vigente, o `labor_obligation`).
+- **Base legal de la candidatura**: `applied` (se inscribió) o `sourced` con la **aceptación de la candidatura**
+  anotada (la ETT la contactó y aceptó presentarse a esa petición: cuándo, canal y quién) son medidas precontractuales;
+  `sourced` sin ella necesita el consentimiento de la bolsa vigente, al crearla y al proponerla al cliente (`TN409`).
+- Candidaturas: la plaza la mueve la base de datos (reservada al proponer, cubierta al confirmar, por cubrir al
+  descartar, retirar o liberar). Una persona ocupa como mucho una plaza a la vez. No se crean en peticiones cerradas o
+  canceladas ni de personas anonimizadas.
+- **Supresión**: `private.anonymize_candidate()` (`privacy.manage`). Sustituye o borra los datos personales y la huella
+  (la persona puede volver a darse de alta), borra sus documentos salvo los de conservación obligatoria (devuelve las
+  rutas para que la API borre los ficheros), saca sus candidaturas abiertas y vacía los valores de su historial. Se
+  conservan la auditoría y los consentimientos. No se puede con una plaza confirmada. Punto previsto para la fase 7:
+  `private.candidate_legal_retention()` (hoy no devuelve nada) dirá qué obliga a conservar la ley laboral y de la
+  Seguridad Social a quien haya tenido contrato.
+- **Auditoría**: nadie la cambia; borrar solo lo que ha pasado `tenants.access_log_retention_months` (24 [verificar])
+  y nunca con la sesión de la API (`private.purge_access_log()`, para una tarea programada con postgres) o al borrar la
+  ETT entera. La leen `privacy.audit`.
+- Documentos: `documents.entity_type` admite `candidate`; estado nuevo `rejected` con motivo (quién y cuándo los pone la
+  base de datos) y `renewal_notice_sent_at`. Tipos de serie del candidato: DNI o NIE, permiso de trabajo y residencia,
+  Seguridad Social, consentimiento RGPD, carné de carretillero, permiso de conducir, PRL, manipulador de alimentos,
+  reconocimiento médico, currículum y otro documento. Los ficheros no se cifran uno a uno (Storage privado con enlaces
+  que caducan); la descarga de los de un candidato se audita.
+- Tablas maestras con sinónimos: tipos `candidate_profile`, `license`, `skill` y `language`; `catalog_items` gana
+  `group_name` y `synonyms`. `private.search_norm()` quita acentos y mayúsculas. Quien gestiona candidatos añade valores
+  con `private.add_candidate_catalog_item()`; los sinónimos se editan en Tablas maestras.
+
+Permisos nuevos: `candidates.manage` (admin, director de zona, selección y laboral), `personal_data.view` (admin y
+laboral), `privacy.manage` y `privacy.audit` (admin; la ETT puede dárselos a un rol de responsable de protección de
+datos). Leer candidatos: `candidates.manage`, `module.seleccion` o `module.laboral`.
+
 ## Probar en local
 
 Requisitos: Docker Desktop. No hace falta `psql` en el Mac.
@@ -707,6 +763,10 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
    de documento del servicio. Para el CPD previo, cada sociedad necesita en Mi ETT el número de autorización y el
    representante legal con su documento.
 
+10. Candidatos (desde la fase 6): **antes de desplegar la API**, las claves de datos personales en `proyecto/.env`
+    (`infra/nas/README.md`, «Claves de datos personales»). Después, `migrate.sh`: da a cada ETT los permisos, las tablas
+    maestras de perfiles, carnés, habilidades e idiomas y los tipos de documento del candidato.
+
 ### ETT de demostración y primer usuario
 
 1. En Supabase Studio (`http://192.168.2.8:8000`): Authentication > Add user > Create new user, con
@@ -756,7 +816,13 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 
 - Resto de tablas del modelo (ofertas, peticiones, candidatos, trabajadores, comunicaciones, importaciones),
   siguiendo las reglas de arriba, con su historial (`private.log_activity`) y sus documentos (`documents`).
-- Datos personales (NIF, Nº SS, IBAN, documentos): cifrado a nivel de columna y auditoría de accesos.
+- Fase 6: plazos de conservación (bolsa y auditoría, 24 meses) y lista de supuestos [verificar] con la asesoría; si
+  comunicar los datos al cliente al proponer necesita algo más que las medidas precontractuales [verificar]. Tareas
+  programadas: avisos de caducidad de documentos y de consentimientos, purga de la auditoría
+  (`private.purge_access_log()`) y anonimización automática al caducar el consentimiento de la bolsa (hoy se revisan con
+  `GET /v1/candidates?poolConsent=expired` o `GET /v1/privacy/retention` y se anonimizan uno a uno). Fase 7: rellenar
+  `private.candidate_legal_retention()` con los plazos de conservación de contratos y nóminas [verificar]. Volver a
+  cifrar con la clave nueva al rotar. Envío real de correos. Datos de los trabajadores (fase 7) con el mismo cifrado.
 - Más catálogos oficiales globales: ocupaciones CNO-11 (y el código de 8 dígitos del SEPE para Contrat@),
   grupos y clases de la CNAE (hoy solo secciones y divisiones, en `cnae_activities`), regímenes de la Seguridad Social, tipos de documento de identidad (`client_centers.cnae_code` y
   `ss_regime_code` pasarán a FK). `professional_categories.cno_code`

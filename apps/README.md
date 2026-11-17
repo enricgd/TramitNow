@@ -70,8 +70,8 @@ reload();
 
 Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`), Empresas
 (`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**) y
-Presupuestos (`src/views/presupuestos/`) y Peticiones (`src/views/peticiones/`). El resto de pantallas aún usan los datos
-de ejemplo que llevan dentro.
+Presupuestos (`src/views/presupuestos/`), Peticiones (`src/views/peticiones/`) y Candidatos (`src/views/candidatos/`). El
+resto de pantallas aún usan los datos de ejemplo que llevan dentro.
 
 #### Conectar una pantalla
 
@@ -147,7 +147,9 @@ Lo que en Empresas sigue sin API, de momento: el acceso de los contactos al Áre
 Mi ETT, con API: datos legales (`companyLegal`) y facturación (`companyBilling`) de cada sociedad, series de
 facturas y rectificativas del año (`numberSeries`; si no existen, se crean al guardar), CCC
 (`contributionAccounts`), servicios que factura la ETT (`billableServices`; el código se genera del nombre),
-ajustes de presupuestos (`tenantSettings`, en la pestaña Facturación) y usuarios con alta, invitación, nuevo
+ajustes de presupuestos (`tenantSettings`, en la pestaña Facturación), la pestaña «Protección de datos» (versiones del
+texto de privacidad de la bolsa con `privacyNotices`/`publishPrivacyNotice`, y los plazos de consentimiento, aviso de
+documentos y auditoría en `tenantSettings`) y usuarios con alta, invitación, nuevo
 enlace, revocación, rol, departamento, estado y sucursal (`memberships`). La forma de pago «Otra…» se añade a la
 tabla maestra `payment_method`. Lo que sigue sin API: plantillas, portales, historial de Mi ETT, responsable de
 cada sucursal, logotipo, matriz de permisos (fija en la vista) y exportación a PDF. Las sucursales dadas de baja
@@ -191,6 +193,26 @@ página y entra sin red.
   `src/data/memoriaPeticionesSeleccion.js` (`repos.requestSelection`, sin ruta en la API); en real, las plazas por cubrir
   y un texto de «llega con…».
 - Los turnos de serie (mañana, tarde, noche y partida) están en `src/data/turnos.ts`.
+- Plazas y embudo (fase 6): contra la API salen de las candidaturas (`/v1/applications`): proponer reserva una plaza,
+  «Confirmar» la cubre (a mano, hasta que haya portal de empresas) y «Retirar» la libera. Bajas, CPD de cada persona y
+  portales siguen para la fase 7.
+
+#### Candidatos en la web
+
+- `src/views/candidatos/useCandidatos.ts` y `mapeo.ts`, con el contrato de la fase 6 (`/v1/candidates`,
+  `/v1/candidate-catalog`, `/v1/applications`, `/v1/access-log`). Los valores de la API y su texto en la pantalla están
+  en `src/data/candidatosValores.ts`.
+- **Datos sensibles** (documento de identidad, NSS, IBAN): llegan tapados. «ver» (`DatoSensible` en la vista) los pide
+  a `/v1/candidates/{id}/sensitive`, que lo registra, y solo los enseña mientras están a la vista: no se guardan en el
+  estado, en caché ni en `localStorage`. Al editar, solo se envían si se escribe un valor nuevo.
+- Abrir la ficha queda en la auditoría; la lista no. La pestaña «Accesos» sale con `privacy.audit`; «Eliminar»
+  (supresión: la API anonimiza) y «Exportar datos» (JSON), con `privacy.manage`.
+- Documentos: los de siempre con `entityType: 'candidate'`, caducidad, validar, rechazar con motivo y aviso de
+  renovación (el correo real, más adelante). Subir el consentimiento firmado registra el consentimiento de bolsa.
+- La bolsa es de toda la ETT; las peticiones del asistente «Asignar a petición», las de la sucursal de la cabecera.
+- La lista filtra en el servidor (búsqueda con sinónimos, estado, origen, perfil, carné/habilidad/idioma y
+  documentación con `documents=ok|pending|id_or_ss_pending|privacy_pending`); los indicadores y los desplegables
+  cuentan con `/v1/candidate-facets`. La demo calcula lo mismo en `memoriaCandidatos.ts`.
 
 ## api
 
@@ -347,6 +369,11 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `POST /v1/quote-versions/{id}/approve` · `/reject-approval`: aprobar el margen por debajo del mínimo o pedir cambios | `quotes.approve_margin` |
 | `GET /v1/requests` (`?q=&status=…\|active&clientId=&quoteId=&responsibleUserId=&branchId=&startingSoon=`), `GET /v1/requests/{id}`, `GET /v1/request-use-cases`: peticiones y supuestos de utilización | `requests.manage`, `module.comercial`, `module.seleccion` o `module.laboral`, en la sucursal |
 | `GET /v1/request-sources`, `POST /v1/requests`, `POST /v1/quote-versions/{id}/requests`, `PATCH /v1/requests/{id}`, `POST /v1/requests/{id}/duplicate`, `POST /v1/requests/{id}/pre-cpd` · `/pre-cpd/sent` · `/pre-cpd/reviewed` (ver "Peticiones") | `requests.manage` |
+| `GET /v1/candidates` (`?q=&status=&source=&profileId=&attributeId=&documents=alerts\|missing\|ok\|pending\|id_or_ss_pending\|privacy_pending&poolConsent=&idDocumentNumber=&anonymized=`), `GET /v1/candidates/{id}` (auditado), `GET /v1/candidate-catalog`, `GET /v1/candidate-facets` (recuentos para los filtros), `GET /v1/candidate-document-alerts`, `GET /v1/applications?candidateId=\|requestId=`, `GET /v1/privacy-notices` | `candidates.manage`, `module.seleccion` o `module.laboral` |
+| `POST /v1/candidates`, `PATCH /v1/candidates/{id}`, `POST /v1/candidates/check-duplicate`, `POST /v1/candidate-catalog`, `POST /v1/candidates/{id}/consents`, `POST /v1/candidate-consents/{id}/withdraw`, `POST`/`PATCH /v1/applications`, `POST /v1/applications/{id}/propose` · `/confirm` · `/release` (ver "Candidatos") | `candidates.manage` (las candidaturas, también `requests.manage`) |
+| `GET /v1/candidates/{id}/sensitive?fields=`: documento, Seguridad Social, IBAN y salud completos (auditado) | `personal_data.view` |
+| `GET /v1/candidates/{id}/export`, `POST /v1/candidates/{id}/anonymize`, `POST /v1/privacy-notices`, `GET /v1/privacy/retention` | `privacy.manage` |
+| `GET /v1/access-log`: auditoría de accesos | `privacy.audit` |
 
 Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
 sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
@@ -407,6 +434,23 @@ cálculo, que no cambian aunque el presupuesto cambie después (`conditions` en 
   `pre-cpd/reviewed` lo marcan a mano. Errores: 409 `cpd_incompleto` (con un `details` por cada comprobación que bloquea)
   y 422 `salario_bajo_convenio` si el convenio vigente pide más que el salario copiado (art. 11 de la Ley 14/1994). El
   supuesto de utilización es obligatorio; la lista (`GET /v1/request-use-cases`) está marcada [verificar].
+
+### Candidatos
+
+- **Datos sensibles**: el número del documento de identidad, el de la Seguridad Social, el IBAN y la salud se cifran en
+  la API (`src/lib/personal-data.ts`: AES-256-GCM, claves versionadas en `PERSONAL_DATA_KEYS`, huella HMAC con
+  `PERSONAL_DATA_HMAC_KEY`). Las respuestas los llevan enmascarados (`•••••678Z`); completos, solo
+  `GET /v1/candidates/{id}/sensitive` con `personal_data.view`. Sin claves configuradas, lo que cifra o descifra responde
+  503 `servicio_no_disponible` y lo demás funciona. DNI y NIE se validan con su letra; el NSS y el IBAN, con su control.
+- **Duplicados**: la huella del documento es única en la ETT (409 con el candidato que ya lo tiene en `details`);
+  `POST /v1/candidates/check-duplicate` lo comprueba antes de guardar.
+- **Auditoría** (`access_log`): abrir la ficha, ver datos sensibles, descargar un documento del candidato, exportar y
+  anonimizar. Los listados no se registran.
+- **Candidaturas**: `origin: applied` (se inscribió: medidas precontractuales) o `sourced` (de la bolsa: exige su
+  consentimiento vigente). `propose` reserva una plaza de la petición, `confirm` la cubre y `release` la libera; la
+  ficha de la petición dice quién ocupa cada plaza.
+- **RGPD**: consentimientos con la versión del texto (`/privacy-notices`), exportación (derecho de acceso),
+  anonimización (supresión) y `GET /v1/privacy/retention` (plazo cumplido).
 
 ### Documentos
 

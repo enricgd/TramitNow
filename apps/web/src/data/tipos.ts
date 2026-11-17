@@ -404,7 +404,7 @@ export type CatalogItemQuery = PageQuery & { type: CatalogItemType; q?: string; 
 export type CatalogItemCreate = { type: CatalogItemType; name: string; code?: string; parentId?: string; status?: Status };
 
 /** Historial de cambios (GET /v1/activity), lo último primero. */
-export type ActivityEntityType = 'client' | 'client_center' | 'client_contact' | 'client_billing' | 'document' | 'quote' | 'request';
+export type ActivityEntityType = 'client' | 'client_center' | 'client_contact' | 'client_billing' | 'document' | 'quote' | 'request' | 'candidate';
 export type ActivityEntry = {
   id: string;
   entityType: ActivityEntityType;
@@ -420,8 +420,8 @@ export type ActivityEntry = {
 };
 export type ActivityQuery = PageQuery & { entityType: ActivityEntityType; entityId: string; includeChildren?: boolean };
 
-export type DocumentEntityType = 'client' | 'client_center' | 'quote' | 'request';
-export type DocumentStatus = 'pending' | 'validated' | 'draft';
+export type DocumentEntityType = 'client' | 'client_center' | 'quote' | 'request' | 'candidate';
+export type DocumentStatus = 'pending' | 'validated' | 'draft' | 'rejected';
 export type StoredDocument = Stamped & {
   entityType: DocumentEntityType;
   entityId: string;
@@ -442,6 +442,9 @@ export type StoredDocument = Stamped & {
   validatedBy: string | null;
   validatedByName: string | null;
   validatedAt: string | null;
+  /** Fase 6: motivo del rechazo y último aviso de renovación (documentos de candidatos). */
+  rejectionReason?: string | null;
+  renewalNoticeSentAt?: string | null;
 } & Deleted;
 export type DocumentQuery = PageQuery & {
   entityType?: DocumentEntityType;
@@ -462,6 +465,8 @@ export type DocumentUpload = {
   expiresOn?: string | null;
   visibleInPortal?: boolean;
   notes?: string | null;
+  /** Fase 6: renovar; el anterior queda eliminado (baja recuperable). */
+  replacesDocumentId?: string | null;
 };
 export type DocumentInput = Partial<Pick<StoredDocument, 'typeId' | 'name' | 'status' | 'expiresOn' | 'visibleInPortal' | 'notes'>>;
 
@@ -621,6 +626,11 @@ export type TenantSettings = {
   quoteMinMarginPercent: number | null;
   /** Días sin respuesta para avisar (15 por defecto). */
   quoteNoResponseDays: number;
+  /** Fase 6: meses de vigencia del consentimiento de bolsa y días de aviso antes de caducar un documento. */
+  candidatePoolRetentionMonths?: number;
+  candidateDocumentNoticeDays?: number;
+  /** Meses que se conserva la auditoría de accesos. */
+  accessLogRetentionMonths?: number;
 };
 
 /** Para dar de alta un usuario: el alcance es la lista de sociedades y sucursales (branchId null: toda la sociedad). */
@@ -1006,7 +1016,8 @@ export type ServiceRequest = ServiceRequestSummary &
       periods: { versionId: string; from: string; to: string | null; categoryMatched: boolean; minimumSalaryHour: number | null; belowAgreement: boolean }[];
     } | null;
     distribution: RequestDistribution;
-    slotList: { id: string; number: number; status: string }[];
+    /** Fase 6: la candidatura y la persona que ocupan cada plaza. */
+    slotList: { id: string; number: number; status: string; applicationId?: string | null; candidateName?: string | null; candidateId?: string | null }[];
     preCpd: PreCpd;
     signedQuoteDocument: { documentId: string; name: string; kind: 'signed' | 'proposal'; date: string } | null;
   };
@@ -1081,3 +1092,190 @@ export type RequestSelection = {
   /** Portales de empleo activos y candidaturas de cada petición. */
   difusion: Record<string, { portalesActivos: number; candidaturas: number }>;
 };
+
+// ---------------------------------------------------------------------------
+// Candidatos (fase 6): contrato de fase6-backend.md (BORRADOR). Bolsa común a toda la ETT.
+// Los datos sensibles (documento de identidad, NSS, IBAN, salud) llegan enmascarados; completos solo con
+// GET /candidates/{id}/sensitive (personal_data.view, auditado).
+// ---------------------------------------------------------------------------
+
+export type CandidateStatus = 'new' | 'to_contact' | 'contacted' | 'in_selection' | 'available' | 'unavailable' | 'onboarding' | 'in_mission' | 'discarded';
+export type CandidateSource = 'candidate_portal' | 'infojobs' | 'indeed' | 'linkedin' | 'database' | 'referral' | 'walk_in' | 'other';
+export type CandidateShift = 'morning' | 'afternoon' | 'night' | 'split' | 'weekends';
+export type CandidateAvailability = 'immediate' | 'one_week' | 'two_weeks' | 'from_date';
+export type IdDocumentKind = 'dni' | 'nie' | 'passport' | 'other';
+export type CandidateCatalog = 'candidate_profile' | 'license' | 'skill' | 'language';
+export type LanguageLevel = 'native' | 'C2' | 'C1' | 'B2' | 'B1' | 'A2' | 'A1';
+
+export type CandidateCatalogItem = { id: string; name: string; group: string | null; synonyms: string[]; matchedSynonym?: string | null };
+
+export type CandidateSummary = {
+  id: string;
+  code: string;
+  firstName: string;
+  lastName: string | null;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  provinceCode: string | null;
+  status: CandidateStatus;
+  source: CandidateSource;
+  mainProfile: { id: string; name: string; group: string | null } | null;
+  otherProfileNames: string[];
+  idDocument: { type: IdDocumentKind | null; masked: string | null; expiresOn: string | null; state: 'ok' | 'expired' | 'missing' };
+  ssNumber: { masked: string } | null;
+  iban: { masked: string } | null;
+  poolConsent: { state: 'valid' | 'expiring' | 'expired' | 'none'; expiresAt: string | null };
+  documentAlerts: { expired: number; expiring: number };
+  activeApplications: number;
+  experienceYears: number | null;
+  lastContactAt: string | null;
+  anonymized?: boolean;
+  createdAt: string;
+};
+
+export type CandidateExperience = { company: string; position: string; from: string | null; to: string | null; duties: string | null };
+export type CandidateEducation = { title: string; center: string | null; year: number | null };
+export type CandidateConsent = {
+  id: string;
+  purpose: 'talent_pool' | 'health_data';
+  noticeId?: string;
+  noticeVersion: string | null;
+  givenAt: string;
+  channel: 'portal' | 'paper' | 'email' | 'other';
+  expiresAt: string | null;
+  withdrawnAt: string | null;
+};
+export type ApplicationStage = 'registered' | 'preselected' | 'interview' | 'proposed' | 'confirmed' | 'discarded' | 'withdrawn' | 'on_mission' | 'finished' | 'left';
+export type Application = {
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  candidateCode: string;
+  requestId: string;
+  requestCode: string;
+  positionName: string;
+  shiftName: string | null;
+  clientName: string;
+  stage: ApplicationStage;
+  origin: 'applied' | 'sourced';
+  source: string | null;
+  slotId: string | null;
+  slotNumber: number | null;
+  legalBasis: string | null;
+  stageChangedAt: string;
+  notes: string | null;
+  discardReason: string | null;
+  createdAt: string;
+};
+
+export type Candidate = CandidateSummary & {
+  birthDate: string | null;
+  nationality: string | null;
+  address: string | null;
+  postalCode: string | null;
+  experienceYears: number | null;
+  hasCar: boolean;
+  otherLicensesText: string | null;
+  attributes: {
+    licenses: { id: string; name: string }[];
+    skills: { id: string; name: string }[];
+    languages: { id: string; name: string; level: LanguageLevel }[];
+    otherProfiles: { id: string; name: string }[];
+  };
+  experiences: CandidateExperience[];
+  education: CandidateEducation[];
+  shifts: CandidateShift[];
+  availability: CandidateAvailability | null;
+  availableFrom: string | null;
+  maxDistanceKm: number | null;
+  availabilityNotes: string | null;
+  autoExpiryNotice: boolean;
+  health: { hasData: boolean; legalBasis: string | null };
+  consents: CandidateConsent[];
+  applications: Application[];
+  missing: { code: string; message: string; tab: string }[];
+  sourceRef: string | null;
+  createdByName: string | null;
+  updatedAt: string;
+};
+
+export type CandidateInput = Partial<{
+  firstName: string;
+  lastName: string | null;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  provinceCode: string | null;
+  postalCode: string | null;
+  address: string | null;
+  birthDate: string | null;
+  nationality: string | null;
+  status: CandidateStatus;
+  source: CandidateSource;
+  sourceRef: string | null;
+  lastContactAt: string | null;
+  idDocumentType: IdDocumentKind | null;
+  idDocumentNumber: string | null;
+  idDocumentExpiresOn: string | null;
+  ssNumber: string | null;
+  iban: string | null;
+  mainProfileId: string | null;
+  attributeIds: string[];
+  languages: { id: string; level: LanguageLevel }[];
+  otherLicensesText: string | null;
+  experienceYears: number | null;
+  hasCar: boolean;
+  experiences: CandidateExperience[];
+  education: CandidateEducation[];
+  shifts: CandidateShift[];
+  availability: CandidateAvailability | null;
+  availableFrom: string | null;
+  maxDistanceKm: number | null;
+  availabilityNotes: string | null;
+  autoExpiryNotice: boolean;
+  health: { disabilityPercent: number | null; adaptations: string | null; notes: string | null; legalBasis: string } | null;
+}>;
+export type CandidateCreate = CandidateInput & { firstName: string; lastName: string };
+
+export type CandidateQuery = PageQuery & {
+  q?: string;
+  status?: CandidateStatus;
+  profileId?: string;
+  /** Uno o varios (carné, habilidad o idioma) separados por comas: deben cumplirse todos. */
+  attributeId?: string;
+  source?: string;
+  /** ok, pending, id_or_ss_pending y privacy_pending: los filtros de documentación de la lista (sin descifrar). */
+  documents?: 'alerts' | 'missing' | 'ok' | 'pending' | 'id_or_ss_pending' | 'privacy_pending';
+  poolConsent?: 'valid' | 'expiring' | 'expired' | 'none';
+  /** Búsqueda exacta por la huella del documento. */
+  idDocumentNumber?: string;
+};
+
+/** Valores completos de los datos sensibles (GET /candidates/{id}/sensitive). */
+export type CandidateSensitive = {
+  idDocument?: { type: IdDocumentKind | null; number: string | null } | null;
+  ssNumber?: string | null;
+  iban?: string | null;
+  health?: { disabilityPercent: number | null; adaptations: string | null; notes: string | null; legalBasis: string | null } | null;
+};
+export type SensitiveField = 'idDocument' | 'ssNumber' | 'iban' | 'health';
+/** Recuentos de la bolsa para los indicadores y los filtros (GET /v1/candidate-facets). */
+export type CandidateFacets = {
+  total: number;
+  byStatus: Record<string, number>;
+  documentAlerts: number;
+  poolConsentExpired: number;
+  /** Los mismos totales que el listado con documents=ok|pending|id_or_ss_pending|privacy_pending. */
+  documentation?: { ok: number; pending: number; idOrSsPending: number; privacyPending: number };
+  profiles: { id: string; name: string; group: string | null; count: number }[];
+  attributes: { id: string; catalog: CandidateCatalog; name: string; group: string | null; count: number }[];
+};
+export type PrivacyNotice = { id: string; purpose: 'talent_pool' | 'health_data'; version: string; text: string; createdAt: string; createdByName?: string | null };
+
+export type ContactChannel = 'phone' | 'email' | 'whatsapp' | 'sms' | 'in_person' | 'other';
+/** Contacto registrado con la persona (GET/POST /candidates/{id}/contacts). */
+export type CandidateContact = { id: string; contactedAt: string; channel: ContactChannel; result: string | null; note: string | null; nextAction: string | null; requestId: string | null; requestCode: string | null; createdByName: string | null };
+
+export type AccessLogEntry = { id: string; occurredAt: string; actorUserId: string | null; actorName: string | null; action: string; candidateId: string | null; candidateCode: string | null; details: Record<string, unknown> | null };
+export type AccessLogQuery = PageQuery & { candidateId?: string; actorUserId?: string; action?: string; from?: string; to?: string };

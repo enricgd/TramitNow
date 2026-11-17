@@ -265,7 +265,12 @@ const RequestSchema = z
         quotePositionId: z.guid(), name: z.string(), requests: z.array(z.object({ id: z.guid(), code: z.string() })),
       })),
     }),
-    slotList: z.array(z.object({ id: z.guid(), number: z.number().int(), status: z.enum(['open', 'reserved', 'covered', 'started', 'left']) })),
+    slotList: z.array(z.object({
+      id: z.guid(), number: z.number().int(), status: z.enum(['open', 'reserved', 'covered', 'started', 'left']),
+      applicationId: z.guid().nullable().openapi({ description: 'Candidatura que la ocupa (propuesta o confirmada)' }),
+      candidateId: z.guid().nullable(),
+      candidateName: z.string().nullable(),
+    })),
     preCpd: z.object({
       status: PreCpdStatus,
       outdated: z.boolean().openapi({ description: 'Algo del CPD cambió después de generarlo: hay que generarlo de nuevo' }),
@@ -518,8 +523,12 @@ async function loadDetail(tx: Tx, tenantId: string, id: string) {
   const inRequests = siblings.reduce((s, r) => s + r.positionsCount, 0);
 
   const slotList = await tx<RequestOut['slotList']>`
-    select id, slot_number as number, status from public.request_slots
-    where tenant_id = ${tenantId} and request_id = ${id} order by slot_number
+    select s.id, s.slot_number as number, s.status, s.application_id, a.candidate_id,
+           trim(c.first_name || ' ' || coalesce(c.last_name, '')) as candidate_name
+    from public.request_slots s
+    left join public.applications a on a.tenant_id = s.tenant_id and a.id = s.application_id
+    left join public.candidates c on c.tenant_id = a.tenant_id and c.id = a.candidate_id
+    where s.tenant_id = ${tenantId} and s.request_id = ${id} order by s.slot_number
   `;
 
   const [signed] = await tx<{ documentId: string; name: string; kind: 'signed' | 'proposal'; date: string }[]>`

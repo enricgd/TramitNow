@@ -33,10 +33,10 @@ import { DOWNLOAD_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS, requireStorage } from
 export const ALLOWED_MIME_TYPES = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' } as const;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-const EntityType = z.enum(['client', 'client_center', 'quote', 'request']).openapi({ description: 'Ficha del documento' });
+const EntityType = z.enum(['client', 'client_center', 'quote', 'request', 'candidate']).openapi({ description: 'Ficha del documento' });
 const DocumentStatus = z
-  .enum(['pending', 'validated', 'draft'])
-  .openapi({ description: 'pending: pendiente de validar (al subir); validated; draft: borrador' });
+  .enum(['pending', 'validated', 'draft', 'rejected'])
+  .openapi({ description: 'pending: pendiente de validar (al subir); validated; draft: borrador; rejected: rechazado (POST /documents/{id}/reject)' });
 const MimeType = z.enum(Object.keys(ALLOWED_MIME_TYPES) as [keyof typeof ALLOWED_MIME_TYPES]);
 const date = z.iso.date().nullable();
 
@@ -61,6 +61,10 @@ const DocumentSchema = z
     validatedBy: z.guid().nullable(),
     validatedByName: z.string().nullable(),
     validatedAt: Timestamp.nullable(),
+    rejectionReason: z.string().nullable(),
+    rejectedAt: Timestamp.nullable(),
+    rejectedByName: z.string().nullable(),
+    renewalNoticeSentAt: Timestamp.nullable().openapi({ description: 'Último aviso de renovación al candidato' }),
     createdAt: Timestamp,
     updatedAt: Timestamp,
     deletedAt: Timestamp.nullable().openapi({ description: 'Cuándo se eliminó (null si está activo)' }),
@@ -88,7 +92,7 @@ const UploadResponse = z
 const editableFields = {
   typeId: z.guid().openapi({ description: 'Tipo de documento (GET /v1/catalog-items?type=document_type)' }),
   name: z.string().trim().min(1).max(250),
-  status: DocumentStatus,
+  status: z.enum(['pending', 'validated', 'draft']).openapi({ description: 'Para rechazar, POST /documents/{id}/reject' }),
   expiresOn: date,
   visibleInPortal: z.boolean(),
   notes: z.string().max(4000).nullable(),
@@ -101,6 +105,8 @@ const CreateSchema = z
     ...editableFields,
     status: z.enum(['pending', 'draft']).default('pending').openapi({ description: 'Al subir: pendiente de validar o borrador' }),
     visibleInPortal: z.boolean().default(false),
+    replacesDocumentId: z.guid().optional()
+      .openapi({ description: '«Renovar»: el documento anterior de la misma ficha queda eliminado (baja recuperable) y lo sustituye este' }),
   })
   .partial({ expiresOn: true, notes: true })
   .openapi('DocumentCreate');
@@ -133,11 +139,13 @@ const select = (tx: Tx) => tx`
   select d.id, d.entity_type, d.entity_id, d.type_id, t.name as type_name, t.retention_required, d.name, d.mime_type,
          d.size_bytes::int as size_bytes, d.status, to_char(d.expires_on, 'YYYY-MM-DD') as expires_on,
          d.visible_in_portal, d.notes, d.uploaded_by, up.full_name as uploaded_by_name, d.uploaded_at,
-         d.validated_by, vp.full_name as validated_by_name, d.validated_at, d.created_at, d.updated_at, d.deleted_at
+         d.validated_by, vp.full_name as validated_by_name, d.validated_at, d.rejection_reason, d.rejected_at,
+         rp.full_name as rejected_by_name, d.renewal_notice_sent_at, d.created_at, d.updated_at, d.deleted_at
   from public.documents d
   join public.catalog_items t on t.tenant_id = d.tenant_id and t.id = d.type_id
   left join public.profiles up on up.id = d.uploaded_by
   left join public.profiles vp on vp.id = d.validated_by
+  left join public.profiles rp on rp.id = d.rejected_by
 `;
 
 async function findDocument(tx: Tx, tenantId: string, id: string): Promise<DocumentRow> {
@@ -234,7 +242,17 @@ export const documents = createRouter()
           mimeType: info.mimeType,
           sizeBytes: info.size,
         };
+        if (body.replacesDocumentId) {
+          const [old] = await tx`
+            select 1 from public.documents where tenant_id = ${ctx.tenantId} and id = ${body.replacesDocumentId}
+              and entity_type = ${body.entityType} and entity_id = ${body.entityId} and deleted_at is null
+          `;
+          if (!old) throw new ApiError(422, 'referencia_invalida', 'El documento que se renueva tiene que ser de la misma ficha');
+        }
         const [created] = await tx<{ id: string }[]>`insert into public.documents ${tx(values)} returning id`;
+        if (body.replacesDocumentId) {
+          await tx`update public.documents set deleted_at = now() where tenant_id = ${ctx.tenantId} and id = ${body.replacesDocumentId}`;
+        }
         return findDocument(tx, ctx.tenantId, created!.id);
       });
       return c.json(row, 201);
@@ -332,11 +350,15 @@ export const documents = createRouter()
       const { id } = c.req.valid('param');
       const storage = storageOf(c);
       const doc = await withTenant(c, {}, async (tx, ctx) => {
-        const [row] = await tx<{ storagePath: string; name: string; mimeType: string }[]>`
-          select storage_path, name, mime_type from public.documents
+        const [row] = await tx<{ storagePath: string; name: string; mimeType: string; entityType: string; entityId: string }[]>`
+          select storage_path, name, mime_type, entity_type, entity_id from public.documents
           where tenant_id = ${ctx.tenantId} and id = ${id} and deleted_at is null
         `;
         if (!row) throw notFound('El documento no existe');
+        // Documentos de una persona: la descarga queda en la auditoría de accesos.
+        if (row.entityType === 'candidate') {
+          await tx`select private.log_access('download_document', ${row.entityId}, ${tx.json({ documentId: id } as never)})`;
+        }
         return row;
       });
       const extension = ALLOWED_MIME_TYPES[doc.mimeType as keyof typeof ALLOWED_MIME_TYPES];
@@ -384,6 +406,49 @@ export const documents = createRouter()
       const row = await withTenant(c, {}, async (tx, ctx) => {
         await findWritable(tx, ctx.tenantId, id, true);
         await tx`update public.documents set deleted_at = null where tenant_id = ${ctx.tenantId} and id = ${id}`;
+        return findDocument(tx, ctx.tenantId, id);
+      });
+      return c.json(row, 200);
+    },
+  )
+  .openapi(
+    createRoute({
+      method: 'post',
+      path: '/documents/{id}/reject',
+      tags,
+      summary: 'Rechazar un documento',
+      description: 'Con el motivo (ilegible, no coincide con la ficha, caducado, falta una cara, sin firmar…). Quién y cuándo lo pone la base de datos.',
+      security: bearerSecurity,
+      request: { params: IdParams, body: jsonBody(z.strictObject({ reason: z.string().trim().min(1).max(250) }).openapi('DocumentReject')) },
+      responses: { 200: jsonContent(DocumentSchema, 'Documento'), ...errorResponses(400, 401, 403, 404) },
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const { reason } = c.req.valid('json');
+      const row = await withTenant(c, {}, async (tx, ctx) => {
+        await findWritable(tx, ctx.tenantId, id);
+        await tx`update public.documents set status = 'rejected', rejection_reason = ${reason} where tenant_id = ${ctx.tenantId} and id = ${id}`;
+        return findDocument(tx, ctx.tenantId, id);
+      });
+      return c.json(row, 200);
+    },
+  )
+  .openapi(
+    createRoute({
+      method: 'post',
+      path: '/documents/{id}/renewal-notice',
+      tags,
+      summary: 'Marcar que se avisó de la renovación',
+      description: 'Deja la fecha del último aviso de renovación (el envío real del correo llegará más adelante).',
+      security: bearerSecurity,
+      request: { params: IdParams },
+      responses: { 200: jsonContent(DocumentSchema, 'Documento'), ...errorResponses(400, 401, 403, 404) },
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const row = await withTenant(c, {}, async (tx, ctx) => {
+        await findWritable(tx, ctx.tenantId, id);
+        await tx`update public.documents set renewal_notice_sent_at = now() where tenant_id = ${ctx.tenantId} and id = ${id}`;
         return findDocument(tx, ctx.tenantId, id);
       });
       return c.json(row, 200);
