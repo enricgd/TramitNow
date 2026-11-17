@@ -190,8 +190,18 @@ const emptyBilling = (companyId: string): CompanyBilling => ({
 const settingsFields = {
   quoteMinMarginPercent: z.number().min(-100).max(1000).nullable().openapi({ description: 'Margen mínimo en %. null: sin mínimo' }),
   quoteNoResponseDays: z.number().int().min(1).max(365).openapi({ description: 'Días sin respuesta para avisar (15 por defecto)' }),
+  candidatePoolRetentionMonths: z.number().int().min(1).max(120)
+    .openapi({ description: 'Meses que dura el consentimiento de la bolsa de candidatos (24 por defecto) [verificar]' }),
+  candidateDocumentNoticeDays: z.number().int().min(1).max(365)
+    .openapi({ description: 'Días antes de caducar un documento del candidato para avisar (30 por defecto)' }),
+  accessLogRetentionMonths: z.number().int().min(12).max(120)
+    .openapi({ description: 'Meses que se conserva la auditoría de accesos (24 por defecto) [verificar]' }),
 };
 const TenantSettingsSchema = z.object(settingsFields).openapi('TenantSettings');
+const settingsColumns = (tx: Tx) => tx`
+  quote_min_margin_percent::float8 as quote_min_margin_percent, quote_no_response_days, candidate_pool_retention_months,
+  candidate_document_notice_days, access_log_retention_months
+`;
 const TenantSettingsUpdate = z.strictObject(settingsFields).partial().openapi('TenantSettingsUpdate');
 
 // ---------------------------------------------------------------------------
@@ -362,8 +372,7 @@ export const miEtt = createRouter()
     async (c) => {
       const settings = await withTenant(c, {}, async (tx, ctx) => {
         const [row] = await tx<z.infer<typeof TenantSettingsSchema>[]>`
-          select quote_min_margin_percent::float8 as quote_min_margin_percent, quote_no_response_days
-          from public.tenants where id = ${ctx.tenantId}
+          select ${settingsColumns(tx)} from public.tenants where id = ${ctx.tenantId}
         `;
         if (!row) throw notFound();
         return row;
@@ -388,7 +397,7 @@ export const miEtt = createRouter()
         const [row] = await tx<z.infer<typeof TenantSettingsSchema>[]>`
           update public.tenants set ${Object.keys(patch).length ? tx(patch) : tx`updated_at = now()`}
           where id = ${ctx.tenantId}
-          returning quote_min_margin_percent::float8 as quote_min_margin_percent, quote_no_response_days
+          returning ${settingsColumns(tx)}
         `;
         if (!row) throw notFound();
         return row;

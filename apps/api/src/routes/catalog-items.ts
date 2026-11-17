@@ -51,6 +51,9 @@ const fields = {
   retentionRequired: z.boolean().openapi({
     description: 'Solo tipos de documento: sus documentos no se pueden borrar (obligación legal de conservación)',
   }),
+  groupName: z.string().trim().min(1).max(80).nullable().openapi({ description: 'Grupo o sector (perfiles, carnés, habilidades)' }),
+  synonyms: z.array(z.string().trim().min(1).max(120)).max(50)
+    .openapi({ description: 'Otros nombres con los que se busca (perfiles, carnés, habilidades, idiomas)' }),
 };
 
 export const catalogItems = crudRoutes({
@@ -64,10 +67,10 @@ export const catalogItems = crudRoutes({
     .openapi('CatalogItem'),
   fields,
   required: ['type', 'name'],
-  createDefaults: { status: Status.default('active'), retentionRequired: z.boolean().default(false) },
+  createDefaults: { status: Status.default('active'), retentionRequired: z.boolean().default(false), synonyms: z.array(z.string()).default([]) },
   createOnly: ['type'],
   columnAliases: { type: 'catalog' },
-  columns: 'id, catalog as type, code, name, parent_id, metadata, status, retention_required, created_at, updated_at',
+  columns: 'id, catalog as type, code, name, parent_id, metadata, status, retention_required, group_name, synonyms, created_at, updated_at',
   permission: 'catalogs.manage',
   search: ['name', 'code'],
   filters: {
