@@ -213,7 +213,7 @@ export function apiRepositories(): Repositories {
       withdrawConsent: (consentId) => request('POST', `/candidate-consents/${consentId}/withdraw`),
       privacyNotices: (purpose) => get<PrivacyNotice[] | { data: PrivacyNotice[] }>('/privacy-notices', { purpose }).then((r) => (Array.isArray(r) ? r : r.data)),
       contacts: (id) => get<CandidateContact[] | { data: CandidateContact[] }>(`/candidates/${id}/contacts`).then((r) => (Array.isArray(r) ? r : r.data)),
-      addContact: (id, body) => request('POST', `/candidates/${id}/contacts`, { body }),
+      addContact: (id, body) => request<CandidateContact[] | { data: CandidateContact[] }>('POST', `/candidates/${id}/contacts`, { body }).then((r) => (Array.isArray(r) ? r : r.data)),
     },
     candidateCatalog: {
       list: (catalog, q) => get<CandidateCatalogItem[] | { data: CandidateCatalogItem[] }>('/candidate-catalog', { catalog, q }).then((r) => (Array.isArray(r) ? r : r.data)),

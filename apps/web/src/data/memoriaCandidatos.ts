@@ -3,7 +3,7 @@
 // cubren plazas de las peticiones de ejemplo (memoriaPeticiones.ts), supresión, exportación y auditoría de accesos.
 // Los datos salen de memoriaCandidatosEjemplo.js (los del diseñador). Todo es ficticio. Sin efectos al cargarse (ver
 // vite.config.ts): se crean la primera vez que se usan.
-import { ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, TURNO, clave, codigoDeTipo, enmascarar, origenApi } from './candidatosValores';
+import { ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, TURNO, canalApi, clave, codigoDeTipo, enmascarar, origenApi } from './candidatosValores';
 import { delay, id, newId, page } from './memoriaBase';
 import { alDescargarDocumentoDeCandidato, documentosDeEntidad, log, quitarDocumentoDemo, sembrarDocumentos } from './memoriaEmpresas';
 import { ejemploCandidatos } from './memoriaCandidatosEjemplo';
@@ -116,7 +116,7 @@ async function crearEstado(): Promise<Estado> {
       } as Parameters<typeof sembrarDocumentos>[0][number]);
     }
     e.contactos.set(r.id, (c.communications ?? []).map((m: { date: string; user: string; channel: string; result: string; note?: string; nextAction?: string }) => ({
-      id: newId(), occurredAt: new Date(m.date.replace(' ', 'T')).toISOString(), userName: m.user, channel: m.channel, result: m.result, note: m.note ?? null, nextAction: m.nextAction ?? null,
+      id: newId(), contactedAt: new Date(m.date.replace(' ', 'T')).toISOString(), createdByName: m.user, channel: canalApi(m.channel), result: m.result, note: m.note ?? null, nextAction: m.nextAction ?? null, requestId: null, requestCode: null,
     })));
   }
   sembrarDocumentos(docs, (code) => code);
@@ -217,6 +217,7 @@ async function resumen(e: Estado, r: Registro): Promise<CandidateSummary> {
       expired: docs.filter((d) => d.expiresOn && (diasPara(d.expiresOn) ?? 0) < 0).length,
       expiring: docs.filter((d) => { const x = diasPara(d.expiresOn); return x !== null && x >= 0 && x <= DIAS_AVISO; }).length,
     },
+    experienceYears: r.experienceYears,
     activeApplications: e.candidaturas.filter((a) => a.candidateId === r.id && !['discarded', 'withdrawn', 'finished', 'left'].includes(a.stage)).length,
     lastContactAt: r.lastContactAt, createdAt: r.createdAt,
   };
@@ -297,6 +298,7 @@ export function memoryCandidateRepositories(
       async list(q = {}) {
         const e = await datos();
         const texto = normal(q.q);
+        const documento = q.idDocumentNumber?.toUpperCase().replace(/[\s-]/g, '');
         const sinonimos = (r: Registro) => [r.mainProfileId, ...r.otherProfileIds, ...r.licenseIds, ...r.skillIds]
           .map((x) => (x ? deItem(e, x) : undefined)).filter(Boolean).flatMap((x) => [x!.name, ...x!.synonyms]).join(' | ');
         const atributos = q.attributeId?.split(',').filter(Boolean) ?? [];
@@ -305,6 +307,7 @@ export function memoryCandidateRepositories(
             .filter((r) => !r.anonymizedAt || !texto)
             .filter((r) =>
               (!texto || normal(`${r.firstName} ${r.lastName} ${r.phone ?? ''} ${r.email ?? ''} ${r.city ?? ''} ${r.code} ${sinonimos(r)}`).includes(texto)) &&
+              (!documento || r.idNumber === documento) &&
               (!q.status || r.status === q.status) && (!q.source || r.source === q.source) &&
               (!q.profileId || r.mainProfileId === q.profileId || r.otherProfileIds.includes(q.profileId)) &&
               atributos.every((x) => r.licenseIds.includes(x) || r.skillIds.includes(x) || r.languages.some((l) => l.id === x)))
@@ -415,11 +418,15 @@ export function memoryCandidateRepositories(
       async addContact(candidateId, d) {
         const e = await datos();
         const r = buscar(e, candidateId);
-        const c: CandidateContact = { id: newId(), occurredAt: ahora(), userName: YO.name, channel: d.channel, result: d.result, note: d.note ?? null, nextAction: d.nextAction ?? null };
+        const p = d.requestId ? await peticionDemo(d.requestId) : null;
+        const c: CandidateContact = {
+          id: newId(), contactedAt: d.contactedAt ?? ahora(), createdByName: YO.name, channel: d.channel, result: d.result ?? null, note: d.note ?? null,
+          nextAction: d.nextAction ?? null, requestId: p?.id ?? null, requestCode: p?.code ?? null,
+        };
         e.contactos.set(r.id, [c, ...(e.contactos.get(r.id) ?? [])]);
-        r.lastContactAt = c.occurredAt;
+        r.lastContactAt = c.contactedAt;
         if (['new', 'to_contact'].includes(r.status)) r.status = 'contacted';
-        return delay(c);
+        return delay(e.contactos.get(r.id) ?? []);
       },
     },
     candidateCatalog: {
@@ -455,9 +462,9 @@ export function memoryCandidateRepositories(
         const p = await peticionDemo(d.requestId);
         if (!p) throw new ApiError(422, 'referencia_invalida', 'La petición no existe');
         if (e.candidaturas.some((a) => a.candidateId === r.id && a.requestId === p.id)) throw new ApiError(409, 'conflicto', 'Ya tiene una candidatura en esta petición');
-        if (d.origin === 'sourced') {
+        if (d.origin === 'sourced' && !d.candidateAcceptance) {
           const pool = r.consents.find((c) => c.purpose === 'talent_pool' && !c.withdrawnAt && (!c.expiresAt || c.expiresAt > ahora()));
-          if (!pool) throw new ApiError(409, 'conflicto', 'Sin consentimiento de bolsa vigente: no se le puede proponer para una petición a la que no se ha inscrito');
+          if (!pool) throw new ApiError(409, 'conflicto', 'Sin consentimiento de bolsa vigente: anota que la persona ha aceptado presentarse a esta petición');
         }
         const a: Application = {
           id: newId(), candidateId: r.id, candidateName: `${r.firstName} ${r.lastName}`, candidateCode: r.code, requestId: p.id, requestCode: p.code,

@@ -465,6 +465,8 @@ export type DocumentUpload = {
   expiresOn?: string | null;
   visibleInPortal?: boolean;
   notes?: string | null;
+  /** Fase 6: renovar; el anterior queda eliminado (baja recuperable). */
+  replacesDocumentId?: string | null;
 };
 export type DocumentInput = Partial<Pick<StoredDocument, 'typeId' | 'name' | 'status' | 'expiresOn' | 'visibleInPortal' | 'notes'>>;
 
@@ -1124,6 +1126,7 @@ export type CandidateSummary = {
   poolConsent: { state: 'valid' | 'expiring' | 'expired' | 'none'; expiresAt: string | null };
   documentAlerts: { expired: number; expiring: number };
   activeApplications: number;
+  experienceYears: number | null;
   lastContactAt: string | null;
   anonymized?: boolean;
   createdAt: string;
@@ -1241,6 +1244,9 @@ export type CandidateQuery = PageQuery & {
   attributeId?: string;
   source?: string;
   documents?: 'alerts' | 'missing';
+  poolConsent?: 'valid' | 'expiring' | 'expired' | 'none';
+  /** Búsqueda exacta por la huella del documento. */
+  idDocumentNumber?: string;
 };
 
 /** Valores completos de los datos sensibles (GET /candidates/{id}/sensitive). */
@@ -1253,8 +1259,9 @@ export type CandidateSensitive = {
 export type SensitiveField = 'idDocument' | 'ssNumber' | 'iban' | 'health';
 export type PrivacyNotice = { id: string; purpose: 'talent_pool' | 'health_data'; version: string; text: string; createdAt: string };
 
-/** Contacto registrado con la persona. [Pedido al backend: GET/POST /candidates/{id}/contacts.] */
-export type CandidateContact = { id: string; occurredAt: string; userName: string | null; channel: string; result: string; note: string | null; nextAction: string | null };
+export type ContactChannel = 'phone' | 'email' | 'whatsapp' | 'sms' | 'in_person' | 'other';
+/** Contacto registrado con la persona (GET/POST /candidates/{id}/contacts). */
+export type CandidateContact = { id: string; contactedAt: string; channel: ContactChannel; result: string | null; note: string | null; nextAction: string | null; requestId: string | null; requestCode: string | null; createdByName: string | null };
 
 export type AccessLogEntry = { id: string; occurredAt: string; actorUserId: string | null; actorName: string | null; action: string; candidateId: string | null; candidateCode: string | null; details: Record<string, unknown> | null };
 export type AccessLogQuery = PageQuery & { candidateId?: string; actorUserId?: string; action?: string; from?: string; to?: string };

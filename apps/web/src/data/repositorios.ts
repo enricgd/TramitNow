@@ -110,6 +110,7 @@ import type {
   CandidateSensitive,
   CandidateSummary,
   PrivacyNotice,
+  ContactChannel,
   SensitiveField,
   RequestSource,
   RequestSourceQuery,
@@ -353,9 +354,10 @@ export interface Repositories {
     /** Textos de privacidad publicados (el último, el vigente). */
     privacyNotices(purpose: 'talent_pool' | 'health_data'): Promise<PrivacyNotice[]>;
     withdrawConsent(consentId: string): Promise<CandidateConsent>;
-    /** [Pedido al backend.] Historial de contactos. */
+    /** Historial de contactos, lo último primero. */
     contacts(id: string): Promise<CandidateContact[]>;
-    addContact(id: string, data: { channel: string; result: string; note?: string | null; nextAction?: string | null }): Promise<CandidateContact>;
+    /** Devuelve la lista completa. Actualiza lastContactAt. */
+    addContact(id: string, data: { contactedAt?: string; channel: ContactChannel; result?: string | null; note?: string | null; nextAction?: string | null; requestId?: string | null }): Promise<CandidateContact[]>;
   };
   /** Tablas maestras de candidatos con sinónimos. */
   candidateCatalog: {
@@ -366,7 +368,8 @@ export interface Repositories {
   /** Candidaturas (persona × petición). */
   applications: {
     list(query: { requestId?: string; candidateId?: string; stage?: ApplicationStage }): Promise<Application[]>;
-    create(data: { candidateId: string; requestId: string; origin: 'applied' | 'sourced'; stage?: 'registered' | 'preselected' | 'interview'; source?: string | null; notes?: string | null }): Promise<Application & { requirements?: { code: string; ok: boolean; message: string }[] }>;
+    /** Desde la bolsa sin consentimiento vigente hace falta `candidateAcceptance` (que la persona aceptó presentarse); si no, 409. */
+    create(data: { candidateId: string; requestId: string; origin: 'applied' | 'sourced'; stage?: 'registered' | 'preselected' | 'interview'; source?: string | null; notes?: string | null; candidateAcceptance?: { at?: string; channel: ContactChannel } }): Promise<Application & { requirements?: { code: string; ok: boolean; message: string }[] }>;
     update(id: string, data: { stage?: ApplicationStage; notes?: string | null; discardReason?: string | null }): Promise<Application>;
     /** Reserva una plaza por cubrir (la indicada o la primera). */
     propose(id: string, slotId?: string | null): Promise<Application & { requirements?: { code: string; ok: boolean; message: string }[] }>;

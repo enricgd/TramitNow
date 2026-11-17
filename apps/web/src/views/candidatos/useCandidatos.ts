@@ -16,7 +16,7 @@ import {
   type Repositories,
   type ServiceRequestSummary,
 } from '../../data';
-import { codigoDeTipo, origenApi } from '../../data/candidatosValores';
+import { canalApi, codigoDeTipo, origenApi } from '../../data/candidatosValores';
 import { useSesion } from '../../sesion';
 import { esError, fechaHora, mensajeError } from '../comun/datos';
 import { ESTADOS as ESTADOS_PETICION } from '../peticiones/mapeo';
@@ -133,13 +133,7 @@ export function useCandidatos() {
       const [r, docs, contactos] = await Promise.all([
         repos.candidates.get(v._id),
         repos.documents.list({ entityType: 'candidate', entityId: v._id, limit: 200 }).then((p) => p.data, () => []),
-        // Sin ruta de contactos en la API, el historial sale de la actividad de la ficha
-        repos.candidates.contacts(v._id).catch(() =>
-          repos.activity.list({ entityType: 'candidate', entityId: v._id, limit: 100 }).then(
-            (p) => p.data.map((a) => ({ id: a.id, occurredAt: a.occurredAt, userName: a.actorName, channel: 'Ficha', result: a.summary, note: null, nextAction: null })),
-            () => [],
-          ),
-        ),
+        repos.candidates.contacts(v._id).catch(() => []),
       ]);
       return candidatoVista(r, { documentos: docs.map((d) => documentoVista(d, tipoPorTypeId)), contactos });
     },
@@ -202,12 +196,7 @@ export function useCandidatos() {
 
   const contactar = useCallback(
     async (v: CandidatoVista, d: { channel: string; result: string; note?: string | null; nextAction?: string | null }) => {
-      // Sin ruta de contactos en la API: queda la fecha del último contacto (y «Contactado» si era nuevo)
-      await repos.candidates.addContact(v._id, d).catch(async (e) => {
-        if (!(e instanceof ApiError) || ![404, 405, 501].includes(e.status)) throw e;
-        const estado = v.status === 'Nuevo' || v.status === 'Pendiente de contactar' ? { status: 'contacted' as const } : {};
-        await repos.candidates.update(v._id, { lastContactAt: new Date().toISOString(), ...estado });
-      });
+      await repos.candidates.addContact(v._id, { ...d, channel: canalApi(d.channel) });
       return recargarFicha(v);
     },
     [abrir],
@@ -221,9 +210,8 @@ export function useCandidatos() {
       if (!typeId) throw new ApiError(422, 'validacion', `No existe el tipo de documento «${d.tipo}» en la tabla maestra`);
       // El consentimiento firmado se registra con el texto de privacidad vigente: se comprueba antes de subir nada
       const texto = d.tipo === 'RGPD' ? await textoVigente() : null;
-      const doc = await repos.documents.upload({ entityType: 'candidate', entityId: v._id, typeId, name: d.archivo.name, file: d.archivo, expiresOn: d.caducidad || null });
-      // Renovar: el nuevo sustituye al anterior
-      if (d.sustituye) await repos.documents.remove(d.sustituye).catch(() => null);
+      // Renovar: el nuevo sustituye al anterior (que queda eliminado)
+      const doc = await repos.documents.upload({ entityType: 'candidate', entityId: v._id, typeId, name: d.archivo.name, file: d.archivo, expiresOn: d.caducidad || null, replacesDocumentId: d.sustituye || null });
       // El documento de identidad lleva su caducidad a la ficha; el consentimiento firmado, a los consentimientos
       if (d.tipo === 'DNI/NIE' && d.caducidad) await repos.candidates.update(v._id, { idDocumentExpiresOn: d.caducidad });
       if (texto) await consentir(v._id, doc.id, texto.id);
@@ -257,7 +245,7 @@ export function useCandidatos() {
   /** Marca el aviso de renovación (el correo real llega más adelante). */
   const avisarRenovacion = useCallback(async (v: CandidatoVista, docIds: string[], nota: string) => {
     await Promise.all(docIds.map((x) => repos.documents.renewalNotice(x)));
-    await repos.candidates.addContact(v._id, { channel: 'Email', result: 'Aviso de renovación', note: nota }).catch(() => null); // sin ruta de contactos, queda en cada documento
+    await repos.candidates.addContact(v._id, { channel: 'email', result: 'Aviso de renovación', note: nota }).catch(() => null);
     return recargarFicha(v);
   }, [abrir]);
 
@@ -272,11 +260,14 @@ export function useCandidatos() {
 
   /** «Añadir a la selección» o «Proponer al cliente» (reserva la plaza elegida). */
   const asignar = useCallback(
-    async (v: CandidatoVista, codigo: string, modo: 'seleccion' | 'propuesta', slotId: string | null, nota?: string) => {
+    async (v: CandidatoVista, codigo: string, modo: 'seleccion' | 'propuesta', slotId: string | null, nota?: string, aceptacion?: boolean) => {
       const p = pets.data?.find((x) => x.code === codigo);
       if (!p) throw new ApiError(404, 'no_encontrado', `No encuentro la petición ${codigo}`);
       const existente = (await repos.applications.list({ candidateId: v._id, requestId: p.id }))[0];
-      const app = existente ?? (await repos.applications.create({ candidateId: v._id, requestId: p.id, origin: 'sourced', notes: nota || null }));
+      // Sin consentimiento de bolsa vigente, hace falta anotar que la persona aceptó presentarse a esta petición
+      const app = existente ?? (await repos.applications.create({
+        candidateId: v._id, requestId: p.id, origin: 'sourced', notes: nota || null, ...(aceptacion ? { candidateAcceptance: { channel: 'phone' as const } } : {}),
+      }));
       let avisos: { ok: boolean; message: string }[] = [];
       if (modo === 'propuesta') avisos = (await repos.applications.propose(app.id, slotId)).requirements ?? [];
       pets.reload();
@@ -295,6 +286,12 @@ export function useCandidatos() {
       return recargarFicha(v);
     },
     [pets, abrir],
+  );
+
+  /** Búsqueda exacta por DNI/NIE (la API busca por la huella, sin descifrar). */
+  const buscarPorDocumento = useCallback(
+    (texto: string) => repos.candidates.list({ idDocumentNumber: texto.trim().toUpperCase(), limit: 20 }).then((p) => p.data.map((x) => candidatoVista(x)), () => [] as CandidatoVista[]),
+    [],
   );
 
   // ---- Auditoría ---------------------------------------------------------------------
@@ -334,6 +331,7 @@ export function useCandidatos() {
     descargarDocumento,
     avisarRenovacion,
     cargarPeticion,
+    buscarPorDocumento,
     asignar,
     cambiarCandidatura,
     auditoria,

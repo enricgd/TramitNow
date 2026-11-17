@@ -585,6 +585,11 @@ export function memoryClientRepositories(): Pick<
         // Un fichero de verdad (elegido por el usuario) se puede ver en esta sesión; los de ejemplo, no.
         if (file instanceof Blob && file.size > 0 && typeof URL.createObjectURL === 'function') ficheros.set(created.id, URL.createObjectURL(file));
         documents.unshift(created);
+        // Renovar: el anterior queda eliminado (baja recuperable), como en la API
+        if (data.replacesDocumentId) {
+          const viejo = documents.find((d) => d.id === data.replacesDocumentId && !d.deletedAt);
+          if (viejo) viejo.deletedAt = new Date().toISOString();
+        }
         log('document', created.id, data.entityId, 'create', `Documento subido: ${created.name}`);
         return delay(created, 400);
       },

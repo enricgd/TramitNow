@@ -1,7 +1,7 @@
 // Traducción entre los candidatos de la API (fase 6, fase6-backend.md) y la forma que usa CandidatosView.jsx (la del
 // diseñador). En la vista un candidato se identifica por su código (`id`: «CAN-0101»); el id de la API va en `_id`.
 // Lo sensible (documento de identidad, NSS, IBAN) llega y se queda enmascarado: nunca se guarda el valor completo.
-import { ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, ORIGEN, TIPO_DOCUMENTO, TURNO, clave } from '../../data/candidatosValores';
+import { CANAL, ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, ORIGEN, TIPO_DOCUMENTO, TURNO, clave } from '../../data/candidatosValores';
 import type {
   Application,
   Candidate,
@@ -49,7 +49,7 @@ export function candidaturaVista(a: Application) {
 }
 
 export function contactoVista(c: CandidateContact) {
-  return { date: fechaHora(c.occurredAt), user: c.userName ?? '—', channel: c.channel, result: c.result, note: c.note ?? '', nextAction: c.nextAction ?? undefined };
+  return { date: fechaHora(c.contactedAt), user: c.createdByName ?? '—', channel: CANAL[c.channel] ?? 'Otro', result: c.result ?? '', note: c.note ?? '', nextAction: c.nextAction ?? undefined };
 }
 
 /** Fila del listado (y base de la ficha). En la fila no vienen los documentos: solo cuántos hay por renovar. */
@@ -89,8 +89,8 @@ export function candidatoVista(r: CandidateSummary & Partial<Candidate>, extra: 
     source: ORIGEN[r.source] ?? 'Otro',
     sourceId: r.sourceRef ?? '',
     lastContactDate: fecha(r.lastContactAt),
-    lastContactBy: ultimo?.userName ?? '',
-    lastContactType: ultimo?.channel ?? '',
+    lastContactBy: ultimo?.createdByName ?? '',
+    lastContactType: ultimo ? (CANAL[ultimo.channel] ?? '') : '',
     status: ESTADO_CANDIDATO[r.status],
     category: r.mainProfile?.name ?? '',
     otherProfiles: r.otherProfileNames,

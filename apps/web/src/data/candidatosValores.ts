@@ -1,6 +1,6 @@
 // Valores de Candidatos en la API (fase6-backend.md) y su texto en la pantalla del diseñador (CandidatosView.jsx).
 // Los usan la traducción de la vista (views/candidatos/mapeo.ts) y la memoria de la demo (memoriaCandidatos.ts).
-import type { ApplicationStage, CandidateAvailability, CandidateShift, CandidateSource, CandidateStatus, LanguageLevel } from './tipos';
+import type { ApplicationStage, CandidateAvailability, CandidateShift, CandidateSource, CandidateStatus, ContactChannel, LanguageLevel } from './tipos';
 
 /** Estado del candidato ↔ texto de la vista (ESTADO_CANDIDATO). */
 export const ESTADO_CANDIDATO: Record<CandidateStatus, string> = {
@@ -28,6 +28,10 @@ export const ORIGEN: Record<CandidateSource, string> = {
 };
 /** Origen de la vista → el de la API (lo que no está en la lista, «other»). */
 export const origenApi = (texto: string | null | undefined): CandidateSource => (Object.keys(ORIGEN) as CandidateSource[]).find((k) => ORIGEN[k] === texto) ?? 'other';
+
+/** Canal de contacto ↔ texto de la vista (ventana «Contactar»). */
+export const CANAL: Record<ContactChannel, string> = { phone: 'Llamada', email: 'Email', whatsapp: 'WhatsApp', sms: 'SMS', in_person: 'Presencial', other: 'Otro' };
+export const canalApi = (texto: string): ContactChannel => (Object.keys(CANAL) as ContactChannel[]).find((k) => CANAL[k] === texto) ?? 'other';
 
 /** Turnos ↔ ids de la vista (TURNOS). */
 export const TURNO: Record<CandidateShift, string> = { morning: 'manana', afternoon: 'tarde', night: 'noche', split: 'partida', weekends: 'finde' };

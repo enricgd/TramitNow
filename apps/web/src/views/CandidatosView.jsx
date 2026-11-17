@@ -552,13 +552,27 @@ export default function CandidatosView() {
     };
 
     // Calculate filtered candidates
+    // Búsqueda exacta por DNI o NIE: la hace la API (sin descifrar) y lo encontrado se añade a la lista si no estaba
+    const [porDocumento, setPorDocumento] = useState([]);
+    useEffect(() => {
+        const q = searchQuery.trim();
+        if (!/^[XYZ]?\d{7,8}[A-Z]$/i.test(q)) { setPorDocumento([]); return; }
+        let vigente = true;
+        can.buscarPorDocumento(q).then(l => {
+            if (!vigente) return;
+            setPorDocumento(l.map(c => c._id));
+            setCandidates(prev => [...l.filter(c => !prev.some(x => x._id === c._id)), ...prev]);
+        });
+        return () => { vigente = false; };
+    }, [searchQuery]);
     const filteredCandidates = useMemo(() => {
         return candidates.filter(can => {
             // Search query
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase();
                 const matchName = `${can.name} ${can.lastName}`.toLowerCase().includes(q);
-                const matchDni = can.dni.toLowerCase().includes(q);
+                // El DNI llega tapado: lo busca la API por su huella (porDocumento)
+                const matchDni = porDocumento.includes(can._id);
                 const matchPhone = can.phone.toLowerCase().includes(q);
                 const matchEmail = can.email.toLowerCase().includes(q);
                 const matchCity = can.city.toLowerCase().includes(q);
@@ -599,7 +613,7 @@ export default function CandidatosView() {
 
             return true;
         });
-    }, [candidates, searchQuery, statusFilter, sourceFilter, docFilter, categoryFilter, skillFilter, savedPreset, catalogos]);
+    }, [candidates, searchQuery, statusFilter, sourceFilter, docFilter, categoryFilter, skillFilter, savedPreset, catalogos, porDocumento]);
 
     // Handlers
     const handleSelectAll = (e) => {
@@ -720,7 +734,7 @@ export default function CandidatosView() {
         const propuesta = assignmentMode === 'propuesta';
         const nombre = `${candidate.name} ${candidate.lastName}`;
         const slotId = pos?.plazas.find(x => x.plazaNum === Number(selectedPlazaNum))?._slotId || null;
-        const r = await ejecutar(() => can.asignar(candidate, selectedPetitionId, propuesta ? 'propuesta' : 'seleccion', slotId, wizardState.overrideReason));
+        const r = await ejecutar(() => can.asignar(candidate, selectedPetitionId, propuesta ? 'propuesta' : 'seleccion', slotId, wizardState.overrideReason, wizardState.aceptacion));
         if (!r) return;
         ponerCandidato(r.ficha);
         setWizardState(prev => ({ ...prev, isOpen: false }));
@@ -1997,6 +2011,14 @@ export default function CandidatosView() {
                                                             </p>
                                                         </div>
                                                     </div>
+                                                )}
+
+                                                {/* Sin consentimiento de bolsa vigente: hay que anotar que la persona aceptó presentarse a esta petición */}
+                                                {!['Vigente', 'Próximo a caducar'].includes(wizardState.candidate?.rgpdStatus) && !(wizardState.candidate?.candidaturas || []).some(x => x.petId === wizardState.selectedPetitionId) && (
+                                                    <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                                                        <input type="checkbox" checked={!!wizardState.aceptacion} onChange={(e) => setWizardState(prev => ({ ...prev, aceptacion: e.target.checked }))} className="mt-0.5 rounded border-amber-300 text-indigo-600 focus:ring-indigo-500" />
+                                                        <span>No tiene el consentimiento de bolsa vigente. Marca que la persona ha aceptado presentarse a esta petición (por ejemplo, por teléfono): queda anotado como base para presentarla.</span>
+                                                    </label>
                                                 )}
 
                                                 {/* Optional Notes for Activity Log */}
