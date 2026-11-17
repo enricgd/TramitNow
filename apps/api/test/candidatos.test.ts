@@ -157,6 +157,7 @@ describe('perfil, sinónimos y consentimientos', () => {
   it('consentimiento de la bolsa con la versión del texto, y salud solo con base legal', async () => {
     const pool = await call('POST', '/v1/privacy-notices', { token: admin, body: { purpose: 'talent_pool', version: 'TEST-1', text: 'Texto ficticio de la bolsa' } });
     expect(pool.status).toBe(201);
+    expect(pool.body.createdByName).toBeTruthy();
     expect((await call('POST', '/v1/privacy-notices', { token: seleccion, body: { purpose: 'talent_pool', version: 'TEST-2', text: 'x' } })).status).toBe(403);
     const consent = await call('POST', `/v1/candidates/${candidateId}/consents`, { token: seleccion, body: { purpose: 'talent_pool', noticeId: pool.body.id, channel: 'paper' } });
     expect(consent.status).toBe(201);

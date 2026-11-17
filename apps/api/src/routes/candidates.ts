@@ -265,7 +265,10 @@ const CatalogItemSchema = z
   .openapi('CandidateCatalogItem');
 
 const NoticeSchema = z
-  .object({ id: z.guid(), purpose: z.enum(['talent_pool', 'health_data']), version: z.string(), text: z.string(), createdAt: Timestamp })
+  .object({
+    id: z.guid(), purpose: z.enum(['talent_pool', 'health_data']), version: z.string(), text: z.string(),
+    createdByName: z.string().nullable().openapi({ description: 'Quién publicó la versión' }), createdAt: Timestamp,
+  })
   .openapi('PrivacyNotice');
 
 const AccessLogSchema = z
@@ -967,9 +970,10 @@ export const candidates = createRouter()
     async (c) => {
       const { purpose } = c.req.valid('query');
       const data = await withTenant(c, {}, (tx, ctx) => tx<z.infer<typeof NoticeSchema>[]>`
-        select id, purpose, version, text, created_at from public.privacy_notices
-        where tenant_id = ${ctx.tenantId} and ${purpose ? tx`purpose = ${purpose}` : tx`true`}
-        order by purpose, created_at desc
+        select n.id, n.purpose, n.version, n.text, p.full_name as created_by_name, n.created_at
+        from public.privacy_notices n left join public.profiles p on p.id = n.created_by
+        where n.tenant_id = ${ctx.tenantId} and ${purpose ? tx`n.purpose = ${purpose}` : tx`true`}
+        order by n.purpose, n.created_at desc
       `);
       return c.json({ data: [...data] }, 200);
     },
@@ -995,8 +999,8 @@ export const candidates = createRouter()
       const body = c.req.valid('json');
       const notice = await withTenant(c, { permission: PRIVACY }, async (tx, ctx) => {
         const [row] = await tx<z.infer<typeof NoticeSchema>[]>`
-          insert into public.privacy_notices ${tx({ tenantId: ctx.tenantId, ...body })}
-          returning id, purpose, version, text, created_at
+          insert into public.privacy_notices ${tx({ tenantId: ctx.tenantId, createdBy: ctx.userId, ...body })}
+          returning id, purpose, version, text, (select full_name from public.profiles where id = ${ctx.userId}) as created_by_name, created_at
         `;
         return row!;
       });
