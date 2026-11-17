@@ -938,6 +938,17 @@ Notas: Puede disparar eventos de comunicación y generación documental.
 
 ### 06. Candidatos, trabajadores y documentos
 
+> **Candidatos implementados en la fase 6 de otra forma** (`db/migrations/20261117000500_candidates.sql`, detalle en
+> `db/README.md`, "Fase 6: candidatos y selección"). Las tablas de abajo quedan como referencia. Lo que cambia:
+>
+> - `candidates`: bolsa común de la ETT, única por la huella HMAC del documento. Documento, Seguridad Social, IBAN y
+>   salud **cifrados por la API** (AES-256-GCM, decisión del 17/11/2026), con sus cuatro últimos para enmascarar.
+>   Perfiles, carnés, habilidades e idiomas pasan a tablas maestras con sinónimos (`candidate_attributes`).
+> - Nuevo: `privacy_notices` y `candidate_consents` (bolsa y salud, con la versión del texto aceptado), `applications`
+>   (candidaturas por petición, ligadas a sus plazas) y `access_log` (auditoría de accesos, solo se añade).
+> - Supresión = anonimizar (`private.anonymize_candidate`), no borrar.
+> - `workers` (trabajadores, contratos): fase 7, con el mismo cifrado.
+
 #### candidates
 
 Candidatos/personas disponibles para asignación.

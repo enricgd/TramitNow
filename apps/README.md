@@ -347,6 +347,11 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `POST /v1/quote-versions/{id}/approve` · `/reject-approval`: aprobar el margen por debajo del mínimo o pedir cambios | `quotes.approve_margin` |
 | `GET /v1/requests` (`?q=&status=…\|active&clientId=&quoteId=&responsibleUserId=&branchId=&startingSoon=`), `GET /v1/requests/{id}`, `GET /v1/request-use-cases`: peticiones y supuestos de utilización | `requests.manage`, `module.comercial`, `module.seleccion` o `module.laboral`, en la sucursal |
 | `GET /v1/request-sources`, `POST /v1/requests`, `POST /v1/quote-versions/{id}/requests`, `PATCH /v1/requests/{id}`, `POST /v1/requests/{id}/duplicate`, `POST /v1/requests/{id}/pre-cpd` · `/pre-cpd/sent` · `/pre-cpd/reviewed` (ver "Peticiones") | `requests.manage` |
+| `GET /v1/candidates` (`?q=&status=&source=&profileId=&attributeId=&documents=alerts\|missing&anonymized=`), `GET /v1/candidates/{id}` (auditado), `GET /v1/candidate-catalog`, `GET /v1/candidate-document-alerts`, `GET /v1/applications?candidateId=\|requestId=`, `GET /v1/privacy-notices` | `candidates.manage`, `module.seleccion` o `module.laboral` |
+| `POST /v1/candidates`, `PATCH /v1/candidates/{id}`, `POST /v1/candidates/check-duplicate`, `POST /v1/candidate-catalog`, `POST /v1/candidates/{id}/consents`, `POST /v1/candidate-consents/{id}/withdraw`, `POST`/`PATCH /v1/applications`, `POST /v1/applications/{id}/propose` · `/confirm` · `/release` (ver "Candidatos") | `candidates.manage` (las candidaturas, también `requests.manage`) |
+| `GET /v1/candidates/{id}/sensitive?fields=`: documento, Seguridad Social, IBAN y salud completos (auditado) | `personal_data.view` |
+| `GET /v1/candidates/{id}/export`, `POST /v1/candidates/{id}/anonymize`, `POST /v1/privacy-notices`, `GET /v1/privacy/retention` | `privacy.manage` |
+| `GET /v1/access-log`: auditoría de accesos | `privacy.audit` |
 
 Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
 sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
@@ -407,6 +412,23 @@ cálculo, que no cambian aunque el presupuesto cambie después (`conditions` en 
   `pre-cpd/reviewed` lo marcan a mano. Errores: 409 `cpd_incompleto` (con un `details` por cada comprobación que bloquea)
   y 422 `salario_bajo_convenio` si el convenio vigente pide más que el salario copiado (art. 11 de la Ley 14/1994). El
   supuesto de utilización es obligatorio; la lista (`GET /v1/request-use-cases`) está marcada [verificar].
+
+### Candidatos
+
+- **Datos sensibles**: el número del documento de identidad, el de la Seguridad Social, el IBAN y la salud se cifran en
+  la API (`src/lib/personal-data.ts`: AES-256-GCM, claves versionadas en `PERSONAL_DATA_KEYS`, huella HMAC con
+  `PERSONAL_DATA_HMAC_KEY`). Las respuestas los llevan enmascarados (`•••••678Z`); completos, solo
+  `GET /v1/candidates/{id}/sensitive` con `personal_data.view`. Sin claves configuradas, lo que cifra o descifra responde
+  503 `servicio_no_disponible` y lo demás funciona. DNI y NIE se validan con su letra; el NSS y el IBAN, con su control.
+- **Duplicados**: la huella del documento es única en la ETT (409 con el candidato que ya lo tiene en `details`);
+  `POST /v1/candidates/check-duplicate` lo comprueba antes de guardar.
+- **Auditoría** (`access_log`): abrir la ficha, ver datos sensibles, descargar un documento del candidato, exportar y
+  anonimizar. Los listados no se registran.
+- **Candidaturas**: `origin: applied` (se inscribió: medidas precontractuales) o `sourced` (de la bolsa: exige su
+  consentimiento vigente). `propose` reserva una plaza de la petición, `confirm` la cubre y `release` la libera; la
+  ficha de la petición dice quién ocupa cada plaza.
+- **RGPD**: consentimientos con la versión del texto (`/privacy-notices`), exportación (derecho de acceso),
+  anonimización (supresión) y `GET /v1/privacy/retention` (plazo cumplido).
 
 ### Documentos
 
