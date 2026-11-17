@@ -9,7 +9,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
       Info, RefreshCw, SlidersHorizontal, BookOpen, FileSpreadsheet, GitBranch,
       UserCheck, ExternalLink, ShieldAlert, Award, EyeOff, List, SquareKanban, GripVertical, Archive, Upload, Paperclip
     } from 'lucide-react';
-import { Page, PageHeader, Card, KpiTile, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Segmented, Tabs, CAMPO, Modal, Drawer, Confirmar, Notice, EmptyState, CargandoPagina, ErrorCarga } from '../ui';
+import { Page, PageHeader, Card, KpiTile, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Segmented, Tabs, CAMPO, Modal, Drawer, Confirmar, Notice, EmptyState, CargandoPagina, ErrorCarga, numero, euros as importe, eurosHora, porcentaje, cantidad, fecha, fechaHora } from '../ui';
 import { CLAVE_PRESUPUESTO_EMPRESA, recogerTraspaso } from './traspasos';
 import { usePresupuestos, economiaPuesto, conceptosNuevos, mensajeError } from './presupuestos/usePresupuestos';
 import { DEMO } from '../modo';
@@ -353,21 +353,6 @@ import { DEMO } from '../modo';
         setVistaActual('detalle');
         setPestanaActiva('resumen');
       };
-      // Enlace directo a un presupuesto (#/presupuestos/PRE-…), por ejemplo desde una petición
-      const enlaceDe = () => (window.location.hash.startsWith('#/presupuestos/') ? window.location.hash.split('/')[2] || '' : '');
-      const [enlace, setEnlace] = useState(enlaceDe);
-      useEffect(() => {
-        const alCambiar = () => setEnlace(enlaceDe());
-        window.addEventListener('hashchange', alCambiar);
-        return () => window.removeEventListener('hashchange', alCambiar);
-      }, []);
-      useEffect(() => {
-        if (!enlace || !listado.length) return;
-        const p = listado.find(x => x.id === decodeURIComponent(enlace));
-        setEnlace('');
-        window.history.replaceState(null, '', '#/presupuestos');
-        if (p) abrirPresupuesto(p);
-      }, [enlace, listado]);
 
       // Documentos del presupuesto: se pueden eliminar y volver a generar
       const [docsPresupuesto, setDocsPresupuesto] = useState(['propuesta', 'escandallo']);
@@ -405,6 +390,40 @@ import { DEMO } from '../modo';
       const [formularioPresupuesto, setFormularioPresupuesto] = useState(presupuestoVacio);
       const [cambiosPendientes, setCambiosPendientes] = useState([]);
       const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
+      // Enlace directo a un presupuesto (#/presupuestos/PRE-…), por ejemplo desde una petición
+      const enlaceDe = () => (window.location.hash.startsWith('#/presupuestos/') ? window.location.hash.split('/')[2] || '' : '');
+      const [enlace, setEnlace] = useState(enlaceDe);
+      // «Atrás» desde un presupuesto (#/presupuestos): vuelve al listado, salvo con cambios sin guardar
+      const sinGuardarRef = useRef(false);
+      sinGuardarRef.current = modoEdicion && hayCambiosSinGuardar;
+      useEffect(() => {
+        const alCambiar = () => {
+          if (!window.location.hash.startsWith('#/presupuestos')) return;
+          const codigo = enlaceDe();
+          if (codigo) { setEnlace(codigo); return; }
+          if (sinGuardarRef.current) {
+            window.history.go(1);
+            mostrarToast('Guarda o cancela los cambios antes de salir del presupuesto.', 'info');
+            return;
+          }
+          setVistaActual('listado');
+        };
+        window.addEventListener('hashchange', alCambiar);
+        return () => window.removeEventListener('hashchange', alCambiar);
+      }, []);
+      useEffect(() => {
+        if (!enlace || !listado.length) return;
+        const p = listado.find(x => x.id === decodeURIComponent(enlace));
+        setEnlace('');
+        if (p) abrirPresupuesto(p);
+        else window.history.replaceState(null, '', '#/presupuestos');
+      }, [enlace, listado]);
+      // La URL sigue a lo que hay abierto (#/presupuestos/PRE-…), para enlazarlo y volver con «atrás»
+      useEffect(() => {
+        if (enlace || !window.location.hash.startsWith('#/presupuestos')) return;
+        const destino = vistaActual === 'detalle' && !esNuevo && presupuesto.id ? `#/presupuestos/${presupuesto.id}` : '#/presupuestos';
+        if (window.location.hash !== destino) window.history.pushState(null, '', destino);
+      }, [vistaActual, presupuesto.id, esNuevo]);
       const [estadoGuardado, setEstadoGuardado] = useState('guardado'); // 'guardado' | 'guardando' | 'incompleto' | 'revision' | 'error'
       
       // Paneles laterales (Drawers) y Modales
@@ -611,13 +630,13 @@ if (orig.posiciones.length !== edit.posiciones.length) {
 edit.posiciones.forEach((pos, idx) => {
   const posOrig = orig.posiciones.find(p => p.id === pos.id);
   if (!posOrig) {
-    diffs.push({ campo: `Nuevo puesto añadido`, anterior: '—', nuevo: `${pos.nombre} (${pos.tarifaHoraOfertada} €/h)` });
+    diffs.push({ campo: `Nuevo puesto añadido`, anterior: '—', nuevo: `${pos.nombre} (${eurosHora(pos.tarifaHoraOfertada)})` });
   } else {
     if (posOrig.tarifaHoraOfertada !== pos.tarifaHoraOfertada) {
-      diffs.push({ campo: `Tarifa [${pos.nombre}]`, anterior: `${posOrig.tarifaHoraOfertada} €/h`, nuevo: `${pos.tarifaHoraOfertada} €/h` });
+      diffs.push({ campo: `Tarifa [${pos.nombre}]`, anterior: eurosHora(posOrig.tarifaHoraOfertada), nuevo: eurosHora(pos.tarifaHoraOfertada) });
     }
     if (posOrig.salarioBaseAnual !== pos.salarioBaseAnual) {
-      diffs.push({ campo: `Salario Base [${pos.nombre}]`, anterior: `${posOrig.salarioBaseAnual} €`, nuevo: `${pos.salarioBaseAnual} €` });
+      diffs.push({ campo: `Salario Base [${pos.nombre}]`, anterior: importe(posOrig.salarioBaseAnual), nuevo: importe(pos.salarioBaseAnual) });
     }
     if (posOrig.convenio !== pos.convenio) {
       diffs.push({ campo: `Convenio [${pos.nombre}]`, anterior: posOrig.convenio, nuevo: pos.convenio });
@@ -862,8 +881,7 @@ return datosActivos.posiciones.map(pos => ({
 
       const totalesAgregados = useMemo(() => {
         const tot = totalesDe(datosActivos);
-        const costeMedio = tot.ecos.length ? tot.ecos.reduce((s, e) => s + e.costeTotalEmpresaHora, 0) / tot.ecos.length : 0;
-        return { ...tot, costeMedio, margenMedioEur: tot.tarifaMedia - costeMedio };
+        return { ...tot, margenMedioEur: tot.tarifaMedia - tot.costeMedio };
       }, [datosActivos]);
 
       // Render de etiqueta de estado
@@ -989,8 +1007,32 @@ return datosActivos.posiciones.map(pos => ({
           <div className="p-3">
             <PipelinePresupuestos lista={listadoFiltrado} onAbrir={abrirPresupuesto} onMover={moverPresupuesto} />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
+        ) : (<>
+          {/* Móvil: una tarjeta por presupuesto, con importe, estado y validez (la tabla, desde md) */}
+          <ul className="md:hidden divide-y divide-slate-100">
+            {listadoFiltrado.map(p => (
+              <li key={p.id}>
+                <button type="button" onClick={() => abrirPresupuesto(p)} className="w-full text-left px-4 py-3 hover:bg-slate-50 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs text-slate-700">{p.id}</span>
+                    {renderBadgeEstado(p.estado)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">{p.cliente}</div>
+                    <div className="text-[11px] text-slate-500 line-clamp-1">{p.titulo}</div>
+                  </div>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
+                    <span className="font-semibold text-slate-900">{eurosTotal(p.importe)}</span>
+                    <span className="text-slate-600">{p.puestosCount} {p.puestosCount === 1 ? 'puesto' : 'puestos'} · {eurosHora(p.tarifaMedia)}</span>
+                    {rolUsuario === 'direccion' && <span className="text-emerald-700">Margen {porcentaje(p.margenPct)}</span>}
+                    <span className={estadoValidez(p.fechaValidez) === 'caducado' ? 'text-rose-600' : estadoValidez(p.fechaValidez) === 'pronto' ? 'text-amber-700' : 'text-slate-500'}>Válido hasta {fecha(p.fechaValidez)}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500">{p.comercial}{sinRespuesta(p) && <span className="text-amber-700"> · Sin respuesta · {p.diasSinRespuesta} días</span>}</div>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-500">
@@ -1017,10 +1059,10 @@ return datosActivos.posiciones.map(pos => ({
                     <td className="py-2.5 px-3 whitespace-nowrap text-slate-600">{p.comercial}</td>
                     <td className="py-2.5 px-3 whitespace-nowrap text-slate-600">{p.puestosCount}</td>
                     <td className="py-2.5 px-3 whitespace-nowrap text-right font-medium text-slate-900">{eurosTotal(p.importe)}</td>
-                    <td className="py-2.5 px-3 whitespace-nowrap text-slate-700">{p.tarifaMedia.toFixed(2)} €/h</td>
-                    {rolUsuario === 'direccion' && <td className="py-2.5 px-3 whitespace-nowrap text-emerald-700">{p.margenPct.toFixed(1)} %</td>}
+                    <td className="py-2.5 px-3 whitespace-nowrap text-slate-700">{eurosHora(p.tarifaMedia)}</td>
+                    {rolUsuario === 'direccion' && <td className="py-2.5 px-3 whitespace-nowrap text-emerald-700">{porcentaje(p.margenPct)}</td>}
                     <td className="py-2.5 px-3 whitespace-nowrap">
-                      <span className={estadoValidez(p.fechaValidez) === 'caducado' ? 'text-rose-600' : estadoValidez(p.fechaValidez) === 'pronto' ? 'text-amber-700' : 'text-slate-500'}>{p.fechaValidez}</span>
+                      <span className={estadoValidez(p.fechaValidez) === 'caducado' ? 'text-rose-600' : estadoValidez(p.fechaValidez) === 'pronto' ? 'text-amber-700' : 'text-slate-500'}>{fecha(p.fechaValidez)}</span>
                     </td>
                     <td className="py-2.5 px-3 whitespace-nowrap">
                       {renderBadgeEstado(p.estado)}
@@ -1047,7 +1089,7 @@ return datosActivos.posiciones.map(pos => ({
               </tbody>
             </table>
           </div>
-        )}
+        </>)}
       </Card>
     </Page>
   )}
@@ -1088,7 +1130,7 @@ return datosActivos.posiciones.map(pos => ({
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="inline-flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-slate-400" />{datosActivos.cliente}</span>
             <span className="inline-flex items-center gap-1"><User className="w-3.5 h-3.5 text-slate-400" />{datosActivos.contacto}</span>
-            <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />Válido hasta {datosActivos.fechaValidez}</span>
+            <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />Válido hasta {fecha(datosActivos.fechaValidez)}</span>
           </span>
         }
         actions={
@@ -1142,7 +1184,7 @@ return datosActivos.posiciones.map(pos => ({
       )}
       {datosActivos.estado === 'Obsoleto' && (
         <Notice tone="neutral" icon={Archive}>
-          <strong>Presupuesto obsoleto</strong>{datosActivos.obsoleto ? ` desde el ${datosActivos.obsoleto.fecha}: ${datosActivos.obsoleto.motivo.toLowerCase()}.` : '.'} Ya no se puede enviar ni aceptar; se queda para consultar.
+          <strong>Presupuesto obsoleto</strong>{datosActivos.obsoleto ? ` desde el ${fecha(datosActivos.obsoleto.fecha)}: ${datosActivos.obsoleto.motivo.toLowerCase()}.` : '.'} Ya no se puede enviar ni aceptar; se queda para consultar.
           {datosActivos.obsoleto?.sustituidoPor && <> Lo sustituye <button type="button" className="font-semibold text-indigo-700 hover:underline" onClick={() => abrirPorId(datosActivos.obsoleto.sustituidoPor)}>{datosActivos.obsoleto.sustituidoPor}</button>.</>}
         </Notice>
       )}
@@ -1236,7 +1278,7 @@ return datosActivos.posiciones.map(pos => ({
               {[
                 { icono: Building2, titulo: 'Empresa', lineas: [datosActivos.cliente || 'Sin empresa', datosActivos.cif, etiquetaConvenio(datosActivos.convenioEmpresa)] },
                 { icono: User, titulo: 'Contacto', lineas: [datosActivos.contacto || 'Sin contacto', datosActivos.emailContacto, datosActivos.telefonoContacto] },
-                { icono: Briefcase, titulo: 'Gestión comercial', lineas: [datosActivos.comercial || 'Sin comercial', datosActivos.fechaEmision && `Emitido el ${datosActivos.fechaEmision}`, datosActivos.fechaValidez && `Válido hasta ${datosActivos.fechaValidez}`] },
+                { icono: Briefcase, titulo: 'Gestión comercial', lineas: [datosActivos.comercial || 'Sin comercial', datosActivos.fechaEmision && `Emitido el ${fecha(datosActivos.fechaEmision)}`, datosActivos.fechaValidez && `Válido hasta ${fecha(datosActivos.fechaValidez)}`] },
               ].map(b => (
                 <div key={b.titulo} className="rounded-xl border border-slate-200 p-4 space-y-1.5">
                   <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5"><b.icono className="w-4 h-4 text-slate-400" /> {b.titulo}</div>
@@ -1270,17 +1312,17 @@ return datosActivos.posiciones.map(pos => ({
                       <div className="flex items-start justify-between gap-2">
                         <h5 className="font-semibold text-slate-900 text-sm">{pos.nombre}</h5>
                         <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          {eco.tarifaPVP.toFixed(2)} €/h
+                          {eurosHora(eco.tarifaPVP)}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 mt-1 line-clamp-2">{pos.descripcionTareas || 'Sin descripción de tareas.'}</p>
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">Jornada 8h: <strong className="text-slate-800">{eco.tarifaJornadaCalculada.toFixed(2)} €/día</strong></span>
+                      <span className="text-slate-500">Jornada 8h: <strong className="text-slate-800">{numero(eco.tarifaJornadaCalculada)} €/día</strong></span>
                       {rolUsuario === 'direccion' && (
                         <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">
-                          Margen: +{eco.margenEuroHora.toFixed(2)} €/h ({eco.margenPorcentaje.toFixed(1)}%)
+                          Margen: +{eurosHora(eco.margenEuroHora)} ({porcentaje(eco.margenPorcentaje)})
                         </span>
                       )}
                     </div>
@@ -1371,8 +1413,8 @@ return datosActivos.posiciones.map(pos => ({
                       </div>
 
                       <div className="text-right">
-                        <div className="text-lg font-semibold text-indigo-700">{eco.tarifaPVP.toFixed(2)} €/h</div>
-                        <div className="text-[11px] text-slate-500">{eco.tarifaJornadaCalculada.toFixed(2)} €/jornada</div>
+                        <div className="text-lg font-semibold text-indigo-700">{eurosHora(eco.tarifaPVP)}</div>
+                        <div className="text-[11px] text-slate-500">{numero(eco.tarifaJornadaCalculada)} €/jornada</div>
                         {eco.horasTotales > 0 && (
                           <div className="mt-1 text-[11px] text-slate-600">
                             {eco.personas} × {horasFmt(eco.horasPersona)} h = <strong className="text-slate-900">{eurosTotal(eco.facturacionTotal)}</strong>
@@ -1408,15 +1450,15 @@ return datosActivos.posiciones.map(pos => ({
                     <div className="grid grid-cols-3 gap-2 py-3.5 text-xs border-b border-slate-100 bg-slate-50/50 rounded-lg p-2.5 my-3">
                       <div>
                         <span className="text-slate-400 block text-[10px]">Salario Base Anual</span>
-                        <span className="font-semibold text-slate-800">{Number(pos.salarioBaseAnual).toLocaleString('es-ES')} €</span>
+                        <span className="font-semibold text-slate-800">{importe(pos.salarioBaseAnual)}</span>
                       </div>
                       <div>
                         <span className="text-slate-400 block text-[10px]">Plus Convenio/mes</span>
-                        <span className="font-semibold text-slate-800">{Number(pos.plusConvenioMes).toFixed(2)} €</span>
+                        <span className="font-semibold text-slate-800">{importe(pos.plusConvenioMes)}</span>
                       </div>
                       <div>
                         <span className="text-slate-400 block text-[10px]">Salario Bruto/hora</span>
-                        <span className="font-semibold text-slate-800">{eco.salarioBrutoHora.toFixed(2)} €/h</span>
+                        <span className="font-semibold text-slate-800">{eurosHora(eco.salarioBrutoHora)}</span>
                       </div>
                     </div>
 
@@ -1549,7 +1591,7 @@ return datosActivos.posiciones.map(pos => ({
                         {CATALOGOS.tiposConcepto.find(t => t.id === c.tipo)?.label || c.tipoCustom || c.tipo}
                       </td>
                       <td className="px-4 py-3.5 font-semibold text-indigo-700">
-                        {c.tipo === 'porcentaje' ? `${c.valor} %` : `${Number(c.valor).toFixed(2)} €`}
+                        {valorConcepto(c)}
                       </td>
                       <td className="px-4 py-3.5 text-slate-600 text-[11px]">
                         {CATALOGOS.basesCalculo.find(b => b.id === c.baseCalculo)?.label || c.baseCalculoCustom || c.baseCalculo}
@@ -1868,7 +1910,7 @@ return datosActivos.posiciones.map(pos => ({
                     return (
                       <tr key={v.codigo} className="border-b border-slate-100 last:border-0">
                         <td className="py-2.5 px-3 font-mono text-slate-700 whitespace-nowrap">{v.codigo}{v.actual && <span className="ml-1.5"><Badge tone="accent">Actual</Badge></span>}</td>
-                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{v.fecha}</td>
+                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{fecha(v.fecha)}</td>
                         <td className="py-2.5 px-3 text-slate-700">{v.autor}</td>
                         <td className="py-2.5 px-3 text-right text-slate-900">{eurosTotal(tv.facturacion)}</td>
                         <td className="py-2.5 px-3 text-right text-slate-700">{euros(tv.tarifaMedia)}</td>
@@ -1939,7 +1981,7 @@ return datosActivos.posiciones.map(pos => ({
                       <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Paperclip className="w-4 h-4" /></div>
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-slate-900">{d.nombre}</div>
-                        <div className="text-[11px] text-slate-500">{d.tipo} · {d.archivo} · añadido el {d.fecha} por {d.autor}</div>
+                        <div className="text-[11px] text-slate-500">{d.tipo} · {d.archivo} · añadido el {fecha(d.fecha)} por {d.autor}</div>
                       </div>
                       {d.interno && <Badge icon={EyeOff}>Interno</Badge>}
                       <Button size="sm" icon={Download} onClick={() => descargarAnadido(d)}>Descargar</Button>
@@ -1973,7 +2015,7 @@ return datosActivos.posiciones.map(pos => ({
                   <div className="space-y-0.5 flex-1">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-slate-800">{log.accion}</span>
-                      <span className="text-[11px] text-slate-400 font-mono">{log.fecha}</span>
+                      <span className="text-[11px] text-slate-400 font-mono">{fechaHora(log.fecha)}</span>
                     </div>
                     <div className="text-slate-600">{log.detalle}</div>
                     <div className="text-[11px] text-indigo-600 font-medium pt-0.5">Por: {log.usuario}</div>
@@ -2502,7 +2544,7 @@ return datosActivos.posiciones.map(pos => ({
                       onClick={() => setPosicionEnEdicion(prev => ({ ...prev, tarifaHoraOfertada: Math.round(ecoSim.tarifaSugerida * 100) / 100 }))}
                       className="mt-1 text-[11px] font-medium text-indigo-600 hover:underline"
                     >
-                      Usar la sugerida: {ecoSim.tarifaSugerida.toFixed(2).replace('.', ',')} €/h
+                      Usar la sugerida: {eurosHora(ecoSim.tarifaSugerida)}
                     </button>
                   </div>
                 </div>
@@ -2855,8 +2897,9 @@ return datosActivos.posiciones.map(pos => ({
     // DESGLOSE DE LA TARIFA DE UN PUESTO
     // Dirección ve cómo se llega a la tarifa (todo interno). El cliente solo ve salario y tarifa.
     // ==========================================
-    const euros = (n) => `${Number(n || 0).toFixed(2).replace('.', ',')} €/h`;
-    const pct = (n) => `${Number(n || 0).toFixed(1).replace('.', ',')} %`;
+    // Formato único de la web (ui/formato.ts)
+    const euros = (n) => eurosHora(n || 0);
+    const pct = (n) => porcentaje(n || 0);
 
     function DesgloseTarifa({ eco, rol, compacto = false }) {
       const t = eco.tarifaPVP || 0;
@@ -2985,7 +3028,7 @@ return datosActivos.posiciones.map(pos => ({
                 )}
                 <td className="py-1 text-right text-slate-800 whitespace-nowrap">
                   {editable && !conCoefSalario && x.propio ? (
-                    <input type="number" step="0.05" value={x.salarioManual ?? ''} placeholder={x.salarioHora != null ? x.salarioHora.toFixed(2) : ''} onChange={(e) => cambiar(x.id, 'salarioManual', e.target.value)} className={celda} aria-label={`Salario por hora de ${x.concepto}`} />
+                    <input type="number" step="0.05" value={x.salarioManual ?? ''} placeholder={x.salarioHora != null ? numero(x.salarioHora) : ''} onChange={(e) => cambiar(x.id, 'salarioManual', e.target.value)} className={celda} aria-label={`Salario por hora de ${x.concepto}`} />
                   ) : x.salarioHora != null ? euros(x.salarioHora) : `×${x.coefSalario}`}
                 </td>
                 {editable && (
@@ -3048,13 +3091,13 @@ return datosActivos.posiciones.map(pos => ({
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
             <span className="flex items-center gap-1.5">
-              <input type="number" step="0.5" disabled={disabled} value={porcentaje} placeholder={sugeridoPorcentaje != null ? sugeridoPorcentaje.toFixed(1) : '—'} onChange={(e) => onPorcentaje(e.target.value)} className={celda(tipo === 'porcentaje')} aria-label="Margen en porcentaje" />
+              <input type="number" step="0.5" disabled={disabled} value={porcentaje} placeholder={sugeridoPorcentaje != null ? numero(sugeridoPorcentaje, 1) : '—'} onChange={(e) => onPorcentaje(e.target.value)} className={celda(tipo === 'porcentaje')} aria-label="Margen en porcentaje" />
               <span className={`text-xs ${tipo === 'porcentaje' ? 'text-slate-700 font-semibold' : 'text-slate-400'}`}>%</span>
             </span>
           </label>
           <label className="block">
             <span className="flex items-center gap-1.5">
-              <input type="number" step="0.05" disabled={disabled} value={importe} placeholder={sugeridoImporte != null ? sugeridoImporte.toFixed(2) : '—'} onChange={(e) => onImporte(e.target.value)} className={celda(tipo === 'importe')} aria-label="Margen en euros por hora" />
+              <input type="number" step="0.05" disabled={disabled} value={importe} placeholder={sugeridoImporte != null ? numero(sugeridoImporte) : '—'} onChange={(e) => onImporte(e.target.value)} className={celda(tipo === 'importe')} aria-label="Margen en euros por hora" />
               <span className={`text-xs whitespace-nowrap ${tipo === 'importe' ? 'text-slate-700 font-semibold' : 'text-slate-400'}`}>€/h</span>
             </span>
           </label>
@@ -3281,8 +3324,8 @@ return datosActivos.posiciones.map(pos => ({
                 ) : (
                   <dl className="space-y-2">
                     {fila('Comercial', datos.comercial)}
-                    {fila('Emisión', datos.fechaEmision)}
-                    {fila('Válido hasta', datos.fechaValidez)}
+                    {fila('Emisión', fecha(datos.fechaEmision))}
+                    {fila('Válido hasta', fecha(datos.fechaValidez))}
                   </dl>
                 )}
               </div>
@@ -3340,8 +3383,8 @@ return datosActivos.posiciones.map(pos => ({
                     <div className="mt-1 text-xs font-medium text-slate-900 line-clamp-2">{p.cliente}</div>
                     <div className="text-[11px] text-slate-500 line-clamp-1">{p.titulo}</div>
                     <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                      <span>{p.puestosCount} puestos · {p.tarifaMedia.toFixed(2).replace('.', ',')} €/h</span>
-                      <span>{p.fechaValidez}</span>
+                      <span>{p.puestosCount} puestos · {eurosHora(p.tarifaMedia)}</span>
+                      <span>{fecha(p.fechaValidez)}</span>
                     </div>
                     <div className="mt-1 flex items-center justify-between text-[11px]">
                       <span className="text-slate-400">{p.comercial}</span>
@@ -3366,6 +3409,7 @@ return datosActivos.posiciones.map(pos => ({
     // Los legales (Seguridad Social, indemnización) se aplican siempre.
     // ==========================================
     const unidadConcepto = (c) => ({ porcentaje: '%', fijo_hora: '€/h', fijo_jornada: '€/día', fijo_mes: '€/mes' }[c.tipo] || '');
+    const valorConcepto = (c) => (c.tipo === 'porcentaje' ? porcentaje(c.valor, 2) : `${numero(c.valor)} ${unidadConcepto(c) || '€'}`);
 
     function ajusteDe(pos, c) {
       const a = pos.conceptos?.[c.id] || {};
@@ -3387,7 +3431,7 @@ return datosActivos.posiciones.map(pos => ({
       const celda = 'h-7 w-14 bg-white border border-slate-200 rounded-md px-1.5 text-xs text-right focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400 placeholder:text-slate-300';
       const pctActivo = porcentaje !== '' && porcentaje != null;
       const impActivo = importe !== '' && importe != null;
-      const fmt = (n, d) => (n == null || Number.isNaN(n) ? '—' : Number(n).toFixed(d));
+      const fmt = (n, d) => (n == null || Number.isNaN(n) ? '—' : numero(n, d));
       return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap">
           <input type="number" step="0.1" value={porcentaje ?? ''} placeholder={impActivo ? '' : fmt(sugeridoPorcentaje, 1)} disabled={disabled} onChange={(e) => onPorcentaje(e.target.value)} className={celda} aria-label={`Porcentaje de ${etiqueta}`} />
@@ -3420,13 +3464,13 @@ return datosActivos.posiciones.map(pos => ({
                     {c.nombre}
                     {c.esObligatorioLegal && <span className="ml-1.5 text-[11px] text-slate-400">(legal, siempre)</span>}
                   </td>
-                  <td className="py-2 px-3 text-right whitespace-nowrap text-slate-500">{c.valor} {unidadConcepto(c)}</td>
+                  <td className="py-2 px-3 text-right whitespace-nowrap text-slate-500">{valorConcepto(c)}</td>
                   {posiciones.map(p => {
                     const a = ajusteDe(p, c);
                     return (
                       <td key={p.id} className="py-2 px-3">
                         {c.esObligatorioLegal ? (
-                          <span className="text-slate-400">{c.valor} {unidadConcepto(c)}</span>
+                          <span className="text-slate-400">{valorConcepto(c)}</span>
                         ) : (
                           <div className="flex items-center gap-1.5">
                             <input
@@ -3482,7 +3526,7 @@ return datosActivos.posiciones.map(pos => ({
                   {c.esObligatorioLegal && <span className="ml-1.5 text-[11px] text-slate-400 no-underline">(legal, siempre)</span>}
                 </span>
                 {c.esObligatorioLegal ? (
-                  <span className="text-slate-500 whitespace-nowrap">{c.valor} {unidadConcepto(c)}</span>
+                  <span className="text-slate-500 whitespace-nowrap">{valorConcepto(c)}</span>
                 ) : (
                   <DosCasillas
                     porcentaje={a.porcentaje}
@@ -3505,24 +3549,28 @@ return datosActivos.posiciones.map(pos => ({
     // ==========================================
     // IMPORTES, REVISIÓN ANTES DE ENVIAR, PROPUESTA Y VERSIONES
     // ==========================================
-    const eurosTotal = (n) => `${Math.round(Number(n) || 0).toLocaleString('es-ES')} €`;
-    const horasFmt = (n) => (Number(n) || 0).toLocaleString('es-ES');
+    const eurosTotal = (n) => importe(Number(n) || 0, 0);
+    const horasFmt = (n) => cantidad(Number(n) || 0);
 
     function totalesDe(datos) {
       const ecos = datos.posiciones.map(p => calcularEconomiaPosicion(p, datos.conceptosEscandallo, margenDe(datos)));
       const suma = (k) => ecos.reduce((s, e) => s + (e[k] || 0), 0);
       const facturacion = suma('facturacionTotal');
-      const margen = suma('margenServicio');
+      const costeTotal = suma('costeServicio');
+      const margen = facturacion - costeTotal;
+      const horas = suma('horasTotales');
+      // Como los totales de calc/quote.ts (calculateQuote) y el listado: medias ponderadas por horas
+      // (personas × horas) y el % de margen redondeado a dos decimales antes de pintarlo.
       return {
         ecos,
         facturacion,
-        costeTotal: suma('costeServicio'),
+        costeTotal,
         margenTotal: margen,
-        margenTotalPct: facturacion > 0 ? (margen / facturacion) * 100 : 0,
+        margenTotalPct: facturacion > 0 ? Math.round((margen / facturacion) * 10000) / 100 : 0,
         personas: datos.posiciones.reduce((s, p) => s + (Number(p.personas) || 1), 0),
-        horas: suma('horasTotales'),
-        tarifaMedia: ecos.length ? suma('tarifaPVP') / ecos.length : 0,
-        margenMedioPct: ecos.length ? suma('margenPorcentaje') / ecos.length : 0,
+        horas,
+        tarifaMedia: horas > 0 ? facturacion / horas : 0,
+        costeMedio: horas > 0 ? costeTotal / horas : 0,
       };
     }
 
@@ -3562,7 +3610,7 @@ return datosActivos.posiciones.map(pos => ({
               </div>
               <div className="text-right text-[11px] text-slate-500">
                 <div className="font-mono text-slate-700">{datos.codigoVersion}</div>
-                <div>Emitida el {datos.fechaEmision || '—'}</div>
+                <div>Emitida el {fecha(datos.fechaEmision)}</div>
                 <div>Válida hasta el {datos.fechaValidez || '—'}</div>
               </div>
             </div>

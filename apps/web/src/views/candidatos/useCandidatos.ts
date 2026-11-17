@@ -348,9 +348,11 @@ export function useCandidatos() {
   const ACCIONES: Record<string, string> = {
     view_record: 'Abrió la ficha', view_sensitive: 'Vio datos sensibles', download_document: 'Descargó un documento', export: 'Exportó sus datos', anonymize: 'Anonimizó la ficha',
   };
+  /** Datos sensibles de la auditoría (view_sensitive: fields) con su nombre en la pantalla. */
+  const CAMPO_SENSIBLE: Record<string, string> = { idDocument: 'DNI/NIE', ssNumber: 'Nº Seguridad Social', iban: 'IBAN', health: 'Salud y discapacidad' };
   const auditoria = useCallback(async (v: CandidatoVista) => {
     const p = await repos.accessLog.list({ candidateId: v._id, limit: 100 });
-    return p.data.map((x) => ({ id: x.id, fecha: fechaHora(x.occurredAt), usuario: x.actorName ?? '—', accion: ACCIONES[x.action] ?? x.action, detalle: x.details ? Object.values(x.details).flat().join(', ') : '' }));
+    return p.data.map((x) => ({ id: x.id, fecha: fechaHora(x.occurredAt), usuario: x.actorName ?? '—', accion: ACCIONES[x.action] ?? x.action, detalle: x.details ? Object.values(x.details).flat().map((v) => CAMPO_SENSIBLE[String(v)] ?? String(v)).join(', ') : '' }));
   }, []);
 
   return {

@@ -1,6 +1,7 @@
 // Traducción entre la forma de la API (contrato de la fase 4, en inglés) y la de PresupuestosView.jsx (el
 // «presupuesto» del diseñador, en español). La vista sigue trabajando con su forma; este fichero es el único que
 // conoce las dos. El cálculo es el módulo puro de la API (data/calculoPresupuestos.ts).
+import { porcentaje } from '../../ui/formato';
 import { DEFAULT_SS_RATES, SEVERANCE_DAYS_PER_YEAR, calculatePosition, totalSsRate } from '../../data/calculoPresupuestos';
 import type {
   ServiceRequestSummary,
@@ -70,7 +71,7 @@ export function conceptosVista(v: Pick<QuoteVersion, 'ssRates' | 'costConcepts'>
     {
       id: SS, nombre: 'Seguridad Social de la empresa', tipo: 'porcentaje', tipoCustom: '', valor: redondear(totalSsRate(t)), baseCalculo: 'salario_bruto_hora',
       baseCalculoCustom: '', esObligatorioLegal: true, tasas: t,
-      descripcion: `Contingencias comunes ${t.commonContingencies} %, desempleo ${t.unemployment} %, FOGASA ${t.fogasa} %, FP ${t.vocationalTraining} %, MEI ${t.mei} % y AT/EP ${t.atEp} % (según el CNAE del cliente).`,
+      descripcion: `Contingencias comunes ${porcentaje(t.commonContingencies, 2)}, desempleo ${porcentaje(t.unemployment, 2)}, FOGASA ${porcentaje(t.fogasa, 2)}, FP ${porcentaje(t.vocationalTraining, 2)}, MEI ${porcentaje(t.mei, 2)} y AT/EP ${porcentaje(t.atEp, 2)} (según el CNAE del cliente).`,
     },
     {
       id: INDEMNIZACION, nombre: `Indemnización fin de contrato (${SEVERANCE_DAYS_PER_YEAR} días por año)`, tipo: 'porcentaje', tipoCustom: '',

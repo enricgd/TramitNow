@@ -118,8 +118,12 @@ el código de la app. No vuelvas a generarlas con `import-design.py` (borraría 
   del fichero y anótalo en la nota. Más adelante se moverán a `src/ui/`.
 - **Textos en español**, con el vocabulario del sector (petición, posición, candidato, alta, contrato,
   convenio, cliente, sucursal...). Consulta `docs/inventario-pantallas.md` si dudas de un término.
+- **Fechas, importes y porcentajes** con las funciones de `src/ui/formato.ts` (se importan de `../ui`):
+  `fecha` (dd/mm/aaaa), `fechaHora`, `euros`, `eurosHora`, `porcentaje`, `numero` y `cantidad`. Nada de
+  `toFixed`, `toLocaleString` ni fechas `AAAA-MM-DD` a la vista: así toda la web sale igual (1.234,56 €, 13,3 %).
 - **Responsive**: comprueba también en ancho de móvil (en el navegador integrado se puede cambiar el
-  tamaño). La barra lateral se oculta por debajo de `md`.
+  tamaño). La barra lateral se oculta por debajo de `md`. Las tablas de los listados, por debajo de `md`,
+  se ven como tarjetas con lo importante (importe, estado, fechas): mira Presupuestos, Peticiones o Candidatos.
 - **Sin dependencias nuevas** (`npm install algo`) sin que Enric lo apruebe: pon la propuesta en la nota.
 
 ### Qué no tocar

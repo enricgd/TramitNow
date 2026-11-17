@@ -10,7 +10,7 @@ import {
     Copy, Star, Hash, FileCheck2, UserX, AlertOctagon, Share2, ArrowUpRight,
     Grid, List, SlidersHorizontal, ArrowLeft, BookmarkCheck, UploadCloud, ChevronLeft
 } from 'lucide-react';
-import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar, SearchInput, Select, Field, TextInput, Interruptor, Segmented, Tabs, Drawer, Modal, Confirmar, CargandoPagina, ErrorCarga } from '../ui';
+import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar, SearchInput, Select, Field, TextInput, Interruptor, Segmented, Tabs, Drawer, Modal, Confirmar, CargandoPagina, ErrorCarga , fecha, fechaHora } from '../ui';
 import { DEMO } from '../modo';
 import { useCandidatos, mensajeError } from './candidatos/useCandidatos';
 import { PROVINCIAS_CP, POBLACIONES_CP } from './codigosPostales';
@@ -162,7 +162,8 @@ const DIAS_AVISO_CADUCIDAD = 30;
 const TIPOS_DOCUMENTO_CANDIDATO = ['DNI/NIE', 'Seguridad Social', 'RGPD', 'Carné de carretillero', 'Formación PRL', 'Manipulador de alimentos', 'Permiso de conducir', 'CV', 'Otro'];
 const URL_PORTAL_CANDIDATOS = 'https://ettglobal.tramitnow.com/candidatos';
 const hoyIso = () => new Date().toISOString().slice(0, 10);
-const fechaES = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+// Formato único de fechas de la web (ui/formato.ts)
+const fechaES = (iso) => fecha(iso);
 const edadDe = (iso) => Math.floor((new Date(hoyIso()) - new Date(iso)) / (365.25 * 86400000));
 const diasPara = (iso) => (iso ? Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toDateString())) / 86400000) : null);
 const sumarAnios = (iso, n) => { const d = new Date(`${iso}T00:00:00`); d.setFullYear(d.getFullYear() + n); return d.toISOString().slice(0, 10); };
@@ -298,7 +299,7 @@ function AccesosCandidato({ candidato, cargar }) {
                     <tbody>
                         {lista.map(a => (
                             <tr key={a.id} className="border-b border-slate-100 last:border-0">
-                                <td className="py-1.5 text-slate-600 whitespace-nowrap">{a.fecha}</td>
+                                <td className="py-1.5 text-slate-600 whitespace-nowrap">{fechaHora(a.fecha)}</td>
                                 <td className="py-1.5 text-slate-800">{a.usuario}</td>
                                 <td className="py-1.5 text-slate-800">{a.accion}{a.detalle ? <span className="text-slate-500"> · {a.detalle}</span> : null}</td>
                             </tr>
@@ -794,13 +795,13 @@ export default function CandidatosView() {
     const renderDniBadge = (status, expiry, dni) => {
         if (status === 'OK') {
             return (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-700" title={`DNI verificado. Caduca el ${expiry}`}>
+                <span className="inline-flex items-center gap-1 text-xs text-slate-700" title={`DNI verificado. Caduca el ${fechaES(expiry)}`}>
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                     {dni}
                 </span>
             );
         }
-        if (status === 'Caducado') return <Badge tone="danger" icon={XCircle} title={`Caducó el ${expiry}`}>Caducado</Badge>;
+        if (status === 'Caducado') return <Badge tone="danger" icon={XCircle} title={`Caducó el ${fechaES(expiry)}`}>Caducado</Badge>;
         return <Badge tone="warning" icon={AlertTriangle}>Falta</Badge>;
     };
 
@@ -821,7 +822,7 @@ export default function CandidatosView() {
         const rgpd = (RGPD[c.rgpdStatus] ?? RGPD['Sin consentimiento']).tone;
         return (
             <div className="flex items-center gap-1">
-                <Badge tone={dni} title={c.dniStatus === 'OK' ? `DNI ${c.dni}, caduca el ${c.dniExpiry}` : `DNI: ${c.dniStatus}`}>DNI</Badge>
+                <Badge tone={dni} title={c.dniStatus === 'OK' ? `DNI ${c.dni}, caduca el ${fechaES(c.dniExpiry)}` : `DNI: ${c.dniStatus}`}>DNI</Badge>
                 <Badge tone={nss} title={c.nssStatus === 'OK' ? `NSS ${c.nss}` : 'Falta el número de la Seguridad Social'}>NSS</Badge>
                 <Badge tone={rgpd} title={`RGPD: ${c.rgpdStatus}`}>RGPD</Badge>
                 {docsPorRenovar(c).length > 0 && (
@@ -1004,8 +1005,9 @@ export default function CandidatosView() {
                             text="Prueba con otra búsqueda o limpia los filtros."
                             action={<Button onClick={limpiarFiltros}>Limpiar filtros</Button>}
                         />
-                    ) : viewMode === 'table' ? (
-                        <div className="overflow-x-auto">
+                    ) : (<>
+                        {/* En móvil, la vista de tabla se ve como tarjetas (la tabla, desde md) */}
+                        {viewMode === 'table' && <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-left text-xs">
                                 <thead>
                                     <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-500">
@@ -1107,9 +1109,8 @@ export default function CandidatosView() {
                                     })}
                                 </tbody>
                             </table>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-3">
+                        </div>}
+                        <div className={`${viewMode === 'table' ? 'md:hidden ' : ''}grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-3`}>
                             {filteredCandidates.map((c) => (
                                 <div key={c.id} className="rounded-xl border border-slate-200 p-4 hover:border-slate-200 transition-colors flex flex-col gap-3">
                                     <div className="flex items-start justify-between gap-2">
@@ -1129,16 +1130,16 @@ export default function CandidatosView() {
                                         {renderStatusBadge(c.status)}
                                     </div>
 
-                                    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
+                                    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-xs">
                                         <dt className="text-slate-500">Teléfono</dt>
                                         <dd className="text-slate-700 text-right">{c.phone}</dd>
                                         <dt className="text-slate-500">Ubicación</dt>
                                         <dd className="text-slate-700 text-right">{c.city}</dd>
                                         <dt className="text-slate-500">Documentación</dt>
-                                        <dd className="flex justify-end">{renderDocumentacion(c)}</dd>
-                                        <dt className="text-slate-500">Misión</dt>
+                                        <dd className="flex justify-end min-w-0 [&>div]:flex-wrap [&>div]:justify-end">{renderDocumentacion(c)}</dd>
+                                        <dt className="text-slate-500">Petición o misión</dt>
                                         <dd className="text-slate-700 text-right truncate">
-                                            {c.assignedMission ? `${c.assignedMission.petitionId} · Plaza ${c.assignedMission.plazaNum}` : '—'}
+                                            {c.assignedMission ? `${c.assignedMission.petitionId}${c.assignedMission.plazaNum ? ` · Plaza ${c.assignedMission.plazaNum}` : ''}` : c.activeCandidatures[0] || '—'}
                                         </dd>
                                     </dl>
 
@@ -1149,7 +1150,7 @@ export default function CandidatosView() {
                                 </div>
                             ))}
                         </div>
-                    )}
+                    </>)}
                 </Card>
             </Page>
 
@@ -1356,7 +1357,7 @@ export default function CandidatosView() {
                                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs">
                                                 <div className="flex items-center justify-between mb-1">
                                                     <span className="font-semibold text-slate-900">{selectedCandidateForDetail.communications[0].channel} · {selectedCandidateForDetail.communications[0].result}</span>
-                                                    <span className="text-[11px] text-slate-400">{selectedCandidateForDetail.communications[0].date}</span>
+                                                    <span className="text-[11px] text-slate-400">{fechaHora(selectedCandidateForDetail.communications[0].date)}</span>
                                                 </div>
                                                 <p className="text-slate-600">{selectedCandidateForDetail.communications[0].note}</p>
                                             </div>
@@ -1730,7 +1731,7 @@ export default function CandidatosView() {
                                                         <span className="font-semibold text-slate-900">{comm.channel}</span>
                                                         <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.2 rounded font-medium text-[10px]">{comm.result}</span>
                                                     </div>
-                                                    <span className="text-[11px] text-slate-400">{comm.date} · {comm.user}</span>
+                                                    <span className="text-[11px] text-slate-400">{fechaHora(comm.date)} · {comm.user}</span>
                                                 </div>
                                                 <p className="text-slate-700 text-xs">{comm.note}</p>
                                                 {comm.nextAction && (

@@ -161,6 +161,17 @@ async function deEjemplo(e: Estado, c: CandidatoEjemplo, info: Record<string, { 
     }
     e.candidaturas.push(a);
   }
+  // Los que ya trabajan o se incorporan (Contratos, Personal en misión): su candidatura confirmada o en misión
+  const mision = c.assignedMission as { petitionId: string; client: string; positionTitle: string; plazaNum: number | null; startDate: string } | null | undefined;
+  if (mision && !e.candidaturas.some((a) => a.candidateId === rid && a.requestCode === mision.petitionId)) {
+    const p = await peticionDemo(mision.petitionId);
+    e.candidaturas.push({
+      id: newId(), candidateId: rid, candidateName: `${c.name} ${c.lastName}`, candidateCode: c.id, requestId: p?.id ?? `sin-${mision.petitionId}`, requestCode: mision.petitionId,
+      positionName: p?.positionName ?? mision.positionTitle, shiftName: p?.shiftName ?? null, clientName: p?.clientName ?? mision.client,
+      stage: c.status === 'Asignado/En misión' ? 'on_mission' : 'confirmed', origin: 'applied', source: c.source ?? null, slotId: null, slotNumber: mision.plazaNum ?? null,
+      legalBasis: 'precontractual', stageChangedAt: `${mision.startDate}T08:00:00.000Z`, notes: null, discardReason: null, createdAt: `${mision.startDate}T08:00:00.000Z`,
+    });
+  }
   const rgpd = (c.documents ?? []).find((d: { type: string }) => d.type === 'RGPD');
   const consents: CandidateConsent[] = rgpd && c.rgpdStatus !== 'Sin consentimiento'
     ? [{ id: newId(), purpose: 'talent_pool', noticeVersion: '1', givenAt: `${c.rgpdSignedDate ?? rgpd.uploadDate}T10:00:00.000Z`, channel: 'paper', expiresAt: rgpd.expiry ? `${rgpd.expiry}T10:00:00.000Z` : null, withdrawnAt: null }]
@@ -217,7 +228,9 @@ async function documentacion(r: Registro) {
   const dPool = pool?.expiresAt ? diasPara(pool.expiresAt.slice(0, 10)) : null;
   const privacyPending = !pool || (dPool !== null && dPool < 0);
   const caducados = docs.filter((d) => d.expiresOn && (diasPara(d.expiresOn) ?? 0) < 0).length;
-  return { idOrSsPending, privacyPending, pending: idOrSsPending || privacyPending, ok: !idOrSsPending && !privacyPending && caducados === 0 };
+  // «Correctos» y «pendiente» son complementarios: un documento caducado (PRL, carné...) también es pendiente
+  const pending = idOrSsPending || privacyPending || caducados > 0;
+  return { idOrSsPending, privacyPending, pending, ok: !pending };
 }
 type FiltroDocumentacion = 'ok' | 'pending' | 'id_or_ss_pending' | 'privacy_pending';
 const CAMPO_DOCUMENTACION = { ok: 'ok', pending: 'pending', id_or_ss_pending: 'idOrSsPending', privacy_pending: 'privacyPending' } as const;
@@ -242,8 +255,17 @@ async function resumen(e: Estado, r: Registro): Promise<CandidateSummary> {
     },
     experienceYears: r.experienceYears,
     activeApplications: e.candidaturas.filter((a) => a.candidateId === r.id && !['discarded', 'withdrawn', 'finished', 'left'].includes(a.stage)).length,
+    currentApplication: candidaturaActual(e, r.id),
     lastContactAt: r.lastContactAt, createdAt: r.createdAt,
   };
+}
+
+/** Como la pedimos a la API: la confirmada o en misión y, si no, la activa más reciente. */
+function candidaturaActual(e: Estado, candidateId: string): CandidateSummary['currentApplication'] {
+  const suyas = e.candidaturas.filter((a) => a.candidateId === candidateId && !['discarded', 'withdrawn', 'finished', 'left'].includes(a.stage))
+    .sort((a, b) => b.stageChangedAt.localeCompare(a.stageChangedAt));
+  const a = suyas.find((x) => x.stage === 'on_mission' || x.stage === 'confirmed') ?? suyas[0];
+  return a ? { requestCode: a.requestCode, slotNumber: a.slotNumber, positionName: a.positionName, clientName: a.clientName, stage: a.stage, stageChangedAt: a.stageChangedAt } : null;
 }
 
 async function ficha(e: Estado, r: Registro): Promise<Candidate> {

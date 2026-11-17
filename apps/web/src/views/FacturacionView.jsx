@@ -9,7 +9,7 @@ import {
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, SearchInput,
     Select, Field, TextInput, Modal, Drawer, Confirmar, Tabs
-} from '../ui';
+, fecha, euros as importe, cantidad } from '../ui';
 import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
 import { SERVICIOS_INICIALES, FORMAS_COBRO, CLAVE_SERVICIO_PENDIENTE } from './serviciosDemo';
 
@@ -136,14 +136,15 @@ const MOTIVOS_RECTIFICACION = ['Error en las horas', 'Error en la tarifa', 'Erro
 // ==========================================
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const hoyIso = () => new Date().toISOString().slice(0, 10);
-const fechaES = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+// Formato único de fechas de la web (ui/formato.ts)
+const fechaES = (iso) => fecha(iso);
 const sumar = (iso, n) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const diasEntre = (a, b) => Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000);
 const nombreMes = (mes) => `${MESES[Number(mes.slice(5)) - 1]} de ${mes.slice(0, 4)}`;
 const mayus = (t) => t.replace(/^./, s => s.toUpperCase());
 const redondear = (n) => Math.round(n * 100) / 100;
-const euros = (n) => n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', useGrouping: 'always' });
-const num = (n) => n.toLocaleString('es-ES', { maximumFractionDigits: 2, useGrouping: 'always' });
+const euros = (n) => importe(n);
+const num = (n) => cantidad(n);
 // Vencimiento: días de la forma de pago y, si el cliente tiene días fijos de pago, el siguiente de ellos
 const vencimientoDe = (cliente, emision) => {
     let d = sumar(emision, cliente.diasPago);

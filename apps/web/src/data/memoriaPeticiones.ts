@@ -204,6 +204,7 @@ function resumen(r: Registro): ServiceRequestSummary {
     responsibleUserId: r.responsibleUserId, responsibleName: r.responsibleUserId ? (RESPONSABLES[r.responsibleUserId] ?? null) : null, daysToStart: dias,
     startsSoonUncovered: ACTIVAS.includes(r.status) && dias !== null && dias >= 0 && dias <= 7 && cuentaPlazas(r).filled < r.positionsCount,
     cancelReason: r.cancelReason, preCpdStatus: r.preCpd.status, createdAt: r.createdAt,
+    clientCenterName: centroPorId(r.clientCenterId)?.name ?? r.workplaceText,
   };
 }
 

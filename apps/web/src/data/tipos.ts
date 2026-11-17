@@ -920,6 +920,8 @@ export type ServiceRequestSummary = {
   cancelReason: string | null;
   preCpdStatus: PreCpdStatus;
   createdAt: string;
+  /** Centro de trabajo (nombre de la ficha del cliente o el texto escrito). Pendiente en la API: hasta entonces, solo en la ficha. */
+  clientCenterName?: string | null;
 };
 
 /** Condiciones copiadas del puesto del presupuesto al crear la petición (no cambian después). */
@@ -1128,6 +1130,11 @@ export type CandidateSummary = {
   poolConsent: { state: 'valid' | 'expiring' | 'expired' | 'none'; expiresAt: string | null };
   documentAlerts: { expired: number; expiring: number };
   activeApplications: number;
+  /**
+   * Candidatura que se enseña en la lista («Petición o misión»): la confirmada o en misión y, si no hay, la activa más
+   * reciente. Pendiente en la API: hasta entonces, solo en la ficha.
+   */
+  currentApplication?: { requestCode: string; slotNumber: number | null; positionName: string; clientName: string; stage: ApplicationStage; stageChangedAt: string } | null;
   experienceYears: number | null;
   lastContactAt: string | null;
   anonymized?: boolean;

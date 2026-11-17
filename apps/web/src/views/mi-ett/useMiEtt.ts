@@ -36,6 +36,7 @@ import {
   type TenantSettings,
 } from '../../data';
 import { useSesion } from '../../sesion';
+import { cantidad } from '../../ui/formato';
 export { mensajeError } from '../comun/datos';
 import { direccionVista, fechaCorta, fechaHora, guardarDireccion, mensajeError, provincias, quitarDireccionNueva, vacioANull, type DireccionVista } from '../comun/datos';
 
@@ -117,8 +118,8 @@ const TIPOS_CCC: Record<ContributionAccount['staffType'], string> = { mission: '
 const COBROS: Record<string, BillableService['chargeMode']> = { porcentaje: 'percentage', persona: 'per_person', unidad: 'per_unit', fijo: 'fixed' };
 const cobroVista = (modo: BillableService['chargeMode']) => Object.entries(COBROS).find(([, m]) => m === modo)?.[0] ?? 'fijo';
 
-const euros = (n: number | null) => (n == null ? '' : `${n.toLocaleString('es-ES', { maximumFractionDigits: 2 })} €`);
-const porcentaje = (n: number) => `${n.toLocaleString('es-ES', { maximumFractionDigits: 2 })} %`;
+const euros = (n: number | null) => (n == null ? '' : `${cantidad(n)} €`);
+const porcentaje = (n: number) => `${cantidad(n)} %`;
 const ibanVista = (iban: string | null) => (iban ? iban.replace(/(.{4})/g, '$1 ').trim() : '');
 const cccVista = (code: string) => `${code.slice(0, 2)} ${code.slice(2, 9)} ${code.slice(9)}`;
 const numero = (texto: string | undefined) => {

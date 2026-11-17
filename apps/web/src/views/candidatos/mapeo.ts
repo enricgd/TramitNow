@@ -57,7 +57,12 @@ export function candidatoVista(r: CandidateSummary & Partial<Candidate>, extra: 
   const idiomas = (r.attributes?.languages ?? []).map((l) => `${l.name} (${NIVEL[l.level]})`);
   const turnos = (r.shifts ?? []).map((s) => TURNO[s]);
   const candidaturas = (r.applications ?? []).map(candidaturaVista);
-  const activa = candidaturas.find((x) => ['Confirmada', 'En misión'].includes(x.estado));
+  // En la lista no vienen las candidaturas: solo la actual (currentApplication)
+  const actual = r.currentApplication;
+  const activa = candidaturas.find((x) => ['Confirmada', 'En misión'].includes(x.estado))
+    ?? (!r.applications && actual && ['confirmed', 'on_mission'].includes(actual.stage)
+      ? { petId: actual.requestCode, cliente: actual.clientName, puesto: actual.positionName, plaza: actual.slotNumber, fecha: fecha(actual.stageChangedAt) }
+      : undefined);
   // Sin la ficha, los documentos por renovar se representan con su número (la columna «N por renovar» de la lista)
   const docs = extra.documentos ?? [
     ...Array.from({ length: r.documentAlerts.expired }, (_, i) => ({ id: `alerta-${r.id}-c${i}`, name: '', type: 'Documento', status: 'Verificado', uploadDate: '', expiry: enDias(-1) })),
@@ -116,7 +121,9 @@ export function candidatoVista(r: CandidateSummary & Partial<Candidate>, extra: 
     documents: docs,
     communications: (extra.contactos ?? []).map(contactoVista),
     candidaturas,
-    activeCandidatures: candidaturas.filter((x) => !['Finalizada', 'Baja', 'Descartada'].includes(x.estado)).map((x) => `${x.petId} (${x.estado}${x.plaza ? `, plaza ${x.plaza}` : ''})`),
+    activeCandidatures: r.applications
+      ? candidaturas.filter((x) => !['Finalizada', 'Baja', 'Descartada'].includes(x.estado)).map((x) => `${x.petId} (${x.estado}${x.plaza ? `, plaza ${x.plaza}` : ''})`)
+      : actual ? [`${actual.requestCode} (${ETAPA[actual.stage]}${actual.slotNumber ? `, plaza ${actual.slotNumber}` : ''})`] : [],
     _candidaturasActivas: r.activeApplications,
     assignedMission: activa ? { petitionId: activa.petId, client: activa.cliente, positionTitle: activa.puesto, plazaNum: activa.plaza, startDate: activa.fecha } : null,
     _saludConDatos: !!r.health?.hasData,

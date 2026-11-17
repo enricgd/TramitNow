@@ -8,7 +8,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
       Building, Briefcase, FileCheck, Layers, ArrowLeft, RefreshCw, BookmarkCheck,
       Upload, Download, ZoomIn, ZoomOut, CirclePause, CirclePlay, CloudUpload, FileImage, Archive, RotateCcw,
     } from 'lucide-react';
-import { Page, PageHeader, Card, EmptyState, Notice, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Tabs, Modal, Drawer, Confirmar, Interruptor, CargandoPagina, ErrorCarga } from '../ui';
+import { Page, PageHeader, Card, EmptyState, Notice, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Tabs, Modal, Drawer, Confirmar, Interruptor, CargandoPagina, ErrorCarga , numero } from '../ui';
 import { DEMO } from '../modo';
 import { useEmpresas, mensajeError } from './empresas/useEmpresas';
 import { SelectorCnae } from './empresas/SelectorCnae';
@@ -2437,7 +2437,7 @@ if (!ok) setGuardando(false);
     const FORMATOS_DOC = ['application/pdf', 'image/jpeg', 'image/png'];
     const MAX_MB_DOC = 10;
 
-    const tamanoLegible = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+    const tamanoLegible = (bytes) => (bytes >= 1024 * 1024 ? `${numero(bytes / 1024 / 1024, 1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
     function SubirDocumentos({ empresa, tipos, onAddTipo, onClose, onSubir }) {
       const [archivos, setArchivos] = useState([]);

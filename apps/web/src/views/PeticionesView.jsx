@@ -10,7 +10,7 @@ import {
     Home, UserCheck, UserPlus, DollarSign, BarChart3, Settings,
     Shield, Cpu, BookOpen, Layers2, FolderKanban, List, SquareKanban, GripVertical, Upload, Paperclip, FileSignature
 } from 'lucide-react';
-import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal, CargandoPagina, ErrorCarga, CAMPO } from '../ui';
+import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal, CargandoPagina, ErrorCarga, CAMPO , fecha, cantidad, eurosHora } from '../ui';
 import { DEMO } from '../modo';
 import { usePeticiones, mensajeError } from './peticiones/usePeticiones';
 
@@ -29,7 +29,8 @@ const ESTADOS_PETICION = [
 ];
 const tonoEstado = (estado) => ESTADOS_PETICION.find(e => e.estado === estado)?.tono || 'neutral';
 const ESTADOS_ACTIVOS = ['Nueva', 'En difusión', 'En selección', 'Cubierta', 'En curso'];
-const fechaCorta = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
+// Formato único de fechas de la web (ui/formato.ts)
+const fechaCorta = (iso) => (iso ? fecha(iso) : '');
 const diasHasta = (iso) => Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
 // Peticiones del mismo puesto del mismo presupuesto (por ejemplo, otro turno), del reparto que da la API
 const hermanasDe = (p, lista) => (p.reparto?.hermanas || []).filter(h => !h.esta).map(h => ({ ...h, ...(lista.find(x => x.id === h.id) || {}) }));
@@ -1003,8 +1004,34 @@ export default function PeticionesView() {
                                 <div className="p-3">
                                     <PipelinePeticiones lista={peticionesFiltradas} plazas={plazas} horarios={horarios} onAbrir={(p) => abrirPeticion(p.id)} onMover={moverPeticion} />
                                 </div>
-                            ) : (
-                                <div className="overflow-x-auto">
+                            ) : (<>
+                                {/* Móvil: una tarjeta por petición con cobertura, fechas y estado (la tabla, desde md) */}
+                                <ul className="md:hidden divide-y divide-slate-100">
+                                    {gruposListado.flatMap(grupo => grupo.items).map(p => {
+                                        const cubiertas = cubiertasDe(plazas[p.id]);
+                                        const pct = Math.round((cubiertas / p.solicitados) * 100);
+                                        return (
+                                            <li key={p.id}>
+                                                <button type="button" onClick={() => abrirPeticion(p.id)} className="w-full text-left px-4 py-3 hover:bg-slate-50 space-y-1.5">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <span className="text-sm font-medium text-slate-900">{p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}</span>
+                                                        <Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge>
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-500">{p.id} · {p.centroTrabajo}</div>
+                                                    <div className="text-xs text-slate-700">{p.clienteNombre} · {p.presupuestoOrigen}</div>
+                                                    <div className="flex items-center justify-between gap-3 text-xs">
+                                                        <span className="text-slate-600">{fechaCorta(p.inicio) || 'sin inicio'} a {fechaCorta(p.fin) || 'sin fin'}</span>
+                                                        <span className="flex items-center gap-1.5 text-slate-700 whitespace-nowrap">
+                                                            {cubiertas}/{p.solicitados} plazas
+                                                            <span className="w-14 bg-slate-100 rounded-full h-1.5 overflow-hidden"><span className={`block ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-600'} h-1.5 rounded-full`} style={{ width: `${pct}%` }}></span></span>
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                                <div className="hidden md:block overflow-x-auto">
                                     <table className="w-full text-left text-xs">
                                         <thead>
                                             <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-500">
@@ -1070,7 +1097,7 @@ export default function PeticionesView() {
                                         </tbody>
                                     </table>
                                 </div>
-                            )}
+                            </>)}
                         </Card>
                     </Page>
                 )}
@@ -1152,7 +1179,7 @@ export default function PeticionesView() {
                                         <div><dt className="text-[11px] text-slate-500">Salario</dt><dd className="font-medium text-slate-900">{peticion.salarioBrutoConvenio}</dd></div>
                                         <div><dt className="text-[11px] text-slate-500">Tarifa al cliente</dt><dd className="font-medium text-slate-900">{peticion.tarifaVentaHora}</dd></div>
                                         <div><dt className="text-[11px] text-slate-500">Plazas de esta petición</dt><dd className="font-medium text-slate-900">{peticion.solicitados}</dd></div>
-                                        <div><dt className="text-[11px] text-slate-500">Turno</dt><dd className="font-medium text-slate-900">{currentSchedule.turnoNombre} · {totalHorasSemana.toLocaleString('es-ES')} h/semana</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Turno</dt><dd className="font-medium text-slate-900">{currentSchedule.turnoNombre} · {cantidad(totalHorasSemana)} h/semana</dd></div>
                                     </dl>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-600">
                                         <div className="flex items-start gap-1.5"><ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" /><span><span className="text-slate-500">EPIs:</span> {peticion.requiereEpi}</span></div>
@@ -1468,7 +1495,7 @@ export default function PeticionesView() {
                                         </div>
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
                                             <div className="text-[10px] font-semibold text-slate-400">Horas por semana</div>
-                                            <div className="font-semibold text-indigo-600 text-base mt-0.5">{totalHorasSemana.toLocaleString('es-ES')} h por semana</div>
+                                            <div className="font-semibold text-indigo-600 text-base mt-0.5">{cantidad(totalHorasSemana)} h por semana</div>
                                             <div className="text-[11px] text-emerald-600 font-medium">Cumple convenio laboral</div>
                                         </div>
                                         <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
@@ -1610,7 +1637,7 @@ export default function PeticionesView() {
                                                             </td>
                                                             <td className="py-3 px-4">
                                                                 <span className={`font-mono font-semibold ${d.laborable ? 'text-indigo-600' : 'text-slate-400'}`}>
-                                                                    {d.laborable ? `${d.horas} h` : '—'}
+                                                                    {d.laborable ? `${cantidad(d.horas)} h` : '—'}
                                                                 </span>
                                                             </td>
                                                             <td className="py-3 px-4 text-right">
@@ -2071,7 +2098,7 @@ export default function PeticionesView() {
                                         {previo.fecha && ` Enviado el ${fechaCorta(previo.fecha)}.`}
                                     </p>
                                     {previo.desactualizado && <Notice tone="warning" icon={AlertTriangle}>Algo de la petición ha cambiado después de generarlo: vuelve a generarlo antes de enviarlo.</Notice>}
-                                    {peticion.salarioBajoConvenio && <Notice tone="danger" icon={AlertTriangle}>El convenio vigente{peticion.tramoBajoConvenio ? ` desde el ${fechaCorta(peticion.tramoBajoConvenio.from)}` : ''} pide para esta categoría {peticion.tramoBajoConvenio?.minimumSalaryHour != null ? `${peticion.tramoBajoConvenio.minimumSalaryHour.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €/h, ` : ''}más que el salario de la petición. No se puede generar el CPD: haz una versión nueva del presupuesto y una petición nueva.</Notice>}
+                                    {peticion.salarioBajoConvenio && <Notice tone="danger" icon={AlertTriangle}>El convenio vigente{peticion.tramoBajoConvenio ? ` desde el ${fechaCorta(peticion.tramoBajoConvenio.from)}` : ''} pide para esta categoría {peticion.tramoBajoConvenio?.minimumSalaryHour != null ? `${eurosHora(peticion.tramoBajoConvenio.minimumSalaryHour)}, ` : ''}más que el salario de la petición. No se puede generar el CPD: haz una versión nueva del presupuesto y una petición nueva.</Notice>}
                                     {faltan.length > 0 && (
                                         <div className="rounded-lg border border-slate-200 p-3 space-y-1.5 text-xs">
                                             <div className="font-medium text-slate-800">{bloquean.length ? (bloquean.length === 1 ? 'Falta 1 dato para generarlo' : `Faltan ${bloquean.length} datos para generarlo`) : 'Se puede generar, pero conviene revisar'}</div>
@@ -2324,7 +2351,7 @@ export default function PeticionesView() {
                         <dt className="text-slate-500">Puesto y cualificación</dt><dd className="text-slate-900">{peticion.puesto} · {peticion.categoria}. {peticion.carnetRequerido === 'Ninguno' ? 'Sin carné específico.' : `${peticion.carnetRequerido}.`}</dd>
                         <dt className="text-slate-500">Riesgos del puesto</dt><dd className="text-slate-900">{peticion.riesgos || 'Según la evaluación de riesgos del cliente para este puesto.'} EPIs: {peticion.requiereEpi.toLowerCase()}.</dd>
                         <dt className="text-slate-500">Centro de trabajo</dt><dd className="text-slate-900">{peticion.centroTrabajo}</dd>
-                        <dt className="text-slate-500">Horario</dt><dd className="text-slate-900">{currentSchedule.turnoNombre} · {totalHorasSemana.toLocaleString('es-ES')} h por semana</dd>
+                        <dt className="text-slate-500">Horario</dt><dd className="text-slate-900">{currentSchedule.turnoNombre} · {cantidad(totalHorasSemana)} h por semana</dd>
                         <dt className="text-slate-500">Duración estimada</dt><dd className="text-slate-900">Del {fechaCorta(peticion.inicio) || 'sin fecha'} al {fechaCorta(peticion.fin) || 'sin fecha'} · {peticion.solicitados} {peticion.solicitados === 1 ? 'persona' : 'personas'}</dd>
                         <dt className="text-slate-500">Precio</dt><dd className="text-slate-900">{peticion.tarifaVentaHora} la hora ordinaria{peticion.extrasPropuesta.length ? `, más los conceptos extra del presupuesto (${peticion.extrasPropuesta.join(', ')})` : ''}.</dd>
                     </dl>

@@ -7,7 +7,7 @@ import {
     CreditCard, Sparkles, Sliders, Globe, Mail, Phone, Briefcase, FileSpreadsheet,
     Key, Layers, ArrowRight, Save, RefreshCw, AlertCircle, Eye, UserPlus, EyeOff
 } from 'lucide-react';
-import { PageHeader, Button, Badge, Tabs, Modal, Drawer, Card, SectionTitle, Field, TextInput, Interruptor, Notice, Select, IconButton, Confirmar, CargandoPagina, ErrorCarga, Proximamente } from '../ui';
+import { PageHeader, Button, Badge, Tabs, Modal, Drawer, Card, SectionTitle, Field, TextInput, Interruptor, Notice, Select, IconButton, Confirmar, CargandoPagina, ErrorCarga, Proximamente , fecha } from '../ui';
 import { datosDeCp } from './codigosPostales';
 import { FORMAS_COBRO } from './serviciosDemo';
 import { useMiEtt, mensajeError, TIPOS_GARANTIA, TIPOS_DOCUMENTO } from './mi-ett/useMiEtt';
@@ -20,7 +20,8 @@ import { leerCampos } from './mi-ett/formulario';
 // Códigos de cuenta de cotización (CCC): uno por provincia y por tipo de personal
 const TIPOS_CCC = ['Personas en misión', 'Personal de estructura'];
 
-const fechaES = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+// Formato único de fechas de la web (ui/formato.ts)
+const fechaES = (iso) => fecha(iso);
 const diasHasta = (iso) => (iso ? Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00')) / 86400000) : null);
 const DIAS_AVISO = 60;
 
