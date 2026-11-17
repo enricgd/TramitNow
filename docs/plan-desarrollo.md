@@ -133,7 +133,7 @@ del servicio, CPD previo. La publicación en portales de empleo queda para más 
 
 Ficha, perfiles, carnés, habilidades e idiomas como tablas maestras con sinónimos, documentos con caducidad y
 avisos, candidaturas por petición con etapas, consentimiento y supresión RGPD. Es el primer módulo con muchos datos
-personales: antes hay que decidir el cifrado de columnas y la auditoría de accesos (pendiente en `db/README.md`).
+personales: cifrado de columnas y auditoría de accesos según «Decisiones tomadas (17/11/2026)».
 
 ### Fase 7. Contratos y altas
 
@@ -191,7 +191,7 @@ ramas, copias de seguridad fuera del NAS y un entorno que no sea el NAS de casa.
 | ~~Convenios: hacerlo nosotros o licenciar~~ (nosotros); convenios siguientes según los clientes de las primeras ETT | Fase 3 | Equipo / negocio |
 | ~~Pagar por debajo de convenio~~ (se bloquea) | Fase 4 | Producto |
 | ~~Margen mínimo y días sin respuesta~~ (configurable por ETT) | Fase 4 | Producto |
-| Cifrado de datos personales y auditoría de accesos | Fase 6 | Enric |
+| ~~Cifrado de datos personales y auditoría de accesos~~ (decidido) | Fase 6 | Enric |
 | Proveedor de firma electrónica (CPD, contrato, adendas) | Fases 7 y 11 | Enric |
 | Quién prepara los riesgos de cada puesto (PRL) | Fases 7 y 11 | Producto / laboral |
 | Plazos laborales de ejemplo (avisos, máximo de misión, baja en la SS) | Fases 7 y 8 | Laboral |
@@ -214,6 +214,21 @@ ramas, copias de seguridad fuera del NAS y un entorno que no sea el NAS de casa.
     de vacaciones y de la indemnización de fin de contrato (12 días por año) y margen.
   - Margen mínimo y días sin respuesta, configurables por ETT en Mi ETT. Por defecto, sin margen mínimo y aviso a
     los 15 días.
+
+### Decisiones tomadas (17/11/2026)
+
+- **Datos personales (fase 6)**:
+  - **Cifrado campo a campo solo de lo sensible**: DNI/NIE, número de la Seguridad Social, IBAN y datos de salud y
+    discapacidad. Nombre, teléfono, email y localidad quedan en claro para buscar y filtrar. El DNI/NIE lleva además
+    una huella (HMAC) para buscar sin descifrar.
+  - **Cifra y descifra la API** (AES-256-GCM), con la clave fuera de la base de datos y versionada para poder
+    rotarla. Una copia o un acceso directo a la base solo ve datos cifrados.
+  - **Auditoría de accesos**: quién y cuándo abre la ficha de una persona, ve un dato sensible (en pantalla va
+    tapado, con «ver»), descarga un documento o exporta un listado. Registro que no se modifica, visible para el
+    administrador y el responsable de protección de datos. Los listados no se registran. Conservación: 2 años
+    **[verificar]**.
+  - **Documentos**: Storage privado con enlaces que caducan, sin cifrar fichero a fichero de momento.
+  - **Copias**: cifrar la copia diaria del NAS y guardar otra fuera del NAS antes de la primera ETT real.
 
 ## 5. Siguiente paso propuesto
 
