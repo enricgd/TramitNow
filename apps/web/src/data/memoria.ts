@@ -5,6 +5,8 @@ import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import { NOW, checkUniqueCode, delay, find, id, matches, newId, page, stamp, touch } from './memoriaBase';
 import { clientAddresses, memoryClientRepositories } from './memoriaEmpresas';
 import { memoryMiEttRepositories } from './memoriaMiEtt';
+import { memoryRequestRepositories } from './memoriaPeticiones';
+import { seleccionDemo } from './memoriaPeticionesSeleccion';
 import { memoryQuoteRepositories } from './memoriaPresupuestos';
 import type { CatalogRepository, Repositories } from './repositorios';
 import {
@@ -15,6 +17,7 @@ import {
   type Company,
   type ContractKey,
   type ContractType,
+  type RequestSelection,
   type Membership,
   type MembershipContextInput,
   type PageQuery,
@@ -102,6 +105,7 @@ const roles: Role[] = [
     'module.administracion', 'module.laboral', 'module.seleccion', 'module.comercial', 'tenant.manage',
     'companies.manage', 'branches.manage', 'catalogs.manage', 'users.manage', 'roles.manage', 'addresses.write',
     'labor_catalogs.manage', 'clients.manage', 'quotes.manage', 'quotes.approve_margin', 'quotes.view_costs',
+    'requests.manage',
   ]),
   role(31, 'laboral', 'Laboral', 'tenant', ['module.laboral', 'addresses.write', 'labor_catalogs.manage']),
   role(32, 'director_zona', 'Director de zona', 'branches', ['module.laboral', 'module.seleccion', 'module.comercial', 'addresses.write']),
@@ -332,6 +336,7 @@ function memoryCatalog<T extends { id: string; code: string; name: string; statu
 
 export function memoryRepositories(): Repositories {
   const miEtt = memoryMiEttRepositories();
+  let seleccion: RequestSelection | undefined;
   return {
     session: {
       me: () =>
@@ -508,6 +513,9 @@ export function memoryRepositories(): Repositories {
     },
     ...miEtt,
     ...memoryQuoteRepositories(miEtt.tenantSettings.get),
+    ...memoryRequestRepositories(),
+    // La selección se crea una vez y la pantalla trabaja sobre su copia.
+    requestSelection: { get: () => delay(seleccion ??= seleccionDemo()) },
     search: sampleSearch(false),
     notifications: sampleNotifications(false),
   };

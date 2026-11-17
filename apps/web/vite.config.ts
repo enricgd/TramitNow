@@ -48,9 +48,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       input: mode === 'ejemplo' ? PAGES : { erp: PAGES.erp },
-      // Los datos de ejemplo (src/data/memoria*.ts) no hacen nada al cargarse: si la compilación no usa el modo
+      // Los datos de ejemplo (src/data/memoria*.ts y .js) no hacen nada al cargarse: si la compilación no usa el modo
       // demo (la del NAS), se descartan enteros en vez de dejar parte de sus datos en el JS.
-      treeshake: { moduleSideEffects: (id) => !/[\\/]src[\\/]data[\\/]memoria[^\\/]*\.ts$/.test(id) },
+      treeshake: { moduleSideEffects: (id) => !/[\\/]src[\\/]data[\\/]memoria[^\\/]*\.[jt]s$/.test(id) },
     },
   },
 }));

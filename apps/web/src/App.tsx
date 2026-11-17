@@ -90,7 +90,8 @@ const ITEMS = NAV.flatMap((s) => s.items);
 const AVAILABLE = ITEMS.filter((i) => i.view);
 
 function currentId() {
-  const id = window.location.hash.replace(/^#\/?/, '');
+  // `#/peticiones/PET-…`: la pantalla y, detrás, lo que abre dentro (la pantalla lee el resto).
+  const id = window.location.hash.replace(/^#\/?/, '').split('/')[0];
   return AVAILABLE.some((i) => i.id === id) ? id : 'inicio';
 }
 

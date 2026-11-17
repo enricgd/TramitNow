@@ -10,12 +10,12 @@ import {
     Home, UserCheck, UserPlus, DollarSign, BarChart3, Settings,
     Shield, Cpu, BookOpen, Layers2, FolderKanban, List, SquareKanban, GripVertical, Upload, Paperclip, FileSignature
 } from 'lucide-react';
-import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal } from '../ui';
-import { contactoDemo } from './personasDemo';
-import { REPRESENTANTE_ETT, AUTORIZACION_ETT } from './ettDemo';
-import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
+import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal, CargandoPagina, ErrorCarga, CAMPO } from '../ui';
+import { DEMO } from '../modo';
+import { usePeticiones, mensajeError } from './peticiones/usePeticiones';
 
-// --- DATOS DE EJEMPLO ---
+// Datos: usePeticiones (peticiones/usePeticiones.ts), de la API o, en la demo, de memoriaPeticiones.ts. Plazas con
+// personas, candidatos, CPD de cada persona y portales (fases 6 y 7) solo tienen datos de ejemplo en la demo.
 // Una petición = un puesto. Las peticiones siempre salen de un presupuesto aceptado. Un mismo puesto del presupuesto
 // se puede repartir en varias peticiones (por ejemplo, una por turno o por fechas); todas comparten sus condiciones.
 const ESTADOS_PETICION = [
@@ -29,173 +29,18 @@ const ESTADOS_PETICION = [
 ];
 const tonoEstado = (estado) => ESTADOS_PETICION.find(e => e.estado === estado)?.tono || 'neutral';
 const ESTADOS_ACTIVOS = ['Nueva', 'En difusión', 'En selección', 'Cubierta', 'En curso'];
-const RESPONSABLES = ['Ane Uriarte', 'Jon Ibarra', 'Nuria Castells'];
-
-const CLIENTES = {
-    translog: {
-        clienteNombre: 'Trans-Logística Ibérica Norte, S.L.',
-        cif: 'B-87654321',
-        sector: 'Logística y almacén',
-        contactoCliente: 'Marta Gómez Arana (Responsable de RRHH y Selección)',
-        emailContacto: 'marta.gomez@translog-norte.es',
-        telefonoContacto: '+34 654 987 321',
-        centroTrabajo: 'HUB central Basauri (Bizkaia) - Nave 2',
-        ciudad: 'Basauri (Bizkaia)',
-    },
-    hosteleria: {
-        clienteNombre: 'Hostelería & Eventos Premium BCN, S.L.',
-        cif: 'B-00000041',
-        sector: 'Hostelería y eventos',
-        contactoCliente: 'Responsable de eventos',
-        emailContacto: 'eventos@ejemplo-hosteleria.es',
-        telefonoContacto: '+34 600 000 041',
-        centroTrabajo: 'Recinto de congresos - Barcelona',
-        ciudad: 'Barcelona',
-    },
-    mediterranea: {
-        clienteNombre: 'Mediterránea Agrícola y Envasado, S.L.',
-        cif: 'B-00000047',
-        sector: 'Agroalimentario',
-        contactoCliente: 'Jefe de planta',
-        emailContacto: 'planta@ejemplo-mediterranea.es',
-        telefonoContacto: '+34 600 000 047',
-        centroTrabajo: 'Planta de envasado - Lleida',
-        ciudad: 'Lleida',
-    },
-};
-
-// Puestos tal como vienen del presupuesto: convenio, categoría, salario, tarifa y requisitos
-const PUESTOS = {
-    operario: {
-        puesto: 'Operario/a de almacén',
-        categoria: 'Especialistas / Logística (Grupo 4)',
-        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
-        salarioBrutoConvenio: '10,45 €/h',
-        tarifaVentaHora: '17,65 €/h',
-        requiereEpi: 'Calzado S3, chaleco de alta visibilidad, guantes anticorte',
-        carnetRequerido: 'Ninguno',
-        descripcionCorta: 'Recepción, control de bultos, picking por radiofrecuencia, preparación de pedidos e inventario rotativo.',
-    },
-    carretillero: {
-        puesto: 'Carretillero/a frontal y retráctil',
-        categoria: 'Mozo/a especialista (Grupo 3)',
-        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
-        salarioBrutoConvenio: '12,11 €/h',
-        tarifaVentaHora: '19,80 €/h',
-        requiereEpi: 'Calzado S3, chaleco, protectores auditivos',
-        carnetRequerido: 'Carnet de carretillero vigente (UNE 58451)',
-        descripcionCorta: 'Ubicación en altura en estanterías dinámicas (hasta 9 m), descarga de tráileres y abastecimiento de líneas.',
-    },
-    mozo: {
-        puesto: 'Mozo/a de almacén',
-        categoria: 'Mozo/a (Grupo 5)',
-        cctConvenio: 'Convenio Logística y Distribución Bizkaia',
-        salarioBrutoConvenio: '10,10 €/h',
-        tarifaVentaHora: '16,20 €/h',
-        requiereEpi: 'Calzado S3, chaleco de alta visibilidad',
-        carnetRequerido: 'Ninguno',
-        descripcionCorta: 'Carga y descarga manual, recuento de inventario y etiquetado.',
-    },
-    camarero: {
-        puesto: 'Camarero/a de sala',
-        categoria: 'Camarero/a (Nivel IV)',
-        cctConvenio: 'Convenio de Hostelería de Cataluña',
-        salarioBrutoConvenio: '10,60 €/h',
-        tarifaVentaHora: '17,40 €/h',
-        requiereEpi: 'Calzado antideslizante',
-        carnetRequerido: 'Manipulador/a de alimentos',
-        descripcionCorta: 'Servicio de sala y banquetes, montaje y desmontaje de mesas.',
-    },
-    camarero_barra: {
-        puesto: 'Camarero/a de barra',
-        categoria: 'Camarero/a (Nivel IV)',
-        cctConvenio: 'Convenio de Hostelería de Cataluña',
-        salarioBrutoConvenio: '10,60 €/h',
-        tarifaVentaHora: '17,40 €/h',
-        requiereEpi: 'Calzado antideslizante',
-        carnetRequerido: 'Manipulador/a de alimentos',
-        descripcionCorta: 'Servicio de barra y coctelería en eventos nocturnos.',
-    },
-    ayudante_cocina: {
-        puesto: 'Ayudante de cocina',
-        categoria: 'Ayudante (Nivel V)',
-        cctConvenio: 'Convenio de Hostelería de Cataluña',
-        salarioBrutoConvenio: '10,20 €/h',
-        tarifaVentaHora: '16,90 €/h',
-        requiereEpi: 'Calzado antideslizante, uniforme de cocina',
-        carnetRequerido: 'Manipulador/a de alimentos',
-        descripcionCorta: 'Preparación de elaboraciones frías y calientes, limpieza y orden de la cocina.',
-    },
-    cocinero: {
-        puesto: 'Cocinero/a',
-        categoria: 'Cocinero/a (Nivel III)',
-        cctConvenio: 'Convenio de Hostelería de Cataluña',
-        salarioBrutoConvenio: '11,90 €/h',
-        tarifaVentaHora: '19,60 €/h',
-        requiereEpi: 'Calzado antideslizante, uniforme de cocina',
-        carnetRequerido: 'Manipulador/a de alimentos',
-        descripcionCorta: 'Elaboración de menús de banquete y coordinación de la partida.',
-    },
-    envasado: {
-        puesto: 'Operario/a de envasado',
-        categoria: 'Peón especialista',
-        cctConvenio: 'Convenio de la industria de conservas vegetales',
-        salarioBrutoConvenio: '9,90 €/h',
-        tarifaVentaHora: '16,90 €/h',
-        requiereEpi: 'Calzado de seguridad, guantes, cofia',
-        carnetRequerido: 'Manipulador/a de alimentos',
-        descripcionCorta: 'Alimentación de línea, control de calidad visual y paletizado.',
-    },
-};
-
-// Presupuestos aceptados de los que se pueden crear peticiones (de cada puesto, las personas presupuestadas)
-const PRESUPUESTOS_ACEPTADOS = [
-    {
-        id: 'PRE-2026-0042', version: 'v1', cliente: 'translog', aceptado: '2026-10-14',
-        titulo: 'Campaña logística otoño HUB central',
-        puestos: [{ tipo: 'operario', personas: 8 }, { tipo: 'carretillero', personas: 4 }],
-    },
-    {
-        id: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', aceptado: '2026-09-30',
-        titulo: 'Servicio ETT camareros/as y cocina fiestas locales',
-        puestos: [{ tipo: 'camarero', personas: 10 }, { tipo: 'camarero_barra', personas: 3 }, { tipo: 'ayudante_cocina', personas: 4 }, { tipo: 'cocinero', personas: 2 }],
-    },
-    {
-        id: 'PRE-2026-0033', version: 'v2', cliente: 'mediterranea', aceptado: '2026-08-26',
-        titulo: 'Envasado campaña de Navidad',
-        puestos: [{ tipo: 'envasado', personas: 5 }],
-    },
-    {
-        id: 'PRE-2026-0029', version: 'v1', cliente: 'translog', aceptado: '2026-06-10',
-        titulo: 'Campaña logística verano HUB central',
-        puestos: [{ tipo: 'mozo', personas: 6 }],
-    },
-];
-// Tipos de documento que se suben a una petición
-const TIPOS_DOC_SERVICIO = ['Presupuesto firmado por el cliente', 'Pedido u orden de compra del cliente', 'Evaluación de riesgos del cliente', 'Correo del cliente', 'Otro documento'];
-
-// plantilla: turno del horario (HORARIO_TEMPLATES). cubiertas: plazas ya cubiertas en la demo.
-const PETICIONES_BASE = [
-    { id: 'PET-2026-0048', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'manana', solicitados: 5, cubiertas: 5, estado: 'Cubierta', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 3, candidaturas: 41 },
-    { id: 'PET-2026-0049', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'operario', personasPuesto: 8, plantilla: 'tarde', solicitados: 3, cubiertas: 0, estado: 'En selección', inicio: '2026-11-03', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Ane Uriarte', portalesActivos: 4, candidaturas: 22 },
-    { id: 'PET-2026-0050', presupuesto: 'PRE-2026-0042', version: 'v1', cliente: 'translog', tipo: 'carretillero', personasPuesto: 4, plantilla: 'tarde', solicitados: 4, cubiertas: 2, estado: 'En selección', inicio: '2026-11-10', fin: '2027-01-29', creada: '2026-10-15', responsable: 'Jon Ibarra', portalesActivos: 4, candidaturas: 17 },
-    { id: 'PET-2026-0044', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero', personasPuesto: 10, plantilla: 'partida', solicitados: 10, cubiertas: 10, estado: 'En curso', inicio: '2026-10-10', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 2, candidaturas: 58 },
-    { id: 'PET-2026-0045', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'ayudante_cocina', personasPuesto: 4, plantilla: 'partida', solicitados: 4, cubiertas: 4, estado: 'Cubierta', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 1, candidaturas: 19 },
-    { id: 'PET-2026-0046', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'cocinero', personasPuesto: 2, plantilla: 'partida', solicitados: 2, cubiertas: 0, estado: 'En difusión', inicio: '2026-11-05', fin: '2026-11-30', creada: '2026-10-01', responsable: 'Nuria Castells', portalesActivos: 3, candidaturas: 6 },
-    { id: 'PET-2026-0047', presupuesto: 'PRE-2026-0041', version: 'v1', cliente: 'hosteleria', tipo: 'camarero_barra', personasPuesto: 3, plantilla: 'noche', solicitados: 3, cubiertas: 0, estado: 'Nueva', inicio: '2026-11-12', fin: '2026-11-30', creada: '2026-10-27', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 0 },
-    { id: 'PET-2026-0031', presupuesto: 'PRE-2026-0029', version: 'v1', cliente: 'translog', tipo: 'mozo', personasPuesto: 6, plantilla: 'manana', solicitados: 6, cubiertas: 6, estado: 'Cerrada', inicio: '2026-07-01', fin: '2026-09-30', creada: '2026-06-12', responsable: 'Ane Uriarte', portalesActivos: 0, candidaturas: 47 },
-    { id: 'PET-2026-0036', presupuesto: 'PRE-2026-0033', version: 'v2', cliente: 'mediterranea', tipo: 'envasado', personasPuesto: 5, plantilla: 'noche', solicitados: 5, cubiertas: 0, estado: 'Cancelada', inicio: '2026-09-15', fin: '2026-12-15', creada: '2026-08-28', responsable: 'Jon Ibarra', portalesActivos: 0, candidaturas: 9, motivoCancelacion: 'El cliente aplaza la campaña' },
-];
-
-const completarPeticion = (p) => ({ ...CLIENTES[p.cliente], ...PUESTOS[p.tipo], ...p, presupuestoOrigen: `${p.presupuesto} ${p.version}` });
-const INITIAL_PETICIONES = PETICIONES_BASE.map(completarPeticion);
-
 const fechaCorta = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
 const diasHasta = (iso) => Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
-// Peticiones del mismo puesto del mismo presupuesto (por ejemplo, otro turno)
-const hermanasDe = (p, lista) => lista.filter(x => x.id !== p.id && x.presupuesto === p.presupuesto && x.tipo === p.tipo);
-const siguienteCodigo = (lista) => `PET-2026-${String(Math.max(...lista.map(p => Number(p.id.slice(-4)))) + 1).padStart(4, '0')}`;
-
+// Peticiones del mismo puesto del mismo presupuesto (por ejemplo, otro turno), del reparto que da la API
+const hermanasDe = (p, lista) => (p.reparto?.hermanas || []).filter(h => !h.esta).map(h => ({ ...h, ...(lista.find(x => x.id === h.id) || {}) }));
+// Mientras carga la lista no hay petición abierta: valores vacíos para que la ficha no falle
+const PETICION_VACIA = {
+    id: '', _id: '', presupuesto: '', version: '', presupuestoOrigen: '', cliente: '', clienteNombre: '', tipo: '', perfil: '', puesto: '', personasPuesto: 0,
+    plantilla: '', turnoNombre: '', solicitados: 0, cubiertas: 0, estado: 'Nueva', inicio: '', fin: '', creada: '', creadaPor: '', responsable: '',
+    portalesActivos: 0, candidaturas: 0, centroTrabajo: '', ciudad: '', cif: '', sector: '', contactoCliente: '', emailContacto: '', telefonoContacto: '',
+    categoria: '', cctConvenio: '', salarioBrutoConvenio: '', tarifaVentaHora: '', requiereEpi: '', carnetRequerido: '', descripcionCorta: '',
+    riesgos: '', supuesto: '', justificacion: '', extrasPropuesta: [], salarioBajoConvenio: false, cpdPrevio: null, presupuestoFirmado: null, reparto: null, servicio: {},
+};
 // Plantillas horarias
 const HORARIO_TEMPLATES = {
     manana: {
@@ -257,9 +102,6 @@ const horarioDesdePlantilla = (plantilla, centro, nota) => ({
     guardado: true,
     ultimaModif: nota
 });
-const INITIAL_HORARIOS = Object.fromEntries(
-    INITIAL_PETICIONES.map(p => [p.id, horarioDesdePlantilla(p.plantilla, p.centroTrabajo, `${fechaCorta(p.creada)} por ${p.responsable}`)])
-);
 
 const INITIAL_CONTENIDO_COMUN = {
     titulo: 'Operarios/as de almacén y carretilleros/as - campaña logística 2026',
@@ -273,413 +115,16 @@ const INITIAL_CONTENIDO_COMUN = {
     cta: '¡Inscríbete ahora y nuestro equipo de selección contactará contigo en menos de 24 horas laborables!'
 };
 
-const INITIAL_PORTALES = [
-    {
-        id: 'infojobs',
-        nombre: 'InfoJobs',
-        badgeColor: 'bg-blue-600',
-        logoText: 'IJ',
-        activo: true,
-        estadoApi: 'Sincronizado',
-        candidaturas: 18,
-        ultSinc: '14/02/2026 12:40',
-        personalizado: false,
-        customContent: null
-    },
-    {
-        id: 'linkedin',
-        nombre: 'LinkedIn Talent Solutions',
-        badgeColor: 'bg-blue-700',
-        logoText: 'in',
-        activo: true,
-        estadoApi: 'Sincronizado',
-        candidaturas: 12,
-        ultSinc: '14/02/2026 12:40',
-        personalizado: true,
-        customContent: {
-            titulo: 'Operario/a de almacén y carretillero/a — ZAL Bilbao',
-            descripcion: 'Trans-Logística Ibérica Norte busca talento para su hub de Bilbao. Únete a un equipo dinámico con oportunidades de desarrollo profesional.',
-            funciones: '• Gestión ágil de pedidos con RF y sistemas WMS.\n• Manejo de carretillas retráctiles y frontales.\n• Cumplimiento de estándares de seguridad y calidad en muelle.',
-            requisitos: '• Experiencia sólida en logística moderna.\n• Carnet UNE 58451 carretillas.\n• Orientación a la seguridad y trabajo en equipo.',
-            categoria: 'Supply Chain & Logistics',
-            ubicacion: 'Bilbao y alrededores, España (Híbrido/Presencial)',
-            jornada: 'Jornada completa',
-            condiciones: 'Contratación ETT con alta tasa de conversión a plantilla directa.',
-            cta: 'Envía tu candidatura simplificada con tu perfil de LinkedIn.'
-        }
-    },
-    {
-        id: 'indeed',
-        nombre: 'Indeed y Glassdoor',
-        badgeColor: 'bg-indigo-600',
-        logoText: 'inD',
-        activo: true,
-        estadoApi: 'Sincronizado',
-        candidaturas: 24,
-        ultSinc: '14/02/2026 12:40',
-        personalizado: false,
-        customContent: null
-    },
-    {
-        id: 'monster',
-        nombre: 'Monster',
-        badgeColor: 'bg-indigo-600',
-        logoText: 'M',
-        activo: false,
-        estadoApi: 'Pausado',
-        candidaturas: 0,
-        ultSinc: '10/02/2026 09:15',
-        personalizado: false,
-        customContent: null
-    },
-    {
-        id: 'portal_ett',
-        nombre: 'Portal de Empleo Propio ETT',
-        badgeColor: 'bg-emerald-600',
-        logoText: 'ETT',
-        activo: true,
-        estadoApi: 'Publicado directo',
-        candidaturas: 9,
-        ultSinc: 'En tiempo real',
-        personalizado: false,
-        customContent: null
-    }
-];
-
-// --- MOCK DATA: PLAZAS Y CANDIDATOS POR POSICIÓN ---
-const PLAZAS_BASE = {
-    'operario': [
-        {
-            id: 'PLZ-001-01',
-            numero: 1,
-            estado: 'cubierta', // 'cubierta' | 'vacante' | 'en_proceso'
-            candidatoId: 'CAN-0126',
-            nombre: 'Jon Ander Etxebarria Bilbao',
-            dni: '45892134K',
-            telefono: '+34 654 112 890',
-            email: 'jonander.etxebarria@email.com',
-            fechaIncorporacion: '03/11/2026',
-            contratoTipo: 'CPD Obra y Servicio (ETT)',
-            scoring: 96,
-            foto: null
-        },
-        {
-            id: 'PLZ-001-02',
-            numero: 2,
-            estado: 'cubierta',
-            candidatoId: 'CAN-0127',
-            nombre: 'Ainhoa Larrazabal Urkijo',
-            dni: '78912340M',
-            telefono: '+34 688 234 561',
-            email: 'ainhoa.larrazabal@email.com',
-            fechaIncorporacion: '03/11/2026',
-            contratoTipo: 'CPD Obra y Servicio (ETT)',
-            scoring: 92,
-            foto: null
-        },
-        {
-            id: 'PLZ-001-03',
-            numero: 3,
-            estado: 'cubierta',
-            candidatoId: 'CAN-0128',
-            nombre: 'Mamadou Diallo',
-            dni: 'X8923412P',
-            telefono: '+34 611 902 443',
-            email: 'mamadou.diallo@email.com',
-            fechaIncorporacion: '03/11/2026',
-            contratoTipo: 'CPD Obra y Servicio (ETT)',
-            scoring: 88,
-            foto: null
-        },
-        {
-            id: 'PLZ-001-04',
-            numero: 4,
-            estado: 'cubierta',
-            candidatoId: 'CAN-0129',
-            nombre: 'Laura Morales San Sebastián',
-            dni: '16098234L',
-            telefono: '+34 670 445 119',
-            email: 'laura.morales@email.com',
-            fechaIncorporacion: '03/11/2026',
-            contratoTipo: 'CPD Obra y Servicio (ETT)',
-            scoring: 94,
-            foto: null
-        },
-        {
-            id: 'PLZ-001-05',
-            numero: 5,
-            estado: 'cubierta',
-            candidatoId: 'CAN-0130',
-            nombre: 'Iker Agirrebeitia Mendia',
-            dni: '30691288B',
-            telefono: '+34 699 871 203',
-            email: 'iker.agirre@email.com',
-            fechaIncorporacion: '03/11/2026',
-            contratoTipo: 'CPD Obra y Servicio (ETT)',
-            scoring: 90,
-            foto: null
-        },
-        {
-            id: 'PLZ-001-06',
-            numero: 6,
-            estado: 'vacante',
-            candidatoId: null,
-            nombre: null,
-            dni: null,
-            telefono: null,
-            email: null,
-            fechaIncorporacion: null,
-            contratoTipo: null,
-            scoring: null,
-            foto: null
-        },
-        {
-            id: 'PLZ-001-07',
-            numero: 7,
-            estado: 'vacante',
-            candidatoId: null,
-            nombre: null,
-            dni: null,
-            telefono: null,
-            email: null,
-            fechaIncorporacion: null,
-            contratoTipo: null,
-            scoring: null,
-            foto: null
-        },
-        {
-            id: 'PLZ-001-08',
-            numero: 8,
-            estado: 'vacante',
-            candidatoId: null,
-            nombre: null,
-            dni: null,
-            telefono: null,
-            email: null,
-            fechaIncorporacion: null,
-            contratoTipo: null,
-            scoring: null,
-            foto: null
-        }
-    ],
-    'carretillero': [
-        {
-            id: 'PLZ-002-01',
-            numero: 1,
-            estado: 'cubierta',
-            candidatoId: 'CAN-0131',
-            nombre: 'Unai García Zabaleta',
-            dni: '44901238R',
-            telefono: '+34 633 901 223',
-            email: 'unai.garcia@email.com',
-            fechaIncorporacion: '03/11/2026',
-            contratoTipo: 'CPD Obra y Servicio (ETT)',
-            scoring: 98,
-            foto: null
-        },
-        {
-            id: 'PLZ-002-02',
-            numero: 2,
-            estado: 'cubierta',
-            candidatoId: 'CAN-0132',
-            nombre: 'Carlos Manuel Ortiz Reyes',
-            dni: 'Y1290384T',
-            telefono: '+34 677 340 192',
-            email: 'carlos.ortiz@email.com',
-            fechaIncorporacion: '03/11/2026',
-            contratoTipo: 'CPD Obra y Servicio (ETT)',
-            scoring: 95,
-            foto: null
-        },
-        {
-            id: 'PLZ-002-03',
-            numero: 3,
-            estado: 'vacante',
-            candidatoId: null,
-            nombre: null,
-            dni: null,
-            telefono: null,
-            email: null,
-            fechaIncorporacion: null,
-            contratoTipo: null,
-            scoring: null,
-            foto: null
-        },
-        {
-            id: 'PLZ-002-04',
-            numero: 4,
-            estado: 'vacante',
-            candidatoId: null,
-            nombre: null,
-            dni: null,
-            telefono: null,
-            email: null,
-            fechaIncorporacion: null,
-            contratoTipo: null,
-            scoring: null,
-            foto: null
-        }
-    ]
-};
-
-// Plazas de cada petición. Las de logística salen de los ejemplos de arriba; el resto se generan.
-const NOMBRES_DEMO = ['Garazi Uribe Arana', 'Pablo Ruiz Cano', 'Sara Benítez Lago', 'Youssef Amrani', 'Lucía Ferrer Sanz', 'Marc Puig Soler', 'Aitana Roca Vidal', 'Daniel Sousa Prieto', 'Irene Campos Gil', 'Óscar León Mena', 'Noa Serra Pons', 'Hugo Martín Vera', 'Ane Goikoetxea Ruiz', 'Iván Molina Prat', 'Clara Esteve Ros', 'Bruno Lage Costa', 'Nerea Olabarria Gil', 'Adrián Vela Soto', 'Paula Rius Ferrer', 'Sergio Navas Peña'];
-// Primer nombre de cada petición generada, para que nadie esté en dos peticiones (las mismas personas que en Contratos y altas)
-const PRIMER_NOMBRE = { 'PET-2026-0044': 0, 'PET-2026-0045': 10, 'PET-2026-0031': 14 };
+// Plazas de cada petición (fase 6): en la demo vienen de la selección de ejemplo; si no, todas por cubrir.
 const renumerarPlazas = (lista, codigo) => lista.map((p, i) => ({ ...p, id: `PLZ-${codigo}-${String(i + 1).padStart(2, '0')}`, numero: i + 1 }));
 const plazaVacante = { estado: 'vacante', candidatoId: null, nombre: null, dni: null, telefono: null, email: null, fechaIncorporacion: null, contratoTipo: null, scoring: null, foto: null };
-const generarPlazas = (p) => Array.from({ length: p.solicitados }, (_, i) => {
-    if (i >= p.cubiertas) return { ...plazaVacante };
-    const nombre = NOMBRES_DEMO[((PRIMER_NOMBRE[p.id] ?? 0) + i) % NOMBRES_DEMO.length];
-    return {
-        estado: 'cubierta',
-        candidatoId: null, // se rellena con el código de Candidatos (conContacto)
-        nombre,
-        dni: '00000000T',
-        telefono: '+34 600 000 000',
-        email: `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
-        fechaIncorporacion: fechaCorta(p.inicio),
-        contratoTipo: 'CPD circunstancias de la producción (ETT)',
-        scoring: 85 + (i % 10),
-        foto: null
-    };
-});
-// Las personas de las plazas son las de Candidatos: mismo código, DNI, teléfono y email (personasDemo.js)
-const conContacto = (plz) => {
-    const c = plz.nombre && contactoDemo(plz.nombre);
-    return c ? { ...plz, candidatoId: c.id, dni: c.dni, telefono: c.telefono, email: c.email } : plz;
-};
-const PLAZAS_INICIO = Object.fromEntries(INITIAL_PETICIONES.map(p => {
-    const codigo = p.id.slice(-4);
-    const lista = p.id === 'PET-2026-0048' ? PLAZAS_BASE['operario'].slice(0, 5)
-        : p.id === 'PET-2026-0049' ? PLAZAS_BASE['operario'].slice(5)
-            : p.id === 'PET-2026-0050' ? PLAZAS_BASE['carretillero']
-                : generarPlazas(p);
-    return [p.id, renumerarPlazas(lista.map(conContacto), codigo)];
-}));
-
-const CANDIDATOS_BASE = [
-    {
-        id: 'CAN-0201',
-        nombre: 'Nerea Barandiarán Goikoetxea',
-        dni: '45903218V',
-        telefono: '+34 644 192 830',
-        email: 'nerea.barandiaran@email.com',
-        puestoPrincipal: 'Operaria de almacén / Moza de almacén',
-        experiencia: '3 años en logística de frío y picking con radiofrecuencia',
-        disponibilidad: 'Inmediata (Turnos Mañana / Tarde)',
-        carnets: 'Carnet B + Manipuladora de alimentos',
-        scoring: 95,
-        matchPosicion: ['operario'],
-        ubicacion: 'Barakaldo (Bizkaia)',
-        valoracionETT: 'Candidata muy formal, experiencia comprobada en un operador logístico de alimentación.',
-        estadoSeleccion: 'Disponible para asignación',
-        foto: null
-    },
-    {
-        id: 'CAN-0202',
-        nombre: 'David Aranguren Sola',
-        dni: '72890123C',
-        telefono: '+34 605 882 104',
-        email: 'david.aranguren@email.com',
-        puestoPrincipal: 'Carretillero frontal y retráctil UNE 58451',
-        experiencia: '5 años en estanterías dinámicas 12m y carga de tráileres',
-        disponibilidad: 'Inmediata',
-        carnets: 'Carnet Carretillas UNE 58451 (5 tipos) + C1',
-        scoring: 98,
-        matchPosicion: ['carretillero'],
-        ubicacion: 'Santurtzi (Bizkaia)',
-        valoracionETT: 'Alta destreza en retráctil, buenas referencias de un operador logístico de Bilbao.',
-        estadoSeleccion: 'Disponible para asignación',
-        foto: null
-    },
-    {
-        id: 'CAN-0203',
-        nombre: 'Yeray Fernández Ramos',
-        dni: '16102934D',
-        telefono: '+34 682 301 928',
-        email: 'yeray.fernandez@email.com',
-        puestoPrincipal: 'Operario de almacén y expediciones',
-        experiencia: '2 años en empaquetado, albaranes y preparación con terminal Zebra',
-        disponibilidad: 'Inmediata (Mañanas)',
-        carnets: 'Carnet B + PRL básico 60h',
-        scoring: 89,
-        matchPosicion: ['operario'],
-        ubicacion: 'Bilbao (Bizkaia)',
-        valoracionETT: 'Muy motivado, disponibilidad para horas extra si procede.',
-        estadoSeleccion: 'Disponible para asignación',
-        foto: null
-    },
-    {
-        id: 'CAN-0204',
-        nombre: 'Kepa Iturriaga Elorrieta',
-        dni: '30654891Q',
-        telefono: '+34 618 450 912',
-        email: 'kepa.iturriaga@email.com',
-        puestoPrincipal: 'Conductor / Carretillero homologado',
-        experiencia: '4 años en almacén logístico portuario ZAL',
-        disponibilidad: 'A partir del 02/11/2026',
-        carnets: 'Carnet Carretillero UNE 58451 + C+E',
-        scoring: 91,
-        matchPosicion: ['carretillero'],
-        ubicacion: 'Portugalete (Bizkaia)',
-        valoracionETT: 'Conoce los muelles de la ZAL de Santurtzi a la perfección.',
-        estadoSeleccion: 'Disponible para asignación',
-        foto: null
-    },
-    {
-        id: 'CAN-0205',
-        nombre: 'Sofía Valderrama Galdós',
-        dni: '79012384H',
-        telefono: '+34 690 128 347',
-        email: 'sofia.valderrama@email.com',
-        puestoPrincipal: 'Preparadora de pedidos / Picking',
-        experiencia: '1.5 años en sector textil y paquetería express',
-        disponibilidad: 'Inmediata',
-        carnets: 'Carnet B',
-        scoring: 87,
-        matchPosicion: ['operario'],
-        ubicacion: 'Galdakao (Bizkaia)',
-        valoracionETT: 'Rapidez en picking y manejo ágil de lector de código de barras.',
-        estadoSeleccion: 'Disponible para asignación',
-        foto: null
-    }
-];
-
-// --- ROOT COMPONENT ---
-// Perfil de cada candidato para comprobarlo contra la petición: turnos en los que puede trabajar, carnés,
-// si su documentación está en vigor y de dónde vino.
-const PERFIL_CANDIDATOS = {
-    'CAN-0201': { turnos: ['manana', 'tarde'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' },
-    'CAN-0202': { turnos: ['manana', 'tarde', 'noche'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' },
-    'CAN-0203': { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' },
-    'CAN-0204': { turnos: ['tarde', 'noche'], carnes: ['carretilla'], docOk: false, origen: 'Indeed' },
-    'CAN-0205': { turnos: ['manana', 'tarde'], carnes: [], docOk: true, origen: 'Base de datos' },
-};
-const persona = (id, nombre, puestoPrincipal, ubicacion, scoring, matchPosicion, perfil, experiencia) => ({
-    id, nombre, dni: '00000000T', telefono: '+34 600 000 000', email: `${nombre.split(' ')[0].toLowerCase()}@ejemplo.es`,
-    puestoPrincipal, experiencia, disponibilidad: 'Inmediata', carnets: perfil.carnes.map(c => NOMBRE_CARNE[c]).join(', ') || 'Ninguno',
-    scoring, matchPosicion, ubicacion, valoracionETT: 'Pendiente de entrevista.', estadoSeleccion: 'En proceso', foto: null, ...perfil
-});
+const plazasVacantes = (p) => renumerarPlazas(Array.from({ length: p.solicitados }, () => ({ ...plazaVacante })), p.id.slice(-4));
 const NOMBRE_CARNE = { carretilla: 'Carné de carretillero', manipulador: 'Manipulador/a de alimentos' };
-const INITIAL_CANDIDATOS_POOL = [
-    ...CANDIDATOS_BASE.map(c => ({ ...c, ...PERFIL_CANDIDATOS[c.id] })),
-    // En selección también en Candidatos (con sus datos de allí)
-    { ...persona('CAN-0104', 'Elena Sánchez Pascual', 'Reponedora / Moza de almacén', 'Galdakao (Bizkaia)', 90, ['operario'], { turnos: ['manana', 'tarde'], carnes: [], docOk: true, origen: 'Monster' }, '2 años en reposición y almacén'), dni: '02891277W', telefono: '+34 689 112 233', email: 'elena.sanchez.p@fastmail.com' },
-    { ...persona('CAN-0105', 'David Castillo Ruiz', 'Operario de almacén', 'Bilbao (Bizkaia)', 89, ['operario', 'carretillero'], { turnos: ['manana', 'tarde'], carnes: ['carretilla'], docOk: true, origen: 'Portal de candidatos' }, '3 años en almacén y carretilla frontal'), dni: '50449912K', telefono: '+34 654 321 987', email: 'david.castillo@example.com' },
-    persona('CAN-0206', 'Ibai Zubizarreta Lasa', 'Operario de almacén', 'Basauri (Bizkaia)', 88, ['operario'], { turnos: ['tarde'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, '2 años en almacén de recambios'),
-    persona('CAN-0207', 'Leire Ortuzar Bengoa', 'Operaria de almacén', 'Etxebarri (Bizkaia)', 80, ['operario'], { turnos: ['manana'], carnes: [], docOk: true, origen: 'Portal de candidatos' }, 'Sin experiencia en logística; viene de comercio'),
-    persona('CAN-0208', 'Gorka Bilbao Arrieta', 'Carretillero', 'Arrigorriaga (Bizkaia)', 86, ['carretillero'], { turnos: ['tarde'], carnes: ['carretilla'], docOk: true, origen: 'InfoJobs' }, '4 años con carretilla retráctil'),
-    persona('CAN-0301', 'Marina Soler Bosch', 'Camarera de sala y barra', 'Barcelona', 92, ['camarero', 'camarero_barra'], { turnos: ['partida', 'noche'], carnes: ['manipulador'], docOk: true, origen: 'Portal de candidatos' }, '5 temporadas en banquetes y eventos'),
-    persona('CAN-0302', 'Jordi Vila Mas', 'Cocinero', 'L\'Hospitalet de Llobregat', 90, ['cocinero', 'ayudante_cocina'], { turnos: ['partida'], carnes: ['manipulador'], docOk: true, origen: 'InfoJobs' }, 'Jefe de partida en restaurante de 120 cubiertos'),
-    persona('CAN-0303', 'Fatima Zahra El Idrissi', 'Ayudante de cocina', 'Badalona', 84, ['ayudante_cocina'], { turnos: ['partida', 'manana'], carnes: ['manipulador'], docOk: false, origen: 'Portal de candidatos' }, '1 año en cocina de colectividades'),
-    persona('CAN-0304', 'Álex Romero Gil', 'Camarero de barra', 'Barcelona', 81, ['camarero_barra'], { turnos: ['noche'], carnes: [], docOk: true, origen: 'Indeed' }, 'Coctelería en locales de ocio nocturno'),
-].map(c => ({ ...c, ...(contactoDemo(c.nombre) ? (({ dni, telefono, email }) => ({ dni, telefono, email }))(contactoDemo(c.nombre)) : {}) }));
 
 // Requisitos de la petición que se comprueban al proponer a alguien
 const REQUISITO_CARNE = { carretillero: 'carretilla', camarero: 'manipulador', camarero_barra: 'manipulador', ayudante_cocina: 'manipulador', cocinero: 'manipulador', envasado: 'manipulador' };
 const comprobarRequisitos = (c, pet, plantilla) => {
-    const carne = REQUISITO_CARNE[pet.tipo];
+    const carne = REQUISITO_CARNE[pet.perfil];
     return [
         { id: 'carne', texto: carne ? NOMBRE_CARNE[carne] : 'Sin carné específico', ok: !carne || (c.carnes || []).includes(carne) },
         { id: 'turno', texto: HORARIO_TEMPLATES[plantilla]?.nombre || 'Turno', ok: (c.turnos || []).includes(plantilla) },
@@ -698,30 +143,6 @@ const ETAPAS = [
 ];
 const ETAPAS_EN_PROCESO = ['preseleccionado', 'entrevista', 'propuesto'];
 const enProcesoDe = (lista) => (lista || []).filter(x => ETAPAS_EN_PROCESO.includes(x.etapa)).length;
-const INITIAL_EMBUDO = {
-    'PET-2026-0049': [
-        { id: 'CAN-0201', etapa: 'entrevista', fecha: '2026-10-24' },
-        { id: 'CAN-0205', etapa: 'entrevista', fecha: '2026-10-22' },
-        { id: 'CAN-0203', etapa: 'preseleccionado', fecha: '2026-10-25' },
-        { id: 'CAN-0206', etapa: 'preseleccionado', fecha: '2026-10-26' },
-        { id: 'CAN-0207', etapa: 'inscrito', fecha: '2026-10-27' },
-        { id: 'CAN-0104', etapa: 'entrevista', fecha: '2026-10-23' },
-    ],
-    'PET-2026-0050': [
-        { id: 'CAN-0202', etapa: 'propuesto', fecha: '2026-10-20' },
-        { id: 'CAN-0204', etapa: 'entrevista', fecha: '2026-10-23' },
-        { id: 'CAN-0208', etapa: 'preseleccionado', fecha: '2026-10-26' },
-        { id: 'CAN-0105', etapa: 'entrevista', fecha: '2026-10-20' },
-    ],
-    'PET-2026-0046': [
-        { id: 'CAN-0302', etapa: 'entrevista', fecha: '2026-10-21' },
-        { id: 'CAN-0303', etapa: 'inscrito', fecha: '2026-10-27' },
-    ],
-    'PET-2026-0047': [
-        { id: 'CAN-0301', etapa: 'inscrito', fecha: '2026-10-27' },
-        { id: 'CAN-0304', etapa: 'inscrito', fecha: '2026-10-28' },
-    ],
-};
 
 // Estados de una plaza: por cubrir → pendiente del cliente → cubierta → incorporada; y baja si alguien se va
 const ESTADOS_PLAZA = {
@@ -740,46 +161,17 @@ const ESTADOS_CPD = {
     enviado: { texto: 'Pendiente de firma', tono: 'warning' },
     firmado: { texto: 'Firmado', tono: 'success' },
 };
+// Sin firma electrónica: el CPD previo se genera en el servidor, se envía a mano y se marca
 const ESTADOS_CPD_PREVIO = {
-    sin_enviar: { texto: 'Sin enviar', tono: 'neutral' },
+    sin_generar: { texto: 'Sin generar', tono: 'neutral' },
+    generado: { texto: 'Generado, sin enviar', tono: 'info' },
     enviado: { texto: 'Enviado, sin revisar', tono: 'warning' },
     revisado: { texto: 'Revisado por el cliente', tono: 'success' },
 };
-const INITIAL_CPD_PREVIO = Object.fromEntries(INITIAL_PETICIONES.map(p => [p.id,
-    p.estado === 'Nueva' ? { estado: 'sin_enviar' } : ['PET-2026-0049', 'PET-2026-0046'].includes(p.id) ? { estado: 'enviado', fecha: p.creada } : { estado: 'revisado', fecha: p.creada }
-]));
 
 // Portales propios de la ETT (subdominio configurado en Mi ETT): uno para empresas y otro para candidatos
 const SUBDOMINIO_ETT = 'ettglobal';
 const urlPortal = (tipo, petId) => `https://${SUBDOMINIO_ETT}.tramitnow.com/${tipo === 'empresa' ? 'empresas' : `candidatos/ofertas/${petId}`}`;
-const INITIAL_PORTALES_PROPIOS = Object.fromEntries(INITIAL_PETICIONES.map(p => [p.id, {
-    empresa: ESTADOS_ACTIVOS.includes(p.estado) && p.estado !== 'Nueva',
-    candidatos: ['En difusión', 'En selección'].includes(p.estado),
-    bienvenidaEmpresa: true,
-    bienvenidaCandidatos: true,
-    bienvenidaEmpresaEnviada: p.estado !== 'Nueva' ? p.creada : null,
-}]));
-
-// Plazas con su estado y su CPD. Las cubiertas de peticiones ya empezadas pasan a incorporadas.
-const INITIAL_PLAZAS = Object.fromEntries(Object.entries(PLAZAS_INICIO).map(([petId, lista]) => {
-    const pet = INITIAL_PETICIONES.find(p => p.id === petId);
-    const empezada = diasHasta(pet.inicio) <= 0;
-    return [petId, lista.map(pl => {
-        const p = { ...pl, motivoBaja: null, bajaDe: null, cpd: null };
-        if (p.estado !== 'cubierta') return { ...p, estado: 'vacante' };
-        return { ...p, estado: empezada ? 'incorporada' : 'cubierta', cpd: 'firmado', fechaIncorporacion: fechaCorta(pet.inicio), contratoTipo: 'Circunstancias de la producción' };
-    })];
-}));
-// Casos de la demo: CPD aún sin firmar, una persona propuesta al cliente y una baja
-INITIAL_PLAZAS['PET-2026-0048'][3].cpd = 'enviado';
-INITIAL_PLAZAS['PET-2026-0048'][4].cpd = 'enviado';
-INITIAL_PLAZAS['PET-2026-0050'][1].cpd = 'enviado';
-(() => {
-    const c = INITIAL_CANDIDATOS_POOL.find(x => x.id === 'CAN-0202');
-    Object.assign(INITIAL_PLAZAS['PET-2026-0050'][2], { estado: 'reservada', candidatoId: c.id, nombre: c.nombre, dni: c.dni, telefono: c.telefono, email: c.email, scoring: c.scoring, fechaIncorporacion: '10/11/2026', contratoTipo: 'Circunstancias de la producción', cpd: 'sin_generar' });
-    const baja = INITIAL_PLAZAS['PET-2026-0044'][2];
-    Object.assign(baja, { estado: 'baja', motivoBaja: 'No se presentó', bajaDe: baja.nombre, candidatoId: null, nombre: null, cpd: null });
-})();
 
 // Requisitos de un candidato frente a la petición: carné, turno y documentación
 function Requisitos({ lista, compacto = false }) {
@@ -885,11 +277,32 @@ export default function PeticionesView() {
         setTimeout(() => setToast(null), 3800);
     };
 
+    // Datos (usePeticiones). En la vista, cada petición se identifica por su código (id) y lleva el de la API en _id.
+    const pet = usePeticiones();
+    const seleccion = pet.seleccion; // plazas con personas, candidatos y portales: solo en la demo (fases 6 y 7)
+    const soloDemo = (mensajeDemo, que, tipo = 'success') => showToast(DEMO ? mensajeDemo : `Disponible próximamente: ${que}.`, DEMO ? tipo : 'info');
+    // Llama a la API (con usePeticiones) y avisa si falla. Devuelve lo que devuelve la acción, o undefined.
+    const ejecutar = async (accion, mensajeOk) => {
+        try {
+            const r = await accion();
+            if (mensajeOk) showToast(typeof mensajeOk === 'function' ? mensajeOk(r) : mensajeOk);
+            return r;
+        } catch (e) {
+            showToast(mensajeError(e), 'error');
+            return undefined;
+        }
+    };
+
     // Main States
-    const [peticiones, setPeticiones] = useState(INITIAL_PETICIONES);
-    const [peticionId, setPeticionId] = useState(INITIAL_PETICIONES[0].id);
-    const peticion = peticiones.find(p => p.id === peticionId) || peticiones[0];
-    const [horarios, setHorarios] = useState(INITIAL_HORARIOS);
+    const [peticiones, setPeticiones] = useState([]);
+    const [peticionId, setPeticionId] = useState('');
+    // Ficha abierta: la petición completa, sus documentos, su actividad y los datos de la ETT para el CPD
+    const [ficha, setFicha] = useState(null);
+    const fila = peticiones.find(p => p.id === peticionId);
+    const peticion = ficha?.peticion.id === peticionId
+        ? { ...ficha.peticion, portalesActivos: fila?.portalesActivos ?? 0, candidaturas: fila?.candidaturas ?? 0 }
+        : fila || PETICION_VACIA;
+    const [horarios, setHorarios] = useState({});
     // Cada petición tiene un solo puesto: la "posición seleccionada" es siempre la propia petición
     const selectedPosId = peticion.id;
     const [savingHorario, setSavingHorario] = useState(false);
@@ -900,31 +313,66 @@ export default function PeticionesView() {
     const [filtroCliente, setFiltroCliente] = useState('');
     const [filtroPresupuesto, setFiltroPresupuesto] = useState('');
     const [filtroResponsable, setFiltroResponsable] = useState('');
-    const [filtroSucursal, setFiltroSucursal] = useState(''); // solo para quien ve más de una sucursal
     const [vistaListado, setVistaListado] = useState('tabla'); // 'tabla' | 'pipeline'
     const [agruparPorPresupuesto, setAgruparPorPresupuesto] = useState(false);
 
-    // Ventanas: duplicar con otro horario, nueva petición y copiar difusión
+    // Ventanas: duplicar con otro horario, nueva petición, cancelar y copiar difusión
     const [duplicar, setDuplicar] = useState(null);
     const [nuevaPeticion, setNuevaPeticion] = useState(null);
+    const [cancelar, setCancelar] = useState(null); // { id, motivo }
     const [copiarDifusion, setCopiarDifusion] = useState(false);
 
     // Plazas y candidatos: embudo, bajas, CPD previo y portales propios de cada petición
-    const [embudo, setEmbudo] = useState(INITIAL_EMBUDO);
+    const [embudo, setEmbudo] = useState({});
     const [filtroEtapa, setFiltroEtapa] = useState('');
     const [verTodosCandidatos, setVerTodosCandidatos] = useState(false);
     const [bajaPlaza, setBajaPlaza] = useState(null);
     const [motivosBaja, setMotivosBaja] = useState(MOTIVOS_BAJA);
-    const [cpdPrevio, setCpdPrevio] = useState(INITIAL_CPD_PREVIO);
     const [verCpdPrevio, setVerCpdPrevio] = useState(false);
-    // Documentos del servicio que se suben a cada petición (además de los que salen solos)
-    const [docsServicio, setDocsServicio] = useState({});
+    // Documentos del servicio que se suben a la petición abierta (además del presupuesto firmado, que sale solo)
+    const docsServicio = { [peticion.id]: ficha?.peticion.id === peticion.id ? ficha.documentos : [] };
     const [subirDoc, setSubirDoc] = useState(null); // { tipo, nombre, archivo }
     const [buscarPresu, setBuscarPresu] = useState('');
-    const [portalesPropios, setPortalesPropios] = useState(INITIAL_PORTALES_PROPIOS);
-    const enviarCpdPrevio = () => {
-        setCpdPrevio(prev => ({ ...prev, [peticion.id]: { estado: 'enviado', fecha: new Date().toISOString().slice(0, 10) } }));
-        showToast(`Condiciones del CPD enviadas a ${peticion.emailContacto}${portalesPropios[peticion.id]?.empresa ? ' y publicadas en su portal' : ''}.`);
+    // Presupuestos aceptados del buscador de «Nueva petición» (los busca el servidor)
+    const [presupuestosAceptados, setPresupuestosAceptados] = useState({ lista: [], total: 0, cargando: false });
+    const [portalesPropios, setPortalesPropios] = useState({});
+    const cpdPrevio = { [peticion.id]: peticion.cpdPrevio || { estado: 'sin_generar', comprobaciones: [] } };
+    // La ficha abierta cambia por lo que devuelve la API (una petición suelta o la ficha entera)
+    const ponerFicha = (p) => {
+        if (!p) return;
+        setFicha(f => (f && f.peticion.id === p.id ? { ...f, peticion: p } : f));
+    };
+    const ponerFichaEntera = (f) => {
+        if (!f) return;
+        setFicha(f);
+        setHorarios(prev => ({ ...prev, [f.peticion.id]: f.horario }));
+        setPeticiones(prev => prev.map(p => (p.id === f.peticion.id ? { ...p, turnoNombre: f.peticion.turnoNombre, plantilla: f.peticion.plantilla, solicitados: f.peticion.solicitados, inicio: f.peticion.inicio, fin: f.peticion.fin, responsable: f.peticion.responsable } : p)));
+    };
+    // CPD previo, sin firma electrónica: se genera en el servidor, se envía a mano y se marca como enviado y revisado
+    const [datosServicio, setDatosServicio] = useState(null);
+    const generarCpdPrevio = async () => {
+        const r = await ejecutar(() => pet.generarCpdPrevio(ficha));
+        if (!r) return;
+        ponerFichaEntera(r.ficha);
+        showToast(r.hay ? 'CPD previo generado. Envíalo al cliente y márcalo como enviado.' : 'CPD previo generado. En la demo no hay PDF: mira las condiciones en «Ver condiciones».', r.hay ? 'success' : 'info');
+    };
+    const enviarCpdPrevio = async () => {
+        ponerFichaEntera(await ejecutar(() => pet.marcarCpdPrevio(ficha, 'enviado'), `CPD previo marcado como enviado${peticion.emailContacto ? ` a ${peticion.emailContacto}` : ''}.`));
+    };
+    const marcarCpdRevisado = async () => {
+        ponerFichaEntera(await ejecutar(() => pet.marcarCpdPrevio(ficha, 'revisado'), 'CPD previo marcado como revisado por el cliente.'));
+    };
+    const descargarCpdPrevio = async () => {
+        if (peticion.cpdPrevio?.estado === 'sin_generar' || peticion.cpdPrevio?.desactualizado) return generarCpdPrevio();
+        const doc = (ficha?.documentos || []).find(d => d.tipo.startsWith('CPD previo'));
+        const hay = doc ? await ejecutar(() => pet.descargarDocumento(doc.id)) : false;
+        if (hay === false) showToast(DEMO ? 'En la demo no hay PDF: mira las condiciones en «Ver condiciones».' : 'No se encuentra el PDF: vuelve a generarlo.', 'info');
+    };
+    const guardarDatosServicio = async () => {
+        const r = await ejecutar(() => pet.guardarServicio(ficha, datosServicio), 'Datos del servicio guardados.');
+        if (!r) return;
+        ponerFichaEntera(r);
+        setDatosServicio(null);
     };
     const cambiarPortalPropio = (tipo, activo) => {
         const pp = portalesPropios[peticion.id] || {};
@@ -940,16 +388,39 @@ export default function PeticionesView() {
     };
 
     // Portales & Content
-    const [contenidoComun, setContenidoComun] = useState(() => contenidoDe(INITIAL_PETICIONES[0], INITIAL_HORARIOS[INITIAL_PETICIONES[0].id]));
+    const [contenidoComun, setContenidoComun] = useState(INITIAL_CONTENIDO_COMUN);
     const [comunSavedStatus, setComunSavedStatus] = useState('Guardado'); // 'Guardado', 'Modificado', 'Guardando...'
-    const [portales, setPortales] = useState(() => INITIAL_PORTALES.map((x, i) => ({ ...x, activo: i < INITIAL_PETICIONES[0].portalesActivos })));
+    const [portales, setPortales] = useState([]);
 
     // Plazas y Candidatos Management State
-    const [plazas, setPlazas] = useState(INITIAL_PLAZAS);
-    const [candidatosPool, setCandidatosPool] = useState(INITIAL_CANDIDATOS_POOL);
+    const [plazas, setPlazas] = useState({});
+    const [candidatosPool, setCandidatosPool] = useState([]);
     const [candidatoFichaModal, setCandidatoFichaModal] = useState(null); // Candidate object or null to display profile
     const [assignCandidateModal, setAssignCandidateModal] = useState(null); // { posId, plaza } or null
     const [candidateSearchFilter, setCandidateSearchFilter] = useState('');
+
+    // La selección de ejemplo (solo demo) se carga una vez
+    const [seleccionCargada, setSeleccionCargada] = useState(false);
+    useEffect(() => {
+        if (!seleccion || seleccionCargada) return;
+        setEmbudo(seleccion.embudo);
+        setCandidatosPool(seleccion.candidatos);
+        setPortalesPropios(seleccion.portalesPropios);
+        setPortales(seleccion.portales);
+        setPlazas(prev => ({ ...prev, ...seleccion.plazas }));
+        setSeleccionCargada(true);
+    }, [seleccion]);
+    // Lista de la API: portales y candidaturas de la demo encima; plazas por cubrir para las que no tienen
+    useEffect(() => {
+        if (!pet.listado || pet.seleccionCargando) return;
+        setPeticiones(pet.listado.map(p => ({ ...p, ...(seleccion?.difusion[p.id] || {}) })));
+        setHorarios(prev => ({ ...Object.fromEntries(pet.listado.map(p => [p.id, prev[p.id]?.dias ? prev[p.id] : { turnoNombre: p.turnoNombre }])) }));
+        setPlazas(prev => {
+            const n = { ...prev };
+            pet.listado.forEach(p => { if (!n[p.id] || (!seleccion?.plazas[p.id] && n[p.id].length !== p.solicitados)) n[p.id] = seleccion?.plazas[p.id] || plazasVacantes(p); });
+            return n;
+        });
+    }, [pet.listado, pet.seleccionCargando]);
 
     // Modals for Portals
     const [editPortalModal, setEditPortalModal] = useState(null); // portal object or null
@@ -974,10 +445,12 @@ export default function PeticionesView() {
     const posActual = useMemo(() => ({ ...peticion, incorporados: cubiertasDe(plazas[peticion.id]) }), [peticion, plazas]);
     const posiciones = [posActual];
 
-    // Listado
-    const hayFiltros = filtroEstado !== 'activas' || filtroCliente || filtroPresupuesto || filtroResponsable || filtroSucursal || busquedaPeticiones;
+    // Listado (la sucursal la elige la cabecera: el servidor filtra la lista por ella)
+    const clientesListado = useMemo(() => [...new Map(peticiones.map(p => [p.cliente, p.clienteNombre])).entries()].sort((a, b) => a[1].localeCompare(b[1])), [peticiones]);
+    const responsablesListado = useMemo(() => [...new Set(peticiones.map(p => p.responsable))].sort(), [peticiones]);
+    const hayFiltros = filtroEstado !== 'activas' || filtroCliente || filtroPresupuesto || filtroResponsable || busquedaPeticiones;
     const limpiarFiltros = () => {
-        setFiltroEstado('activas'); setFiltroCliente(''); setFiltroPresupuesto(''); setFiltroResponsable(''); setFiltroSucursal(''); setBusquedaPeticiones('');
+        setFiltroEstado('activas'); setFiltroCliente(''); setFiltroPresupuesto(''); setFiltroResponsable(''); setBusquedaPeticiones('');
     };
     const peticionesFiltradas = useMemo(() => {
         const q = busquedaPeticiones.trim().toLowerCase();
@@ -986,11 +459,9 @@ export default function PeticionesView() {
             (!filtroCliente || p.cliente === filtroCliente) &&
             (!filtroPresupuesto || p.presupuesto === filtroPresupuesto) &&
             (!filtroResponsable || p.responsable === filtroResponsable) &&
-            SUCURSALES_USUARIO.includes(sucursalDeCliente(p.clienteNombre)) &&
-            (!filtroSucursal || sucursalDeCliente(p.clienteNombre) === filtroSucursal) &&
             (!q || [p.id, p.clienteNombre, p.puesto, p.presupuesto].some(t => t.toLowerCase().includes(q)))
         );
-    }, [peticiones, filtroEstado, filtroCliente, filtroPresupuesto, filtroResponsable, filtroSucursal, busquedaPeticiones]);
+    }, [peticiones, filtroEstado, filtroCliente, filtroPresupuesto, filtroResponsable, busquedaPeticiones]);
     const gruposListado = useMemo(() => {
         if (!agruparPorPresupuesto) return [{ id: 'todas', items: peticionesFiltradas }];
         const grupos = [];
@@ -1016,63 +487,136 @@ export default function PeticionesView() {
         };
     }, [peticiones, plazas]);
 
-    const abrirPeticion = (id) => {
+    // Abre la ficha: la pide entera (horario, documentos, actividad) y la enseña
+    const abrirPeticion = async (id) => {
         const p = peticiones.find(x => x.id === id);
+        if (!p) return;
+        const d = await ejecutar(() => pet.abrir(p._id));
+        if (!d) return;
+        setFicha(d);
+        setHorarios(prev => ({ ...prev, [id]: d.horario }));
         setPeticionId(id);
         setActiveTab('resumen');
         setHorarioChangesUnsaved(false);
-        if (p) {
-            setContenidoComun(contenidoDe(p, horarios[id]));
-            setComunSavedStatus('Guardado');
-            setPortales(prev => prev.map((x, i) => ({ ...x, activo: i < p.portalesActivos })));
-        }
+        setContenidoComun(contenidoDe(d.peticion, d.horario));
+        setComunSavedStatus('Guardado');
+        setPortales(prev => prev.map((x, i) => ({ ...x, activo: i < p.portalesActivos })));
         setCurrentView('detalle');
+        if (window.location.hash !== `#/peticiones/${id}`) window.history.replaceState(null, '', `#/peticiones/${id}`);
     };
+    const volverAlListado = () => {
+        setCurrentView('bandeja');
+        window.history.replaceState(null, '', '#/peticiones');
+    };
+    // Enlace directo a una petición (#/peticiones/PET-…), por ejemplo desde Presupuestos
+    const enlaceDe = () => (window.location.hash.startsWith('#/peticiones/') ? window.location.hash.split('/')[2] || '' : '');
+    const [enlace, setEnlace] = useState(enlaceDe);
     useEffect(() => {
+        const alCambiar = () => {
+            if (!window.location.hash.startsWith('#/peticiones')) return;
+            const id = enlaceDe();
+            if (id) setEnlace(id); else setCurrentView('bandeja');
+        };
+        window.addEventListener('hashchange', alCambiar);
+        return () => window.removeEventListener('hashchange', alCambiar);
+    }, []);
+    useEffect(() => {
+        if (!enlace || !peticiones.length) return;
+        setEnlace('');
+        if (enlace !== peticionId || currentView !== 'detalle') abrirPeticion(decodeURIComponent(enlace));
+    }, [enlace, peticiones]);
+    useEffect(() => {
+        if (!DEMO || !peticionId) return;
         const activos = portales.filter(x => x.activo).length;
         setPeticiones(prev => prev.map(p => (p.id === peticionId && p.portalesActivos !== activos ? { ...p, portalesActivos: activos } : p)));
     }, [portales]);
 
-    const moverPeticion = (id, estado) => {
+    const moverPeticion = async (id, estado, motivo) => {
         if (!ESTADOS_PETICION.some(e => e.estado === estado)) return;
-        setPeticiones(prev => prev.map(p => (p.id === id ? { ...p, estado } : p)));
-        showToast(`${id} pasa a ${estado}.`);
+        const p = peticiones.find(x => x.id === id);
+        if (!p || p.estado === estado) return;
+        // Cancelar pide el motivo
+        if (estado === 'Cancelada' && !motivo) { setCancelar({ id, motivo: '' }); return; }
+        const r = await ejecutar(() => pet.cambiarEstado(p, estado, motivo), `${id} pasa a ${estado}.`);
+        if (r && ficha?.peticion.id === id) ponerFicha({ ...r, emailContacto: r.emailContacto || ficha.peticion.emailContacto, telefonoContacto: r.telefonoContacto || ficha.peticion.telefonoContacto });
+        if (r) setCancelar(null);
     };
 
     // Crear peticiones: siempre de un puesto de un presupuesto aceptado
-    const crearPeticionNueva = (base, plantilla) => {
-        const id = siguienteCodigo(peticiones);
-        const nueva = completarPeticion({ ...base, id, plantilla, cubiertas: 0, estado: 'Nueva', creada: new Date().toISOString().slice(0, 10), portalesActivos: 0, candidaturas: 0 });
-        setPeticiones(prev => [nueva, ...prev]);
-        setHorarios(prev => ({ ...prev, [id]: horarioDesdePlantilla(plantilla, nueva.centroTrabajo, `${fechaCorta(nueva.creada)} por ${nueva.responsable}`) }));
-        setPlazas(prev => ({ ...prev, [id]: renumerarPlazas(Array.from({ length: nueva.solicitados }, () => ({ ...plazaVacante })), id.slice(-4)) }));
-        setPeticionId(id);
-        setContenidoComun(contenidoDe(nueva, { turnoNombre: HORARIO_TEMPLATES[plantilla].nombre }));
+    const abrirCreada = async (nueva, mensaje) => {
+        if (!nueva) return;
+        setPlazas(prev => ({ ...prev, [nueva.id]: plazasVacantes(nueva) }));
+        setPeticiones(prev => [nueva, ...prev.filter(p => p.id !== nueva.id)]);
+        showToast(mensaje);
+        const d = await ejecutar(() => pet.abrir(nueva._id));
+        if (!d) return;
+        setFicha(d);
+        setHorarios(prev => ({ ...prev, [nueva.id]: d.horario }));
+        setPeticionId(nueva.id);
+        setContenidoComun(contenidoDe(d.peticion, d.horario));
         setPortales(prev => prev.map(x => ({ ...x, activo: false })));
         setActiveTab('resumen');
         setCurrentView('detalle');
-        return id;
+        window.history.replaceState(null, '', `#/peticiones/${nueva.id}`);
     };
     const abrirDuplicar = () => {
         const otra = Object.keys(HORARIO_TEMPLATES).find(k => HORARIO_TEMPLATES[k].nombre !== currentSchedule.turnoNombre) || 'manana';
         setDuplicar({ plantilla: otra, solicitados: 1, inicio: peticion.inicio, fin: peticion.fin });
     };
-    const confirmarDuplicar = () => {
-        const { id, cubiertas, estado, creada, portalesActivos, candidaturas, motivoCancelacion, ...base } = PETICIONES_BASE.find(b => b.id === peticion.id) || peticion;
-        const nuevoId = crearPeticionNueva({ ...base, solicitados: Number(duplicar.solicitados), inicio: duplicar.inicio, fin: duplicar.fin }, duplicar.plantilla);
+    const confirmarDuplicar = async () => {
+        const datos = { ...duplicar };
+        const nueva = await ejecutar(() => pet.duplicar(peticion, {
+            plazas: Number(datos.solicitados), inicio: datos.inicio, fin: datos.fin, horario: horarioDesdePlantilla(datos.plantilla, peticion.centroTrabajo, ''),
+        }));
+        if (!nueva) return;
         setDuplicar(null);
-        showToast(`Petición ${nuevoId} creada: ${peticion.puesto.toLowerCase()}, ${HORARIO_TEMPLATES[duplicar.plantilla].nombre.toLowerCase()}.`);
+        await abrirCreada(nueva, `Petición ${nueva.id} creada: ${peticion.puesto.toLowerCase()}, ${HORARIO_TEMPLATES[datos.plantilla].nombre.toLowerCase()}.`);
     };
-    const confirmarNuevaPeticion = () => {
-        const presu = PRESUPUESTOS_ACEPTADOS.find(p => p.id === nuevaPeticion.presupuesto);
-        const puesto = presu.puestos.find(x => x.tipo === nuevaPeticion.tipo);
+    const confirmarNuevaPeticion = async () => {
+        const presu = nuevaPeticion.presu;
         const fin = new Date(`${nuevaPeticion.inicio}T00:00:00`); fin.setMonth(fin.getMonth() + 3);
-        const nuevoId = crearPeticionNueva({
-            presupuesto: presu.id, version: presu.version, cliente: presu.cliente, tipo: puesto.tipo, personasPuesto: puesto.personas,
-            solicitados: Number(nuevaPeticion.solicitados), inicio: nuevaPeticion.inicio, fin: fin.toISOString().slice(0, 10), responsable: RESPONSABLES[0],
-        }, nuevaPeticion.plantilla);
+        const nueva = await ejecutar(() => pet.crear({
+            quotePositionId: nuevaPeticion.tipo, plazas: Number(nuevaPeticion.solicitados), inicio: nuevaPeticion.inicio, fin: `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, '0')}-${String(fin.getDate()).padStart(2, '0')}`,
+            horario: horarioDesdePlantilla(nuevaPeticion.plantilla, '', ''),
+        }));
+        if (!nueva) return;
         setNuevaPeticion(null);
-        showToast(`Petición ${nuevoId} creada desde ${presu.id}.`);
+        await abrirCreada(nueva, `Petición ${nueva.id} creada desde ${presu.id}.`);
+    };
+    // Buscador de presupuestos aceptados: busca en el servidor al escribir
+    useEffect(() => {
+        if (!nuevaPeticion || nuevaPeticion.presu) return;
+        let vigente = true;
+        setPresupuestosAceptados(x => ({ ...x, cargando: true }));
+        const t = setTimeout(() => {
+            pet.buscarPresupuestos(buscarPresu).then(
+                r => vigente && setPresupuestosAceptados({ ...r, cargando: false }),
+                e => { if (vigente) { setPresupuestosAceptados({ lista: [], total: 0, cargando: false }); showToast(mensajeError(e), 'error'); } },
+            );
+        }, 250);
+        return () => { vigente = false; clearTimeout(t); };
+    }, [buscarPresu, !!nuevaPeticion, nuevaPeticion?.presu]);
+
+    // Documentos del servicio
+    const recargarDocumentos = async () => {
+        const d = await ejecutar(() => pet.abrir(peticion._id));
+        if (d) setFicha(d);
+    };
+    const descargarDocServicio = async (doc) => {
+        if (doc.cpd) return descargarCpdPrevio();
+        if (!doc.id) return showToast(`Descarga simulada: ${doc.nombre}`);
+        const hay = await ejecutar(() => pet.descargarDocumento(doc.id));
+        if (hay === false) showToast(`En la demo no hay fichero: ${doc.nombre}`, 'info');
+    };
+    const quitarDocServicio = async (doc) => {
+        if (await ejecutar(() => pet.quitarDocumento(doc.id).then(() => true), "Documento quitado")) recargarDocumentos();
+    };
+    const subirDocServicio = async () => {
+        const d = { ...subirDoc };
+        const r = await ejecutar(() => pet.subirDocumento(peticion, d), (x) => `Documento «${x.nombre}» subido a ${peticion.id}`);
+        if (!r) return;
+        setSubirDoc(null);
+        recargarDocumentos();
     };
 
     // Handlers: Plazas & Candidatos
@@ -1229,22 +773,13 @@ export default function PeticionesView() {
         setHorarioChangesUnsaved(true);
     };
 
-    const handleSaveSchedule = () => {
+    const handleSaveSchedule = async () => {
         setSavingHorario(true);
-        setTimeout(() => {
-            const nowStr = new Date().toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
-            setHorarios(prev => ({
-                ...prev,
-                [selectedPosId]: {
-                    ...prev[selectedPosId],
-                    guardado: true,
-                    ultimaModif: `${nowStr} por Ane Uriarte`
-                }
-            }));
-            setSavingHorario(false);
-            setHorarioChangesUnsaved(false);
-            showToast(`Horario y turno guardados correctamente de ${selectedPosId}.`);
-        }, 700);
+        const r = await ejecutar(() => pet.guardarHorario(ficha, currentSchedule), `Horario y turno guardados correctamente de ${selectedPosId}.`);
+        setSavingHorario(false);
+        if (!r) return;
+        ponerFichaEntera(r);
+        setHorarioChangesUnsaved(false);
     };
 
 
@@ -1332,6 +867,15 @@ export default function PeticionesView() {
         }, 800);
     };
 
+    if (!pet.listado && pet.cargando) return <CargandoPagina texto="Cargando peticiones" />;
+    if (pet.error) {
+        return (
+            <Page>
+                <ErrorCarga titulo="No se han podido cargar las peticiones" mensaje={pet.error} onReintentar={pet.recargar} />
+            </Page>
+        );
+    }
+
     return (
         <div className="flex min-h-full">
             {/* TOAST ALERT */}
@@ -1360,7 +904,7 @@ export default function PeticionesView() {
                             title="Peticiones"
                             count={peticiones.length}
                             subtitle="Cada petición es un puesto de un presupuesto aceptado, con su horario, sus plazas y su difusión en portales."
-                            actions={<Button variant="primary" icon={Plus} onClick={() => { setBuscarPresu(''); setNuevaPeticion({ presupuesto: '', tipo: '', plantilla: 'manana', solicitados: 1, inicio: '' }); }}>Nueva petición</Button>}
+                            actions={<Button variant="primary" icon={Plus} disabled={!pet.puedeEditar} onClick={() => { setBuscarPresu(''); setNuevaPeticion({ presu: null, tipo: '', plantilla: 'manana', solicitados: 1, inicio: '' }); }}>Nueva petición</Button>}
                         />
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1383,15 +927,9 @@ export default function PeticionesView() {
                                     <option value="todas">Todos los estados</option>
                                     {ESTADOS_PETICION.map(e => <option key={e.estado} value={e.estado}>{e.estado}</option>)}
                                 </Select>
-                                {veVariasSucursales && (
-                                    <Select value={filtroSucursal} onChange={(e) => setFiltroSucursal(e.target.value)} aria-label="Sucursal">
-                                        <option value="">Todas las sucursales</option>
-                                        {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-                                    </Select>
-                                )}
                                 <Select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} aria-label="Cliente">
                                     <option value="">Todos los clientes</option>
-                                    {Object.entries(CLIENTES).map(([id, c]) => <option key={id} value={id}>{c.clienteNombre}</option>)}
+                                    {clientesListado.map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
                                 </Select>
                                 <Select value={filtroPresupuesto} onChange={(e) => setFiltroPresupuesto(e.target.value)} aria-label="Presupuesto">
                                     <option value="">Todos los presupuestos</option>
@@ -1399,7 +937,7 @@ export default function PeticionesView() {
                                 </Select>
                                 <Select value={filtroResponsable} onChange={(e) => setFiltroResponsable(e.target.value)} aria-label="Responsable">
                                     <option value="">Todos los responsables</option>
-                                    {RESPONSABLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                    {responsablesListado.map(r => <option key={r} value={r}>{r}</option>)}
                                 </Select>
                                 {hayFiltros && <Button size="sm" variant="ghost" onClick={limpiarFiltros}>Limpiar</Button>}
                                 <div className="ml-auto flex items-center gap-2">
@@ -1460,7 +998,7 @@ export default function PeticionesView() {
                                                                 </td>
                                                                 <td className="py-2.5 px-3">
                                                                     <div className="text-slate-700">{p.clienteNombre}</div>
-                                                                    <div className="text-[11px] text-slate-500">{veVariasSucursales && <span className="text-slate-600">{sucursal(sucursalDeCliente(p.clienteNombre)).corto} · </span>}{p.presupuestoOrigen}</div>
+                                                                    <div className="text-[11px] text-slate-500">{p.presupuestoOrigen}</div>
                                                                 </td>
                                                                 <td className="py-2.5 px-3 whitespace-nowrap">
                                                                     <div className="text-slate-700">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</div>
@@ -1499,7 +1037,7 @@ export default function PeticionesView() {
                 {currentView === 'detalle' && (
                     <div className="w-full px-4 sm:px-6 py-5 space-y-4">
                         <PageHeader
-                            breadcrumbs={[{ label: 'Peticiones', onClick: () => setCurrentView('bandeja') }, { label: peticion.id }]}
+                            breadcrumbs={[{ label: 'Peticiones', onClick: volverAlListado }, { label: peticion.id }]}
                             title={`${peticion.puesto} · ${currentSchedule.turnoNombre.toLowerCase()}`}
                             status={<Badge tone={tonoEstado(peticion.estado)} dot>{peticion.estado}</Badge>}
                             subtitle={
@@ -1507,7 +1045,7 @@ export default function PeticionesView() {
                                     <span className="inline-flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-slate-400" />{peticion.clienteNombre}</span>
                                     <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" />{peticion.centroTrabajo}</span>
                                     <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />{fechaCorta(peticion.inicio)} a {fechaCorta(peticion.fin)}</span>
-                                    <button type="button" onClick={() => { window.location.hash = '#/presupuestos'; }} className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline">
+                                    <button type="button" onClick={() => { window.location.hash = `#/presupuestos/${peticion.presupuesto}`; }} className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline">
                                         <FileText className="w-3.5 h-3.5" />Presupuesto {peticion.presupuestoOrigen}
                                     </button>
                                 </span>
@@ -1518,7 +1056,7 @@ export default function PeticionesView() {
                                         {ESTADOS_PETICION.map(e => <option key={e.estado} value={e.estado}>{e.estado}</option>)}
                                     </Select>
                                     <Button icon={Copy} onClick={abrirDuplicar}>Duplicar con otro horario</Button>
-                                    <Button variant="primary" icon={Share2} onClick={() => startSyncProcess()}>Publicar cambios</Button>
+                                    <Button variant="primary" icon={Share2} onClick={() => (DEMO ? startSyncProcess() : soloDemo('', 'la publicación en portales de empleo (fase 7 del plan)'))}>Publicar cambios</Button>
                                 </>
                             }
                         />
@@ -1584,25 +1122,26 @@ export default function PeticionesView() {
                                 </Card>
 
                                 <Card className="p-5 space-y-3">
-                                    <SectionTitle>Cliente y servicio</SectionTitle>
+                                    <SectionTitle actions={pet.puedeEditar && !['Cerrada', 'Cancelada'].includes(peticion.estado) && <Button size="sm" variant="ghost" icon={Edit3} onClick={() => setDatosServicio({ ...peticion.servicio, positionsCount: peticion.solicitados })}>Editar</Button>}>Cliente y servicio</SectionTitle>
                                     <dl className="space-y-2.5 text-xs">
                                         <div><dt className="text-[11px] text-slate-500">Empresa</dt><dd className="text-slate-900">{peticion.clienteNombre} · {peticion.cif}</dd></div>
-                                        <div><dt className="text-[11px] text-slate-500">Contacto</dt><dd className="text-slate-900">{peticion.contactoCliente}</dd><dd className="text-slate-500">{peticion.emailContacto} · {peticion.telefonoContacto}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Contacto que firma los CPD</dt><dd className="text-slate-900">{peticion.contactoCliente}</dd>{(peticion.emailContacto || peticion.telefonoContacto) && <dd className="text-slate-500">{[peticion.emailContacto, peticion.telefonoContacto].filter(Boolean).join(' · ')}</dd>}</div>
                                         <div><dt className="text-[11px] text-slate-500">Centro de trabajo</dt><dd className="text-slate-900">{peticion.centroTrabajo}</dd></div>
-                                        <div><dt className="text-[11px] text-slate-500">Fechas</dt><dd className="text-slate-900">{fechaCorta(peticion.inicio)} a {fechaCorta(peticion.fin)}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Fechas</dt><dd className="text-slate-900">{fechaCorta(peticion.inicio) || 'Sin fecha de inicio'} a {fechaCorta(peticion.fin) || 'sin fecha de fin'}</dd></div>
+                                        <div><dt className="text-[11px] text-slate-500">Supuesto de utilización</dt><dd className="text-slate-900">{pet.supuestos.find(x => x.id === peticion.supuesto)?.nombre || 'Sin indicar'}</dd>{peticion.justificacion && <dd className="text-slate-500">{peticion.justificacion}</dd>}</div>
                                         <div><dt className="text-[11px] text-slate-500">Responsable de la ETT</dt><dd className="text-slate-900">{peticion.responsable}</dd></div>
                                     </dl>
                                 </Card>
 
                                 {/* REPARTO DEL PUESTO: cuántas personas del presupuesto cubre cada petición de este puesto */}
                                 {(() => {
-                                    const delPuesto = [peticion, ...hermanasDe(peticion, peticiones)]
-                                        .filter(p => p.estado !== 'Cancelada')
-                                        .sort((a, b) => a.inicio.localeCompare(b.inicio) || a.id.localeCompare(b.id));
-                                    const repartidas = delPuesto.reduce((s, p) => s + p.solicitados, 0);
+                                    // El reparto lo calcula el servidor (sin las canceladas)
+                                    if (!peticion.reparto) return null;
+                                    const delPuesto = peticion.reparto.hermanas;
+                                    const repartidas = peticion.reparto.repartidas;
                                     const faltan = peticion.personasPuesto - repartidas;
                                     const escala = Math.max(peticion.personasPuesto, repartidas);
-                                    const otrosPuestos = peticiones.filter(p => p.presupuesto === peticion.presupuesto && p.tipo !== peticion.tipo);
+                                    const otrosPuestos = peticion.reparto.otrosPuestos;
                                     return (
                                         <Card className="overflow-hidden xl:col-span-3">
                                             <div className="p-4 space-y-3">
@@ -1624,7 +1163,7 @@ export default function PeticionesView() {
                                                             style={{ width: `${(p.solicitados / escala) * 100}%` }}
                                                             className={`flex items-center justify-center border-r border-white/70 last:border-0 truncate px-1 ${p.id === peticion.id ? 'bg-indigo-600 text-white' : 'bg-indigo-200 text-indigo-900'}`}
                                                         >
-                                                            {p.solicitados} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()}
+                                                            {p.solicitados} · {p.turnoNombre.toLowerCase()}
                                                         </div>
                                                     ))}
                                                     {faltan > 0 && (
@@ -1646,11 +1185,11 @@ export default function PeticionesView() {
                                                         return (
                                                             <tr key={p.id} className={`border-b border-slate-100 last:border-0 ${actual ? 'bg-indigo-50/50' : 'hover:bg-slate-50 cursor-pointer'}`} onClick={() => !actual && abrirPeticion(p.id)}>
                                                                 <td className="py-2.5 px-4">
-                                                                    <div className="font-medium text-slate-900">{horarios[p.id]?.turnoNombre}{actual && <span className="ml-2 text-[11px] font-normal text-indigo-700">esta petición</span>}</div>
+                                                                    <div className="font-medium text-slate-900">{p.turnoNombre}{actual && <span className="ml-2 text-[11px] font-normal text-indigo-700">esta petición</span>}</div>
                                                                     <div className="text-[11px] text-slate-500">{p.id}</div>
                                                                 </td>
                                                                 <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{fechaCorta(p.inicio)} a {fechaCorta(p.fin)}</td>
-                                                                <td className="py-2.5 px-4 text-slate-700 whitespace-nowrap">{p.solicitados} plazas · {cubiertasDe(plazas[p.id])} cubiertas</td>
+                                                                <td className="py-2.5 px-4 text-slate-700 whitespace-nowrap">{p.solicitados} plazas · {plazas[p.id] ? cubiertasDe(plazas[p.id]) : p.cubiertas} cubiertas</td>
                                                                 <td className="py-2.5 px-4 text-right"><Badge tone={tonoEstado(p.estado)} dot>{p.estado}</Badge></td>
                                                             </tr>
                                                         );
@@ -1662,7 +1201,7 @@ export default function PeticionesView() {
                                                     <span>Otros puestos del mismo presupuesto:</span>
                                                     {otrosPuestos.map(p => (
                                                         <button key={p.id} type="button" onClick={() => abrirPeticion(p.id)} className="text-indigo-600 hover:text-indigo-800 hover:underline">
-                                                            {p.puesto} · {(horarios[p.id]?.turnoNombre || '').toLowerCase()} ({p.id})
+                                                            {p.puesto} ({p.id})
                                                         </button>
                                                     ))}
                                                 </div>
@@ -1691,16 +1230,22 @@ export default function PeticionesView() {
                                                     {cuenta(['cubierta', 'incorporada'])} cubiertas · {cuenta(['reservada'])} {cuenta(['reservada']) === 1 ? 'pendiente' : 'pendientes'} del cliente · {cuenta(['vacante', 'baja'])} por cubrir
                                                 </p>
                                             </div>
-                                            <Button variant="primary" icon={UserPlus} disabled={!libre} onClick={() => libre && setAssignCandidateModal({ posId: peticion.id, plaza: libre })}>
+                                            <Button variant="primary" icon={UserPlus} disabled={!libre || !seleccion} onClick={() => libre && setAssignCandidateModal({ posId: peticion.id, plaza: libre })}>
                                                 Proponer candidato
                                             </Button>
                                         </div>
                                         <div className="px-4 pt-3">
+                                            {!seleccion ? (
+                                            <Notice tone="info" icon={Info}>
+                                                Proponer personas para cada plaza, la confirmación del cliente y el CPD de cada persona llegan con Selección (fase 6 del plan). De momento se ven las plazas por cubrir.
+                                            </Notice>
+                                            ) : (
                                             <Notice tone={portalesPropios[peticion.id]?.empresa ? 'info' : 'warning'} icon={Info}>
                                                 {portalesPropios[peticion.id]?.empresa
                                                     ? <>El cliente confirma las personas propuestas en su portal. Al confirmar, se genera el CPD de cada persona y se le envía a firmar.</>
                                                     : <>El portal de empresas está desactivado en esta petición: pulsa «Confirmar» cuando el cliente responda. Se puede activar en Difusión en portales.</>}
                                             </Notice>
+                                            )}
                                         </div>
                                         <div className="overflow-x-auto mt-3">
                                             <table className="w-full text-left text-xs">
@@ -1744,7 +1289,7 @@ export default function PeticionesView() {
                                                                     ) : <span className="text-slate-400">—</span>}
                                                                 </td>
                                                                 <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                                                                    {plaza.estado === 'vacante' && <Button size="sm" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Proponer</Button>}
+                                                                    {plaza.estado === 'vacante' && seleccion && <Button size="sm" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Proponer</Button>}
                                                                     {plaza.estado === 'baja' && <Button size="sm" variant="primary" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Buscar sustituto</Button>}
                                                                     {plaza.estado === 'reservada' && (
                                                                         <span className="inline-flex gap-1">
@@ -1791,7 +1336,9 @@ export default function PeticionesView() {
                                                 })}
                                             </div>
                                         </div>
-                                        {visibles.length === 0 ? (
+                                        {!seleccion ? (
+                                            <EmptyState icon={Users} title="Aún no hay candidatos" text="Los candidatos llegan con Selección y la difusión en portales (fases 6 y 7 del plan)." />
+                                        ) : visibles.length === 0 ? (
                                             <EmptyState
                                                 icon={Users}
                                                 title={filtroEtapa ? 'Nadie en esta etapa' : 'Aún no hay candidatos'}
@@ -2049,7 +1596,7 @@ export default function PeticionesView() {
 
                                         <button
                                             onClick={handleSaveSchedule}
-                                            disabled={savingHorario}
+                                            disabled={savingHorario || !pet.puedeEditar}
                                             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-semibold shadow-sm transition"
                                         >
                                             {savingHorario ? (
@@ -2070,7 +1617,12 @@ export default function PeticionesView() {
                         )}
 
                         {/* TAB 3: DIFUSIÓN EN PORTALES & PERSONALIZACIÓN (REQUISITO PRINCIPAL 2) */}
-                        {activeTab === 'portales' && (
+                        {activeTab === 'portales' && !seleccion && (
+                            <Card>
+                                <EmptyState icon={Globe2} title="Difusión en portales: disponible próximamente" text="Los portales de la ETT (empresas y candidatos) y la publicación en portales de empleo llegan en la fase 7 del plan." />
+                            </Card>
+                        )}
+                        {activeTab === 'portales' && seleccion && (
                             <div className="space-y-6 animate-fade-in">
                                 {/* PORTALES PROPIOS DE LA ETT: se activan en cada petición */}
                                 {(() => {
@@ -2460,25 +2012,46 @@ export default function PeticionesView() {
 
                         {/* TAB 4: DOCUMENTOS Y CONTRATOS */}
                         {activeTab === 'documentos' && (() => {
-                            const previo = cpdPrevio[peticion.id] || { estado: 'sin_enviar' };
+                            const previo = cpdPrevio[peticion.id] || { estado: 'sin_generar', comprobaciones: [] };
+                            const faltan = (previo.comprobaciones || []).filter(c => !c.ok);
+                            const bloquean = faltan.filter(c => c.blocking);
                             const ocupadas = (plazas[peticion.id] || []).filter(p => ['cubierta', 'incorporada'].includes(p.estado));
                             const empezado = diasHasta(peticion.inicio) <= 0;
+                            const cerrada = ['Cerrada', 'Cancelada'].includes(peticion.estado);
                             return (
                             <div className="space-y-4">
                                 <Card className="p-4 space-y-3">
-                                    <SectionTitle actions={<Badge tone={ESTADOS_CPD_PREVIO[previo.estado].tono} dot>{ESTADOS_CPD_PREVIO[previo.estado].texto}</Badge>}>
+                                    <SectionTitle actions={<span className="inline-flex gap-1.5">{previo.desactualizado && <Badge tone="warning">Desactualizado</Badge>}<Badge tone={ESTADOS_CPD_PREVIO[previo.estado].tono} dot>{ESTADOS_CPD_PREVIO[previo.estado].texto}</Badge></span>}>
                                         CPD previo: condiciones para la empresa
                                     </SectionTitle>
                                     <p className="text-xs text-slate-600">
                                         Antes de tener personas, la empresa recibe las condiciones de la puesta a disposición (causa, puesto, riesgos, horario, duración y precio) para revisarlas con tiempo.
-                                        Se envía a {peticion.emailContacto}{portalesPropios[peticion.id]?.empresa ? ' y queda en su portal' : ''}.
-                                        {previo.fecha && ` Último envío: ${fechaCorta(previo.fecha)}.`}
+                                        {' '}Se genera aquí, se envía a mano{peticion.emailContacto ? ` a ${peticion.emailContacto}` : ''} y se marca como enviado (aún no hay firma electrónica).
+                                        {previo.generado && ` Generado el ${fechaCorta(previo.generado)}.`}
+                                        {previo.fecha && ` Enviado el ${fechaCorta(previo.fecha)}.`}
                                     </p>
+                                    {previo.desactualizado && <Notice tone="warning" icon={AlertTriangle}>Algo de la petición ha cambiado después de generarlo: vuelve a generarlo antes de enviarlo.</Notice>}
+                                    {peticion.salarioBajoConvenio && <Notice tone="danger" icon={AlertTriangle}>El convenio vigente{peticion.tramoBajoConvenio ? ` desde el ${fechaCorta(peticion.tramoBajoConvenio.from)}` : ''} pide para esta categoría {peticion.tramoBajoConvenio?.minimumSalaryHour != null ? `${peticion.tramoBajoConvenio.minimumSalaryHour.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €/h, ` : ''}más que el salario de la petición. No se puede generar el CPD: haz una versión nueva del presupuesto y una petición nueva.</Notice>}
+                                    {faltan.length > 0 && (
+                                        <div className="rounded-lg border border-slate-200 p-3 space-y-1.5 text-xs">
+                                            <div className="font-medium text-slate-800">{bloquean.length ? (bloquean.length === 1 ? 'Falta 1 dato para generarlo' : `Faltan ${bloquean.length} datos para generarlo`) : 'Se puede generar, pero conviene revisar'}</div>
+                                            <ul className="space-y-1">
+                                                {faltan.map(c => (
+                                                    <li key={c.code} className={`flex items-start gap-1.5 ${c.blocking ? 'text-rose-700' : 'text-amber-700'}`}>
+                                                        {c.blocking ? <X className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />}{c.message}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            {pet.puedeEditar && !cerrada && <Button size="sm" icon={Edit3} onClick={() => setDatosServicio({ ...peticion.servicio, positionsCount: peticion.solicitados })}>Completar datos del servicio</Button>}
+                                        </div>
+                                    )}
                                     <div className="flex flex-wrap gap-2">
                                         <Button icon={Eye} onClick={() => setVerCpdPrevio(true)}>Ver condiciones</Button>
-                                        <Button variant={previo.estado === 'sin_enviar' ? 'primary' : 'secondary'} icon={Send} onClick={enviarCpdPrevio}>
-                                            {previo.estado === 'sin_enviar' ? 'Enviar al cliente' : 'Reenviar'}
-                                        </Button>
+                                        {(previo.estado === 'sin_generar' || previo.desactualizado)
+                                            ? <Button variant="primary" icon={FileText} disabled={!pet.puedeEditar || bloquean.length > 0 || peticion.salarioBajoConvenio} onClick={generarCpdPrevio}>{previo.desactualizado ? 'Volver a generar' : 'Generar PDF'}</Button>
+                                            : <Button icon={FileText} onClick={descargarCpdPrevio}>Descargar PDF</Button>}
+                                        {previo.estado === 'generado' && !previo.desactualizado && <Button variant="primary" icon={Send} disabled={!pet.puedeEditar} onClick={enviarCpdPrevio}>Marcar como enviado</Button>}
+                                        {previo.estado === 'enviado' && <Button variant="ghost" icon={Check} disabled={!pet.puedeEditar} onClick={marcarCpdRevisado}>Revisado por el cliente</Button>}
                                     </div>
                                 </Card>
 
@@ -2535,16 +2108,15 @@ export default function PeticionesView() {
                                 </Card>
 
                                 <Card className="p-4 space-y-2 text-xs">
-                                    <SectionTitle actions={<Button size="sm" variant="primary" icon={Upload} onClick={() => setSubirDoc({ tipo: TIPOS_DOC_SERVICIO[1], nombre: '', archivo: '' })}>Subir documento</Button>}>Documentos del servicio</SectionTitle>
+                                    <SectionTitle actions={<Button size="sm" variant="primary" icon={Upload} disabled={!pet.puedeEditar} onClick={() => setSubirDoc({ tipo: pet.tiposDocumento[1] || pet.tiposDocumento[0] || '', nombre: '', archivo: null })}>Subir documento</Button>}>Documentos del servicio</SectionTitle>
                                     {[
-                                        (() => {
-                                            const pa = PRESUPUESTOS_ACEPTADOS.find(x => x.id === peticion.presupuesto);
-                                            return { nombre: `Presupuesto_${peticion.presupuesto}_${peticion.version}_firmado.pdf`, texto: `Presupuesto firmado por el cliente${pa ? ` el ${fechaCorta(pa.aceptado)}` : ''} · sale solo del presupuesto aceptado`, icono: FileSignature };
-                                        })(),
+                                        peticion.presupuestoFirmado
+                                            ? { id: peticion.presupuestoFirmado.documentId, nombre: peticion.presupuestoFirmado.nombre, texto: `Presupuesto firmado por el cliente el ${fechaCorta(peticion.presupuestoFirmado.fecha)} · sale solo del presupuesto aceptado`, icono: FileSignature, presupuesto: true }
+                                            : { nombre: `Presupuesto ${peticion.presupuestoOrigen}`, texto: 'Aún no hay presupuesto firmado ni propuesta en PDF: súbelo en Presupuestos → Documentos', icono: FileSignature, sinArchivo: true },
                                         ...(docsServicio[peticion.id] || []).map(d => ({ id: d.id, nombre: d.nombre, texto: `${d.tipo} · subido el ${fechaCorta(d.fecha)} por ${d.autor}`, icono: Paperclip, subido: true })),
-                                        { nombre: `CPD_previo_${peticion.id}.pdf`, texto: 'Condiciones de la puesta a disposición para la empresa', icono: FileText },
-                                        { nombre: `Riesgos_PRL_${peticion.tipo}.pdf`, texto: `Información de riesgos del puesto: ${peticion.puesto.toLowerCase()}`, icono: ShieldCheck },
-                                    ].map(doc => (
+                                        { nombre: `CPD_previo_${peticion.id}.pdf`, texto: 'Condiciones de la puesta a disposición para la empresa', icono: FileText, cpd: true },
+                                        DEMO && { nombre: `Riesgos_PRL_${peticion.perfil}.pdf`, texto: `Información de riesgos del puesto: ${peticion.puesto.toLowerCase()}`, icono: ShieldCheck },
+                                    ].filter(Boolean).map(doc => (
                                         <div key={doc.nombre} className="p-3 rounded-lg border border-slate-200 flex items-center justify-between gap-3 hover:bg-slate-50">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <doc.icono className="w-4 h-4 text-indigo-600 shrink-0" />
@@ -2554,8 +2126,8 @@ export default function PeticionesView() {
                                                 </div>
                                             </div>
                                             <span className="flex items-center gap-1 shrink-0">
-                                                <Button size="sm" variant="ghost" onClick={() => showToast(`Descarga simulada: ${doc.nombre}`)}>Descargar</Button>
-                                                {doc.subido && <Button size="sm" variant="ghost" icon={Trash2} onClick={() => { setDocsServicio(prev => ({ ...prev, [peticion.id]: prev[peticion.id].filter(x => x.id !== doc.id) })); showToast('Documento quitado'); }} aria-label={`Quitar ${doc.nombre}`} />}
+                                                {!doc.sinArchivo && <Button size="sm" variant="ghost" onClick={() => descargarDocServicio(doc)}>Descargar</Button>}
+                                                {doc.subido && <Button size="sm" variant="ghost" icon={Trash2} disabled={!pet.puedeEditar} onClick={() => quitarDocServicio(doc)} aria-label={`Quitar ${doc.nombre}`} />}
                                             </span>
                                         </div>
                                     ))}
@@ -2571,10 +2143,11 @@ export default function PeticionesView() {
                                 <SectionTitle>Actividad de la petición</SectionTitle>
                                 <ol className="mt-2 space-y-3 text-xs">
                                     {[
+                                        ...(ficha?.peticion.id === peticion.id ? ficha.actividad : []).map(a => ({ color: 'bg-indigo-400', titulo: a.texto, texto: `${a.fecha} por ${a.usuario}` })),
                                         posActual.incorporados > 0 && { color: 'bg-emerald-500', titulo: `${posActual.incorporados} ${posActual.incorporados === 1 ? 'plaza cubierta' : 'plazas cubiertas'}`, texto: `Última incorporación prevista el ${fechaCorta(peticion.inicio)}` },
                                         peticion.portalesActivos > 0 && { color: 'bg-blue-500', titulo: `Publicada en ${peticion.portalesActivos} portales`, texto: `${peticion.candidaturas} candidaturas recibidas` },
                                         { color: 'bg-indigo-500', titulo: `Horario guardado: ${currentSchedule.turnoNombre.toLowerCase()}`, texto: currentSchedule.ultimaModif },
-                                        { color: 'bg-slate-400', titulo: `Petición creada desde el presupuesto ${peticion.presupuestoOrigen}`, texto: `${fechaCorta(peticion.creada)} por ${peticion.responsable} · ${peticion.solicitados} de ${peticion.personasPuesto} personas del puesto` },
+                                        { color: 'bg-slate-400', titulo: `Petición creada desde el presupuesto ${peticion.presupuestoOrigen}`, texto: `${fechaCorta(peticion.creada)} por ${peticion.creadaPor} · ${peticion.solicitados} de ${peticion.personasPuesto} personas del puesto` },
                                     ].filter(Boolean).map((a, i) => (
                                         <li key={i} className="flex items-start gap-3">
                                             <span className={`w-2 h-2 rounded-full ${a.color} mt-1.5 shrink-0`}></span>
@@ -2598,7 +2171,7 @@ export default function PeticionesView() {
                 const q = candidateSearchFilter.trim().toLowerCase();
                 const etapaDe = (id) => (embudo[peticion.id] || []).find(e => e.id === id)?.etapa;
                 const lista = candidatosPool
-                    .filter(c => verTodosCandidatos || c.matchPosicion.includes(peticion.tipo))
+                    .filter(c => verTodosCandidatos || c.matchPosicion.includes(peticion.perfil))
                     .filter(c => !q || [c.nombre, c.puestoPrincipal, c.carnets, c.ubicacion].some(t => t.toLowerCase().includes(q)))
                     .map(c => ({ c, req: comprobarRequisitos(c, peticion, peticion.plantilla), otra: plazaDe(c.id), etapa: etapaDe(c.id) }))
                     .sort((a, b) => (a.otra ? 1 : 0) - (b.otra ? 1 : 0) || b.req.filter(r => r.ok).length - a.req.filter(r => r.ok).length || b.c.scoring - a.c.scoring);
@@ -2699,29 +2272,27 @@ export default function PeticionesView() {
                     size="max-w-2xl"
                     footer={<>
                         <Button onClick={() => setVerCpdPrevio(false)}>Cerrar</Button>
-                        <Button variant="primary" icon={Send} onClick={() => { enviarCpdPrevio(); setVerCpdPrevio(false); }}>
-                            {cpdPrevio[peticion.id]?.estado === 'sin_enviar' ? 'Enviar al cliente' : 'Reenviar al cliente'}
-                        </Button>
+                        {cpdPrevio[peticion.id]?.estado !== 'sin_generar' && !cpdPrevio[peticion.id]?.desactualizado && <Button variant="primary" icon={FileText} onClick={descargarCpdPrevio}>Descargar PDF</Button>}
                     </>}
                 >
                     <div className="space-y-4">
                     <dl className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-x-4 gap-y-2.5 text-xs">
-                        <dt className="text-slate-500">Empresa de trabajo temporal</dt><dd className="text-slate-900">ETT Global Servicios Temporales, S.L. · autorización n.º {AUTORIZACION_ETT}</dd>
+                        <dt className="text-slate-500">Empresa de trabajo temporal</dt><dd className="text-slate-900">{ficha?.ett.nombre} · autorización n.º {ficha?.ett.autorizacion}</dd>
                         <dt className="text-slate-500">Empresa usuaria</dt><dd className="text-slate-900">{peticion.clienteNombre} · {peticion.cif}</dd>
-                        <dt className="text-slate-500">Causa de la contratación</dt><dd className="text-slate-900">Circunstancias de la producción (campaña). Presupuesto {peticion.presupuestoOrigen}.</dd>
+                        <dt className="text-slate-500">Causa de la contratación</dt><dd className="text-slate-900">{pet.supuestos.find(x => x.id === peticion.supuesto)?.nombre || 'Sin indicar'}{peticion.justificacion ? `: ${peticion.justificacion}` : ''}. Presupuesto {peticion.presupuestoOrigen}.</dd>
                         <dt className="text-slate-500">Puesto y cualificación</dt><dd className="text-slate-900">{peticion.puesto} · {peticion.categoria}. {peticion.carnetRequerido === 'Ninguno' ? 'Sin carné específico.' : `${peticion.carnetRequerido}.`}</dd>
-                        <dt className="text-slate-500">Riesgos del puesto</dt><dd className="text-slate-900">Según la evaluación de riesgos del cliente para este puesto. EPIs: {peticion.requiereEpi.toLowerCase()}.</dd>
+                        <dt className="text-slate-500">Riesgos del puesto</dt><dd className="text-slate-900">{peticion.riesgos || 'Según la evaluación de riesgos del cliente para este puesto.'} EPIs: {peticion.requiereEpi.toLowerCase()}.</dd>
                         <dt className="text-slate-500">Centro de trabajo</dt><dd className="text-slate-900">{peticion.centroTrabajo}</dd>
                         <dt className="text-slate-500">Horario</dt><dd className="text-slate-900">{currentSchedule.turnoNombre} · {totalHorasSemana.toLocaleString('es-ES')} h por semana</dd>
-                        <dt className="text-slate-500">Duración estimada</dt><dd className="text-slate-900">Del {fechaCorta(peticion.inicio)} al {fechaCorta(peticion.fin)} · {peticion.solicitados} {peticion.solicitados === 1 ? 'persona' : 'personas'}</dd>
-                        <dt className="text-slate-500">Precio</dt><dd className="text-slate-900">{peticion.tarifaVentaHora} la hora ordinaria, más los conceptos extra del presupuesto (horas extra, nocturnidad, fin de semana y festivos).</dd>
+                        <dt className="text-slate-500">Duración estimada</dt><dd className="text-slate-900">Del {fechaCorta(peticion.inicio) || 'sin fecha'} al {fechaCorta(peticion.fin) || 'sin fecha'} · {peticion.solicitados} {peticion.solicitados === 1 ? 'persona' : 'personas'}</dd>
+                        <dt className="text-slate-500">Precio</dt><dd className="text-slate-900">{peticion.tarifaVentaHora} la hora ordinaria{peticion.extrasPropuesta.length ? `, más los conceptos extra del presupuesto (${peticion.extrasPropuesta.join(', ')})` : ''}.</dd>
                     </dl>
                     {/* Quién firma el CPD por cada parte */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div className="rounded-lg border border-slate-200 p-3">
                             <div className="text-[11px] text-slate-500">Firma por la ETT</div>
-                            <div className="font-medium text-slate-900 mt-0.5">{REPRESENTANTE_ETT.nombre}</div>
-                            <div className="text-slate-600">{REPRESENTANTE_ETT.cargo} · DNI {REPRESENTANTE_ETT.dni}</div>
+                            <div className="font-medium text-slate-900 mt-0.5">{ficha?.ett.representante.nombre}</div>
+                            <div className="text-slate-600">{ficha?.ett.representante.cargo} · DNI {ficha?.ett.representante.dni}</div>
                         </div>
                         <div className="rounded-lg border border-slate-200 p-3">
                             <div className="text-[11px] text-slate-500">Firma por la empresa usuaria</div>
@@ -2795,8 +2366,7 @@ export default function PeticionesView() {
             {/* --- MODAL 1: COPIAR HORARIO A OTRA POSICIÓN --- */}
             {/* DUPLICAR CON OTRO HORARIO: crea una petición hermana del mismo puesto */}
             {duplicar && (() => {
-                const delPuesto = [peticion, ...hermanasDe(peticion, peticiones)].filter(p => p.estado !== 'Cancelada');
-                const repartidas = delPuesto.reduce((s, p) => s + p.solicitados, 0) + (Number(duplicar.solicitados) || 0);
+                const repartidas = (peticion.reparto?.repartidas ?? 0) + (Number(duplicar.solicitados) || 0);
                 return (
                     <Modal
                         title="Duplicar con otro horario"
@@ -2841,32 +2411,28 @@ export default function PeticionesView() {
                     size="max-w-md"
                     footer={<>
                         <Button onClick={() => setSubirDoc(null)}>Cancelar</Button>
-                        <Button variant="primary" icon={Upload} disabled={!subirDoc.archivo} onClick={() => {
-                            const doc = { id: `ds-${Date.now()}`, tipo: subirDoc.tipo, nombre: subirDoc.nombre.trim() || subirDoc.archivo, fecha: new Date().toISOString().slice(0, 10), autor: 'Usuario Demo' };
-                            setDocsServicio(prev => ({ ...prev, [peticion.id]: [doc, ...(prev[peticion.id] || [])] }));
-                            setSubirDoc(null);
-                            showToast(`Documento «${doc.nombre}» subido a ${peticion.id}`);
-                        }}>Subir</Button>
+                        <Button variant="primary" icon={Upload} disabled={!subirDoc.archivo || !subirDoc.tipo} onClick={subirDocServicio}>Subir</Button>
                     </>}
                 >
                     <div className="space-y-3 text-xs">
                         <Field label="Tipo de documento">
                             <Select value={subirDoc.tipo} onChange={(e) => setSubirDoc(d => ({ ...d, tipo: e.target.value }))} className="w-full">
-                                {TIPOS_DOC_SERVICIO.map(t => <option key={t}>{t}</option>)}
+                                {pet.tiposDocumento.map(t => <option key={t}>{t}</option>)}
                             </Select>
                         </Field>
                         <Field label="Nombre (opcional)">
                             <TextInput value={subirDoc.nombre} onChange={(e) => setSubirDoc(d => ({ ...d, nombre: e.target.value }))} placeholder="Si lo dejas vacío, el del archivo" />
                         </Field>
-                        <button
-                            type="button"
-                            onClick={() => setSubirDoc(d => ({ ...d, archivo: d.archivo ? '' : `${d.tipo.startsWith('Pedido') ? 'pedido_cliente' : d.tipo.startsWith('Evaluación') ? 'evaluacion_riesgos' : d.tipo.startsWith('Correo') ? 'correo_cliente' : 'documento'}_${peticion.id}.pdf` }))}
-                            className={`w-full rounded-xl border-2 border-dashed p-5 text-center ${subirDoc.archivo ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-700'}`}
+                        <label
+                            className={`block w-full cursor-pointer rounded-xl border-2 border-dashed p-5 text-center ${subirDoc.archivo ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-700'}`}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) setSubirDoc(d => ({ ...d, archivo: f })); }}
                         >
+                            <input type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) setSubirDoc(d => ({ ...d, archivo: f })); e.target.value = ''; }} />
                             {subirDoc.archivo
-                                ? <><CheckCircle2 className="w-5 h-5 mx-auto mb-1" />{subirDoc.archivo} (pulsa para quitarlo)</>
-                                : <><Upload className="w-5 h-5 mx-auto mb-1" />Arrastra el archivo aquí o pulsa para elegirlo</>}
-                        </button>
+                                ? <><CheckCircle2 className="w-5 h-5 mx-auto mb-1" />{subirDoc.archivo.name} (pulsa para cambiarlo)</>
+                                : <><Upload className="w-5 h-5 mx-auto mb-1" />Arrastra el archivo aquí o pulsa para elegirlo (PDF, JPG o PNG)</>}
+                        </label>
                         <p className="text-[11px] text-slate-500">El presupuesto firmado ya sale solo, desde el presupuesto aceptado. Sube aquí el resto: el pedido del cliente, su evaluación de riesgos, correos...</p>
                     </div>
                 </Modal>
@@ -2874,9 +2440,9 @@ export default function PeticionesView() {
 
             {/* NUEVA PETICIÓN: siempre desde un puesto de un presupuesto aceptado */}
             {nuevaPeticion && (() => {
-                const presu = PRESUPUESTOS_ACEPTADOS.find(p => p.id === nuevaPeticion.presupuesto);
+                const presu = nuevaPeticion.presu;
                 const puestoPresu = presu?.puestos.find(x => x.tipo === nuevaPeticion.tipo);
-                const yaRepartidas = puestoPresu ? peticiones.filter(p => p.presupuesto === presu.id && p.tipo === puestoPresu.tipo && p.estado !== 'Cancelada').reduce((s, p) => s + p.solicitados, 0) : 0;
+                const yaRepartidas = puestoPresu ? puestoPresu.enPeticiones : 0;
                 const total = yaRepartidas + (Number(nuevaPeticion.solicitados) || 0);
                 return (
                     <Modal
@@ -2894,37 +2460,34 @@ export default function PeticionesView() {
                                 {presu ? (
                                     <div className="rounded-lg border border-indigo-300 bg-indigo-50/50 px-3 py-2 flex items-center justify-between gap-2">
                                         <span className="min-w-0">
-                                            <span className="block font-medium text-slate-900">{presu.id} {presu.version} · {CLIENTES[presu.cliente].clienteNombre}</span>
+                                            <span className="block font-medium text-slate-900">{presu.id} {presu.version} · {presu.clienteNombre}</span>
                                             <span className="block text-[11px] text-slate-500 truncate">{presu.titulo} · aceptado el {fechaCorta(presu.aceptado)}</span>
                                         </span>
-                                        <Button size="sm" variant="ghost" onClick={() => { setNuevaPeticion(n => ({ ...n, presupuesto: '', tipo: '' })); setBuscarPresu(''); }}>Cambiar</Button>
+                                        <Button size="sm" variant="ghost" onClick={() => { setNuevaPeticion(n => ({ ...n, presu: null, tipo: '' })); setBuscarPresu(''); }}>Cambiar</Button>
                                     </div>
                                 ) : (() => {
-                                    // Buscador: con cientos de presupuestos, un desplegable no sirve
+                                    // Buscador: con cientos de presupuestos, un desplegable no sirve. Busca el servidor (los 8 primeros).
                                     const q = buscarPresu.trim().toLowerCase();
-                                    const pendientes = (p) => p.puestos.reduce((s, x) => s + Math.max(0, x.personas - peticiones.filter(pp => pp.presupuesto === p.id && pp.tipo === x.tipo && pp.estado !== 'Cancelada').reduce((t, pp) => t + pp.solicitados, 0)), 0);
-                                    const lista = PRESUPUESTOS_ACEPTADOS
-                                        .filter(p => !q || `${p.id} ${CLIENTES[p.cliente].clienteNombre} ${p.titulo} ${CLIENTES[p.cliente].cif}`.toLowerCase().includes(q))
-                                        .sort((a, b) => (pendientes(b) > 0) - (pendientes(a) > 0) || b.aceptado.localeCompare(a.aceptado));
+                                    const { lista, total, cargando } = presupuestosAceptados;
                                     return (
                                         <div className="space-y-1.5">
                                             <SearchInput value={buscarPresu} onChange={setBuscarPresu} placeholder="Busca por cliente, CIF, código o título..." className="w-full" />
-                                            <div className="text-[11px] text-slate-500">{q ? `${lista.length} encontrados` : 'Primero, los que tienen personas sin petición; después, los más recientes.'}</div>
+                                            <div className="text-[11px] text-slate-500">{cargando ? 'Buscando...' : q ? `${total} encontrados` : 'Primero, los que tienen personas sin petición; después, los más recientes.'}</div>
                                             <div className="max-h-56 overflow-y-auto space-y-1.5">
                                                 {lista.slice(0, 8).map(p => {
-                                                    const sin = pendientes(p);
+                                                    const sin = p.pendientes;
                                                     return (
-                                                        <button key={p.id} type="button" onClick={() => setNuevaPeticion(n => ({ ...n, presupuesto: p.id, tipo: '' }))} className="w-full text-left rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-slate-50 px-3 py-2 flex items-center justify-between gap-2">
+                                                        <button key={p.id} type="button" onClick={() => setNuevaPeticion(n => ({ ...n, presu: p, tipo: '' }))} className="w-full text-left rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-slate-50 px-3 py-2 flex items-center justify-between gap-2">
                                                             <span className="min-w-0">
-                                                                <span className="block font-medium text-slate-900">{p.id} {p.version} · {CLIENTES[p.cliente].clienteNombre}</span>
+                                                                <span className="block font-medium text-slate-900">{p.id} {p.version} · {p.clienteNombre}</span>
                                                                 <span className="block text-[11px] text-slate-500 truncate">{p.titulo} · aceptado el {fechaCorta(p.aceptado)}</span>
                                                             </span>
                                                             {sin > 0 ? <Badge tone="accent">{sin} sin petición</Badge> : <Badge tone="neutral">Todo en peticiones</Badge>}
                                                         </button>
                                                     );
                                                 })}
-                                                {lista.length === 0 && <div className="text-slate-500 py-2">No hay presupuestos aceptados con «{buscarPresu}».</div>}
-                                                {lista.length > 8 && <div className="text-[11px] text-slate-500">Y {lista.length - 8} más: afina la búsqueda.</div>}
+                                                {!cargando && lista.length === 0 && <div className="text-slate-500 py-2">{q ? `No hay presupuestos aceptados con «${buscarPresu}».` : 'No hay presupuestos aceptados en esta sucursal.'}</div>}
+                                                {total > 8 && <div className="text-[11px] text-slate-500">Y {total - 8} más: afina la búsqueda.</div>}
                                             </div>
                                         </div>
                                     );
@@ -2934,7 +2497,7 @@ export default function PeticionesView() {
                                 <Field label="Puesto">
                                     <div className="space-y-1.5">
                                         {presu.puestos.map(x => {
-                                            const repartidas = peticiones.filter(p => p.presupuesto === presu.id && p.tipo === x.tipo && p.estado !== 'Cancelada').reduce((s, p) => s + p.solicitados, 0);
+                                            const repartidas = x.enPeticiones;
                                             const elegido = nuevaPeticion.tipo === x.tipo;
                                             return (
                                                 <button
@@ -2943,7 +2506,7 @@ export default function PeticionesView() {
                                                     onClick={() => setNuevaPeticion(n => ({ ...n, tipo: x.tipo, solicitados: Math.max(1, x.personas - repartidas) }))}
                                                     className={`w-full text-left rounded-lg border px-3 py-2 flex items-center justify-between gap-2 ${elegido ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'}`}
                                                 >
-                                                    <span className="font-medium text-slate-900">{PUESTOS[x.tipo].puesto}</span>
+                                                    <span className="font-medium text-slate-900">{x.nombre}</span>
                                                     <span className="text-slate-500">{x.personas} personas · {repartidas} ya en peticiones</span>
                                                 </button>
                                             );
@@ -2973,6 +2536,101 @@ export default function PeticionesView() {
                     </Modal>
                 );
             })()}
+
+            {/* DATOS DEL SERVICIO: lo que la petición añade al presupuesto y el CPD previo necesita */}
+            {datosServicio && ficha && (() => {
+                const d = datosServicio;
+                const poner = (k) => (e) => setDatosServicio(x => ({ ...x, [k]: e.target.value }));
+                const supuesto = pet.supuestos.find(x => x.id === d.useCase);
+                const texto = (k, etiqueta, placeholder, filas = 2) => (
+                    <Field label={etiqueta}>
+                        <textarea rows={filas} value={d[k] || ''} onChange={poner(k)} placeholder={placeholder} className={`${CAMPO} w-full`} />
+                    </Field>
+                );
+                return (
+                    <Modal
+                        title="Datos del servicio"
+                        subtitle={`${peticion.id} · ${peticion.clienteNombre}`}
+                        onClose={() => setDatosServicio(null)}
+                        size="max-w-2xl"
+                        footer={<>
+                            <Button onClick={() => setDatosServicio(null)}>Cancelar</Button>
+                            <Button variant="primary" icon={Check} disabled={!(Number(d.positionsCount) > 0)} onClick={guardarDatosServicio}>Guardar</Button>
+                        </>}
+                    >
+                        <div className="space-y-4 text-xs">
+                            <p className="text-slate-600">Salario, tarifa y conceptos extra vienen del presupuesto y no se cambian aquí. Lo de abajo es de esta petición y sale en el CPD previo.</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <Field label="Centro de trabajo">
+                                    <Select value={d.clientCenterId || ''} onChange={poner('clientCenterId')} className="w-full">
+                                        <option value="">{ficha.centros.length ? 'Elige un centro' : (peticion.centroTrabajo !== 'Centro sin indicar' ? peticion.centroTrabajo : 'Sin centros en la ficha del cliente')}</option>
+                                        {ficha.centros.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label="Contacto que firma los CPD">
+                                    <Select value={d.clientSignerContactId || ''} onChange={poner('clientSignerContactId')} className="w-full">
+                                        <option value="">Sin contacto</option>
+                                        {ficha.contactos.map(c => <option key={c.id} value={c.id}>{c.nombre}{c.cargo ? ` (${c.cargo})` : ''}{c.firma ? ' · firma CPD' : ''}</option>)}
+                                    </Select>
+                                </Field>
+                            </div>
+                            {!ficha.centros.length && <Notice tone="warning" icon={AlertTriangle}>Este cliente no tiene centros de trabajo. Añádelos en Empresas para poder elegirlo aquí.</Notice>}
+                            <Field label="Supuesto de utilización">
+                                <Select value={d.useCase || ''} onChange={poner('useCase')} className="w-full">
+                                    <option value="">Elige el supuesto</option>
+                                    {pet.supuestos.map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                                </Select>
+                                {supuesto && <span className="block mt-1 text-[11px] text-slate-500">{[supuesto.referencia, supuesto.ayuda].filter(Boolean).join(' · ')}</span>}
+                            </Field>
+                            {texto('useCaseJustification', 'Justificación del supuesto', 'Por ejemplo: campaña de otoño con más pedidos de lo habitual')}
+                            {texto('tasks', 'Tareas del puesto', 'Lo que hará la persona')}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <Field label="Cualificación"><TextInput value={d.qualification || ''} onChange={poner('qualification')} /></Field>
+                                <Field label="Carnés y acreditaciones"><TextInput value={d.requiredLicenses || ''} onChange={poner('requiredLicenses')} placeholder="Vacío: ninguno" /></Field>
+                            </div>
+                            {texto('risks', 'Riesgos del puesto', 'Vale «Sin riesgos específicos según la evaluación del cliente»')}
+                            <Field label="EPIs"><TextInput value={d.ppe || ''} onChange={poner('ppe')} placeholder="Equipos de protección que necesita el puesto" /></Field>
+                            <label className="flex items-center gap-2 text-slate-700">
+                                <input type="checkbox" checked={!!d.hazardousWork} onChange={(e) => setDatosServicio(x => ({ ...x, hazardousWork: e.target.checked }))} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                Trabajo especialmente peligroso
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <Field label="Plazas"><TextInput type="number" min="1" value={d.positionsCount} onChange={poner('positionsCount')} /></Field>
+                                <Field label="Inicio"><TextInput type="date" value={d.startDate || ''} onChange={poner('startDate')} /></Field>
+                                <Field label="Fin previsto"><TextInput type="date" value={d.endDate || ''} onChange={poner('endDate')} /></Field>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <Field label="Responsable de la ETT">
+                                    <Select value={d.responsibleUserId || ''} onChange={poner('responsibleUserId')} className="w-full">
+                                        <option value="">Sin responsable</option>
+                                        {pet.responsables.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                                    </Select>
+                                </Field>
+                                <Field label="Referencia del pedido del cliente"><TextInput value={d.orderReference || ''} onChange={poner('orderReference')} /></Field>
+                            </div>
+                            {texto('notes', 'Notas', '')}
+                        </div>
+                    </Modal>
+                );
+            })()}
+
+            {/* CANCELAR UNA PETICIÓN: pide el motivo */}
+            {cancelar && (
+                <Modal
+                    title={`¿Cancelar ${cancelar.id}?`}
+                    subtitle="El motivo queda en la petición y en su historial"
+                    onClose={() => setCancelar(null)}
+                    size="max-w-md"
+                    footer={<>
+                        <Button onClick={() => setCancelar(null)}>Volver</Button>
+                        <Button variant="danger" disabled={!cancelar.motivo.trim()} onClick={() => moverPeticion(cancelar.id, 'Cancelada', cancelar.motivo.trim())}>Cancelar petición</Button>
+                    </>}
+                >
+                    <Field label="Motivo">
+                        <TextInput value={cancelar.motivo} onChange={(e) => setCancelar(c => ({ ...c, motivo: e.target.value }))} placeholder="Por ejemplo: el cliente aplaza la campaña" autoFocus />
+                    </Field>
+                </Modal>
+            )}
 
             {/* COPIAR LA DIFUSIÓN DE UNA PETICIÓN HERMANA */}
             {copiarDifusion && (

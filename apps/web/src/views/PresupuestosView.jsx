@@ -262,17 +262,15 @@ import { DEMO } from '../modo';
           return [...prev.slice(0, i), { ...r, plazas: resto }, { ...r, fila: `${r.posId}-${Date.now()}`, plazas: mitad, turno: otro }, ...prev.slice(i + 1)];
         });
       };
-      const crearPeticion = () => {
-        // Las peticiones llegan en la fase 5: en real aún no se crean.
-        if (!DEMO) { setModalPeticion(false); mostrarToast('Disponible próximamente: las peticiones llegan con su módulo (fase 5 del plan).', 'info'); return; }
-        const codigos = repartoPeticiones.map((_, i) => `PET-2026-${String(52 + i).padStart(4, '0')}`);
-        const resumen = codigos.length === 1 ? codigos[0] : `${codigos[0]} a ${codigos[codigos.length - 1].slice(-4)}`;
-        // Se guarda el reparto para verlo en cada puesto del presupuesto
-        const peticionesCreadas = repartoPeticiones.map((r, i) => ({ codigo: codigos[i], posId: r.posId, turno: r.turno, plazas: Number(r.plazas) || 0 }));
-        setPresupuesto(prev => ({ ...prev, peticionCreada: resumen, peticionesCreadas }));
-        setFormularioPresupuesto(prev => ({ ...prev, peticionCreada: resumen, peticionesCreadas }));
+      const crearPeticion = async () => {
+        // Se crean en el servidor y se guarda el reparto para verlo en cada puesto del presupuesto
+        const r = await ejecutar(() => pres.crearPeticiones(presupuesto, repartoPeticiones, inicioPeticion));
+        if (!r) return;
+        const { creadas, presupuesto: d } = r;
+        setPresupuesto(prev => ({ ...prev, peticionCreada: d.peticionCreada, peticionesCreadas: d.peticionesCreadas }));
+        setFormularioPresupuesto(prev => ({ ...prev, peticionCreada: d.peticionCreada, peticionesCreadas: d.peticionesCreadas }));
         setModalPeticion(false);
-        mostrarToast(`${codigos.length === 1 ? 'Creada la petición' : `Creadas ${codigos.length} peticiones:`} ${resumen}. Cada una con un solo puesto.`, 'exito');
+        mostrarToast(`${creadas.length === 1 ? 'Creada la petición' : `Creadas ${creadas.length} peticiones:`} ${creadas.length === 1 ? creadas[0] : `${creadas[0]} a ${creadas[creadas.length - 1].slice(-4)}`}. Cada una con un solo puesto.`, 'exito');
       };
 
       // Duplicar: copia puestos, costes y condiciones; la empresa se elige de nuevo
@@ -355,6 +353,21 @@ import { DEMO } from '../modo';
         setVistaActual('detalle');
         setPestanaActiva('resumen');
       };
+      // Enlace directo a un presupuesto (#/presupuestos/PRE-…), por ejemplo desde una petición
+      const enlaceDe = () => (window.location.hash.startsWith('#/presupuestos/') ? window.location.hash.split('/')[2] || '' : '');
+      const [enlace, setEnlace] = useState(enlaceDe);
+      useEffect(() => {
+        const alCambiar = () => setEnlace(enlaceDe());
+        window.addEventListener('hashchange', alCambiar);
+        return () => window.removeEventListener('hashchange', alCambiar);
+      }, []);
+      useEffect(() => {
+        if (!enlace || !listado.length) return;
+        const p = listado.find(x => x.id === decodeURIComponent(enlace));
+        setEnlace('');
+        window.history.replaceState(null, '', '#/presupuestos');
+        if (p) abrirPresupuesto(p);
+      }, [enlace, listado]);
 
       // Documentos del presupuesto: se pueden eliminar y volver a generar
       const [docsPresupuesto, setDocsPresupuesto] = useState(['propuesta', 'escandallo']);
@@ -1103,7 +1116,7 @@ return datosActivos.posiciones.map(pos => ({
                 </>
               )}
               {datosActivos.estado === 'Firmado / Aceptado' && (datosActivos.peticionCreada ? (
-                <Button icon={ArrowUpRight} onClick={() => { window.location.hash = '#/peticiones'; }}>Ver peticiones</Button>
+                <Button icon={ArrowUpRight} onClick={() => { const l = datosActivos.peticionesCreadas || []; window.location.hash = l.length === 1 ? `#/peticiones/${l[0].codigo}` : '#/peticiones'; }}>Ver peticiones</Button>
               ) : (
                 <Button variant="primary" icon={ArrowUpRight} onClick={abrirCrearPeticiones}>Crear peticiones</Button>
               ))}
@@ -1380,7 +1393,7 @@ return datosActivos.posiciones.map(pos => ({
                           ) : (
                             <>
                               {delPuesto.map(x => (
-                                <a key={x.codigo} href="#/peticiones" className="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                <a key={x.codigo} href={`#/peticiones/${x.codigo}`} className="text-indigo-600 hover:text-indigo-800 hover:underline">
                                   {x.turno.toLowerCase()} · {x.plazas} {x.plazas === 1 ? 'plaza' : 'plazas'} ({x.codigo})
                                 </a>
                               ))}

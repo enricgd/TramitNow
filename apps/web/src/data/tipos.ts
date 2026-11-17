@@ -404,7 +404,7 @@ export type CatalogItemQuery = PageQuery & { type: CatalogItemType; q?: string; 
 export type CatalogItemCreate = { type: CatalogItemType; name: string; code?: string; parentId?: string; status?: Status };
 
 /** Historial de cambios (GET /v1/activity), lo último primero. */
-export type ActivityEntityType = 'client' | 'client_center' | 'client_contact' | 'client_billing' | 'document' | 'quote';
+export type ActivityEntityType = 'client' | 'client_center' | 'client_contact' | 'client_billing' | 'document' | 'quote' | 'request';
 export type ActivityEntry = {
   id: string;
   entityType: ActivityEntityType;
@@ -420,7 +420,7 @@ export type ActivityEntry = {
 };
 export type ActivityQuery = PageQuery & { entityType: ActivityEntityType; entityId: string; includeChildren?: boolean };
 
-export type DocumentEntityType = 'client' | 'client_center' | 'quote';
+export type DocumentEntityType = 'client' | 'client_center' | 'quote' | 'request';
 export type DocumentStatus = 'pending' | 'validated' | 'draft';
 export type StoredDocument = Stamped & {
   entityType: DocumentEntityType;
@@ -870,3 +870,214 @@ export type QuoteAgreementDefaults = {
 export type QuoteAgreementDefaultsQuery = { collectiveAgreementId: string; agreementCategoryId?: string | null; date?: string };
 /** Categoría de la tabla de un convenio (la de su versión vigente). */
 export type AgreementCategory = { id: string; code: string; name: string; group: string | null; level: string | null };
+
+// ---------------------------------------------------------------------------
+// Peticiones (fase 5): contrato de fase5-backend.md (rutas /v1/requests, /v1/request-sources...).
+// Una petición = un puesto de una versión aceptada de un presupuesto; sus condiciones se copian al crearla.
+// Plazas con personas, candidatos, CPD de cada persona y portales son de las fases 6 y 7.
+// ---------------------------------------------------------------------------
+
+export type ServiceRequestStatus = 'new' | 'publishing' | 'selecting' | 'covered' | 'in_progress' | 'closed' | 'cancelled';
+export type PreCpdStatus = 'pending' | 'generated' | 'sent' | 'reviewed';
+
+/** Un día del horario. `weekday`: 1 lunes … 7 domingo. Si `end` < `start`, pasa la medianoche. `hours` la calcula la API. */
+export type RequestScheduleDay = { weekday: number; working: boolean; start: string | null; end: string | null; breakMinutes: number; hours?: number };
+/** Plazas por estado. `filled`: cubiertas más incorporadas. */
+export type RequestSlots = { open: number; reserved: number; covered: number; started: number; left: number; filled: number };
+
+/** Fila del listado. */
+export type ServiceRequestSummary = {
+  id: string;
+  code: string;
+  status: ServiceRequestStatus;
+  positionName: string;
+  shiftName: string | null;
+  clientId: string;
+  clientName: string;
+  quoteId: string;
+  quoteCode: string;
+  quoteVersionNumber: number;
+  quotePositionId: string;
+  branchId: string;
+  startDate: string | null;
+  endDate: string | null;
+  positionsCount: number;
+  slots: RequestSlots;
+  responsibleUserId: string | null;
+  responsibleName: string | null;
+  daysToStart: number | null;
+  startsSoonUncovered: boolean;
+  cancelReason: string | null;
+  preCpdStatus: PreCpdStatus;
+  createdAt: string;
+};
+
+/** Condiciones copiadas del puesto del presupuesto al crear la petición (no cambian después). */
+export type RequestConditions = {
+  positionName: string;
+  description: string | null;
+  collectiveAgreementId: string | null;
+  collectiveAgreementName: string | null;
+  agreementVersionId: string | null;
+  agreementPeriod: { from: string; to: string | null } | null;
+  agreementCategoryId: string | null;
+  agreementCategoryCode: string | null;
+  categoryName: string | null;
+  level: string | null;
+  agreementMinimumSalaryHour: number | null;
+  salaryHour: number | null;
+  grossSalaryHour: number | null;
+  rateHour: number | null;
+  extras: { code: string; name: string; salaryHour: number | null; rateHour: number | null; print: boolean }[];
+  /** El cálculo del puesto tal como estaba; costes y margen a null sin quotes.view_costs. */
+  calculation: PositionResult | null;
+};
+
+/** Reparto del puesto entre sus peticiones (sin las canceladas). */
+export type RequestDistribution = {
+  quotePeople: number;
+  inRequests: number;
+  missing: number;
+  siblings: { id: string; code: string; shiftName: string | null; startDate: string | null; endDate: string | null; positionsCount: number; filled: number; status: ServiceRequestStatus; isThis: boolean }[];
+  otherPositions: { quotePositionId: string; name: string; requests: { id: string; code: string }[] }[];
+};
+
+/** Comprobación para generar el CPD previo. `blocking`: impide generarlo. `field`: el campo que falta. */
+export type PreCpdCheck = { code: string; ok: boolean; blocking: boolean; message: string; field: string | null };
+export type PreCpd = {
+  status: PreCpdStatus;
+  /** Algo del CPD cambió después de generarlo: hay que volver a generarlo. */
+  outdated: boolean;
+  documentId: string | null;
+  generatedAt: string | null;
+  generatedByName: string | null;
+  sentAt: string | null;
+  sentByName: string | null;
+  sentTo: string | null;
+  reviewedAt: string | null;
+  checks: PreCpdCheck[];
+};
+
+/** Datos del servicio que se completan en la petición (el CPD previo los necesita). */
+export type RequestServiceData = {
+  clientCenterId: string | null;
+  clientSignerContactId: string | null;
+  orderReference: string | null;
+  notes: string | null;
+  tasks: string | null;
+  qualification: string | null;
+  risks: string | null;
+  ppe: string | null;
+  requiredLicenses: string | null;
+  useCase: string | null;
+  useCaseJustification: string | null;
+  workdayType: 'full' | 'part' | null;
+  /** Trabajo especialmente peligroso: solo se guarda (el control del art. 8 está pendiente). */
+  hazardousWork: boolean;
+};
+
+/** Ficha. */
+export type ServiceRequest = ServiceRequestSummary &
+  RequestServiceData & {
+    clientTaxId: string | null;
+    clientCenterName: string | null;
+    clientSignerContactName: string | null;
+    clientSignerContactEmail: string | null;
+    clientSignerContactPhone: string | null;
+    companyId: string;
+    quoteVersionId: string;
+    quoteTitle: string | null;
+    quoteAcceptedAt: string | null;
+    cancelledAt: string | null;
+    closedAt: string | null;
+    updatedAt: string;
+    schedule: RequestScheduleDay[];
+    weeklyHours: number;
+    legalChecks: null;
+    createdByName: string | null;
+    conditions: RequestConditions;
+    /**
+     * Art. 11: el salario copiado frente a cada versión del convenio vigente en las fechas de la petición (por tramos).
+     * null si el convenio no está enlazado al catálogo global.
+     */
+    agreementCheck: {
+      belowAgreement: boolean;
+      categoryUnmatched: boolean;
+      periods: { versionId: string; from: string; to: string | null; categoryMatched: boolean; minimumSalaryHour: number | null; belowAgreement: boolean }[];
+    } | null;
+    distribution: RequestDistribution;
+    slotList: { id: string; number: number; status: string }[];
+    preCpd: PreCpd;
+    signedQuoteDocument: { documentId: string; name: string; kind: 'signed' | 'proposal'; date: string } | null;
+  };
+
+export type ServiceRequestQuery = PageQuery & {
+  q?: string;
+  /** Un estado o `active` (de new a in_progress). */
+  status?: ServiceRequestStatus | 'active';
+  clientId?: string;
+  quoteId?: string;
+  responsibleUserId?: string;
+  branchId?: string;
+  startingSoon?: boolean;
+};
+
+export type ServiceRequestInput = Partial<
+  RequestServiceData & {
+    status: ServiceRequestStatus;
+    cancelReason: string | null;
+    positionsCount: number;
+    startDate: string | null;
+    endDate: string | null;
+    shiftName: string | null;
+    schedule: RequestScheduleDay[];
+    responsibleUserId: string | null;
+    branchId: string;
+  }
+>;
+export type ServiceRequestCreate = { quotePositionId: string; positionsCount: number } & Omit<ServiceRequestInput, 'status' | 'cancelReason' | 'positionsCount'>;
+export type ServiceRequestDuplicate = { positionsCount: number } & Pick<ServiceRequestInput, 'startDate' | 'endDate' | 'shiftName' | 'workdayType' | 'schedule'>;
+
+/** Presupuesto aceptado en el buscador de «Nueva petición» (GET /v1/request-sources). */
+export type RequestSource = {
+  quoteId: string;
+  quoteCode: string;
+  versionId: string;
+  versionNumber: number;
+  title: string | null;
+  clientId: string;
+  clientName: string;
+  clientTaxId: string | null;
+  acceptedAt: string | null;
+  people: number;
+  peopleInRequests: number;
+  peopleWithoutRequest: number;
+  positions: {
+    quotePositionId: string;
+    name: string;
+    categoryName: string | null;
+    people: number;
+    peopleInRequests: number;
+    peopleWithoutRequest: number;
+    rateHour: number | null;
+    requests: { id: string; code: string; shiftName: string | null; positionsCount: number; status: ServiceRequestStatus }[];
+  }[];
+};
+export type RequestSourceQuery = PageQuery & { q?: string };
+
+/** Supuesto de utilización de la ETT (GET /v1/request-use-cases). */
+export type RequestUseCase = { code: string; name: string; legalReference: string | null; maxMonths: number | null; hint: string | null };
+
+/**
+ * Selección de las peticiones (fases 6 y 7), solo en la demo: plazas, embudo, candidatos, CPD por persona y portales,
+ * por código de petición y en la forma de PeticionesView.jsx. Sin ruta en apps/api.
+ */
+export type RequestSelection = {
+  plazas: Record<string, Record<string, unknown>[]>;
+  embudo: Record<string, { id: string; etapa: string; fecha: string }[]>;
+  candidatos: Record<string, unknown>[];
+  portalesPropios: Record<string, Record<string, unknown>>;
+  portales: Record<string, unknown>[];
+  /** Portales de empleo activos y candidaturas de cada petición. */
+  difusion: Record<string, { portalesActivos: number; candidaturas: number }>;
+};

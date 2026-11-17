@@ -82,6 +82,10 @@ const catalogItems: CatalogItem[] = [
   ...['Propuesta de presupuesto', 'Presupuesto firmado por el cliente', 'Condiciones o pliego del cliente', 'Correo del cliente'].map((n, i) =>
     item(710 + i, 'document_type', n),
   ),
+  // Peticiones (fase 5, los siembra su migración): documentos del servicio de una petición.
+  ...['Pedido u orden de compra del cliente', 'Evaluación de riesgos del cliente', 'CPD previo (condiciones de la puesta a disposición)', 'Otro documento'].map((n, i) =>
+    item(714 + i, 'document_type', n),
+  ),
 ];
 const catalogId = (type: CatalogItemType, name: string) => catalogItems.find((i) => i.type === type && i.name === name)!.id;
 
@@ -182,6 +186,10 @@ const contacts: ClientContact[] = [
     email: 'mferrer@premiumeventsbcn.example', phone: '+34 600 000 124', roles: ['operations'], validatesHours: true,
   }),
 ];
+
+/** Centro y contacto de ejemplo por id (los usan las peticiones de ejemplo, memoriaPeticiones.ts). */
+export const centroPorId = (centerId: string | null) => (centerId ? centers.find((c) => c.id === centerId) : undefined);
+export const contactoPorId = (contactId: string | null) => (contactId ? contacts.find((c) => c.id === contactId) : undefined);
 
 const emptyBilling = (clientId: string, n?: number): ClientBilling => ({
   id: n ? id(n) : newId(), clientId, paymentMethodId: null, paymentTermDays: null, fixedPaymentDays: null, iban: null, swiftBic: null,

@@ -94,6 +94,16 @@ import type {
   Province,
   Role,
   SearchResult,
+  RequestSelection,
+  RequestSource,
+  RequestSourceQuery,
+  RequestUseCase,
+  ServiceRequest,
+  ServiceRequestCreate,
+  ServiceRequestDuplicate,
+  ServiceRequestInput,
+  ServiceRequestQuery,
+  ServiceRequestSummary,
 } from './tipos';
 
 /** Operaciones de un catálogo de la ETT (convenios, categorías...): listar, ver, crear, editar y baja lógica. */
@@ -304,6 +314,26 @@ export interface Repositories {
     /** Genera el PDF de la propuesta en el servidor y lo guarda como documento del presupuesto (se descarga con documents). */
     proposalPdf(id: string): Promise<{ documentId: string; name: string }>;
   };
+  /** Peticiones (fase 5, fase5-backend.md). Escribir y el CPD previo exigen requests.manage. */
+  requests: {
+    list(query?: ServiceRequestQuery): Promise<Page<ServiceRequestSummary>>;
+    get(id: string): Promise<ServiceRequest>;
+    /** De un puesto de un presupuesto aceptado. */
+    create(data: ServiceRequestCreate): Promise<ServiceRequest>;
+    /** «Crear peticiones» desde la versión aceptada: una o varias por puesto, en una transacción. */
+    createFromQuoteVersion(versionId: string, requests: ServiceRequestCreate[]): Promise<ServiceRequest[]>;
+    update(id: string, data: ServiceRequestInput): Promise<ServiceRequest>;
+    /** «Duplicar con otro horario»: otra petición del mismo puesto. */
+    duplicate(id: string, data: ServiceRequestDuplicate): Promise<ServiceRequest>;
+    /** Buscador de presupuestos aceptados para «Nueva petición». */
+    sources(query?: RequestSourceQuery): Promise<Page<RequestSource>>;
+    useCases(): Promise<RequestUseCase[]>;
+    /** Genera el PDF del CPD previo y lo guarda como documento (409 `cpd_incompleto`, 422 `salario_bajo_convenio`). */
+    generatePreCpd(id: string): Promise<{ documentId: string; name: string }>;
+    /** Sin firma electrónica: el CPD previo se envía a mano y aquí se marca. */
+    markPreCpdSent(id: string, data?: { sentTo?: string | null; notes?: string | null }): Promise<ServiceRequest>;
+    markPreCpdReviewed(id: string): Promise<ServiceRequest>;
+  };
 
   // -------------------------------------------------------------------------
   // Pendiente de API: de momento solo datos de ejemplo (ver tipos.ts).
@@ -335,6 +365,13 @@ export interface Repositories {
   /**
    * Acceso de los contactos del cliente al Área de empresas (fase 11). Contra la API lanza `no_disponible`.
    */
+  /**
+   * Plazas con personas, candidatos, CPD de cada persona y portales de una petición (fases 6 y 7). Solo hay datos de
+   * ejemplo: contra la API lanza `no_disponible` y la pantalla deja esas partes vacías.
+   */
+  requestSelection: {
+    get(): Promise<RequestSelection>;
+  };
   portalAccess: {
     list(clientId: string): Promise<Record<string, ContactPortalAccess>>;
     save(contactId: string, permissions: string[]): Promise<ContactPortalAccess>;

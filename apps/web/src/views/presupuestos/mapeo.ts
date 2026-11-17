@@ -3,6 +3,7 @@
 // conoce las dos. El cálculo es el módulo puro de la API (data/calculoPresupuestos.ts).
 import { DEFAULT_SS_RATES, SEVERANCE_DAYS_PER_YEAR, calculatePosition, totalSsRate } from '../../data/calculoPresupuestos';
 import type {
+  ServiceRequestSummary,
   PositionResult,
   Quote,
   QuoteCostConcept,
@@ -363,9 +364,9 @@ export function presupuestoVista(q: Quote, v: QuoteVersion, r: Resolver) {
     notasRechazo: v.rejectionNotes ?? '',
     obsoleto: q.obsoleteAt ? { motivo: q.obsoleteReason ?? '', fecha: q.obsoleteAt.slice(0, 10), sustituidoPor: q.replacedByCode ?? '' } : undefined,
     creadoDesde: q.createdFromCode ?? undefined,
-    // Las peticiones llegan en la fase 5.
+    // Peticiones creadas desde este presupuesto (las rellena usePresupuestos con conPeticiones)
     peticionCreada: undefined as string | undefined,
-    peticionesCreadas: [] as { codigo: string; posId: string; turno: string; plazas: number }[],
+    peticionesCreadas: [] as PeticionCreada[],
     documentosAnadidos: [] as { id: string; tipo: string; nombre: string; archivo: string; interno: boolean; fecha: string; autor: string }[],
   };
 }
@@ -393,6 +394,29 @@ export function versionApi(v: PresupuestoVista, ids: { comercial: (nombre: strin
     costConcepts: costesApi(v.conceptosEscandallo),
     defaultExtras: (v.extrasDefecto ?? []).map(extraApi),
   };
+}
+
+/** Una petición creada desde el presupuesto (fase 5): código, puesto, turno y plazas. */
+export type PeticionCreada = { codigo: string; posId: string; turno: string; plazas: number };
+/** Resumen de las peticiones para el indicador: «PET-2026-0052» o «PET-2026-0052 a 0054». */
+export function resumenPeticiones(l: PeticionCreada[]) {
+  if (!l.length) return undefined;
+  const c = [...l.map((x) => x.codigo)].sort();
+  return c.length === 1 ? c[0] : `${c[0]} a ${c[c.length - 1].slice(-4)}`;
+}
+/**
+ * Las peticiones no canceladas de un presupuesto. El puesto va por `quotePositionId` o, si la fila no lo trae, por el
+ * nombre (es la copia del puesto del presupuesto).
+ */
+export function peticionesDe(quoteId: string, peticiones: ServiceRequestSummary[], puestos: { id: string; nombre: string }[] = []): PeticionCreada[] {
+  return peticiones
+    .filter((r) => r.quoteId === quoteId && r.status !== 'cancelled')
+    .map((r) => ({
+      codigo: r.code,
+      posId: r.quotePositionId ?? puestos.find((p) => p.nombre === r.positionName)?.id ?? '',
+      turno: r.shiftName ?? 'Sin turno',
+      plazas: r.positionsCount,
+    }));
 }
 
 /** Fila del listado de la vista. */

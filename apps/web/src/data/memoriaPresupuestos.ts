@@ -148,7 +148,7 @@ function semillas(): Semilla[] {
     },
     {
       code: 'PRE-2026-0042', clientId: id(100), status: 'accepted', title: 'Campaña logística otoño HUB central', salesRepId: ELENA, validUntil: '2026-10-20', positions: [operario(), carretillero()],
-      version: { issueDate: '2026-09-20', expectedStartDate: '2026-11-03', durationMonths: 3, modality: 'pico_produccion', commercialNotes: 'Campaña de otoño. Turnos de mañana y tarde en el HUB central de Basauri.' },
+      version: { acceptedAt: '2026-10-14T10:00:00.000Z', issueDate: '2026-09-20', expectedStartDate: '2026-11-03', durationMonths: 3, modality: 'pico_produccion', commercialNotes: 'Campaña de otoño. Turnos de mañana y tarde en el HUB central de Basauri.' },
     },
     {
       code: 'PRE-2026-0041', clientId: id(103), status: 'accepted', title: 'Servicio ETT camareros/as y cocina fiestas locales', salesRepId: LAURA, validUntil: '2026-10-15',
@@ -158,7 +158,7 @@ function semillas(): Semilla[] {
         puesto(3, id(606), { name: 'Cocinero/a de partida', hourlyRate: 19.6, people: 2, description: 'Elaboración de la partida asignada en banquetes.' }),
         puesto(4, id(604), { name: 'Camarero/a de barra', hourlyRate: 18.4, people: 3, description: 'Servicio de barra en el turno de noche.' }),
       ],
-      version: { issueDate: '2026-09-15', expectedStartDate: '2026-10-10', durationMonths: 2, modality: 'pico_produccion', commercialNotes: 'Temporada de congresos y fiestas locales en el recinto de congresos de Barcelona.' },
+      version: { acceptedAt: '2026-09-30T10:00:00.000Z', issueDate: '2026-09-15', expectedStartDate: '2026-10-10', durationMonths: 2, modality: 'pico_produccion', commercialNotes: 'Temporada de congresos y fiestas locales en el recinto de congresos de Barcelona.' },
     },
     {
       code: 'PRE-2026-0038', clientId: id(100), status: 'rejected', title: 'Mozos de carga para inventario anual', salesRepId: CARLOS, validUntil: '2026-10-01',
@@ -168,12 +168,12 @@ function semillas(): Semilla[] {
     {
       code: 'PRE-2026-0033', clientId: id(102), status: 'accepted', title: 'Envasado nocturno campaña de cítricos', salesRepId: CARLOS, validUntil: '2026-09-05',
       positions: [envasado(1, 'Operario/a de envasado', 16300, 60, 16.4, 5, 'Envasado y etiquetado en línea, turno de noche.')],
-      version: { issueDate: '2026-08-20', expectedStartDate: '2026-09-15', durationMonths: 3, commercialNotes: 'El cliente aplazó la campaña después de aceptar: la petición PET-2026-0036 está cancelada.' },
+      version: { acceptedAt: '2026-08-26T10:00:00.000Z', issueDate: '2026-08-20', expectedStartDate: '2026-09-15', durationMonths: 3, commercialNotes: 'El cliente aplazó la campaña después de aceptar: la petición PET-2026-0036 está cancelada.' },
     },
     {
       code: 'PRE-2026-0029', clientId: id(100), status: 'accepted', title: 'Campaña logística verano HUB central', salesRepId: ELENA, validUntil: '2026-06-20',
       positions: [puesto(1, id(602), { name: 'Mozo/a de almacén', hourlyRate: 16.9, people: 6, description: 'Carga, descarga y reposición en la nave 2.' })],
-      version: { issueDate: '2026-06-01', expectedStartDate: '2026-07-01', durationMonths: 3, commercialNotes: 'Campaña de verano, ya terminada.' },
+      version: { acceptedAt: '2026-06-10T10:00:00.000Z', issueDate: '2026-06-01', expectedStartDate: '2026-07-01', durationMonths: 3, commercialNotes: 'Campaña de verano, ya terminada.' },
     },
   ];
 }
@@ -422,6 +422,12 @@ function posicion(datosPuesto: QuotePositionInput, n: number, v: QuoteVersion): 
     id: newId(),
     calculation: null,
   };
+}
+
+/** Los presupuestos aceptados, con el cálculo de sus puestos: de ellos salen las peticiones (memoriaPeticiones.ts). */
+export async function acceptedQuotes(): Promise<Quote[]> {
+  const todos = await Promise.all(datos().cabeceras.map((c) => completo(c.id)));
+  return todos.filter((q) => q.currentVersion.status === 'accepted');
 }
 
 export function memoryQuoteRepositories(ajustes: () => Promise<TenantSettings>): Pick<Repositories, 'quotes' | 'quoteVersions'> {
