@@ -680,7 +680,7 @@ export default function PeticionesView() {
     const cambiarEtapa = (petId, candidatoId, etapa) => {
         if (!seleccion) {
             const app = (embudo[petId] || []).find(x => x.id === candidatoId)?._applicationId;
-            if (app) ejecutar(() => pet.cambiarEtapa(app, etapa)).then(r => r !== undefined && cargarSeleccion());
+            if (app) ejecutar(() => pet.cambiarEtapa(app, etapa).then(() => true)).then(ok => ok && cargarSeleccion());
             return;
         }
         setEmbudo(prev => {

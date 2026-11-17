@@ -1,13 +1,13 @@
 // Valores de Candidatos en la API (fase6-backend.md) y su texto en la pantalla del diseñador (CandidatosView.jsx).
 // Los usan la traducción de la vista (views/candidatos/mapeo.ts) y la memoria de la demo (memoriaCandidatos.ts).
-import type { ApplicationStage, CandidateAvailability, CandidateShift, CandidateStatus, LanguageLevel } from './tipos';
+import type { ApplicationStage, CandidateAvailability, CandidateShift, CandidateSource, CandidateStatus, LanguageLevel } from './tipos';
 
 /** Estado del candidato ↔ texto de la vista (ESTADO_CANDIDATO). */
 export const ESTADO_CANDIDATO: Record<CandidateStatus, string> = {
   new: 'Nuevo',
   to_contact: 'Pendiente de contactar',
   contacted: 'Contactado',
-  selecting: 'En entrevista',
+  in_selection: 'En entrevista',
   available: 'Disponible',
   unavailable: 'No disponible',
   onboarding: 'En incorporación',
@@ -15,8 +15,22 @@ export const ESTADO_CANDIDATO: Record<CandidateStatus, string> = {
   discarded: 'Descartado',
 };
 
+/** Origen del candidato ↔ texto de la vista (filtro «Todos los orígenes»). */
+export const ORIGEN: Record<CandidateSource, string> = {
+  candidate_portal: 'Portal Web ETT',
+  infojobs: 'InfoJobs',
+  indeed: 'Indeed',
+  linkedin: 'LinkedIn',
+  database: 'Base de datos',
+  referral: 'Recomendación',
+  walk_in: 'Presencial',
+  other: 'Otro',
+};
+/** Origen de la vista → el de la API (lo que no está en la lista, «other»). */
+export const origenApi = (texto: string | null | undefined): CandidateSource => (Object.keys(ORIGEN) as CandidateSource[]).find((k) => ORIGEN[k] === texto) ?? 'other';
+
 /** Turnos ↔ ids de la vista (TURNOS). */
-export const TURNO: Record<CandidateShift, string> = { morning: 'manana', afternoon: 'tarde', night: 'noche', split: 'partida', weekend: 'finde' };
+export const TURNO: Record<CandidateShift, string> = { morning: 'manana', afternoon: 'tarde', night: 'noche', split: 'partida', weekends: 'finde' };
 
 /** Incorporación ↔ texto de la vista (INCORPORACION). */
 export const INCORPORACION: Record<CandidateAvailability, string> = {

@@ -109,6 +109,7 @@ import type {
   CandidateQuery,
   CandidateSensitive,
   CandidateSummary,
+  PrivacyNotice,
   SensitiveField,
   RequestSource,
   RequestSourceQuery,
@@ -347,7 +348,10 @@ export interface Repositories {
     anonymize(id: string, reason: string): Promise<Candidate>;
     /** Derecho de acceso (privacy.manage, auditado): todo lo de la persona, en JSON. */
     exportData(id: string): Promise<unknown>;
-    addConsent(id: string, data: { purpose: 'talent_pool' | 'health_data'; noticeId?: string | null; givenAt?: string; channel: CandidateConsent['channel']; documentId?: string | null }): Promise<CandidateConsent>;
+    /** Necesita el texto de privacidad aceptado (`noticeId`, de `privacyNotices`). Devuelve la ficha. */
+    addConsent(id: string, data: { purpose: 'talent_pool' | 'health_data'; noticeId: string; givenAt?: string; channel: CandidateConsent['channel']; documentId?: string | null }): Promise<Candidate>;
+    /** Textos de privacidad publicados (el último, el vigente). */
+    privacyNotices(purpose: 'talent_pool' | 'health_data'): Promise<PrivacyNotice[]>;
     withdrawConsent(consentId: string): Promise<CandidateConsent>;
     /** [Pedido al backend.] Historial de contactos. */
     contacts(id: string): Promise<CandidateContact[]>;
@@ -362,7 +366,7 @@ export interface Repositories {
   /** Candidaturas (persona × petición). */
   applications: {
     list(query: { requestId?: string; candidateId?: string; stage?: ApplicationStage }): Promise<Application[]>;
-    create(data: { candidateId: string; requestId: string; origin: 'applied' | 'sourced'; source?: string | null; notes?: string | null }): Promise<Application>;
+    create(data: { candidateId: string; requestId: string; origin: 'applied' | 'sourced'; stage?: 'registered' | 'preselected' | 'interview'; source?: string | null; notes?: string | null }): Promise<Application & { requirements?: { code: string; ok: boolean; message: string }[] }>;
     update(id: string, data: { stage?: ApplicationStage; notes?: string | null; discardReason?: string | null }): Promise<Application>;
     /** Reserva una plaza por cubrir (la indicada o la primera). */
     propose(id: string, slotId?: string | null): Promise<Application & { requirements?: { code: string; ok: boolean; message: string }[] }>;

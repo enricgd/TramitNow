@@ -1095,9 +1095,9 @@ export type RequestSelection = {
 // GET /candidates/{id}/sensitive (personal_data.view, auditado).
 // ---------------------------------------------------------------------------
 
-/** [Supuesto, pendiente de confirmar en el contrato.] */
-export type CandidateStatus = 'new' | 'to_contact' | 'contacted' | 'selecting' | 'available' | 'unavailable' | 'onboarding' | 'in_mission' | 'discarded';
-export type CandidateShift = 'morning' | 'afternoon' | 'night' | 'split' | 'weekend';
+export type CandidateStatus = 'new' | 'to_contact' | 'contacted' | 'in_selection' | 'available' | 'unavailable' | 'onboarding' | 'in_mission' | 'discarded';
+export type CandidateSource = 'candidate_portal' | 'infojobs' | 'indeed' | 'linkedin' | 'database' | 'referral' | 'walk_in' | 'other';
+export type CandidateShift = 'morning' | 'afternoon' | 'night' | 'split' | 'weekends';
 export type CandidateAvailability = 'immediate' | 'one_week' | 'two_weeks' | 'from_date';
 export type IdDocumentKind = 'dni' | 'nie' | 'passport' | 'other';
 export type CandidateCatalog = 'candidate_profile' | 'license' | 'skill' | 'language';
@@ -1109,13 +1109,13 @@ export type CandidateSummary = {
   id: string;
   code: string;
   firstName: string;
-  lastName: string;
+  lastName: string | null;
   phone: string | null;
   email: string | null;
   city: string | null;
   provinceCode: string | null;
   status: CandidateStatus;
-  source: string | null;
+  source: CandidateSource;
   mainProfile: { id: string; name: string; group: string | null } | null;
   otherProfileNames: string[];
   idDocument: { type: IdDocumentKind | null; masked: string | null; expiresOn: string | null; state: 'ok' | 'expired' | 'missing' };
@@ -1125,14 +1125,16 @@ export type CandidateSummary = {
   documentAlerts: { expired: number; expiring: number };
   activeApplications: number;
   lastContactAt: string | null;
+  anonymized?: boolean;
   createdAt: string;
 };
 
 export type CandidateExperience = { company: string; position: string; from: string | null; to: string | null; duties: string | null };
-export type CandidateEducation = { title: string; center: string | null; year: string | null };
+export type CandidateEducation = { title: string; center: string | null; year: number | null };
 export type CandidateConsent = {
   id: string;
   purpose: 'talent_pool' | 'health_data';
+  noticeId?: string;
   noticeVersion: string | null;
   givenAt: string;
   channel: 'portal' | 'paper' | 'email' | 'other';
@@ -1188,13 +1190,14 @@ export type Candidate = CandidateSummary & {
   consents: CandidateConsent[];
   applications: Application[];
   missing: { code: string; message: string; tab: string }[];
+  sourceRef: string | null;
   createdByName: string | null;
   updatedAt: string;
 };
 
 export type CandidateInput = Partial<{
   firstName: string;
-  lastName: string;
+  lastName: string | null;
   phone: string | null;
   email: string | null;
   city: string | null;
@@ -1204,7 +1207,9 @@ export type CandidateInput = Partial<{
   birthDate: string | null;
   nationality: string | null;
   status: CandidateStatus;
-  source: string | null;
+  source: CandidateSource;
+  sourceRef: string | null;
+  lastContactAt: string | null;
   idDocumentType: IdDocumentKind | null;
   idDocumentNumber: string | null;
   idDocumentExpiresOn: string | null;
@@ -1246,6 +1251,7 @@ export type CandidateSensitive = {
   health?: { disabilityPercent: number | null; adaptations: string | null; notes: string | null; legalBasis: string | null } | null;
 };
 export type SensitiveField = 'idDocument' | 'ssNumber' | 'iban' | 'health';
+export type PrivacyNotice = { id: string; purpose: 'talent_pool' | 'health_data'; version: string; text: string; createdAt: string };
 
 /** Contacto registrado con la persona. [Pedido al backend: GET/POST /candidates/{id}/contacts.] */
 export type CandidateContact = { id: string; occurredAt: string; userName: string | null; channel: string; result: string; note: string | null; nextAction: string | null };

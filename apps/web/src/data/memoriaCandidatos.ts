@@ -3,7 +3,7 @@
 // cubren plazas de las peticiones de ejemplo (memoriaPeticiones.ts), supresión, exportación y auditoría de accesos.
 // Los datos salen de memoriaCandidatosEjemplo.js (los del diseñador). Todo es ficticio. Sin efectos al cargarse (ver
 // vite.config.ts): se crean la primera vez que se usan.
-import { ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, TURNO, clave, codigoDeTipo, enmascarar } from './candidatosValores';
+import { ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, TURNO, clave, codigoDeTipo, enmascarar, origenApi } from './candidatosValores';
 import { delay, id, newId, page } from './memoriaBase';
 import { alDescargarDocumentoDeCandidato, documentosDeEntidad, log, quitarDocumentoDemo, sembrarDocumentos } from './memoriaEmpresas';
 import { ejemploCandidatos } from './memoriaCandidatosEjemplo';
@@ -160,7 +160,7 @@ async function deEjemplo(e: Estado, c: CandidatoEjemplo, info: Record<string, { 
   return {
     id: rid, code: c.id, firstName: c.name, lastName: c.lastName, phone: c.phone ?? null, email: c.email ?? null, city: c.city ?? null,
     provinceCode: prov[c.province] ?? null, postalCode: c.codigoPostal || null, address: c.direccion || null, birthDate: c.fechaNacimiento || null,
-    nationality: c.nacionalidad || null, status: (clave(ESTADO_CANDIDATO, c.status) ?? 'available') as CandidateStatus, source: c.source ?? null,
+    nationality: c.nacionalidad || null, status: (clave(ESTADO_CANDIDATO, c.status) ?? 'available') as CandidateStatus, source: origenApi(c.source), sourceRef: c.sourceId ?? null,
     idType: c.dni ? (nie ? 'nie' : 'dni') : null, idNumber: c.dni || null, idExpiresOn: c.dniExpiry || null,
     ss: c.nss && c.nss !== 'FALTA' ? c.nss : null, ibanValue: c.iban ? c.iban.replace(/\s/g, '') : null, health: null,
     mainProfileId: c.category ? itemPorNombre(e, 'candidate_profile', c.category).id : null,
@@ -169,7 +169,7 @@ async function deEjemplo(e: Estado, c: CandidatoEjemplo, info: Record<string, { 
     skillIds: (c.skills ?? []).map((n: string) => itemPorNombre(e, 'skill', n).id),
     languages: idiomas, otherLicensesText: c.otrosCarnes ?? null, experienceYears: c.experienceYears ?? null, hasCar: !!c.hasCar,
     experiences: (c.experiencias ?? []).map((x: { empresa: string; puesto: string; desde: string; hasta: string; funciones: string }) => ({ company: x.empresa, position: x.puesto, from: x.desde || null, to: x.hasta || null, duties: x.funciones || null })),
-    education: (c.formacion ?? []).map((x: { titulo: string; centro: string; anio: string }) => ({ title: x.titulo, center: x.centro || null, year: x.anio || null })),
+    education: (c.formacion ?? []).map((x: { titulo: string; centro: string; anio: string }) => ({ title: x.titulo, center: x.centro || null, year: x.anio ? Number(x.anio) : null })),
     shifts: (c.turnos ?? []).map((t: string) => clave(TURNO, t)).filter(Boolean) as CandidateShift[],
     availability: clave(INCORPORACION, c.incorporacion) ?? 'immediate', availableFrom: c.incorporacionFecha || null, maxDistanceKm: c.radioKm ?? null,
     availabilityNotes: c.notasDisponibilidad || null, autoExpiryNotice: c.avisoAutomatico !== false, consents,
@@ -247,7 +247,6 @@ async function ficha(e: Estado, r: Registro): Promise<Candidate> {
 
 function aplicar(e: Estado, r: Registro, d: CandidateInput) {
   if (d.firstName !== undefined && !d.firstName.trim()) throw new ApiError(422, 'validacion', 'El nombre es obligatorio', [{ path: 'firstName', message: 'Obligatorio' }]);
-  if (d.lastName !== undefined && !d.lastName.trim()) throw new ApiError(422, 'validacion', 'Los apellidos son obligatorios', [{ path: 'lastName', message: 'Obligatorio' }]);
   if (d.iban && !/^ES\d{22}$/.test(d.iban.replace(/\s/g, '').toUpperCase())) throw new ApiError(422, 'validacion', 'IBAN español: ES y 22 cifras', [{ path: 'iban', message: 'IBAN español: ES y 22 cifras' }]);
   if (d.status === 'in_mission' || d.status === 'onboarding') throw new ApiError(422, 'validacion', 'Ese estado lo pone el sistema', [{ path: 'status', message: 'No se puede elegir' }]);
   if (d.idDocumentNumber) {
@@ -274,7 +273,7 @@ function aplicar(e: Estado, r: Registro, d: CandidateInput) {
     if (d.health && !['explicit_consent', 'labor_obligation'].includes(d.health.legalBasis)) throw new ApiError(422, 'validacion', 'Los datos de salud necesitan una base legal');
     r.health = d.health;
   }
-  const simples = ['firstName', 'lastName', 'phone', 'email', 'city', 'provinceCode', 'postalCode', 'address', 'birthDate', 'nationality', 'status', 'source', 'otherLicensesText', 'experienceYears', 'hasCar', 'experiences', 'education', 'shifts', 'availability', 'availableFrom', 'maxDistanceKm', 'availabilityNotes', 'autoExpiryNotice'] as const;
+  const simples = ['firstName', 'lastName', 'sourceRef', 'lastContactAt', 'phone', 'email', 'city', 'provinceCode', 'postalCode', 'address', 'birthDate', 'nationality', 'status', 'source', 'otherLicensesText', 'experienceYears', 'hasCar', 'experiences', 'education', 'shifts', 'availability', 'availableFrom', 'maxDistanceKm', 'availabilityNotes', 'autoExpiryNotice'] as const;
   for (const k of simples) if (d[k] !== undefined) Object.assign(r, { [k]: copia(d[k]) });
   r.updatedAt = ahora();
 }
@@ -325,7 +324,7 @@ export function memoryCandidateRepositories(
         const e = await datos();
         const r: Registro = {
           id: newId(), code: `CAN-0${e.siguiente++}`, firstName: '', lastName: '', phone: null, email: null, city: null, provinceCode: null, postalCode: null,
-          address: null, birthDate: null, nationality: null, status: 'new', source: null, idType: null, idNumber: null, idExpiresOn: null, ss: null,
+          address: null, birthDate: null, nationality: null, status: 'new', source: 'other', sourceRef: null, idType: null, idNumber: null, idExpiresOn: null, ss: null,
           ibanValue: null, health: null, mainProfileId: null, otherProfileIds: [], licenseIds: [], skillIds: [], languages: [], otherLicensesText: null,
           experienceYears: null, hasCar: false, experiences: [], education: [], shifts: [], availability: 'immediate', availableFrom: null, maxDistanceKm: null,
           availabilityNotes: null, autoExpiryNotice: true, consents: [], lastContactAt: null, createdAt: ahora(), createdByName: YO.name, updatedAt: ahora(),
@@ -396,8 +395,9 @@ export function memoryCandidateRepositories(
         const c: CandidateConsent = { id: newId(), purpose: d.purpose, noticeVersion: '1', givenAt, channel: d.channel, expiresAt: d.purpose === 'talent_pool' ? sumarMeses(givenAt, meses) : null, withdrawnAt: null };
         r.consents.push(c);
         log('candidate', r.id, null, 'update', `Consentimiento ${d.purpose === 'talent_pool' ? 'de bolsa' : 'de salud'} registrado`);
-        return delay(c);
+        return ficha(e, r);
       },
+      privacyNotices: async (purpose) => delay([{ id: id(780 + (purpose === 'talent_pool' ? 0 : 1)), purpose, version: '1', text: 'Texto de privacidad de ejemplo.', createdAt: '2026-01-01T10:00:00.000Z' }]),
       async withdrawConsent(consentId) {
         const e = await datos();
         const r = e.candidatos.find((x) => x.consents.some((c) => c.id === consentId));
@@ -466,7 +466,7 @@ export function memoryCandidateRepositories(
           discardReason: null, createdAt: ahora(),
         };
         e.candidaturas.unshift(a);
-        if (['new', 'to_contact', 'contacted', 'available'].includes(r.status)) r.status = 'selecting';
+        if (['new', 'to_contact', 'contacted', 'available'].includes(r.status)) r.status = 'in_selection';
         log('candidate', r.id, null, 'update', `Candidatura en ${p.code}`);
         return delay(a);
       },
@@ -517,7 +517,7 @@ export function memoryCandidateRepositories(
         Object.assign(a, { slotId: null, slotNumber: null });
         moverEtapa(a, 'interview', 'propuesta retirada');
         const r = buscar(e, a.candidateId);
-        if (r.status === 'onboarding') r.status = 'selecting';
+        if (r.status === 'onboarding') r.status = 'in_selection';
         return delay(a);
       },
     },

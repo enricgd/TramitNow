@@ -16,7 +16,7 @@ import {
   type Repositories,
   type ServiceRequestSummary,
 } from '../../data';
-import { codigoDeTipo } from '../../data/candidatosValores';
+import { codigoDeTipo, origenApi } from '../../data/candidatosValores';
 import { useSesion } from '../../sesion';
 import { esError, fechaHora, mensajeError } from '../comun/datos';
 import { ESTADOS as ESTADOS_PETICION } from '../peticiones/mapeo';
@@ -74,7 +74,7 @@ export function useCandidatos() {
   const { me, sucursal } = useSesion();
   const permisos = me?.permissions ?? [];
   const cat = useData(cargarCatalogos, []);
-  const lista = useData((r) => r.candidates.list({ limit: 500 }).then((p) => p.data.map((x) => candidatoVista(x))), []);
+  const lista = useData((r) => r.candidates.list({ limit: 200 }).then((p) => p.data.map((x) => candidatoVista(x))), []);
   const pets = useData(
     (r) => r.requests.list({ branchId: sucursal ?? undefined, status: 'active', limit: 200 }).then((p) => p.data, () => [] as ServiceRequestSummary[]),
     [sucursal],
@@ -117,13 +117,29 @@ export function useCandidatos() {
 
   // ---- Ficha ------------------------------------------------------------------------
 
+  /** Consentimiento de bolsa con el texto de privacidad vigente (la API lo exige). */
+  const textoVigente = async () => {
+    const textos = await repos.candidates.privacyNotices('talent_pool');
+    const vigente = [...textos].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    if (!vigente) throw new ApiError(409, 'conflicto', 'Falta publicar el texto de privacidad de la bolsa (lo publica quien tiene privacy.manage): sin él no se puede registrar el consentimiento');
+    return vigente;
+  };
+  const consentir = async (candidateId: string, documentId?: string | null, noticeId?: string) =>
+    repos.candidates.addConsent(candidateId, { purpose: 'talent_pool', noticeId: noticeId ?? (await textoVigente()).id, channel: 'paper', documentId: documentId ?? null });
+
   /** La ficha completa (queda en la auditoría de accesos), con sus documentos y contactos. */
   const abrir = useCallback(
     async (v: CandidatoVista) => {
       const [r, docs, contactos] = await Promise.all([
         repos.candidates.get(v._id),
         repos.documents.list({ entityType: 'candidate', entityId: v._id, limit: 200 }).then((p) => p.data, () => []),
-        repos.candidates.contacts(v._id).catch(() => []),
+        // Sin ruta de contactos en la API, el historial sale de la actividad de la ficha
+        repos.candidates.contacts(v._id).catch(() =>
+          repos.activity.list({ entityType: 'candidate', entityId: v._id, limit: 100 }).then(
+            (p) => p.data.map((a) => ({ id: a.id, occurredAt: a.occurredAt, userName: a.actorName, channel: 'Ficha', result: a.summary, note: null, nextAction: null })),
+            () => [],
+          ),
+        ),
       ]);
       return candidatoVista(r, { documentos: docs.map((d) => documentoVista(d, tipoPorTypeId)), contactos });
     },
@@ -145,12 +161,12 @@ export function useCandidatos() {
       const carnes = [ids.atributo('license', 'Permiso B'), f.carretillero ? ids.atributo('license', 'Carné de carretillero') : null].filter((x): x is string => !!x);
       const r = await repos.candidates.create({
         firstName: f.name.trim(), lastName: f.lastName.trim(), phone: f.phone || null, email: f.email || null, city: f.city || null,
-        source: f.source ?? 'Alta rápida', mainProfileId: f.category ? ids.perfil(f.category) : null, attributeIds: carnes,
+        source: origenApi(f.source), mainProfileId: f.category ? ids.perfil(f.category) : null, attributeIds: carnes,
         experienceYears: Number(f.experience) || null, status: 'available',
         ...(f.dni ? { idDocumentType: /^[XYZ]/i.test(f.dni) ? 'nie' : 'dni', idDocumentNumber: f.dni.toUpperCase(), idDocumentExpiresOn: f.dniExpiry || null } : {}),
         ...(f.nss ? { ssNumber: f.nss } : {}),
       } as Parameters<Repositories['candidates']['create']>[0]);
-      if (f.rgpd) await repos.candidates.addConsent(r.id, { purpose: 'talent_pool', channel: 'paper' }).catch(() => null);
+      if (f.rgpd) await consentir(r.id).catch(() => null);
       lista.reload();
       return candidatoVista(await repos.candidates.get(r.id));
     },
@@ -186,7 +202,12 @@ export function useCandidatos() {
 
   const contactar = useCallback(
     async (v: CandidatoVista, d: { channel: string; result: string; note?: string | null; nextAction?: string | null }) => {
-      await repos.candidates.addContact(v._id, d);
+      // Sin ruta de contactos en la API: queda la fecha del último contacto (y «Contactado» si era nuevo)
+      await repos.candidates.addContact(v._id, d).catch(async (e) => {
+        if (!(e instanceof ApiError) || ![404, 405, 501].includes(e.status)) throw e;
+        const estado = v.status === 'Nuevo' || v.status === 'Pendiente de contactar' ? { status: 'contacted' as const } : {};
+        await repos.candidates.update(v._id, { lastContactAt: new Date().toISOString(), ...estado });
+      });
       return recargarFicha(v);
     },
     [abrir],
@@ -198,12 +219,14 @@ export function useCandidatos() {
     async (v: CandidatoVista, d: { tipo: string; archivo: File; caducidad?: string | null; sustituye?: string | null }) => {
       const typeId = typeIdDe(d.tipo);
       if (!typeId) throw new ApiError(422, 'validacion', `No existe el tipo de documento «${d.tipo}» en la tabla maestra`);
+      // El consentimiento firmado se registra con el texto de privacidad vigente: se comprueba antes de subir nada
+      const texto = d.tipo === 'RGPD' ? await textoVigente() : null;
       const doc = await repos.documents.upload({ entityType: 'candidate', entityId: v._id, typeId, name: d.archivo.name, file: d.archivo, expiresOn: d.caducidad || null });
       // Renovar: el nuevo sustituye al anterior
       if (d.sustituye) await repos.documents.remove(d.sustituye).catch(() => null);
       // El documento de identidad lleva su caducidad a la ficha; el consentimiento firmado, a los consentimientos
       if (d.tipo === 'DNI/NIE' && d.caducidad) await repos.candidates.update(v._id, { idDocumentExpiresOn: d.caducidad });
-      if (d.tipo === 'RGPD') await repos.candidates.addConsent(v._id, { purpose: 'talent_pool', channel: 'paper', documentId: doc.id }).catch(() => null);
+      if (texto) await consentir(v._id, doc.id, texto.id);
       return recargarFicha(v);
     },
     [abrir, c],
@@ -234,7 +257,7 @@ export function useCandidatos() {
   /** Marca el aviso de renovación (el correo real llega más adelante). */
   const avisarRenovacion = useCallback(async (v: CandidatoVista, docIds: string[], nota: string) => {
     await Promise.all(docIds.map((x) => repos.documents.renewalNotice(x)));
-    await repos.candidates.addContact(v._id, { channel: 'Email', result: 'Aviso de renovación', note: nota }).catch(() => null);
+    await repos.candidates.addContact(v._id, { channel: 'Email', result: 'Aviso de renovación', note: nota }).catch(() => null); // sin ruta de contactos, queda en cada documento
     return recargarFicha(v);
   }, [abrir]);
 

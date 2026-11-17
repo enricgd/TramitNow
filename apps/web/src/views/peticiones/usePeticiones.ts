@@ -155,7 +155,7 @@ export function usePeticiones() {
   }, []);
   /** La bolsa de candidatos para «Proponer candidato» (sin abrir fichas: no queda en la auditoría). */
   const bolsa = useCallback(async (perfil: string) => {
-    const l = await repos.candidates.list({ limit: 300 }).then((x) => x.data, () => [] as CandidateSummary[]);
+    const l = await repos.candidates.list({ limit: 200 }).then((x) => x.data, () => [] as CandidateSummary[]);
     return l.map((c) => ({
       id: c.id, nombre: `${c.firstName} ${c.lastName}`, puestoPrincipal: c.mainProfile?.name ?? '', ubicacion: c.city ?? '', scoring: '—', origen: c.source ?? 'Bolsa',
       matchPosicion: [c.mainProfile ? perfilPuesto(c.mainProfile.name) : '', ...c.otherProfileNames.map(perfilPuesto)].filter((x) => x === perfil || x),

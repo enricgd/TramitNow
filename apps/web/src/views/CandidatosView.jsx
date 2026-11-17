@@ -963,11 +963,7 @@ export default function CandidatosView() {
                         </Select>
                         <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
                             <option value="ALL">Todos los orígenes</option>
-                            <option value="InfoJobs">InfoJobs</option>
-                            <option value="LinkedIn">LinkedIn</option>
-                            <option value="Monster">Monster</option>
-                            <option value="Portal Web ETT">Portal Web ETT</option>
-                            <option value="Alta Manual">Alta manual</option>
+                            {['Portal Web ETT', 'InfoJobs', 'Indeed', 'LinkedIn', 'Base de datos', 'Recomendación', 'Presencial', 'Otro'].map(o => <option key={o} value={o}>{o}</option>)}
                         </Select>
                         {hayFiltros && (
                             <Button variant="ghost" size="sm" icon={X} onClick={limpiarFiltros}>Limpiar</Button>

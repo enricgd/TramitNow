@@ -1,7 +1,7 @@
 // Traducción entre los candidatos de la API (fase 6, fase6-backend.md) y la forma que usa CandidatosView.jsx (la del
 // diseñador). En la vista un candidato se identifica por su código (`id`: «CAN-0101»); el id de la API va en `_id`.
 // Lo sensible (documento de identidad, NSS, IBAN) llega y se queda enmascarado: nunca se guarda el valor completo.
-import { ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, TIPO_DOCUMENTO, TURNO, clave } from '../../data/candidatosValores';
+import { ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, ORIGEN, TIPO_DOCUMENTO, TURNO, clave } from '../../data/candidatosValores';
 import type {
   Application,
   Candidate,
@@ -70,7 +70,7 @@ export function candidatoVista(r: CandidateSummary & Partial<Candidate>, extra: 
     _id: r.id,
     _ficha: !!r.attributes,
     name: r.firstName,
-    lastName: r.lastName,
+    lastName: r.lastName ?? '',
     dni: r.idDocument.masked ?? '',
     _tipoDocumento: r.idDocument.type,
     dniExpiry: r.idDocument.expiresOn ?? '',
@@ -86,8 +86,8 @@ export function candidatoVista(r: CandidateSummary & Partial<Candidate>, extra: 
     rgpdStatus: RGPD[r.poolConsent.state],
     rgpdSignedDate: consentimiento ? fecha(consentimiento.givenAt) : null,
     _consentimiento: consentimiento ?? null,
-    source: r.source ?? '',
-    sourceId: '',
+    source: ORIGEN[r.source] ?? 'Otro',
+    sourceId: r.sourceRef ?? '',
     lastContactDate: fecha(r.lastContactAt),
     lastContactBy: ultimo?.userName ?? '',
     lastContactType: ultimo?.channel ?? '',
@@ -112,7 +112,7 @@ export function candidatoVista(r: CandidateSummary & Partial<Candidate>, extra: 
     direccion: r.address ?? '',
     codigoPostal: r.postalCode ?? '',
     experiencias: (r.experiences ?? []).map((x) => ({ empresa: x.company, puesto: x.position, desde: x.from ?? '', hasta: x.to ?? '', funciones: x.duties ?? '' })),
-    formacion: (r.education ?? []).map((x) => ({ titulo: x.title, centro: x.center ?? '', anio: x.year ?? '' })),
+    formacion: (r.education ?? []).map((x) => ({ titulo: x.title, centro: x.center ?? '', anio: x.year ? String(x.year) : '' })),
     documents: docs,
     communications: (extra.contactos ?? []).map(contactoVista),
     candidaturas,
@@ -148,7 +148,7 @@ export function candidatoApi(
     const provincia = Object.entries(PROVINCIAS_CP as Record<string, string>).find(([, n]) => n === d.province)?.[0] ?? null;
     return {
       firstName: d.name.trim(),
-      lastName: d.lastName.trim(),
+      lastName: d.lastName.trim() || null,
       phone: vacio(d.phone),
       email: vacio(d.email),
       city: vacio(d.city),
@@ -185,7 +185,7 @@ export function candidatoApi(
       experienceYears: Number(d.experienceYears) || 0,
       hasCar: !!d.hasCar,
       experiences: d.experiencias.filter((x) => x.empresa || x.puesto).map((x) => ({ company: x.empresa, position: x.puesto, from: vacio(x.desde), to: vacio(x.hasta), duties: vacio(x.funciones) })),
-      education: d.formacion.filter((x) => x.titulo).map((x) => ({ title: x.titulo, center: vacio(x.centro), year: vacio(x.anio) })),
+      education: d.formacion.filter((x) => x.titulo).map((x) => ({ title: x.titulo, center: vacio(x.centro), year: Number(x.anio) || null })),
     };
   }
   return {

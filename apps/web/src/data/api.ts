@@ -3,7 +3,7 @@
 import { supabase } from '../auth/session';
 import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import type { CatalogRepository, Repositories } from './repositorios';
-import { ApiError, type DocumentUpload, type Application, type CandidateCatalogItem, type CandidateContact, type RequestUseCase, type ServiceRequest, type StoredDocument } from './tipos';
+import { ApiError, type DocumentUpload, type Application, type CandidateCatalogItem, type CandidateContact, type PrivacyNotice, type RequestUseCase, type ServiceRequest, type StoredDocument } from './tipos';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -211,6 +211,7 @@ export function apiRepositories(): Repositories {
       exportData: (id) => get(`/candidates/${id}/export`),
       addConsent: (id, body) => request('POST', `/candidates/${id}/consents`, { body }),
       withdrawConsent: (consentId) => request('POST', `/candidate-consents/${consentId}/withdraw`),
+      privacyNotices: (purpose) => get<PrivacyNotice[] | { data: PrivacyNotice[] }>('/privacy-notices', { purpose }).then((r) => (Array.isArray(r) ? r : r.data)),
       contacts: (id) => get<CandidateContact[] | { data: CandidateContact[] }>(`/candidates/${id}/contacts`).then((r) => (Array.isArray(r) ? r : r.data)),
       addContact: (id, body) => request('POST', `/candidates/${id}/contacts`, { body }),
     },
