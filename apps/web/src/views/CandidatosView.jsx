@@ -554,9 +554,9 @@ export default function CandidatosView() {
     // Calculate filtered candidates
     // Los filtros van al servidor (la bolsa puede ser grande); la búsqueda, un momento después de dejar de escribir
     useEffect(() => {
-        const t = setTimeout(() => can.filtrar({ q: searchQuery, estado: statusFilter, origen: sourceFilter, perfil: categoryFilter, atributo: skillFilter, vista: savedPreset }), 300);
+        const t = setTimeout(() => can.filtrar({ q: searchQuery, estado: statusFilter, origen: sourceFilter, perfil: categoryFilter, atributo: skillFilter, documentacion: docFilter, vista: savedPreset }), 300);
         return () => clearTimeout(t);
-    }, [searchQuery, statusFilter, sourceFilter, categoryFilter, skillFilter, savedPreset, can.catalogos]);
+    }, [searchQuery, statusFilter, sourceFilter, categoryFilter, skillFilter, docFilter, savedPreset, can.catalogos]);
     // Búsqueda exacta por DNI o NIE: la hace la API (sin descifrar) y lo encontrado se añade a la lista si no estaba
     const [porDocumento, setPorDocumento] = useState([]);
     useEffect(() => {
@@ -572,13 +572,12 @@ export default function CandidatosView() {
     }, [searchQuery]);
     const filteredCandidates = useMemo(() => {
         return candidates.filter(can => {
-            // La búsqueda (también por sinónimos), el perfil y los carnés los filtra el servidor (can.filtrar).
+            // La búsqueda (también por sinónimos), el perfil, los carnés y la documentación los filtra el servidor (can.filtrar).
             // El DNI llega tapado: lo busca la API por su huella (porDocumento).
             if (/^[XYZ]?\d{7,8}[A-Z]$/i.test(searchQuery.trim()) && !porDocumento.includes(can._id)) return false;
 
             // Preset filters
             if (savedPreset === 'AVAILABLE_NOW' && can.status !== 'Disponible') return false;
-            if (savedPreset === 'DOC_PENDING' && (can.dniStatus === 'OK' && can.rgpdStatus === 'Vigente' && can.nssStatus === 'OK')) return false;
             if (savedPreset === 'ASSIGNED' && can.status !== 'Asignado/En misión') return false;
 
             // Status
@@ -587,15 +586,10 @@ export default function CandidatosView() {
             // Source
             if (sourceFilter !== 'ALL' && can.source !== sourceFilter) return false;
 
-            // Doc Filter
-            if (docFilter === 'DOC_OK' && (can.dniStatus !== 'OK' || can.rgpdStatus !== 'Vigente' || can.nssStatus !== 'OK')) return false;
-            if (docFilter === 'DOC_ALERT' && (can.dniStatus === 'OK' && can.nssStatus === 'OK' && docsPorRenovar(can).length === 0)) return false;
-            if (docFilter === 'RGPD_ALERT' && (can.rgpdStatus === 'Vigente')) return false;
-
 
             return true;
         });
-    }, [candidates, searchQuery, statusFilter, sourceFilter, docFilter, categoryFilter, skillFilter, savedPreset, catalogos, porDocumento]);
+    }, [candidates, searchQuery, statusFilter, sourceFilter, savedPreset, porDocumento]);
 
     // Handlers
     const handleSelectAll = (e) => {
@@ -839,6 +833,7 @@ export default function CandidatosView() {
         );
     };
 
+    const cuentaDoc = (k) => (can.facetas?.documentacion ? ` (${can.facetas.documentacion[k]})` : '');
     const conDocPendiente = (c) => c.dniStatus !== 'OK' || c.nssStatus !== 'OK' || c.rgpdStatus !== 'Vigente';
     const hayFiltros = searchQuery || statusFilter !== 'ALL' || docFilter !== 'ALL' || sourceFilter !== 'ALL' || categoryFilter !== 'ALL' || skillFilter !== 'ALL' || savedPreset !== 'ALL';
     const limpiarFiltros = () => {
@@ -900,7 +895,7 @@ export default function CandidatosView() {
                     <KpiTile
                         label="Documentación o RGPD pendiente"
                         tone="warning"
-                        value={candidates.filter(conDocPendiente).length}
+                        value={can.facetas?.documentacion?.pending ?? candidates.filter(conDocPendiente).length}
                         active={savedPreset === 'DOC_PENDING'}
                         onClick={() => aplicarVista('DOC_PENDING')}
                     />
@@ -953,9 +948,9 @@ export default function CandidatosView() {
                         </Select>
                         <Select value={docFilter} onChange={(e) => setDocFilter(e.target.value)}>
                             <option value="ALL">Toda la documentación</option>
-                            <option value="DOC_OK">Documentación y RGPD correctos</option>
-                            <option value="DOC_ALERT">DNI o NSS pendiente o caducado</option>
-                            <option value="RGPD_ALERT">RGPD pendiente o caducado</option>
+                            <option value="DOC_OK">Documentación y RGPD correctos{cuentaDoc('ok')}</option>
+                            <option value="DOC_ALERT">DNI o NSS pendiente o caducado{cuentaDoc('idOrSsPending')}</option>
+                            <option value="RGPD_ALERT">RGPD pendiente o caducado{cuentaDoc('privacyPending')}</option>
                         </Select>
                         <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
                             <option value="ALL">Todos los orígenes</option>

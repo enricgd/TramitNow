@@ -1245,7 +1245,8 @@ export type CandidateQuery = PageQuery & {
   /** Uno o varios (carné, habilidad o idioma) separados por comas: deben cumplirse todos. */
   attributeId?: string;
   source?: string;
-  documents?: 'alerts' | 'missing';
+  /** ok, pending, id_or_ss_pending y privacy_pending: los filtros de documentación de la lista (sin descifrar). */
+  documents?: 'alerts' | 'missing' | 'ok' | 'pending' | 'id_or_ss_pending' | 'privacy_pending';
   poolConsent?: 'valid' | 'expiring' | 'expired' | 'none';
   /** Búsqueda exacta por la huella del documento. */
   idDocumentNumber?: string;
@@ -1265,6 +1266,8 @@ export type CandidateFacets = {
   byStatus: Record<string, number>;
   documentAlerts: number;
   poolConsentExpired: number;
+  /** Los mismos totales que el listado con documents=ok|pending|id_or_ss_pending|privacy_pending. */
+  documentation?: { ok: number; pending: number; idOrSsPending: number; privacyPending: number };
   profiles: { id: string; name: string; group: string | null; count: number }[];
   attributes: { id: string; catalog: CandidateCatalog; name: string; group: string | null; count: number }[];
 };

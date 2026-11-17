@@ -210,6 +210,9 @@ página y entra sin red.
 - Documentos: los de siempre con `entityType: 'candidate'`, caducidad, validar, rechazar con motivo y aviso de
   renovación (el correo real, más adelante). Subir el consentimiento firmado registra el consentimiento de bolsa.
 - La bolsa es de toda la ETT; las peticiones del asistente «Asignar a petición», las de la sucursal de la cabecera.
+- La lista filtra en el servidor (búsqueda con sinónimos, estado, origen, perfil, carné/habilidad/idioma y
+  documentación con `documents=ok|pending|id_or_ss_pending|privacy_pending`); los indicadores y los desplegables
+  cuentan con `/v1/candidate-facets`. La demo calcula lo mismo en `memoriaCandidatos.ts`.
 
 ## api
 

@@ -5,7 +5,7 @@
 // vite.config.ts): se crean la primera vez que se usan.
 import { ETAPA, ESTADO_CANDIDATO, INCORPORACION, NIVEL, TURNO, canalApi, clave, codigoDeTipo, enmascarar, origenApi } from './candidatosValores';
 import { delay, id, newId, page } from './memoriaBase';
-import { alDescargarDocumentoDeCandidato, documentosDeEntidad, log, quitarDocumentoDemo, sembrarDocumentos } from './memoriaEmpresas';
+import { alDescargarDocumentoDeCandidato, codigoTipoDocumento, documentosDeEntidad, log, quitarDocumentoDemo, sembrarDocumentos } from './memoriaEmpresas';
 import { ejemploCandidatos } from './memoriaCandidatosEjemplo';
 import { liberarPlaza, ocuparPlaza, peticionDemo } from './memoriaPeticiones';
 import type { Repositories } from './repositorios';
@@ -207,6 +207,21 @@ function registrar(e: Estado, action: string, r: Registro, details: Record<strin
 const deItem = (e: Estado, itemId: string) => e.items.find((x) => x.id === itemId);
 const documentosDe = async (candidateId: string) => documentosDeEntidad('candidate', candidateId);
 
+/** Estado de la documentación como lo calcula la API (documents=ok|pending|id_or_ss_pending|privacy_pending). */
+async function documentacion(r: Registro) {
+  const docs = await documentosDe(r.id);
+  const escaneado = docs.some((d) => d.status !== 'rejected' && codigoTipoDocumento(d.typeId) === 'candidate_id_document');
+  const dId = diasPara(r.idExpiresOn);
+  const idOrSsPending = !r.idNumber || !escaneado || (dId !== null && dId < 0) || !r.ss;
+  const pool = r.consents.filter((c) => c.purpose === 'talent_pool' && !c.withdrawnAt).sort((a, b) => b.givenAt.localeCompare(a.givenAt))[0];
+  const dPool = pool?.expiresAt ? diasPara(pool.expiresAt.slice(0, 10)) : null;
+  const privacyPending = !pool || (dPool !== null && dPool < 0);
+  const caducados = docs.filter((d) => d.expiresOn && (diasPara(d.expiresOn) ?? 0) < 0).length;
+  return { idOrSsPending, privacyPending, pending: idOrSsPending || privacyPending, ok: !idOrSsPending && !privacyPending && caducados === 0 };
+}
+type FiltroDocumentacion = 'ok' | 'pending' | 'id_or_ss_pending' | 'privacy_pending';
+const CAMPO_DOCUMENTACION = { ok: 'ok', pending: 'pending', id_or_ss_pending: 'idOrSsPending', privacy_pending: 'privacyPending' } as const;
+
 async function resumen(e: Estado, r: Registro): Promise<CandidateSummary> {
   const docs = await documentosDe(r.id);
   const pool = r.consents.filter((c) => c.purpose === 'talent_pool' && !c.withdrawnAt).sort((a, b) => b.givenAt.localeCompare(a.givenAt))[0];
@@ -319,10 +334,12 @@ export function memoryCandidateRepositories(
               (!q.status || r.status === q.status) && (!q.source || r.source === q.source) &&
               (!q.profileId || r.mainProfileId === q.profileId || r.otherProfileIds.includes(q.profileId)) &&
               atributos.every((x) => r.licenseIds.includes(x) || r.skillIds.includes(x) || r.languages.some((l) => l.id === x)))
-            .map((r) => resumen(e, r)),
+            .map(async (r) => ({ f: await resumen(e, r), d: await documentacion(r) })),
         );
-        const lista = filas.filter((f) =>
-          !q.documents || (q.documents === 'alerts' ? f.documentAlerts.expired + f.documentAlerts.expiring > 0 : f.idDocument.state === 'missing' || f.poolConsent.state === 'none'));
+        const lista = filas.filter(({ f, d }) =>
+          !q.documents || (q.documents === 'alerts' ? f.documentAlerts.expired + f.documentAlerts.expiring > 0
+            : q.documents === 'missing' ? f.idDocument.state === 'missing' || f.poolConsent.state === 'none'
+            : d[CAMPO_DOCUMENTACION[q.documents as FiltroDocumentacion]])).map(({ f }) => f);
         return page(lista, q);
       },
       async get(candidateId) {
@@ -359,6 +376,7 @@ export function memoryCandidateRepositories(
         const e = await datos();
         const vivos = e.candidatos.filter((r) => !r.anonymizedAt);
         const filas = await Promise.all(vivos.map((r) => resumen(e, r)));
+        const estados = await Promise.all(vivos.map((r) => documentacion(r)));
         const cuenta = (pred: (r: Registro) => boolean) => vivos.filter(pred).length;
         const byStatus: Record<string, number> = {};
         for (const r of vivos) byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
@@ -367,6 +385,12 @@ export function memoryCandidateRepositories(
           byStatus,
           documentAlerts: filas.filter((f) => f.documentAlerts.expired + f.documentAlerts.expiring > 0).length,
           poolConsentExpired: filas.filter((f) => f.poolConsent.state === 'expired').length,
+          documentation: {
+            ok: estados.filter((x) => x.ok).length,
+            pending: estados.filter((x) => x.pending).length,
+            idOrSsPending: estados.filter((x) => x.idOrSsPending).length,
+            privacyPending: estados.filter((x) => x.privacyPending).length,
+          },
           profiles: e.items.filter((x) => x.catalog === 'candidate_profile')
             .map((x) => ({ id: x.id, name: x.name, group: x.group, count: cuenta((r) => r.mainProfileId === x.id || r.otherProfileIds.includes(x.id)) }))
             .filter((x) => x.count > 0),

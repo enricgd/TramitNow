@@ -23,6 +23,9 @@ import { esError, fechaHora, mensajeError } from '../comun/datos';
 import { ESTADOS as ESTADOS_PETICION } from '../peticiones/mapeo';
 import { candidatoApi, candidatoVista, catalogosVista, documentoVista, tipoDocumentoVista, type CandidatoVista } from './mapeo';
 
+/** Desplegable de documentación de la vista → `documents` de la API. */
+const DOCUMENTACION: Record<string, CandidateQuery['documents']> = { DOC_OK: 'ok', DOC_ALERT: 'id_or_ss_pending', RGPD_ALERT: 'privacy_pending' };
+
 export { mensajeError };
 
 type Catalogos = { perfiles: CandidateCatalogItem[]; carnes: CandidateCatalogItem[]; habilidades: CandidateCatalogItem[]; idiomas: CandidateCatalogItem[]; tiposDocumento: CatalogItem[] };
@@ -96,6 +99,7 @@ export function useCandidatos() {
       disponibles: f.byStatus.available ?? 0,
       enMision: f.byStatus.in_mission ?? 0,
       conAlertas: f.documentAlerts,
+      documentacion: f.documentation ?? null,
       perfiles: Object.fromEntries(f.profiles.map((x) => [x.name, x.count])) as Record<string, number>,
       atributos: Object.fromEntries(f.attributes.map((x) => [`${PREFIJO[x.catalog]}:${x.name}`, x.count])) as Record<string, number>,
     };
@@ -103,20 +107,24 @@ export function useCandidatos() {
 
   /**
    * Filtros de la vista → consulta al servidor: búsqueda (también por sinónimos), estado, origen, perfil, carné,
-   * habilidad o idioma. «Disponibles ya» y «En misión» son estados. Los de documentación siguen en la vista.
+   * habilidad o idioma, y documentación. «Disponibles ya» y «En misión» son estados; «Documentación o RGPD pendiente»,
+   * documents=pending.
    */
   const filtrar = useCallback(
-    (f: { q: string; estado: string; origen: string; perfil: string; atributo: string; vista: string }) => {
+    (f: { q: string; estado: string; origen: string; perfil: string; atributo: string; documentacion: string; vista: string }) => {
       const estado = f.vista === 'AVAILABLE_NOW' ? 'available' : f.vista === 'ASSIGNED' ? 'in_mission' : f.estado !== 'ALL' ? clave(ESTADO_CANDIDATO, f.estado) : undefined;
       const [tipo, nombre] = f.atributo !== 'ALL' ? f.atributo.split(':') : [];
       const lista = tipo === 'carne' ? c?.carnes : tipo === 'habilidad' ? c?.habilidades : tipo === 'idioma' ? c?.idiomas : undefined;
       const q = f.q.trim();
+      // Filtro de documentación de la vista → el de la API; si también está el indicador, manda el desplegable
+      const documentos = DOCUMENTACION[f.documentacion] ?? (f.vista === 'DOC_PENDING' ? 'pending' : undefined);
       const siguiente: CandidateQuery = {
         ...(q && !/^[XYZ]?\d{7,8}[A-Z]$/i.test(q) ? { q } : {}),
         ...(estado ? { status: estado } : {}),
         ...(f.origen !== 'ALL' ? { source: origenApi(f.origen) } : {}),
         ...(f.perfil !== 'ALL' ? { profileId: c?.perfiles.find((x) => x.name === f.perfil)?.id } : {}),
         ...(lista ? { attributeId: lista.find((x) => x.name === nombre)?.id } : {}),
+        ...(documentos ? { documents: documentos } : {}),
       };
       setConsulta((prev) => (JSON.stringify(prev) === JSON.stringify(siguiente) ? prev : siguiente));
     },
