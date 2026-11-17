@@ -544,6 +544,49 @@ y guarda la versión y el periodo usados. Queda para más adelante: avisar a la 
 que usa, qué presupuestos enviados o aceptados quedan con tablas antiguas, y enlazar `professional_categories` con las
 categorías del convenio global (`agreement_category_id`), que encaja mejor con Peticiones y Contratos.
 
+## Fase 5: peticiones
+
+Migración `20261117000300_requests.sql`; pantalla `apps/web/src/views/PeticionesView.jsx` y notas
+`design/cambios/2026-10-28-peticiones-*`, `2026-11-09-peticiones-buscador-y-documentos.md` y
+`2026-11-09-reunion-cpd-presupuestos.md`. Tests: `db/tests/19_peticiones.sql`, `apps/api/test/peticiones.test.ts` y
+`apps/api/test/peticiones-horario.test.ts`.
+
+| Tabla | Qué |
+|---|---|
+| `requests` | Una petición = **un puesto de una versión aceptada** de un presupuesto no obsoleto (un puesto puede tener varias: una por turno o por fechas). Número de la serie `request` de su sociedad. Al crearla, **la base de datos copia** del puesto nombre, descripción, convenio, versión del convenio global y su periodo, categoría (con su código), nivel, mínimo del convenio, salario por hora, tarifa, conceptos extra (salario y tarifa) y el cálculo completo (`calc_result`); no cambian nunca. Además: plazas (`positions_count`), fechas, turno, jornada, horario semanal (jsonb) y horas por semana, centro y firmante del cliente, responsable, sucursal, referencia de pedido, tareas, cualificación, riesgos, EPIs, carnés, supuesto de utilización y justificación, estado (con motivo de cancelación) y el CPD previo |
+| `request_slots` | Una fila por plaza, que mantiene la base de datos con `positions_count` (subir añade, bajar quita las últimas por cubrir). Hoy todas `open`; `reserved`, `covered`, `started` y `left` llegan con candidatos (fase 6) y contratos y altas (fase 7) |
+
+Estados: `new`, `publishing`, `selecting`, `covered`, `in_progress`, `closed` y `cancelled`. Se cambian a mano y
+libremente, como en el pipeline (la nota de diseño deja por confirmar si «Cubierta» y «En curso» serán automáticos).
+Cancelar exige motivo; al salir de cancelada se borra. Cerrada o cancelada solo admite cambiar el estado (reabrir).
+Las peticiones no se borran.
+
+Reglas en la base de datos:
+
+- Solo de un puesto de una versión aceptada de un presupuesto no obsoleto (`TN409`). Origen y copia no cambian (`TN422`).
+- **CPD previo**: `pre_cpd_status` (`pending`, `generated`, `sent`, `reviewed`; enviado y revisado se marcan a mano,
+  sin firma electrónica). Si después de generarlo cambia algo de lo que sale en él (centro, fechas, plazas, horario,
+  tareas, riesgos, supuesto...), `pre_cpd_outdated` pasa a true. Las comprobaciones para generarlo están en la API.
+- **Art. 11 de la Ley 14/1994 con tablas nuevas**: la petición conserva el salario del presupuesto, pero
+  `private.request_current_agreement()` da el mínimo de la versión publicada vigente para la misma categoría (por
+  código). Si queda por encima del salario copiado, la API lo avisa y no deja generar el CPD.
+- Quien tiene `requests.manage` ve los presupuestos **aceptados** de su sucursal (para elegir el puesto), aunque no
+  tenga `module.comercial` (`private.quote_visible_for_requests`, en la RLS de `quotes`).
+- Documentos: `documents.entity_type` admite `request`. Tipos de serie nuevos (`private.seed_request_catalogs`): «CPD
+  previo (condiciones de la puesta a disposición)», «Pedido u orden de compra del cliente», «Evaluación de riesgos del
+  cliente» y «Otro documento».
+- Historial: `request`, con resúmenes propios («Pasa a en selección», «Cancelada: motivo», «CPD previo generado»,
+  «CPD previo enviado al cliente», «CPD previo revisado por el cliente»).
+
+Permiso nuevo: `requests.manage` (admin, director de zona, comercial, selección y laboral). Leer: `requests.manage`,
+`module.comercial`, `module.seleccion` o `module.laboral`, en sus sucursales. Costes y margen de la copia del cálculo:
+`quotes.view_costs` (la API los oculta sin él).
+
+**Art. 8 de la Ley 14/1994 (huelga, trabajos especialmente peligrosos, despidos previos): no implementado, pendiente de
+decidir.** Bloquea las fases 7 a 9. La columna `requests.legal_checks` (jsonb, siempre null) queda reservada para guardar
+el resultado de esos controles; si hacen falta datos del cliente (despidos en los 12 meses anteriores, huelga en
+curso) o del puesto (actividades del RD 216/1999, anexo), irán en `clients` y en la petición.
+
 ## Probar en local
 
 Requisitos: Docker Desktop. No hace falta `psql` en el Mac.
@@ -654,6 +697,10 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 8. Presupuestos (desde la fase 4): solo `migrate.sh`; la migración da a cada ETT los permisos, los motivos de rechazo y
    los tipos de documento de serie. Para el PDF de la propuesta, la API necesita Storage (ya configurado en la fase 1).
 
+9. Peticiones (desde la fase 5): solo `migrate.sh`; la migración da a cada ETT el permiso `requests.manage` y los tipos
+   de documento del servicio. Para el CPD previo, cada sociedad necesita en Mi ETT el número de autorización y el
+   representante legal con su documento.
+
 ### ETT de demostración y primer usuario
 
 1. En Supabase Studio (`http://192.168.2.8:8000`): Authentication > Add user > Create new user, con
@@ -689,7 +736,12 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
   internos y coeficientes de los extras por defecto, [por confirmar]. Si el margen mínimo es por puesto o sobre el total
   (hoy por puesto, como la pantalla). Puestos «Otro / personalizado» sin tabla de convenio: no se puede
   comprobar el art. 11 (hoy se permite enviarlos; ¿bloquear el envío?). Recordatorio al cliente y tarea de
-  aprobación en Inicio (fase 12). Crear peticiones desde un presupuesto aceptado (fase 5).
+  aprobación en Inicio (fase 12).
+
+- Fase 5: lista de supuestos de utilización y sus duraciones orientativas, [verificar] con quien lleve lo laboral.
+  Controles del art. 8 de la Ley 14/1994 (pendiente de decidir; bloquea las fases 7 a 9). Si «Cubierta» y «En curso»
+  pasan solos (al cubrir todas las plazas y al llegar el inicio). Firma electrónica y envío real del CPD (proveedor
+  pendiente). Portales de empleo y portales propios de la ETT. Candidatos, CPD por persona, contratos y altas (fases 6 y 7).
 
 - Fase 3: el margen mínimo, ¿solo en %, o también en €/h? (hoy %). Plazo máximo entre el boletín y la publicación en
   TramitNOW, y quién del equipo de contenidos extrae y quién revisa. Avisos de vencimiento de la garantía y del
