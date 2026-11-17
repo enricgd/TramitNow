@@ -64,6 +64,17 @@ import type {
   NumberSeriesInput,
   NumberSeriesQuery,
   TenantSettings,
+  AgreementCategory,
+  Quote,
+  QuoteAgreementDefaults,
+  QuoteAgreementDefaultsQuery,
+  QuoteCreate,
+  QuotePositionInput,
+  QuoteQuery,
+  QuoteReview,
+  QuoteSummary,
+  QuoteVersion,
+  QuoteVersionInput,
   ContractKey,
   ContractType,
   ContractTypeQuery,
@@ -244,6 +255,54 @@ export interface Repositories {
   tenantSettings: {
     get(): Promise<TenantSettings>;
     update(data: Partial<TenantSettings>): Promise<TenantSettings>;
+  };
+
+  /**
+   * Presupuestos (fase 4, contrato de fase4-backend.md). El presupuesto tiene versiones; lo que se edita es la versión
+   * actual (solo en borrador o en preparación; si no, 409). Los costes los calcula el servidor (`calculation`).
+   * Leer: `module.comercial` o `quotes.manage`; escribir: `quotes.manage`; aprobar el margen: `quotes.approve_margin`.
+   */
+  quotes: {
+    list(query?: QuoteQuery): Promise<Page<QuoteSummary>>;
+    get(id: string): Promise<Quote>;
+    /** v1 en borrador con número de la serie de presupuestos, los costes internos y extras de siempre. */
+    create(data: QuoteCreate): Promise<Quote>;
+    /** Empresa y sucursal (solo con una única versión en borrador). */
+    update(id: string, data: { clientId?: string | null; branchId?: string }): Promise<Quote>;
+    /** Copia sin empresa (número nuevo). */
+    duplicate(id: string): Promise<Quote>;
+    /** Pasa a obsoleto con motivo y crea uno nuevo copiado (número nuevo). */
+    makeObsolete(id: string, reason: string): Promise<{ obsolete: Quote; created: Quote }>;
+    /** Valores del convenio para un puesto (tabla salarial vigente de la categoría). */
+    agreementDefaults(query: QuoteAgreementDefaultsQuery): Promise<QuoteAgreementDefaults>;
+    /** Categorías de la tabla vigente de un convenio de la ETT (las de su convenio del catálogo global). */
+    agreementCategories(collectiveAgreementId: string): Promise<AgreementCategory[]>;
+  };
+  quoteVersions: {
+    /** También las anteriores (para comparar). */
+    get(id: string): Promise<QuoteVersion>;
+    update(id: string, data: QuoteVersionInput): Promise<QuoteVersion>;
+    /** Los puestos se guardan uno a uno; cada operación devuelve la versión entera, recalculada. */
+    addPosition(versionId: string, data: QuotePositionInput): Promise<QuoteVersion>;
+    updatePosition(positionId: string, data: QuotePositionInput): Promise<QuoteVersion>;
+    removePosition(positionId: string): Promise<QuoteVersion>;
+    /** Vuelve a poner los valores del convenio en los campos indicados (todos si no se indica). */
+    resetPositionFromAgreement(positionId: string, fields?: string[]): Promise<QuoteVersion>;
+    requestApproval(id: string, notes?: string | null): Promise<QuoteVersion>;
+    approve(id: string, notes?: string | null): Promise<QuoteVersion>;
+    /** «Pedir cambios». */
+    rejectApproval(id: string, notes: string): Promise<QuoteVersion>;
+    /** Comprobaciones antes de enviar (las mismas que hace `send`). */
+    review(id: string): Promise<QuoteReview>;
+    /** 422 `validacion` (con lo que falta en `details`), 409 `requiere_aprobacion` o 422 `salario_bajo_convenio`. */
+    send(id: string): Promise<QuoteVersion>;
+    pendingSignature(id: string): Promise<QuoteVersion>;
+    accept(id: string): Promise<QuoteVersion>;
+    reject(id: string, data: { reasonId: string; notes?: string | null }): Promise<QuoteVersion>;
+    /** Copia completa editable (v + 1); la anterior queda sustituida. Devuelve la nueva. */
+    newVersion(id: string): Promise<QuoteVersion>;
+    /** Genera el PDF de la propuesta en el servidor y lo guarda como documento del presupuesto (se descarga con documents). */
+    proposalPdf(id: string): Promise<{ documentId: string; name: string }>;
   };
 
   // -------------------------------------------------------------------------

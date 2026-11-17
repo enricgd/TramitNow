@@ -9,53 +9,22 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
       Info, RefreshCw, SlidersHorizontal, BookOpen, FileSpreadsheet, GitBranch,
       UserCheck, ExternalLink, ShieldAlert, Award, EyeOff, List, SquareKanban, GripVertical, Archive, Upload, Paperclip
     } from 'lucide-react';
-import { Page, PageHeader, Card, KpiTile, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Segmented, Tabs, CAMPO, Modal, Drawer, Confirmar, Notice, EmptyState } from '../ui';
-import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
+import { Page, PageHeader, Card, KpiTile, Button, IconButton, Badge, SearchInput, Select, SelectConAlta, Segmented, Tabs, CAMPO, Modal, Drawer, Confirmar, Notice, EmptyState, CargandoPagina, ErrorCarga } from '../ui';
 import { CLAVE_PRESUPUESTO_EMPRESA, recogerTraspaso } from './traspasos';
+import { usePresupuestos, economiaPuesto, conceptosNuevos, mensajeError } from './presupuestos/usePresupuestos';
+import { DEMO } from '../modo';
+
+// Los datos (presupuestos, empresas, convenios, comerciales...) llegan de presupuestos/usePresupuestos.ts, en modo
+// demo y en real; los de ejemplo están en src/data/memoriaPresupuestos.ts. Los costes los calcula el servidor; mientras
+// se edita, la vista previa usa el módulo de cálculo (presupuestos/mapeo.ts).
 
     // ==========================================
     // CATÁLOGOS ESTRUCTURADOS CON "OTRO / PERSONALIZADO"
     // ==========================================
     const CATALOGOS = {
-      convenios: [
-{ id: 'logistica_madrid', label: 'Convenio colectivo logística y paquetería (com. Madrid)' },
-{ id: 'logistica_bcn', label: 'Convenio sectorial transporte de mercancías y logística (Barcelona)' },
-{ id: 'metal_madrid', label: 'Convenio industria del metal (Madrid)' },
-{ id: 'hosteleria_estatal', label: 'ALEH - convenio estatal hostelería' },
-{ id: 'quimicas_estatal', label: 'Convenio general de la industria química' },
-{ id: 'comercio_alimentacion', label: 'Convenio comercio y almacenistas alimentación' },
-{ id: 'otro', label: 'Otro / Personalizado...' }
-      ],
-      categorias: {
-logistica_madrid: [
-  { id: 'op_almacen', label: 'Operario/a de almacén (nivel IV)' },
-  { id: 'mozo_esp', label: 'Mozo/a especialista - carretillero/a (nivel III)' },
-  { id: 'prep_pedidos', label: 'Preparador/a de pedidos / picking (nivel IV)' },
-  { id: 'jefe_equipo', label: 'Jefe/a de equipo / capataz (nivel II)' },
-  { id: 'administrativo_log', label: 'Administrativo/a de tráfico y logística (nivel III)' },
-  { id: 'otro', label: 'Otro / Personalizado...' }
-],
-metal_madrid: [
-  { id: 'peon_metal', label: 'Peón / auxiliar producción' },
-  { id: 'oficial_3_metal', label: 'Oficial 3ª Metal' },
-  { id: 'oficial_1_cnc', label: 'Oficial 1ª mecanizado CNC' },
-  { id: 'soldador_tuv', label: 'Soldador/a homologado TIG/MIG' },
-  { id: 'otro', label: 'Otro / Personalizado...' }
-],
-hosteleria_estatal: [
-  { id: 'camarero_sala', label: 'Camarero/a de sala (nivel II)' },
-  { id: 'ayudante_cocina', label: 'Ayudante de cocina (nivel III)' },
-  { id: 'cocinero_partida', label: 'Cocinero/a de partida (nivel I)' },
-  { id: 'office_limpieza', label: 'Auxiliar de office y limpieza' },
-  { id: 'otro', label: 'Otro / Personalizado...' }
-],
-default: [
-  { id: 'perfil_estandar', label: 'Operador / auxiliar estándar' },
-  { id: 'tecnico_especialista', label: 'Técnico Especialista' },
-  { id: 'responsable_turno', label: 'Responsable de Turno' },
-  { id: 'otro', label: 'Otro / Personalizado...' }
-]
-      },
+      // Convenios y categorías de la ETT: los pone usePresupuestos al cargar (ver usarCatalogos).
+      convenios: [{ id: 'otro', label: 'Otro / Personalizado...' }],
+      categorias: { default: [{ id: 'otro', label: 'Otro / Personalizado...' }] },
       gruposNivel: [
 { id: 'g1', label: 'Grupo I / directivos y titulados superiores' },
 { id: 'g2', label: 'Grupo II / técnicos medios y mandos intermedios' },
@@ -72,15 +41,8 @@ default: [
 { id: 'master_vendor', label: 'Modelo On-Site / master vendor ETT' },
 { id: 'otro', label: 'Otro / Personalizado...' }
       ],
-      formasPago: [
-{ id: 'confirming_60', label: 'Confirming bancario a 60 días fecha factura' },
-{ id: 'transfer_30', label: 'Transferencia bancaria a 30 días' },
-{ id: 'transfer_60', label: 'Transferencia bancaria a 60 días' },
-{ id: 'transfer_15', label: 'Transferencia bancaria quincenal (15 días)' },
-{ id: 'domiciliacion_30', label: 'Recibo domiciliado SEPA B2B a 30 días' },
-{ id: 'prepago_semanal', label: 'Prepago semanal con liquidación mensual' },
-{ id: 'otro', label: 'Otro / Personalizado...' }
-      ],
+      // Formas de pago: tabla maestra de la ETT (usePresupuestos).
+      formasPago: [{ id: 'otro', label: 'Otro / Personalizado...' }],
       garantiasSustitucion: [
 { id: 'garantia_4h', label: '4 horas de respuesta operativa sin coste' },
 { id: 'garantia_24h', label: '24 horas de periodo de prueba con reemplazo bonificado' },
@@ -89,12 +51,10 @@ default: [
 { id: 'sin_garantia', label: 'Sin garantía extendida (condiciones estándar ETT)' },
 { id: 'otro', label: 'Otro / Personalizado...' }
       ],
+      // Los costes internos van en % sobre el salario por hora o en €/h (los que calcula la API).
       tiposConcepto: [
-{ id: 'porcentaje', label: 'Porcentaje (%) sobre Base' },
-{ id: 'fijo_hora', label: 'Importe fijo por hora (€/h)' },
-{ id: 'fijo_mes', label: 'Importe fijo mensual (€/mes)' },
-{ id: 'fijo_jornada', label: 'Importe fijo por jornada (€/día)' },
-{ id: 'otro', label: 'Otro / Personalizado...' }
+{ id: 'porcentaje', label: 'Porcentaje (%) sobre el salario por hora' },
+{ id: 'fijo_hora', label: 'Importe fijo por hora (€/h)' }
       ],
       basesCalculo: [
 { id: 'salario_bruto_hora', label: 'Salario bruto por hora' },
@@ -119,40 +79,26 @@ default: [
       ]
     };
 
-    // Convenio de la empresa de ejemplo (Bizkaia): mismas categorías que el de logística
-    CATALOGOS.convenios.unshift({ id: 'logistica_bizkaia', label: 'Convenio de almacenes y logística (Bizkaia)' });
-    CATALOGOS.categorias.logistica_bizkaia = CATALOGOS.categorias.logistica_madrid;
     const etiquetaConvenio = (id, custom) => CATALOGOS.convenios.find(c => c.id === id)?.label || custom || '';
 
     // ==========================================
-    // EMPRESAS Y COMERCIALES (datos de ejemplo; en real vendrán de Empresas vía apps/api)
+    // EMPRESAS, COMERCIALES Y AJUSTES DE LA ETT: los pone usePresupuestos al cargar (ver usarCatalogos)
     // ==========================================
-    const EMPRESAS_CLIENTE = [
-      {
-        id: 'comp-1', nombre: 'Trans-Logística Ibérica Norte, S.L.', cif: 'B-87654321', sector: 'Logística y almacén',
-        ciudad: 'Basauri (Bizkaia)', convenio: 'logistica_bizkaia', comercial: 'Carlos Mendoza',
-        contactos: [
-          { nombre: 'Marta Gómez Arana', cargo: 'Responsable de RRHH y Selección', email: 'marta.gomez@translog-norte.es', telefono: '+34 654 987 321' },
-          { nombre: 'Javier Ugarte Elorza', cargo: 'Jefe de Planta / Operaciones', email: 'j.ugarte@translog-norte.es', telefono: '+34 611 223 344' },
-        ],
-      },
-      {
-        id: 'comp-2', nombre: 'Manufacturas Metálicas del Henares, S.A.', cif: 'A-28193847', sector: 'Industria metalúrgica',
-        ciudad: 'Alcalá de Henares (Madrid)', convenio: 'metal_madrid', comercial: 'Elena Rivas',
-        contactos: [{ nombre: 'Alfonso Serrano', cargo: 'Dir. Financiero', email: 'aserrano@metalhenares.com', telefono: '+34 600 112 233' }],
-      },
-      {
-        id: 'comp-3', nombre: 'Mediterránea Agrícola y Envasado, S.L.', cif: 'B-65432198', sector: 'Agroalimentario',
-        ciudad: 'Valencia', convenio: 'comercio_alimentacion', comercial: 'Carlos Mendoza', contactos: [],
-      },
-      {
-        id: 'comp-4', nombre: 'Hostelería & Eventos Premium BCN, S.L.', cif: 'B-99887766', sector: 'Hostelería y eventos',
-        ciudad: 'Barcelona', convenio: 'hosteleria_estatal', comercial: 'Laura Vidal',
-        contactos: [{ nombre: 'Sergi Pujol', cargo: 'Coordinador de Eventos', email: 'spujol@premiumeventsbcn.cat', telefono: '+34 688 990 011' }],
-      },
-    ];
-
-    const COMERCIALES = ['Carlos Mendoza', 'Elena Navarro', 'Elena Rivas', 'Laura Vidal', 'Marta Prieto', 'Raúl Santana'];
+    let EMPRESAS_CLIENTE = [];
+    let COMERCIALES = [];
+    // Margen por debajo del cual un responsable tiene que aprobar (null: sin mínimo) y días sin respuesta para
+    // avisar: los de Mi ETT (ajustes de presupuestos).
+    let MARGEN_MINIMO = null;
+    let DIAS_RECORDATORIO = 15;
+    function usarCatalogos(c) {
+      CATALOGOS.convenios = c.convenios;
+      CATALOGOS.categorias = { ...c.categorias, default: [{ id: 'otro', label: 'Otro / Personalizado...' }] };
+      CATALOGOS.formasPago = c.formasPago;
+      EMPRESAS_CLIENTE = c.empresas;
+      COMERCIALES = c.comerciales;
+      MARGEN_MINIMO = c.margenMinimo;
+      DIAS_RECORDATORIO = c.diasRecordatorio;
+    }
 
     // ==========================================
     // CONCEPTOS EXTRA FACTURABLES
@@ -169,15 +115,15 @@ default: [
     const copiarExtras = (lista) => (lista || EXTRAS_DEFECTO).map(x => ({ ...x }));
 
     // Presupuesto nuevo: vacío, con los conceptos internos de siempre y el margen objetivo por defecto
-    function presupuestoVacio(listado) {
-      const max = Math.max(0, ...listado.map(p => Number(p.id.split('-').pop()) || 0));
-      const id = `PRE-2026-${String(max + 1).padStart(4, '0')}`;
+    // El número definitivo lo da el servidor al guardarlo (serie de presupuestos); hasta entonces, «nuevo».
+    function presupuestoVacio() {
+      const id = 'Nuevo presupuesto';
       const hoy = new Date();
       const iso = (d) => d.toISOString().slice(0, 10);
       const validez = new Date(hoy); validez.setDate(validez.getDate() + 30);
       return {
         id,
-        codigoVersion: `${id}-v1`,
+        codigoVersion: id,
         versionNumero: 1,
         titulo: '',
         empresaId: '', cliente: '', cif: '', sector: '', ciudad: '', convenioEmpresa: '',
@@ -194,326 +140,13 @@ default: [
         margenObjetivo: 18,
         extrasDefecto: copiarExtras(EXTRAS_DEFECTO),
         posiciones: [],
-        conceptosEscandallo: JSON.parse(JSON.stringify(DEMO_PRESUPUESTO_INICIAL.conceptosEscandallo)),
-        auditoria: [{ id: `aud-${Date.now()}`, fecha: new Date().toISOString().replace('T', ' ').substring(0, 19), usuario: 'Usuario Demo', accion: 'Creación de presupuesto', detalle: `Alta de ${id} en estado Borrador.` }],
+        conceptosEscandallo: conceptosNuevos(),
+        auditoria: [],
+        documentosAnadidos: [],
       };
     }
 
-    // ==========================================
-    // DATOS DE DEMO INICIALES (v3 fiel a v2)
-    // ==========================================
-    const DEMO_PRESUPUESTO_INICIAL = {
-      id: 'PRE-2026-0048',
-      codigoVersion: 'PRE-2026-0048-v2',
-      versionNumero: 2,
-      titulo: 'Servicio ETT campaña logística primavera y refuerzo HUB central',
-      empresaId: 'comp-1',
-      cliente: 'Trans-Logística Ibérica Norte, S.L.',
-      cif: 'B-87654321',
-      sector: 'Logística y almacén',
-      ciudad: 'Basauri (Bizkaia)',
-      convenioEmpresa: 'logistica_bizkaia',
-      contacto: 'Marta Gómez Arana (Responsable de RRHH y Selección)',
-      emailContacto: 'marta.gomez@translog-norte.es',
-      telefonoContacto: '+34 654 987 321',
-      comercial: 'Elena Navarro',
-      margenObjetivo: 18,
-      extrasDefecto: EXTRAS_DEFECTO.map(x => ({ ...x })),
-      estado: 'Borrador', // Borrador | En preparación | Enviado a Cliente | Pendiente de Firma | Firmado / Aceptado | Rechazado | Sustituido | Obsoleto
-      esEditableDirecto: true,
-      fechaEmision: '2026-10-27',
-      fechaValidez: '2026-11-27',
-      fechaInicioPrevista: '2026-12-01',
-      duracionMeses: 3,
-      moneda: 'EUR',
-      modalidad: 'pico_produccion',
-      modalidadCustom: '',
-      iva: '21',
-      ivaCustom: '',
-      formaPago: 'confirming_60',
-      formaPagoCustom: '',
-      garantiaSustitucion: 'garantia_4h',
-      garantiaSustitucionCustom: '',
-      observacionesComerciales: 'Se contempla cláusula de absorción por plantilla cliente sin coste de traspaso tras superar las 900 horas efectivas de CPD. La ETT asume la gestión documental completa en CAE y portal de PRL.',
-      
-      // Posiciones cotizadas
-      posiciones: [
-{
-  id: 'pos-1',
-  nombre: 'Operario/a de Almacén',
-  convenio: 'logistica_bizkaia',
-  convenioCustom: '',
-  categoria: 'op_almacen',
-  categoriaCustom: '',
-  grupoNivel: 'g4',
-  grupoNivelCustom: '',
-  salarioBaseAnual: 17200.00,
-  plusConvenioMes: 120.00,
-  pagasAnuales: 14,
-  horasAnuales: 1784,
-  horasDiaCalculo: 8,
-  coeficienteParcialidad: 1.0,
-  tarifaHoraOfertada: 17.65,
-  personas: 8,
-  horasPersona: 480,
-  tarifaJornadaManual: null,
-  vacacionesDiasAnio: 30,
-  extras: EXTRAS_DEFECTO.map(x => ({ ...x })),
-  descripcionTareas: 'Recepción, control de bultos, picking por radiofrecuencia, preparación de pedidos e inventario rotativo.'
-},
-{
-  id: 'pos-2',
-  nombre: 'Mozo/a Especialista — Carretillero/a Frontal/Retráctil',
-  convenio: 'logistica_bizkaia',
-  convenioCustom: '',
-  categoria: 'mozo_esp',
-  categoriaCustom: '',
-  grupoNivel: 'g3',
-  grupoNivelCustom: '',
-  salarioBaseAnual: 19450.00,
-  plusConvenioMes: 180.00,
-  pagasAnuales: 14,
-  horasAnuales: 1784,
-  horasDiaCalculo: 8,
-  coeficienteParcialidad: 1.0,
-  tarifaHoraOfertada: 19.80,
-  personas: 4,
-  horasPersona: 480,
-  tarifaJornadaManual: null,
-  vacacionesDiasAnio: 30,
-  extras: EXTRAS_DEFECTO.map(x => ({ ...x, mostrar: x.id !== 'festiva' })),
-  conceptos: { 'c-abs': { aplica: true, valor: 3.2 } },
-  descripcionTareas: 'Ubicación en altura en estanterías dinámicas (hasta 9m), descarga de trailers y abastecimiento de líneas.'
-}
-      ],
-
-      // Conceptos del Escandallo Económico
-      conceptosEscandallo: [
-{
-  id: 'c-ss',
-  nombre: 'Seguridad Social Patronal (Común + AT/EP 4.10% + Desempleo + FOGASA + FP)',
-  tipo: 'porcentaje',
-  tipoCustom: '',
-  valor: 32.85,
-  baseCalculo: 'coste_salarial_total',
-  baseCalculoCustom: '',
-  esObligatorioLegal: true,
-  descripcion: 'Aportación legal obligatoria a la TGSS según tarifa CNAE Transporte y Almacenamiento.'
-},
-{
-  id: 'c-indem',
-  nombre: 'Indemnización Fin de Contrato Puesta a Disposición (12 días/año)',
-  tipo: 'porcentaje',
-  tipoCustom: '',
-  valor: 4.54,
-  baseCalculo: 'coste_salarial_total',
-  baseCalculoCustom: '',
-  esObligatorioLegal: true,
-  descripcion: 'Prorrateo de indemnización legal obligatoria por cese de contrato de puesta a disposición.'
-},
-{
-  id: 'c-abs',
-  recomendado: true,
-  nombre: 'Provisión de absentismo y contingencias',
-  tipo: 'porcentaje',
-  tipoCustom: '',
-  valor: 2.15,
-  baseCalculo: 'salario_bruto_hora',
-  baseCalculoCustom: '',
-  esObligatorioLegal: false,
-  descripcion: 'Cobertura estimada de bajas de corta duración y permisos retribuidos según convenio.'
-},
-{
-  id: 'c-epi',
-  recomendado: true,
-  nombre: 'EPIs',
-  tipo: 'fijo_hora',
-  tipoCustom: '',
-  valor: 0.18,
-  baseCalculo: 'horas_reales_efectivas',
-  baseCalculoCustom: '',
-  esObligatorioLegal: false,
-  descripcion: 'Equipos de protección individual que necesite el puesto.'
-},
-{
-  id: 'c-prl',
-  recomendado: true,
-  nombre: 'Revisión médica inicial y formación PRL',
-  tipo: 'fijo_hora',
-  tipoCustom: '',
-  valor: 0.22,
-  baseCalculo: 'horas_reales_efectivas',
-  baseCalculoCustom: '',
-  esObligatorioLegal: false,
-  descripcion: 'Acreditación según Art. 19 LPRL y vigilancia médica para trabajo en altura y almacén.'
-}
-      ],
-
-      // Historial de auditoría
-      auditoria: [
-{
-  id: 'aud-1',
-  fecha: '2026-03-24 10:15:20',
-  usuario: 'Elena Navarro (KAM)',
-  accion: 'Creación de presupuesto',
-  detalle: 'Alta de presupuesto PRE-2026-0048 en estado Borrador.'
-},
-{
-  id: 'aud-2',
-  fecha: '2026-03-24 10:28:44',
-  usuario: 'Elena Navarro (KAM)',
-  accion: 'Incorporación de puesto',
-  detalle: 'Se añade puesto Mozo/a Especialista - Carretillero/a con tarifa inicial 19.80 €/h.'
-}
-      ]
-    };
-
-    // Versión anterior (v1) para poder comparar: tarifas algo distintas y un carretillero menos
-    const DEMO_VERSION_ANTERIOR = (() => {
-      const v = JSON.parse(JSON.stringify(DEMO_PRESUPUESTO_INICIAL));
-      v.codigoVersion = 'PRE-2026-0048-v1';
-      v.versionNumero = 1;
-      v.estado = 'Sustituido';
-      v.fechaValidez = '2026-11-10';
-      v.posiciones[0].tarifaHoraOfertada = 17.20;
-      v.posiciones[1].tarifaHoraOfertada = 20.40;
-      v.posiciones[1].personas = 3;
-      return v;
-    })();
-
-    // Historial de versiones del presupuesto para demo
-    const DEMO_HISTORIAL_VERSIONES = [
-      {
-version: 'PRE-2026-0048-v1',
-numero: 1,
-fecha: '2026-03-24',
-creador: 'Elena Navarro',
-estado: 'Borrador activo',
-tarifaMedia: '18.72 €/h',
-margenMedio: '17.4%',
-comentario: 'Versión actual en edición.'
-      },
-      {
-version: 'PRE-2026-0032-v2',
-numero: 2,
-fecha: '2026-02-15',
-creador: 'Marcos Rubio',
-estado: 'Firmado / Activo',
-tarifaMedia: '17.20 €/h',
-margenMedio: '16.8%',
-comentario: 'Campaña invierno finalizada con éxito.'
-      }
-    ];
-
-    // Otros presupuestos para la vista de listado
     const TURNOS_PETICION = ['Turno de mañana', 'Turno de tarde', 'Turno de noche', 'Jornada partida'];
-
-    const DEMO_LISTADO_PRESUPUESTOS = [
-      { id: 'PRE-2026-0048', importe: 63800,  titulo: 'Servicio ETT campaña logística primavera HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Borrador', puestosCount: 2, tarifaMedia: 18.72, margenPct: 17.4, fechaValidez: '2026-11-27', esEditableDirecto: true },
-      { id: 'PRE-2026-0047', importe: 97536,  titulo: 'Refuerzo líneas de envasado y picking alimentario', cliente: 'Mediterránea Agrícola y Envasado, S.L.', comercial: 'Carlos Mendoza', estado: 'En preparación', puestosCount: 3, tarifaMedia: 17.30, margenPct: 16.4, fechaValidez: '2026-11-02', esEditableDirecto: true },
-      { id: 'PRE-2026-0046', importe: 100224, diasSinRespuesta: 2,  titulo: 'Camareros/as para temporada de congresos', cliente: 'Hostelería & Eventos Premium BCN, S.L.', comercial: 'Laura Vidal', estado: 'Pendiente de Firma', puestosCount: 2, tarifaMedia: 17.40, margenPct: 20.0, fechaValidez: '2026-11-10', esEditableDirecto: false },
-      { id: 'PRE-2026-0045', importe: 64512, diasSinRespuesta: 6,  titulo: 'Operarios/as soldadura y mecanizado metal 24/7', cliente: 'Manufacturas Metálicas del Henares, S.A.', comercial: 'Elena Rivas', estado: 'Enviado a Cliente', puestosCount: 1, tarifaMedia: 22.40, margenPct: 16.9, fechaValidez: '2026-11-15', esEditableDirecto: false },
-      { id: 'PRE-2026-0042', importe: 105792,  titulo: 'Campaña logística otoño HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Firmado / Aceptado', puestosCount: 2, tarifaMedia: 18.73, margenPct: 14.0, fechaValidez: '2026-10-20', esEditableDirecto: false },
-      { id: 'PRE-2026-0041', importe: 166656,  titulo: 'Servicio ETT camareros/as y cocina fiestas locales', cliente: 'Hostelería & Eventos Premium BCN, S.L.', comercial: 'Laura Vidal', estado: 'Firmado / Aceptado', puestosCount: 4, tarifaMedia: 18.40, margenPct: 23.7, fechaValidez: '2026-10-15', esEditableDirecto: false },
-      { id: 'PRE-2026-0033', importe: 39360,  titulo: 'Envasado nocturno campaña de cítricos', cliente: 'Mediterránea Agrícola y Envasado, S.L.', comercial: 'Carlos Mendoza', estado: 'Firmado / Aceptado', puestosCount: 1, tarifaMedia: 16.40, margenPct: 16.4, fechaValidez: '2026-09-05', esEditableDirecto: false },
-      { id: 'PRE-2026-0038', importe: 38880,  titulo: 'Mozos de carga para inventario anual', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Carlos Mendoza', estado: 'Rechazado', puestosCount: 1, tarifaMedia: 16.20, margenPct: 13.5, fechaValidez: '2026-10-01', esEditableDirecto: false },
-      { id: 'PRE-2026-0029', importe: 48672,  titulo: 'Campaña logística verano HUB central', cliente: 'Trans-Logística Ibérica Norte, S.L.', comercial: 'Elena Navarro', estado: 'Firmado / Aceptado', puestosCount: 1, tarifaMedia: 16.90, margenPct: 14.2, fechaValidez: '2026-06-20', esEditableDirecto: false },
-    ];
-
-    // ==========================================
-    // DETALLE DE CADA PRESUPUESTO DEL LISTADO
-    // Cada presupuesto abre sus propios datos. Los aceptados llevan el reparto en peticiones que hay en Peticiones.
-    // ==========================================
-    const puestoDemo = (id, nombre, convenio, categoria, grupoNivel, salarioBaseAnual, plusConvenioMes, tarifaHoraOfertada, personas, descripcionTareas, extra = {}) => ({
-      ...JSON.parse(JSON.stringify(DEMO_PRESUPUESTO_INICIAL.posiciones[0])),
-      id, nombre, convenio, categoria, grupoNivel, salarioBaseAnual, plusConvenioMes, tarifaHoraOfertada, personas, descripcionTareas,
-      conceptos: undefined, extras: EXTRAS_DEFECTO.map(x => ({ ...x })), ...extra,
-    });
-    const CLIENTES_PRESUPUESTO = {
-      'Trans-Logística Ibérica Norte, S.L.': { empresaId: 'comp-1', cif: 'B-87654321', sector: 'Logística y almacén', ciudad: 'Basauri (Bizkaia)', convenioEmpresa: 'logistica_bizkaia', contacto: 'Marta Gómez Arana (Responsable de RRHH y Selección)', emailContacto: 'marta.gomez@translog-norte.es', telefonoContacto: '+34 654 987 321', formaPago: 'transfer_60' },
-      'Hostelería & Eventos Premium BCN, S.L.': { empresaId: 'comp-4', cif: 'B-99887766', sector: 'Hostelería y eventos', ciudad: 'Barcelona', convenioEmpresa: 'hosteleria_estatal', contacto: 'Sergi Pujol (Coordinador de Eventos)', emailContacto: 'spujol@premiumeventsbcn.cat', telefonoContacto: '+34 688 990 011', formaPago: 'transfer_30' },
-      'Mediterránea Agrícola y Envasado, S.L.': { empresaId: 'comp-3', cif: 'B-65432198', sector: 'Agroalimentario', ciudad: 'Valencia', convenioEmpresa: 'comercio_alimentacion', contacto: '', emailContacto: '', telefonoContacto: '', formaPago: 'transfer_30' },
-      'Manufacturas Metálicas del Henares, S.A.': { empresaId: 'comp-2', cif: 'A-28193847', sector: 'Industria metalúrgica', ciudad: 'Alcalá de Henares (Madrid)', convenioEmpresa: 'metal_madrid', contacto: 'Alfonso Serrano (Dir. Financiero)', emailContacto: 'aserrano@metalhenares.com', telefonoContacto: '+34 600 112 233', formaPago: 'confirming_60' },
-    };
-    const copiaProfunda = (x) => JSON.parse(JSON.stringify(x));
-    const DETALLES_PRESUPUESTOS = {
-      'PRE-2026-0042': {
-        fechaEmision: '2026-09-20', fechaInicioPrevista: '2026-11-03', duracionMeses: 3, modalidad: 'pico_produccion',
-        observacionesComerciales: 'Campaña de otoño. Turnos de mañana y tarde en el HUB central de Basauri.',
-        posiciones: [copiaProfunda(DEMO_PRESUPUESTO_INICIAL.posiciones[0]), copiaProfunda(DEMO_PRESUPUESTO_INICIAL.posiciones[1])],
-        peticionCreada: 'PET-2026-0048 a 0050',
-        peticionesCreadas: [
-          { codigo: 'PET-2026-0048', posId: 'pos-1', turno: 'Turno de mañana', plazas: 5 },
-          { codigo: 'PET-2026-0049', posId: 'pos-1', turno: 'Turno de tarde', plazas: 3 },
-          { codigo: 'PET-2026-0050', posId: 'pos-2', turno: 'Turno de tarde', plazas: 4 },
-        ],
-      },
-      'PRE-2026-0041': {
-        fechaEmision: '2026-09-15', fechaInicioPrevista: '2026-10-10', duracionMeses: 2, modalidad: 'pico_produccion',
-        observacionesComerciales: 'Temporada de congresos y fiestas locales en el recinto de congresos de Barcelona.',
-        posiciones: [
-          puestoDemo('pos-1', 'Camarero/a de sala', 'hosteleria_estatal', 'camarero_sala', 'g4', 16200, 90, 18.40, 10, 'Servicio de sala, montaje de mesas y servicio de cócteles y banquetes.'),
-          puestoDemo('pos-2', 'Ayudante de cocina', 'hosteleria_estatal', 'ayudante_cocina', 'g5', 15400, 80, 17.20, 4, 'Preparación, emplatado y limpieza de cocina.'),
-          puestoDemo('pos-3', 'Cocinero/a de partida', 'hosteleria_estatal', 'cocinero_partida', 'g3', 18100, 110, 19.60, 2, 'Elaboración de la partida asignada en banquetes.'),
-          puestoDemo('pos-4', 'Camarero/a de barra', 'hosteleria_estatal', 'camarero_sala', 'g4', 16200, 90, 18.40, 3, 'Servicio de barra en el turno de noche.'),
-        ],
-        peticionCreada: 'PET-2026-0044 a 0047',
-        peticionesCreadas: [
-          { codigo: 'PET-2026-0044', posId: 'pos-1', turno: 'Jornada partida', plazas: 10 },
-          { codigo: 'PET-2026-0045', posId: 'pos-2', turno: 'Jornada partida', plazas: 4 },
-          { codigo: 'PET-2026-0046', posId: 'pos-3', turno: 'Jornada partida', plazas: 2 },
-          { codigo: 'PET-2026-0047', posId: 'pos-4', turno: 'Turno de noche', plazas: 3 },
-        ],
-      },
-      'PRE-2026-0029': {
-        fechaEmision: '2026-06-01', fechaInicioPrevista: '2026-07-01', duracionMeses: 3, modalidad: 'pico_produccion',
-        observacionesComerciales: 'Campaña de verano, ya terminada.',
-        posiciones: [puestoDemo('pos-1', 'Mozo/a de almacén', 'logistica_bizkaia', 'op_almacen', 'g4', 16700, 110, 16.90, 6, 'Carga, descarga y reposición en la nave 2.')],
-        peticionCreada: 'PET-2026-0031',
-        peticionesCreadas: [{ codigo: 'PET-2026-0031', posId: 'pos-1', turno: 'Turno de mañana', plazas: 6 }],
-      },
-      'PRE-2026-0033': {
-        codigoVersion: 'PRE-2026-0033-v2', versionNumero: 2, fechaEmision: '2026-08-20', fechaInicioPrevista: '2026-09-15', duracionMeses: 3,
-        observacionesComerciales: 'El cliente aplazó la campaña después de aceptar: la petición PET-2026-0036 está cancelada.',
-        posiciones: [puestoDemo('pos-1', 'Operario/a de envasado', 'comercio_alimentacion', 'otro', 'g4', 16300, 60, 16.40, 5, 'Envasado y etiquetado en línea, turno de noche.', { categoriaCustom: 'Operario/a de envasado' })],
-        peticionCreada: 'PET-2026-0036',
-        peticionesCreadas: [{ codigo: 'PET-2026-0036', posId: 'pos-1', turno: 'Turno de noche', plazas: 5 }],
-      },
-      'PRE-2026-0047': {
-        posiciones: [
-          puestoDemo('pos-1', 'Operario/a de envasado', 'comercio_alimentacion', 'otro', 'g4', 16300, 60, 16.40, 6, 'Envasado y etiquetado en línea.', { categoriaCustom: 'Operario/a de envasado' }),
-          puestoDemo('pos-2', 'Preparador/a de pedidos', 'comercio_alimentacion', 'otro', 'g4', 16500, 60, 16.90, 4, 'Picking de producto fresco.', { categoriaCustom: 'Preparador/a de pedidos' }),
-          puestoDemo('pos-3', 'Carretillero/a', 'comercio_alimentacion', 'otro', 'g3', 18900, 90, 18.60, 2, 'Carga de camiones y ubicación en cámara.', { categoriaCustom: 'Carretillero/a' }),
-        ],
-      },
-      'PRE-2026-0046': {
-        posiciones: [
-          puestoDemo('pos-1', 'Camarero/a de sala', 'hosteleria_estatal', 'camarero_sala', 'g4', 16200, 90, 17.40, 8, 'Servicio de sala en congresos.'),
-          puestoDemo('pos-2', 'Camarero/a de barra', 'hosteleria_estatal', 'camarero_sala', 'g4', 16200, 90, 17.40, 4, 'Servicio de barra.'),
-        ],
-      },
-      'PRE-2026-0045': {
-        posiciones: [puestoDemo('pos-1', 'Soldador/a TIG/MIG', 'metal_madrid', 'soldador_tuv', 'g3', 21500, 150, 22.40, 6, 'Soldadura homologada en turnos rotativos 24/7.')],
-      },
-      'PRE-2026-0038': {
-        posiciones: [puestoDemo('pos-1', 'Mozo/a de carga', 'logistica_bizkaia', 'op_almacen', 'g4', 16200, 100, 16.20, 5, 'Recuento e inventario anual.')],
-      },
-    };
-    const detalleDePresupuesto = (fila) => {
-      if (fila.id === DEMO_PRESUPUESTO_INICIAL.id) return copiaProfunda(DEMO_PRESUPUESTO_INICIAL);
-      const base = copiaProfunda(DEMO_PRESUPUESTO_INICIAL);
-      const det = DETALLES_PRESUPUESTOS[fila.id] || {};
-      return {
-        ...base,
-        id: fila.id, codigoVersion: `${fila.id}-v1`, versionNumero: 1,
-        titulo: fila.titulo, cliente: fila.cliente, comercial: fila.comercial, estado: fila.estado,
-        esEditableDirecto: fila.esEditableDirecto, fechaValidez: fila.fechaValidez,
-        ...(CLIENTES_PRESUPUESTO[fila.cliente] || {}),
-        observacionesComerciales: '',
-        auditoria: [{ id: `aud-${fila.id}`, fecha: `${det.fechaEmision || base.fechaEmision} 10:00:00`, usuario: fila.comercial, accion: 'Creación de presupuesto', detalle: `Alta de ${fila.id}.` }],
-        ...copiaProfunda(det),
-      };
-    };
 
     // ==========================================
     // UTILIDADES DE CÁLCULO ECONÓMICO ETT
@@ -521,161 +154,26 @@ comentario: 'Campaña invierno finalizada con éxito.'
     // Margen objetivo del presupuesto: en % sobre la tarifa o en €/h
     const margenDe = (d) => (d?.margenTipo === 'importe' ? { tipo: 'importe', valor: Number(d.margenImporte) || 0 } : { tipo: 'porcentaje', valor: Number(d?.margenObjetivo ?? 18) });
 
+    // Lo calcula el servidor; mientras se edita, la vista previa con el módulo de cálculo (presupuestos/mapeo.ts).
     function calcularEconomiaPosicion(pos, conceptos, margenGlobal = 18) {
-      const horasAnuales = pos.horasAnuales > 0 ? pos.horasAnuales : 1784;
-      const salarioBase = Number(pos.salarioBaseAnual) || 0;
-      const plusMensual = Number(pos.plusConvenioMes) || 0;
-      const pagas = Number(pos.pagasAnuales) || 12;
-      const horasDia = Number(pos.horasDiaCalculo) || 8;
-      const parcialidad = Number(pos.coeficienteParcialidad) || 1.0;
-      const tarifaPVP = Number(pos.tarifaHoraOfertada) || 0;
-
-      // Salario Bruto Anual Total = Salario Base + (Plus Mensual * 12 o Pagas)
-      const plusAnual = plusMensual * 12;
-      const salarioBrutoAnual = salarioBase + plusAnual;
-
-      // Salario Bruto por Hora Efectiva
-      const salarioBrutoHora = (salarioBrutoAnual / horasAnuales) * parcialidad;
-
-      // Prorrata de Pagas Extras y Vacaciones integrada en hora efectiva
-      const costeSalarialHora = salarioBrutoHora; 
-
-      // Calcular conceptos de escandallo
-      let totalCosteSocialHora = 0;
-      let desgloseConceptos = [];
-
-      conceptos.forEach(c => {
-// Ajuste del puesto: puede no aplicarse (salvo los legales) o llevar su valor en % o en €/h (solo vale uno)
-const ajuste = c.esObligatorioLegal ? { aplica: true, porcentaje: '', importe: '' } : ajusteDe(pos, c);
-if (!ajuste.aplica) return;
-let tipoConcepto = c.tipo;
-let baseCalculo = c.baseCalculo;
-let valorConcepto = Number(c.valor);
-if (ajuste.porcentaje !== '') {
-  tipoConcepto = 'porcentaje';
-  valorConcepto = Number(ajuste.porcentaje);
-  if (c.tipo !== 'porcentaje') baseCalculo = 'salario_bruto_hora'; // un coste fijo pasado a %: sobre el salario
-} else if (ajuste.importe !== '') {
-  tipoConcepto = 'fijo_hora';
-  valorConcepto = Number(ajuste.importe);
-}
-let base = salarioBrutoHora;
-if (baseCalculo === 'coste_salarial_total' || baseCalculo === 'base_ss_total') {
-  base = costeSalarialHora;
-} else if (baseCalculo === 'tarifa_venta_hora') {
-  base = tarifaPVP;
-} else if (baseCalculo === 'horas_reales_efectivas') {
-  base = 1.0; // Fijo por hora
-}
-
-let importeHora = 0;
-if (tipoConcepto === 'porcentaje') {
-  importeHora = (base * valorConcepto) / 100;
-} else if (tipoConcepto === 'fijo_hora') {
-  importeHora = valorConcepto;
-} else if (tipoConcepto === 'fijo_jornada') {
-  importeHora = valorConcepto / horasDia;
-} else if (tipoConcepto === 'fijo_mes') {
-  importeHora = valorConcepto / (horasAnuales / 12);
-}
-
-totalCosteSocialHora += importeHora;
-desgloseConceptos.push({
-  id: c.id,
-  nombre: c.nombre,
-  importeHora: importeHora,
-  esLegal: c.esObligatorioLegal,
-  propio: tipoConcepto !== c.tipo || valorConcepto !== Number(c.valor)
-});
-      });
-
-      // Coste Total Empresa ETT por Hora
-      const costeTotalEmpresaHora = salarioBrutoHora + totalCosteSocialHora;
-
-      // Margen bruto
-      const margenEuroHora = tarifaPVP - costeTotalEmpresaHora;
-      const margenPorcentaje = tarifaPVP > 0 ? (margenEuroHora / tarifaPVP) * 100 : 0;
-
-      // Tarifa sugerida con el margen objetivo: en % sobre la tarifa o en €/h sobre el coste.
-      // El del puesto manda; si no tiene, el del presupuesto.
-      const global = typeof margenGlobal === 'object' && margenGlobal ? margenGlobal : { tipo: 'porcentaje', valor: Number(margenGlobal ?? 18) };
-      const vacio = (v) => v === '' || v == null;
-      const propio = pos.margenTipo === 'importe' && !vacio(pos.margenImporte) ? { tipo: 'importe', valor: Number(pos.margenImporte) }
-        : !vacio(pos.margenObjetivo) ? { tipo: 'porcentaje', valor: Number(pos.margenObjetivo) } : null;
-      const margenAplicado = propio || global;
-      const tarifaSugerida = margenAplicado.tipo === 'importe'
-        ? costeTotalEmpresaHora + margenAplicado.valor
-        : (margenAplicado.valor < 100 ? costeTotalEmpresaHora / (1 - margenAplicado.valor / 100) : 0);
-      const margenObjetivo = margenAplicado.tipo === 'importe' ? (tarifaSugerida > 0 ? (margenAplicado.valor / tarifaSugerida) * 100 : 0) : margenAplicado.valor;
-      const margenObjetivoImporte = tarifaSugerida - costeTotalEmpresaHora;
-      const margenObjetivoTipo = margenAplicado.tipo;
-
-      // Conceptos extra: salario = hora normal x coeficiente; tarifa = salario x coeficiente de tarifa
-      // (si no se indica, el mismo factor tarifa/salario de la hora normal)
-      const factorTarifa = salarioBrutoHora > 0 ? tarifaPVP / salarioBrutoHora : 0;
-      const extras = (pos.extras || EXTRAS_DEFECTO).map(x => {
-        // Un extra añadido a mano puede llevar su propio salario por hora
-        const salarioHora = x.salarioManual !== '' && x.salarioManual != null ? Number(x.salarioManual) : salarioBrutoHora * (Number(x.coefSalario) || 1);
-        const lleno = (v) => v !== '' && v != null;
-        let tarifaHora;
-        if (lleno(x.recargoTarifa)) tarifaHora = tarifaPVP * (1 + Number(x.recargoTarifa) / 100);
-        else if (lleno(x.tarifaManual)) tarifaHora = Number(x.tarifaManual);
-        else tarifaHora = salarioHora * (lleno(x.coefTarifa) ? Number(x.coefTarifa) : factorTarifa);
-        const recargoEquivalente = tarifaPVP > 0 ? (tarifaHora / tarifaPVP - 1) * 100 : ((Number(x.coefSalario) || 1) - 1) * 100;
-        return { ...x, salarioHora, tarifaHora, recargoEquivalente };
-      });
-
-      // Importes del servicio: personas x horas por persona
-      const personas = Number(pos.personas) || 1;
-      const horasPersona = Number(pos.horasPersona) || 0;
-      const horasTotales = personas * horasPersona;
-      const facturacionTotal = tarifaPVP * horasTotales;
-      const costeServicio = costeTotalEmpresaHora * horasTotales;
-      const margenServicio = facturacionTotal - costeServicio;
-
-      // Tarifa Jornada
-      const tarifaJornadaCalculada = tarifaPVP * horasDia;
-      const costeJornada = costeTotalEmpresaHora * horasDia;
-
-      return {
-salarioBrutoHora,
-salarioBrutoAnual,
-costeTotalEmpresaHora,
-totalCosteSocialHora,
-margenEuroHora,
-margenPorcentaje,
-tarifaJornadaCalculada,
-costeJornada,
-desgloseConceptos,
-tarifaPVP,
-horasDia,
-margenObjetivo,
-margenObjetivoImporte,
-margenObjetivoTipo,
-tarifaSugerida,
-extras,
-personas,
-horasPersona,
-horasTotales,
-facturacionTotal,
-costeServicio,
-margenServicio
-      };
+      return economiaPuesto(pos, conceptos, margenGlobal);
     }
 
     // ==========================================
     // COMPONENTE PRINCIPAL
     // ==========================================
     export default function PresupuestosView() {
+      const pres = usePresupuestos();
+      if (pres.catalogos) usarCatalogos(pres.catalogos);
       // Estado de navegación
       const [vistaActual, setVistaActual] = useState('listado'); // 'detalle' | 'listado'
       const [busquedaPresupuestos, setBusquedaPresupuestos] = useState('');
       // Listado: datos, filtros y vista (tabla o pipeline)
-      const [listado, setListado] = useState(DEMO_LISTADO_PRESUPUESTOS);
+      const listado = pres.listado;
       const [filtroEstado, setFiltroEstado] = useState('todos');
       const [filtroComercial, setFiltroComercial] = useState('todos');
       const [filtroValidez, setFiltroValidez] = useState('todas');
-      const [filtroSucursal, setFiltroSucursal] = useState(''); // solo para quien ve más de una sucursal
+      // La sucursal la elige la cabecera (el servidor filtra la lista por ella).
       const [vistaListado, setVistaListado] = useState('tabla');
       const [esNuevo, setEsNuevo] = useState(false);
       const [conveniosExtra, setConveniosExtra] = useState([]);
@@ -684,15 +182,13 @@ margenServicio
         const dias = (new Date(fecha) - new Date(new Date().toISOString().slice(0, 10))) / 86400000;
         return dias < 0 ? 'caducado' : dias <= 7 ? 'pronto' : 'vigente';
       };
-      const hayFiltrosListado = busquedaPresupuestos || filtroEstado !== 'todos' || filtroComercial !== 'todos' || filtroValidez !== 'todas' || filtroSucursal;
-      const limpiarFiltrosListado = () => { setBusquedaPresupuestos(''); setFiltroEstado('todos'); setFiltroComercial('todos'); setFiltroValidez('todas'); setFiltroSucursal(''); };
+      const hayFiltrosListado = busquedaPresupuestos || filtroEstado !== 'todos' || filtroComercial !== 'todos' || filtroValidez !== 'todas';
+      const limpiarFiltrosListado = () => { setBusquedaPresupuestos(''); setFiltroEstado('todos'); setFiltroComercial('todos'); setFiltroValidez('todas'); };
       const listadoFiltrado = listado.filter(p => {
         const q = busquedaPresupuestos.trim().toLowerCase();
         if (q && !`${p.id} ${p.cliente} ${p.titulo}`.toLowerCase().includes(q)) return false;
         if (filtroEstado !== 'todos' && p.estado !== filtroEstado) return false;
         if (filtroComercial !== 'todos' && p.comercial !== filtroComercial) return false;
-        if (!SUCURSALES_USUARIO.includes(sucursalDeCliente(p.cliente))) return false;
-        if (filtroSucursal && sucursalDeCliente(p.cliente) !== filtroSucursal) return false;
         if (filtroValidez === 'vigentes' && estadoValidez(p.fechaValidez) === 'caducado') return false;
         if (filtroValidez === 'pronto' && estadoValidez(p.fechaValidez) !== 'pronto') return false;
         if (filtroValidez === 'caducados' && estadoValidez(p.fechaValidez) !== 'caducado') return false;
@@ -707,37 +203,48 @@ margenServicio
         aplicarEstado(id, estado);
       };
 
-      // Cambia el estado en el listado y, si es el presupuesto abierto, también en el detalle
-      const aplicarEstado = (id, estado, extra = {}) => {
-        const cambios = { estado, esEditableDirecto: ['Borrador', 'En preparación'].includes(estado), ...extra };
-        setListado(prev => prev.map(x => (x.id === id ? { ...x, ...cambios, diasSinRespuesta: estado === 'Enviado a Cliente' ? 0 : x.diasSinRespuesta } : x)));
-        if (id === presupuesto.id) {
-          setPresupuesto(prev => ({ ...prev, ...cambios }));
-          setFormularioPresupuesto(prev => ({ ...prev, ...cambios }));
+      // Llama a la API (con usePresupuestos) y avisa si falla. Devuelve lo que devuelve la acción, o undefined.
+      const ejecutar = async (accion, mensajeOk, tipo = 'exito') => {
+        try {
+          const r = await accion();
+          if (mensajeOk) mostrarToast(typeof mensajeOk === 'function' ? mensajeOk(r) : mensajeOk, tipo);
+          return r;
+        } catch (e) {
+          mostrarToast(mensajeError(e), 'error');
+          return undefined;
         }
-        mostrarToast(`${id} pasa a «${ESTADOS_PIPELINE.find(s => s.estado === estado)?.texto || estado}».`, estado === 'Rechazado' ? 'info' : 'exito');
+      };
+      // El presupuesto abierto se cambia por lo que devuelve la API
+      const ponerAbierto = (d) => {
+        if (!d) return;
+        const conDetalle = { ...d, auditoria: d.auditoria?.length ? d.auditoria : presupuesto.auditoria || [], documentosAnadidos: presupuesto._id === d._id ? presupuesto.documentosAnadidos : d.documentosAnadidos };
+        setPresupuesto(conDetalle);
+        setFormularioPresupuesto(conDetalle);
+      };
+      const idDe = (codigo) => (codigo === presupuesto.id ? presupuesto._id : listado.find(x => x.id === codigo)?._id);
+
+      // Cambia el estado (pipeline o cabecera); si es el presupuesto abierto, también en el detalle
+      const aplicarEstado = async (id, estado, extra = {}) => {
+        const quoteId = idDe(id);
+        const accion = estado === 'Rechazado' ? () => pres.rechazar(quoteId, extra.motivoRechazo, extra.notasRechazo) : () => pres.cambiarEstado(quoteId, estado);
+        const d = await ejecutar(accion, `${id} pasa a «${ESTADOS_PIPELINE.find(s => s.estado === estado)?.texto || estado}».`, estado === 'Rechazado' ? 'info' : 'exito');
+        if (d && id === presupuesto.id) ponerAbierto(d);
+        return d;
       };
 
-      const solicitarAprobacion = () => {
+      const solicitarAprobacion = async () => {
         const motivo = revisarPresupuesto(datosActivos).find(i => i.tipo === 'aprobacion' && !i.ok)?.texto || '';
-        const aprobacion = { estado: 'pendiente', motivo };
-        setPresupuesto(prev => ({ ...prev, aprobacion }));
-        setFormularioPresupuesto(prev => ({ ...prev, aprobacion }));
         setModalRevision(false);
-        mostrarToast('Aprobación pedida a dirección. Lo verá en su panel de Inicio.', 'info');
+        ponerAbierto(await ejecutar(() => pres.pedirAprobacion(presupuesto, motivo), 'Aprobación pedida a un responsable. Lo verá en su panel de Inicio.', 'info'));
       };
 
-      const resolverAprobacion = (aprobada) => {
-        const aprobacion = { ...presupuesto.aprobacion, estado: aprobada ? 'aprobada' : 'rechazada' };
-        setPresupuesto(prev => ({ ...prev, aprobacion }));
-        setFormularioPresupuesto(prev => ({ ...prev, aprobacion }));
-        mostrarToast(aprobada ? 'Margen aprobado: ya se puede enviar al cliente.' : 'Se piden cambios al comercial.', aprobada ? 'exito' : 'info');
+      const resolverAprobacion = async (aprobada) => {
+        ponerAbierto(await ejecutar(() => pres.resolverAprobacion(presupuesto, aprobada), aprobada ? 'Margen aprobado: ya se puede enviar al cliente.' : 'Se piden cambios al comercial.', aprobada ? 'exito' : 'info'));
       };
 
-      const enviarAlCliente = () => {
+      const enviarAlCliente = async () => {
         setModalRevision(false);
-        aplicarEstado(presupuesto.id, 'Enviado a Cliente');
-        mostrarToast(`Propuesta enviada a ${datosActivos.emailContacto}.`, 'exito');
+        ponerAbierto(await ejecutar(() => pres.enviar(presupuesto), `Propuesta enviada a ${datosActivos.emailContacto}.`));
       };
 
       const abrirCrearPeticiones = () => {
@@ -756,6 +263,8 @@ margenServicio
         });
       };
       const crearPeticion = () => {
+        // Las peticiones llegan en la fase 5: en real aún no se crean.
+        if (!DEMO) { setModalPeticion(false); mostrarToast('Disponible próximamente: las peticiones llegan con su módulo (fase 5 del plan).', 'info'); return; }
         const codigos = repartoPeticiones.map((_, i) => `PET-2026-${String(52 + i).padStart(4, '0')}`);
         const resumen = codigos.length === 1 ? codigos[0] : `${codigos[0]} a ${codigos[codigos.length - 1].slice(-4)}`;
         // Se guarda el reparto para verlo en cada puesto del presupuesto
@@ -767,26 +276,17 @@ margenServicio
       };
 
       // Duplicar: copia puestos, costes y condiciones; la empresa se elige de nuevo
-      const handleDuplicarPresupuesto = (p) => {
-        const base = presupuestoVacio(listado);
-        const origen = JSON.parse(JSON.stringify(DEMO_PRESUPUESTO_INICIAL));
-        const copia = {
-          ...base,
-          titulo: `${p.titulo} (copia)`,
-          posiciones: origen.posiciones.map((x, i) => ({ ...x, id: `pos-${Date.now()}-${i}` })),
-          conceptosEscandallo: origen.conceptosEscandallo,
-          extrasDefecto: origen.extrasDefecto,
-          margenObjetivo: origen.margenObjetivo,
-          modalidad: origen.modalidad, formaPago: origen.formaPago, garantiaSustitucion: origen.garantiaSustitucion,
-        };
+      const handleDuplicarPresupuesto = async (p) => {
+        const copia = await ejecutar(() => pres.duplicar(p._id), (d) => `Copia de ${p.id} creada como ${d.id}. Elige la empresa.`, 'info');
+        if (!copia) return;
         setPresupuesto(copia);
         setFormularioPresupuesto(JSON.parse(JSON.stringify(copia)));
+        setVersiones([]);
         setModoEdicion(true);
-        setEsNuevo(true);
-        setHayCambiosSinGuardar(true);
+        setEsNuevo(false);
+        setHayCambiosSinGuardar(false);
         setPestanaActiva('empresa');
         setVistaActual('detalle');
-        mostrarToast(`Copia de ${p.id} creada como ${copia.id}. Elige la empresa.`, 'info');
       };
       // Pasar a obsoleto y crear uno nuevo a partir de este: el original deja de valer (se queda para consultar) y el
       // nuevo, con número nuevo, copia empresa, puestos, costes, extras, margen y condiciones. Distinto de «Nueva
@@ -794,40 +294,14 @@ margenServicio
       const MOTIVOS_OBSOLETO = ['Caducado sin respuesta del cliente', 'El cliente pide otras condiciones', 'Cambian las tablas del convenio', 'Error en el presupuesto', 'Otro motivo'];
       const [modalObsoleto, setModalObsoleto] = useState(null); // { origen, motivo }
       const abrirObsoleto = (p) => {
-        const origen = p.id === presupuesto.id ? presupuesto : (abiertos[p.id] ? { ...abiertos[p.id], estado: p.estado } : detalleDePresupuesto(p));
+        const origen = p.id === presupuesto.id ? presupuesto : p;
         setModalObsoleto({ origen, motivo: MOTIVOS_OBSOLETO[0] });
       };
-      const pasarAObsoletoYCrearNuevo = () => {
+      const pasarAObsoletoYCrearNuevo = async () => {
         const { origen, motivo } = modalObsoleto;
-        const base = presupuestoVacio(listado);
-        const ahora = new Date().toISOString().replace('T', ' ').substring(0, 19);
-        const copia = JSON.parse(JSON.stringify(origen));
-        const nuevo = {
-          ...base,
-          titulo: copia.titulo,
-          empresaId: copia.empresaId, cliente: copia.cliente, cif: copia.cif, sector: copia.sector, ciudad: copia.ciudad, convenioEmpresa: copia.convenioEmpresa,
-          contacto: copia.contacto, emailContacto: copia.emailContacto, telefonoContacto: copia.telefonoContacto, comercial: copia.comercial,
-          fechaInicioPrevista: copia.fechaInicioPrevista, duracionMeses: copia.duracionMeses,
-          modalidad: copia.modalidad, modalidadCustom: copia.modalidadCustom, iva: copia.iva, ivaCustom: copia.ivaCustom,
-          formaPago: copia.formaPago, formaPagoCustom: copia.formaPagoCustom, garantiaSustitucion: copia.garantiaSustitucion, garantiaSustitucionCustom: copia.garantiaSustitucionCustom,
-          observacionesComerciales: copia.observacionesComerciales,
-          margenObjetivo: copia.margenObjetivo, margenTipo: copia.margenTipo, margenImporte: copia.margenImporte,
-          extrasDefecto: copia.extrasDefecto, conceptosEscandallo: copia.conceptosEscandallo,
-          posiciones: (copia.posiciones || []).map((x, i) => ({ ...x, id: `pos-${Date.now()}-${i}` })),
-          creadoDesde: origen.id,
-          auditoria: [{ id: `aud-${Date.now()}`, fecha: ahora, usuario: 'Usuario Demo', accion: 'Creación de presupuesto', detalle: `Creado a partir de ${origen.codigoVersion || origen.id}, que pasa a obsoleto (${motivo.toLowerCase()}).` }],
-        };
-        const t = totalesDe(nuevo);
-        // El original pasa a obsoleto y apunta al nuevo
-        const obsoleto = {
-          ...origen, estado: 'Obsoleto', esEditableDirecto: false, obsoleto: { motivo, fecha: ahora.slice(0, 10), sustituidoPor: nuevo.id },
-          auditoria: [{ id: `aud-${Date.now()}-o`, fecha: ahora, usuario: 'Usuario Demo', accion: 'Pasa a obsoleto', detalle: `${motivo}. Se crea ${nuevo.id} a partir de este.` }, ...(origen.auditoria || [])],
-        };
-        setAbiertos(prev => ({ ...prev, [origen.id]: obsoleto }));
-        setListado(prev => [
-          { id: nuevo.id, titulo: nuevo.titulo || 'Sin título', cliente: nuevo.cliente || 'Sin empresa', comercial: nuevo.comercial || '—', estado: 'Borrador', puestosCount: nuevo.posiciones.length, importe: t.facturacion, tarifaMedia: t.tarifaMedia, margenPct: t.margenMedioPct, fechaValidez: nuevo.fechaValidez, esEditableDirecto: true },
-          ...prev.map(x => (x.id === origen.id ? { ...x, estado: 'Obsoleto', esEditableDirecto: false } : x)),
-        ]);
+        const nuevo = await ejecutar(() => pres.pasarAObsoleto(origen._id, motivo), (d) => `${origen.id} pasa a obsoleto. Nuevo presupuesto ${d.id} creado a partir de él.`);
+        setModalObsoleto(null);
+        if (!nuevo) return;
         // Se abre el nuevo, listo para editar
         setPresupuesto(nuevo);
         setFormularioPresupuesto(JSON.parse(JSON.stringify(nuevo)));
@@ -837,40 +311,43 @@ margenServicio
         setHayCambiosSinGuardar(false);
         setPestanaActiva('resumen');
         setVistaActual('detalle');
-        setModalObsoleto(null);
-        mostrarToast(`${origen.id} pasa a obsoleto. Nuevo presupuesto ${nuevo.id} creado a partir de él.`, 'exito');
       };
-      const abrirPorId = (id) => { const fila = listado.find(x => x.id === id); if (fila) abrirPresupuesto(fila); };
+      const abrirPorId = (codigo) => { const fila = listado.find(x => x.id === codigo); if (fila) abrirPresupuesto(fila); };
 
       // Documentos añadidos a mano (presupuesto firmado por el cliente, pliegos, correos...)
       const TIPOS_DOCUMENTO = ['Presupuesto firmado por el cliente', 'Condiciones o pliego del cliente', 'Correo del cliente', 'Otro documento'];
       const [modalDocumento, setModalDocumento] = useState(null); // { tipo, nombre, archivo, interno }
-      const anadirDocumento = () => {
-        const doc = { id: `doc-${Date.now()}`, tipo: modalDocumento.tipo, nombre: modalDocumento.nombre.trim() || modalDocumento.archivo, archivo: modalDocumento.archivo, interno: modalDocumento.interno, fecha: new Date().toISOString().slice(0, 10), autor: 'Usuario Demo' };
-        const cambia = (prev) => ({ ...prev, documentosAnadidos: [doc, ...(prev.documentosAnadidos || [])] });
+      const recargarDocumentos = async () => {
+        const { presupuesto: d } = await pres.abrir(presupuesto._id);
+        const cambia = (prev) => ({ ...prev, documentosAnadidos: d.documentosAnadidos });
         setPresupuesto(cambia);
         setFormularioPresupuesto(cambia);
-        setModalDocumento(null);
-        mostrarToast(`Documento «${doc.nombre}» añadido.`, 'exito');
       };
-      const quitarDocumentoAnadido = (id) => {
-        const cambia = (prev) => ({ ...prev, documentosAnadidos: (prev.documentosAnadidos || []).filter(d => d.id !== id) });
-        setPresupuesto(cambia);
-        setFormularioPresupuesto(cambia);
-        mostrarToast('Documento quitado.', 'info');
+      const anadirDocumento = async () => {
+        if (!presupuesto._id) { mostrarToast('Guarda el presupuesto antes de añadirle documentos.', 'info'); return; }
+        const d = modalDocumento;
+        const ok = await ejecutar(() => pres.anadirDocumento(presupuesto._id, d).then(() => true), `Documento «${d.nombre.trim() || d.archivo.name}» añadido.`);
+        if (!ok) return;
+        setModalDocumento(null);
+        await recargarDocumentos();
+      };
+      const quitarDocumentoAnadido = async (id) => {
+        const ok = await ejecutar(() => pres.quitarDocumento(id).then(() => true), 'Documento quitado.', 'info');
+        if (ok) await recargarDocumentos();
       };
 
       const sinRespuesta = (p) => ['Enviado a Cliente', 'Pendiente de Firma'].includes(p.estado) && (p.diasSinRespuesta || 0) >= DIAS_RECORDATORIO;
-      // Cada presupuesto abre sus datos; lo cambiado en esta sesión se conserva al volver a abrirlo
-      const [abiertos, setAbiertos] = useState({});
-      const abrirPresupuesto = (p) => {
-        if (p && p.id !== presupuesto.id) {
-          if (!esNuevo) setAbiertos(prev => ({ ...prev, [presupuesto.id]: presupuesto }));
-          const fila = listado.find(x => x.id === p.id) || p;
-          const d = abiertos[p.id] ? { ...abiertos[p.id], estado: fila.estado } : detalleDePresupuesto(fila);
-          setPresupuesto(d);
-          setFormularioPresupuesto(JSON.parse(JSON.stringify(d)));
-          setVersiones(p.id === DEMO_PRESUPUESTO_INICIAL.id ? VERSIONES_0048 : []);
+      // Cada presupuesto se abre con sus datos de la API (y sus versiones anteriores, para comparar)
+      const [abriendo, setAbriendo] = useState(false);
+      const abrirPresupuesto = async (p) => {
+        if (p && p._id && p._id !== presupuesto._id) {
+          setAbriendo(true);
+          const r = await ejecutar(() => pres.abrir(p._id));
+          setAbriendo(false);
+          if (!r) return;
+          setPresupuesto(r.presupuesto);
+          setFormularioPresupuesto(r.presupuesto);
+          setVersiones(r.versiones);
           setModoEdicion(false);
           setEsNuevo(false);
           setHayCambiosSinGuardar(false);
@@ -885,6 +362,8 @@ margenServicio
 
       // Revisión, propuesta, aceptar/rechazar, petición y versiones
       const [modalRevision, setModalRevision] = useState(false);
+      // La revisión la hace el servidor (la misma que al enviar); con cambios sin guardar, la de la pantalla.
+      const [revisionServidor, setRevisionServidor] = useState(null);
       const [modalPropuesta, setModalPropuesta] = useState(false);
       const [modalAceptar, setModalAceptar] = useState(null);
       const [modalRechazo, setModalRechazo] = useState(null);
@@ -892,22 +371,25 @@ margenServicio
       const [inicioPeticion, setInicioPeticion] = useState('');
       // Reparto en peticiones: una por puesto; un puesto se puede dividir (otro turno, otras fechas)
       const [repartoPeticiones, setRepartoPeticiones] = useState([]);
-      const [motivosRechazo, setMotivosRechazo] = useState(['Precio', 'Plazo de incorporación', 'Eligió a la competencia', 'Cancela el proyecto', 'Sin respuesta del cliente']);
-      const VERSIONES_0048 = [{ codigo: 'PRE-2026-0048-v1', fecha: '2026-03-10', autor: 'Elena Navarro', estado: 'Sustituido', comentario: 'Primera propuesta enviada; el cliente pidió ajustar la tarifa del carretillero.', datos: DEMO_VERSION_ANTERIOR }];
-      const [versiones, setVersiones] = useState(VERSIONES_0048);
+      const motivosRechazo = pres.catalogos?.motivosRechazo ?? [];
+      const [versiones, setVersiones] = useState([]);
       const [versionAComparar, setVersionAComparar] = useState(null);
 
       const [pestanaActiva, setPestanaActiva] = useState('resumen'); // 'resumen' | 'empresa' | 'posiciones' (con costes internos y extras) | 'condiciones' | 'historial' | 'documentos' | 'auditoria'
 
       // Rol de usuario (Dirección con costes/márgenes, Comercial con datos sensibles ocultos/limitados)
       const [rolUsuario, setRolUsuario] = useState('direccion'); // 'direccion' | 'comercial'
+      // En real, el rol sale de los permisos: quien ve costes y margen (quotes.view_costs) lo ve como dirección; aprobar
+      // el margen es quotes.approve_margin.
+      const puedeAprobar = DEMO || !!pres.catalogos?.puedeAprobar;
+      useEffect(() => { if (!DEMO && pres.catalogos) setRolUsuario(pres.catalogos.puedeVerCostes ? 'direccion' : 'comercial'); }, [pres.catalogos?.puedeVerCostes]);
 
       // Estado del presupuesto principal
-      const [presupuesto, setPresupuesto] = useState(DEMO_PRESUPUESTO_INICIAL);
+      const [presupuesto, setPresupuesto] = useState(presupuestoVacio);
       
       // Estado de edición global
       const [modoEdicion, setModoEdicion] = useState(false);
-      const [formularioPresupuesto, setFormularioPresupuesto] = useState(DEMO_PRESUPUESTO_INICIAL);
+      const [formularioPresupuesto, setFormularioPresupuesto] = useState(presupuestoVacio);
       const [cambiosPendientes, setCambiosPendientes] = useState([]);
       const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
       const [estadoGuardado, setEstadoGuardado] = useState('guardado'); // 'guardado' | 'guardando' | 'incompleto' | 'revision' | 'error'
@@ -923,6 +405,42 @@ margenServicio
       const [modalConfirmarEliminarPosicion, setModalConfirmarEliminarPosicion] = useState(null);
       const [modalConfirmarConvenio, setModalConfirmarConvenio] = useState(null);
       const [modalNuevaVersionAbierto, setModalNuevaVersionAbierto] = useState(false);
+
+      useEffect(() => {
+        setRevisionServidor(null);
+        if (!modalRevision || !presupuesto._id || hayCambiosSinGuardar) return;
+        let vigente = true;
+        pres.revisar(presupuesto).then((r) => vigente && setRevisionServidor(r), () => {});
+        return () => { vigente = false; };
+      }, [modalRevision]);
+
+      // Parámetros retributivos del puesto: salen de la tabla del convenio (convenio + categoría). Al abrir el panel solo
+      // se lee la tabla (etiqueta «Del convenio» y mínimo); al cambiar convenio o categoría, se vuelven a cargar los
+      // campos que no se hayan cambiado a mano. Las categorías salen de la tabla vigente del convenio.
+      const [tablaConvenio, setTablaConvenio] = useState(null);
+      const ultimaTabla = useRef('');
+      const claveTabla = posicionEnEdicion ? `${posicionEnEdicion.convenio}|${posicionEnEdicion.categoria}` : '';
+      useEffect(() => { if (posicionEnEdicion?.convenio) pres.cargarCategorias(posicionEnEdicion.convenio); }, [posicionEnEdicion?.convenio]);
+      useEffect(() => {
+        if (!posicionEnEdicion) { ultimaTabla.current = ''; return; }
+        const abriendoPuesto = !ultimaTabla.current.startsWith(`${posicionEnEdicion.id}#`);
+        ultimaTabla.current = `${posicionEnEdicion.id}#${claveTabla}`;
+        let vigente = true;
+        pres.salarioConvenio(posicionEnEdicion.convenio, posicionEnEdicion.categoria).then((t) => {
+          if (!vigente) return;
+          setTablaConvenio(t);
+          setPosicionEnEdicion(prev => {
+            if (!prev) return prev;
+            const manuales = prev.camposManuales || [];
+            const valores = !t || abriendoPuesto ? {} : Object.fromEntries(Object.entries(t.valores).filter(([k]) => !manuales.includes(k)));
+            return { ...prev, ...valores, minimoConvenioHora: t?.minimoHora ?? null, versionConvenio: t?.versionConvenio ?? null, periodoConvenio: t?.periodo ?? null };
+          });
+        }, () => vigente && setTablaConvenio(null));
+        return () => { vigente = false; };
+      }, [claveTabla, posicionEnEdicion?.id]);
+      const cambiarRetribucion = (campo, valor) => setPosicionEnEdicion(prev => ({ ...prev, [campo]: valor, camposManuales: [...new Set([...(prev.camposManuales || []), campo])] }));
+      const volverAlConvenio = () => tablaConvenio && setPosicionEnEdicion(prev => ({ ...prev, ...tablaConvenio.valores, camposManuales: [] }));
+      const salarioHoraDe = (p) => ((Number(p.salarioBaseAnual) || 0) + (Number(p.plusConvenioMes) || 0) * 12) / (Number(p.horasAnuales) || 1784);
 
       // Toast feedback
       const [toast, setToast] = useState(null);
@@ -953,7 +471,7 @@ return p.posiciones.every(pos => pos.tarifaHoraOfertada > 0 && pos.salarioBaseAn
 
       // Presupuesto nuevo: empieza vacío, en la pestaña Empresa
       const handleNuevoPresupuesto = () => {
-        const nuevo = presupuestoVacio(listado);
+        const nuevo = presupuestoVacio();
         setPresupuesto(nuevo);
         setFormularioPresupuesto(JSON.parse(JSON.stringify(nuevo)));
         setModoEdicion(true);
@@ -964,23 +482,19 @@ return p.posiciones.every(pos => pos.tarifaHoraOfertada > 0 && pos.salarioBaseAn
       };
 
       // Desde la ficha de una empresa («Crear presupuesto»): presupuesto nuevo con la empresa y su contacto ya puestos
+      // (Cuando ya se han cargado las empresas: la empresa sale de la API.)
+      const catalogosListos = !!pres.catalogos;
       useEffect(() => {
+        if (!catalogosListos) return;
         const t = recogerTraspaso(CLAVE_PRESUPUESTO_EMPRESA);
         if (!t) return;
-        let e = EMPRESAS_CLIENTE.find(x => x.nombre === t.nombre || (t.cif && x.cif === t.cif));
-        if (!e) {
-          // Empresa recién dada de alta en Empresas: en real ya estaría en la API
-          e = { id: `comp-${Date.now()}`, nombre: t.nombre, cif: t.cif || '', sector: t.sector || '', ciudad: t.ciudad || '', convenio: '', comercial: t.comercial || '',
-            contactos: t.contacto ? [t.contacto] : [] };
-          EMPRESAS_CLIENTE.push(e);
-        } else if (t.contacto && !e.contactos.some(x => x.nombre === t.contacto.nombre)) {
-          e.contactos.push(t.contacto); // el contacto destinatario de la ficha de Empresas
-        }
+        const e = EMPRESAS_CLIENTE.find(x => (t.id && x.id === t.id) || (t.cif && x.cif === t.cif) || x.nombre === t.nombre);
+        if (!e) { mostrarToast(`No se encuentra ${t.nombre} en las empresas de esta sucursal.`, 'error'); return; }
         const c = e.contactos.find(x => t.contacto && x.nombre === t.contacto.nombre) || e.contactos[0];
         const nuevo = {
-          ...presupuestoVacio(listado),
+          ...presupuestoVacio(),
           empresaId: e.id, cliente: e.nombre, cif: e.cif, sector: e.sector, ciudad: e.ciudad, convenioEmpresa: e.convenio,
-          contacto: c ? `${c.nombre}${c.cargo ? ` (${c.cargo})` : ''}` : '', emailContacto: c?.email || '', telefonoContacto: c?.telefono || '',
+          contactoId: c?.id || '', contacto: c ? `${c.nombre}${c.cargo ? ` (${c.cargo})` : ''}` : '', emailContacto: c?.email || '', telefonoContacto: c?.telefono || '',
           comercial: COMERCIALES.includes(t.comercial) ? t.comercial : e.comercial,
         };
         setPresupuesto(nuevo);
@@ -991,7 +505,7 @@ return p.posiciones.every(pos => pos.tarifaHoraOfertada > 0 && pos.salarioBaseAn
         setPestanaActiva('empresa');
         setVistaActual('detalle');
         mostrarToast(`Presupuesto nuevo para ${e.nombre}: revisa el contacto y sigue con los puestos`, 'exito');
-      }, []);
+      }, [catalogosListos]);
 
       const ajustarConceptoPuesto = (posId, conceptoId, cambio) => {
         setFormularioPresupuesto(prev => ({
@@ -1022,36 +536,16 @@ if (presupuesto.estado === 'Enviado a Cliente' || presupuesto.estado === 'Pendie
 }
       };
 
-      // Crear nueva versión editable a partir de uno cerrado
-      const handleCrearNuevaVersion = () => {
-const nuevoNum = presupuesto.versionNumero + 1;
-const nuevoId = `${presupuesto.id}-v${nuevoNum}`;
-const nuevaCopia = {
-  ...presupuesto,
-  codigoVersion: nuevoId,
-  versionNumero: nuevoNum,
-  estado: 'Borrador',
-  esEditableDirecto: true,
-  aprobacion: undefined,
-  peticionCreada: undefined,
-  auditoria: [
-    {
-      id: `aud-${Date.now()}`,
-      fecha: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      usuario: 'Elena Navarro (KAM)',
-      accion: 'Creación de versión editable',
-      detalle: `Generada nueva versión ${nuevoId} a partir de la versión sustituida.`
-    },
-    ...presupuesto.auditoria
-  ]
-};
-setVersiones(prev => [{ codigo: presupuesto.codigoVersion, fecha: new Date().toISOString().slice(0, 10), autor: 'Usuario Demo', estado: 'Sustituido', comentario: 'Sustituida por una versión nueva.', datos: JSON.parse(JSON.stringify({ ...presupuesto, estado: 'Sustituido' })) }, ...prev]);
-setPresupuesto(nuevaCopia);
-setFormularioPresupuesto(JSON.parse(JSON.stringify(nuevaCopia)));
-setModoEdicion(true);
-setModalNuevaVersionAbierto(false);
-setHayCambiosSinGuardar(false);
-mostrarToast(`Nueva versión editable creada: ${nuevoId}`, 'exito');
+      // Crear nueva versión editable a partir de uno cerrado (la API guarda la anterior entera, para comparar)
+      const handleCrearNuevaVersion = async () => {
+        const r = await ejecutar(() => pres.nuevaVersion(presupuesto), (x) => `Nueva versión editable creada: ${x.presupuesto.codigoVersion}`);
+        setModalNuevaVersionAbierto(false);
+        if (!r) return;
+        setPresupuesto(r.presupuesto);
+        setFormularioPresupuesto(JSON.parse(JSON.stringify(r.presupuesto)));
+        setVersiones(r.versiones);
+        setModoEdicion(true);
+        setHayCambiosSinGuardar(false);
       };
 
       // Cancelar edición
@@ -1060,8 +554,8 @@ if (esNuevo) {
   // Un presupuesto nuevo que no se ha guardado se descarta y se vuelve al listado
   setEsNuevo(false);
   setModoEdicion(false);
-  setPresupuesto(DEMO_PRESUPUESTO_INICIAL);
-  setFormularioPresupuesto(DEMO_PRESUPUESTO_INICIAL);
+  setPresupuesto(presupuestoVacio());
+  setFormularioPresupuesto(presupuestoVacio());
   setVistaActual('listado');
   return;
 }
@@ -1138,71 +632,25 @@ setModalResumenCambiosAbierto(true);
       };
 
       // Confirmar y aplicar guardado definitivo
-      const handleConfirmarGuardar = (guardarComoBorrador = false) => {
-setEstadoGuardado('guardando');
-
-setTimeout(() => {
-  const nuevosLogs = cambiosPendientes.map(diff => ({
-    id: `aud-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-    fecha: new Date().toISOString().replace('T', ' ').substring(0, 19),
-    usuario: rolUsuario === 'direccion' ? 'Dirección de Operaciones' : 'Elena Navarro (KAM)',
-    accion: 'Modificación de presupuesto',
-    detalle: `${diff.campo}: de "${diff.anterior}" a "${diff.nuevo}"`
-  }));
-
-  const updated = {
-    ...formularioPresupuesto,
-    estado: guardarComoBorrador ? 'Borrador' : (estaCompleto ? 'En preparación' : 'Borrador'),
-    auditoria: [
-      ...(nuevosLogs.length > 0 ? nuevosLogs : [{
-        id: `aud-${Date.now()}`,
-        fecha: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        usuario: 'Elena Navarro (KAM)',
-        accion: 'Guardado de presupuesto',
-        detalle: 'Revisión y actualización de datos.'
-      }]),
-      ...formularioPresupuesto.auditoria
-    ]
-  };
-
-  setPresupuesto(updated);
-  setFormularioPresupuesto(updated);
-  if (esNuevo) {
-    const ecos = updated.posiciones.map(p => calcularEconomiaPosicion(p, updated.conceptosEscandallo, margenDe(updated)));
-    const media = (k) => (ecos.length ? ecos.reduce((s, e) => s + e[k], 0) / ecos.length : 0);
-    setListado(prev => [{ id: updated.id, titulo: updated.titulo || 'Sin título', cliente: updated.cliente || 'Sin empresa', comercial: updated.comercial || '—', estado: updated.estado, puestosCount: updated.posiciones.length, importe: totalesDe(updated).facturacion, tarifaMedia: media('tarifaPVP'), margenPct: media('margenPorcentaje'), fechaValidez: updated.fechaValidez, esEditableDirecto: true }, ...prev]);
-    setEsNuevo(false);
-  }
-  setModoEdicion(false);
-  setHayCambiosSinGuardar(false);
-  setEstadoGuardado('guardado');
-  setModalResumenCambiosAbierto(false);
-  mostrarToast('Presupuesto guardado correctamente y registrado en auditoría.', 'exito');
-}, 600);
+      const handleConfirmarGuardar = async (guardarComoBorrador = false) => {
+        setEstadoGuardado('guardando');
+        const estado = guardarComoBorrador ? 'Borrador' : (estaCompleto ? 'En preparación' : 'Borrador');
+        const quoteId = await ejecutar(() => pres.guardar(formularioPresupuesto, estado, presupuesto));
+        if (!quoteId) { setEstadoGuardado('error'); return; }
+        const { presupuesto: d, versiones: v } = await pres.abrir(quoteId);
+        mostrarToast(esNuevo || !presupuesto._id ? `Presupuesto ${d.id} creado.` : 'Presupuesto guardado y registrado en el historial.', 'exito');
+        setPresupuesto(d);
+        setFormularioPresupuesto(d);
+        setVersiones(v);
+        setEsNuevo(false);
+        setModoEdicion(false);
+        setHayCambiosSinGuardar(false);
+        setEstadoGuardado('guardado');
+        setModalResumenCambiosAbierto(false);
       };
 
       // Guardar directamente como borrador (permite datos incompletos)
-      const handleGuardarComoBorradorDirecto = () => {
-const updated = {
-  ...formularioPresupuesto,
-  estado: 'Borrador',
-  auditoria: [
-    {
-      id: `aud-${Date.now()}`,
-      fecha: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      usuario: 'Elena Navarro (KAM)',
-      accion: 'Guardado en Borrador',
-      detalle: 'Guardado manual en estado borrador (puede contener datos provisionales).'
-    },
-    ...formularioPresupuesto.auditoria
-  ]
-};
-setPresupuesto(updated);
-setFormularioPresupuesto(updated);
-setModoEdicion(false);
-setHayCambiosSinGuardar(false);
-mostrarToast('Presupuesto guardado como Borrador.', 'info');
-      };
+      const handleGuardarComoBorradorDirecto = () => handleConfirmarGuardar(true);
 
       // Actualizar campos del presupuesto en formulario
       const handleActualizarCampoPresupuesto = (campo, valor) => {
@@ -1228,14 +676,15 @@ if (pos) {
   setPosicionEnEdicion({
     id: `pos-${Date.now()}`,
     nombre: '',
-    convenio: formularioPresupuesto.convenioEmpresa || presupuesto.convenioEmpresa || 'logistica_madrid',
+    convenio: formularioPresupuesto.convenioEmpresa || presupuesto.convenioEmpresa || 'otro',
     convenioCustom: '',
-    categoria: 'op_almacen',
+    categoria: (CATALOGOS.categorias[formularioPresupuesto.convenioEmpresa] || CATALOGOS.categorias.default)[0].id, // 'otro' hasta que lleguen las de su convenio
     categoriaCustom: '',
     grupoNivel: 'g4',
     grupoNivelCustom: '',
-    salarioBaseAnual: 18000,
-    plusConvenioMes: 100,
+    camposManuales: [],
+    salarioBaseAnual: 0,
+    plusConvenioMes: 0,
     pagasAnuales: 14,
     horasAnuales: 1784,
     horasDiaCalculo: 8,
@@ -1255,6 +704,12 @@ setDrawerPosicionAbierto(true);
       const handleGuardarPosicion = (posData) => {
 if (!posData.nombre || !posData.tarifaHoraOfertada) {
   alert('Por favor indica al menos el nombre del puesto y la tarifa ofertada.');
+  return;
+}
+// Por debajo del convenio de la empresa usuaria no se puede pagar (art. 11 de la Ley 14/1994): no hay aprobación que lo permita
+const porHora = salarioHoraDe(posData);
+if (posData.minimoConvenioHora != null && porHora + 0.005 < posData.minimoConvenioHora) {
+  mostrarToast(`El salario (${euros(porHora)}) está por debajo del convenio (${euros(posData.minimoConvenioHora)}). Súbelo: no se puede pagar menos que el convenio.`, 'error');
   return;
 }
 
@@ -1313,6 +768,10 @@ mostrarToast('Posición eliminada del presupuesto.', 'info');
       // GESTIÓN DE CONCEPTOS DE ESCANDALLO
       // ==========================================
       const handleAbrirDrawerConcepto = (concepto = null) => {
+if (concepto?.esObligatorioLegal) {
+  mostrarToast('La Seguridad Social y la indemnización las fija la ley: los tipos de cotización son los de la ETT y el AT/EP sale del CNAE del cliente.', 'info');
+  return;
+}
 if (!modoEdicion) {
   setFormularioPresupuesto(JSON.parse(JSON.stringify(presupuesto)));
   setModoEdicion(true);
@@ -1396,7 +855,7 @@ return datosActivos.posiciones.map(pos => ({
 
       // Render de etiqueta de estado
       // Demo: ver el presupuesto como dirección (con costes) o como comercial (sin costes).
-      const selectorRol = (
+      const selectorRol = DEMO && (
         <Select value={rolUsuario} onChange={(e) => setRolUsuario(e.target.value)} aria-label="Ver como">
           <option value="direccion">Ver como dirección</option>
           <option value="comercial">Ver como comercial</option>
@@ -1416,6 +875,28 @@ return datosActivos.posiciones.map(pos => ({
         };
         const textos = { 'Enviado a Cliente': 'Enviado', 'Pendiente de Firma': 'Pendiente de firma', 'Firmado / Aceptado': 'Aceptado' };
         return <Badge tone={tonos[estado] || 'neutral'} dot>{textos[estado] || estado}</Badge>;
+      };
+
+      if (pres.estado === 'cargando') return <CargandoPagina texto="Cargando presupuestos" />;
+      if (pres.estado === 'error') {
+        return (
+          <Page>
+            <ErrorCarga titulo="No se han podido cargar los presupuestos" mensaje={pres.error} onReintentar={pres.reintentar} />
+          </Page>
+        );
+      }
+      // Lo que aún no se hace de verdad (correo saliente, firma electrónica): en real, «Disponible próximamente».
+      const soloDemo = (mensajeDemo, que) => mostrarToast(DEMO ? mensajeDemo : `Disponible próximamente: ${que}.`, DEMO ? 'exito' : 'info');
+      // La propuesta en PDF la genera el servidor; el escandallo en Excel aún no.
+      const descargarGenerado = async (tipo) => {
+        if (!presupuesto._id) { mostrarToast('Guarda el presupuesto para generar sus documentos.', 'info'); return; }
+        if (tipo !== 'propuesta') { mostrarToast('Disponible próximamente: el escandallo interno en Excel.', 'info'); return; }
+        const hay = await ejecutar(() => pres.abrirPropuestaPdf(presupuesto));
+        if (hay === false) mostrarToast('En la demo no se genera el PDF: mira la vista previa.', 'info');
+      };
+      const descargarAnadido = async (d) => {
+        const hay = await ejecutar(() => pres.descargarDocumento(d.id));
+        if (hay === false) mostrarToast('En la demo los documentos de ejemplo no tienen fichero.', 'info');
       };
 
       return (
@@ -1464,12 +945,6 @@ return datosActivos.posiciones.map(pos => ({
             <option value="todos">Todos los estados</option>
             {ESTADOS_PIPELINE.map(s => <option key={s.estado} value={s.estado}>{s.texto || s.estado}</option>)}
           </Select>
-{veVariasSucursales && (
-            <Select value={filtroSucursal} onChange={(e) => setFiltroSucursal(e.target.value)} aria-label="Sucursal">
-              <option value="">Todas las sucursales</option>
-              {SUCURSALES.filter(x => SUCURSALES_USUARIO.includes(x.id)).map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-            </Select>
-          )}
           <Select value={filtroComercial} onChange={(e) => setFiltroComercial(e.target.value)}>
             <option value="todos">Todos los comerciales</option>
             {[...new Set(listado.map(p => p.comercial))].sort().map(c => <option key={c} value={c}>{c}</option>)}
@@ -1524,7 +999,7 @@ return datosActivos.posiciones.map(pos => ({
                     <td className="py-2.5 px-3 whitespace-nowrap font-mono text-slate-700">{p.id}</td>
                     <td className="py-2.5 px-3">
                       <div className="font-medium text-slate-900">{p.cliente}</div>
-                      <div className="text-[11px] text-slate-500 line-clamp-1">{veVariasSucursales && <span className="text-slate-600">{sucursal(sucursalDeCliente(p.cliente)).corto} · </span>}{p.titulo}</div>
+                      <div className="text-[11px] text-slate-500 line-clamp-1">{p.titulo}</div>
                     </td>
                     <td className="py-2.5 px-3 whitespace-nowrap text-slate-600">{p.comercial}</td>
                     <td className="py-2.5 px-3 whitespace-nowrap text-slate-600">{p.puestosCount}</td>
@@ -1542,9 +1017,9 @@ return datosActivos.posiciones.map(pos => ({
                     <td className="py-2.5 px-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {sinRespuesta(p) && (
-                          <Button size="sm" icon={Send} onClick={() => mostrarToast(`Recordatorio enviado a ${p.cliente}.`, 'exito')}>Recordar</Button>
+                          <Button size="sm" icon={Send} onClick={() => soloDemo(`Recordatorio enviado a ${p.cliente}.`, 'el envío de recordatorios por correo')}>Recordar</Button>
                         )}
-                        {p.estado === 'Firmado / Aceptado' && !(p.id === presupuesto.id ? presupuesto : (abiertos[p.id] || detalleDePresupuesto(p))).peticionCreada && (
+                        {p.estado === 'Firmado / Aceptado' && !(p.id === presupuesto.id ? presupuesto : p).peticionCreada && (
                           <Button size="sm" variant="primary" icon={ArrowUpRight} title="Abre el presupuesto para crear sus peticiones" onClick={() => abrirPresupuesto(p)}>Crear peticiones</Button>
                         )}
                         <Button size="sm" icon={p.esEditableDirecto ? Edit3 : Eye} onClick={() => abrirPresupuesto(p)}>
@@ -1668,7 +1143,7 @@ return datosActivos.posiciones.map(pos => ({
         <Notice tone="warning" icon={AlertTriangle}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span><strong>Pendiente de aprobación de dirección.</strong> {datosActivos.aprobacion.motivo}</span>
-            {rolUsuario === 'direccion' ? (
+            {rolUsuario === 'direccion' && puedeAprobar ? (
               <span className="flex items-center gap-2">
                 <Button size="sm" onClick={() => resolverAprobacion(false)}>Pedir cambios</Button>
                 <Button size="sm" variant="primary" icon={Check} onClick={() => resolverAprobacion(true)}>Aprobar</Button>
@@ -1836,7 +1311,7 @@ return datosActivos.posiciones.map(pos => ({
         )}
 
         {pestanaActiva === 'empresa' && (
-          <PestanaEmpresa datos={datosActivos} editable={modoEdicion} onCambiar={actualizarVarios} onEditar={handleIniciarEdicion} />
+          <PestanaEmpresa datos={datosActivos} editable={modoEdicion} onCambiar={actualizarVarios} onEditar={handleIniciarEdicion} onAlta={(d) => ejecutar(() => pres.altaRapidaEmpresa(d))} />
         )}
 
         {/* ----------------------------------------------------
@@ -2409,7 +1884,7 @@ return datosActivos.posiciones.map(pos => ({
                 <h3 className="text-sm font-semibold text-slate-900">Documentos del presupuesto</h3>
                 <p className="text-xs text-slate-500">Si cambias el presupuesto, elimina el documento y vuelve a generarlo para que recoja los cambios.</p>
               </div>
-              <Button variant="primary" icon={Upload} onClick={() => setModalDocumento({ tipo: TIPOS_DOCUMENTO[0], nombre: '', archivo: '', interno: false })}>Añadir documento</Button>
+              <Button variant="primary" icon={Upload} onClick={() => setModalDocumento({ tipo: TIPOS_DOCUMENTO[0], nombre: '', archivo: null, interno: false })}>Añadir documento</Button>
             </div>
             <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
               {[
@@ -2426,9 +1901,9 @@ return datosActivos.posiciones.map(pos => ({
                   {docsPresupuesto.includes(d.id) ? (
                     <div className="flex items-center gap-1">
                       {d.id === 'propuesta' && <Button size="sm" icon={Eye} onClick={() => setModalPropuesta(true)}>Vista previa</Button>}
-                      <Button size="sm" icon={Download} onClick={() => mostrarToast(`Descargando ${d.nombre}...`, 'info')}>Descargar</Button>
+                      <Button size="sm" icon={Download} onClick={() => descargarGenerado(d.id)}>Descargar</Button>
                       {d.id === 'propuesta' && datosActivos.emailContacto && (
-                        <Button size="sm" icon={Send} onClick={() => mostrarToast('Enviando la propuesta a firma a ' + datosActivos.emailContacto, 'exito')}>Enviar a firma</Button>
+                        <Button size="sm" icon={Send} onClick={() => soloDemo('Enviando la propuesta a firma a ' + datosActivos.emailContacto, 'la firma electrónica')}>Enviar a firma</Button>
                       )}
                       <IconButton icon={Trash2} title="Eliminar documento" className="hover:text-rose-600 hover:bg-rose-50" onClick={() => setDocABorrar(d)} />
                     </div>
@@ -2454,7 +1929,7 @@ return datosActivos.posiciones.map(pos => ({
                         <div className="text-[11px] text-slate-500">{d.tipo} · {d.archivo} · añadido el {d.fecha} por {d.autor}</div>
                       </div>
                       {d.interno && <Badge icon={EyeOff}>Interno</Badge>}
-                      <Button size="sm" icon={Download} onClick={() => mostrarToast(`Descargando ${d.archivo}...`, 'info')}>Descargar</Button>
+                      <Button size="sm" icon={Download} onClick={() => descargarAnadido(d)}>Descargar</Button>
                       <IconButton icon={Trash2} title="Quitar documento" className="hover:text-rose-600 hover:bg-rose-50" onClick={() => quitarDocumentoAnadido(d.id)} />
                     </li>
                   ))}
@@ -2503,7 +1978,7 @@ return datosActivos.posiciones.map(pos => ({
 
   {/* REVISIÓN ANTES DE ENVIAR */}
   {modalRevision && (() => {
-    const items = revisarPresupuesto(datosActivos);
+    const items = revisionServidor ?? revisarPresupuesto(datosActivos);
     const errores = items.filter(i => !i.ok && i.tipo === 'error');
     const necesitaAprobacion = items.some(i => !i.ok && i.tipo === 'aprobacion');
     const pendiente = datosActivos.aprobacion?.estado === 'pendiente';
@@ -2570,7 +2045,7 @@ return datosActivos.posiciones.map(pos => ({
       size="max-w-4xl"
       footer={
         <>
-          <Button icon={Download} onClick={() => mostrarToast('Descargando la propuesta en PDF...', 'info')}>Descargar PDF</Button>
+          <Button icon={Download} onClick={() => descargarGenerado('propuesta')}>Descargar PDF</Button>
           <Button variant="primary" onClick={() => setModalPropuesta(false)}>Cerrar</Button>
         </>
       }
@@ -2640,7 +2115,7 @@ return datosActivos.posiciones.map(pos => ({
             value={modalRechazo.motivo || ''}
             onChange={(v) => setModalRechazo(prev => ({ ...prev, motivo: v }))}
             options={motivosRechazo}
-            onAdd={(v) => setMotivosRechazo(prev => [...prev, v])}
+            onAdd={(v) => pres.anadirMotivoRechazo(v)}
             placeholder="Elige el motivo"
             nuevoPlaceholder="Nuevo motivo"
           />
@@ -2882,7 +2357,19 @@ return datosActivos.posiciones.map(pos => ({
 
           {/* Parámetros Salariales */}
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-            <h4 className="font-semibold text-slate-800 text-xs">Parámetros retributivos de convenio</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="font-semibold text-slate-800 text-xs">Parámetros retributivos de convenio</h4>
+              {tablaConvenio ? (
+                (posicionEnEdicion.camposManuales || []).length === 0
+                  ? <Badge tone="success">Del convenio{tablaConvenio.year ? ` · Tablas ${tablaConvenio.year}` : ''}</Badge>
+                  : <button type="button" onClick={volverAlConvenio} className="text-[11px] font-medium text-indigo-700 hover:underline">Volver a los valores del convenio (tablas {tablaConvenio.year})</button>
+              ) : <span className="text-[11px] text-slate-500">Sin tabla salarial para esta categoría y nivel: rellénalos a mano.</span>}
+            </div>
+            {posicionEnEdicion.minimoConvenioHora != null && salarioHoraDe(posicionEnEdicion) + 0.005 < posicionEnEdicion.minimoConvenioHora && (
+              <Notice tone="danger" icon={AlertTriangle}>
+                Por debajo del convenio: el mínimo es {euros(posicionEnEdicion.minimoConvenioHora)} (salario base y pluses entre las horas anuales); ahora son {euros(salarioHoraDe(posicionEnEdicion))}. No se puede pagar menos que el convenio de la empresa usuaria, ni con aprobación.
+              </Notice>
+            )}
             
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -2891,7 +2378,7 @@ return datosActivos.posiciones.map(pos => ({
                   type="number"
                   step="50"
                   value={posicionEnEdicion.salarioBaseAnual}
-                  onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, salarioBaseAnual: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => cambiarRetribucion('salarioBaseAnual', parseFloat(e.target.value) || 0)}
                   className="w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white font-semibold"
                 />
               </div>
@@ -2901,7 +2388,7 @@ return datosActivos.posiciones.map(pos => ({
                   type="number"
                   step="10"
                   value={posicionEnEdicion.plusConvenioMes}
-                  onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, plusConvenioMes: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => cambiarRetribucion('plusConvenioMes', parseFloat(e.target.value) || 0)}
                   className="w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white font-semibold"
                 />
               </div>
@@ -2913,7 +2400,7 @@ return datosActivos.posiciones.map(pos => ({
                 <input
                   type="number"
                   value={posicionEnEdicion.pagasAnuales}
-                  onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, pagasAnuales: parseInt(e.target.value) || 12 }))}
+                  onChange={(e) => cambiarRetribucion('pagasAnuales', parseInt(e.target.value) || 12)}
                   className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
                 />
               </div>
@@ -2922,7 +2409,7 @@ return datosActivos.posiciones.map(pos => ({
                 <input
                   type="number"
                   value={posicionEnEdicion.horasAnuales}
-                  onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, horasAnuales: parseInt(e.target.value) || 1784 }))}
+                  onChange={(e) => cambiarRetribucion('horasAnuales', parseInt(e.target.value) || 1784)}
                   className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
                 />
               </div>
@@ -2931,7 +2418,7 @@ return datosActivos.posiciones.map(pos => ({
                 <input
                   type="number"
                   value={posicionEnEdicion.horasDiaCalculo}
-                  onChange={(e) => setPosicionEnEdicion(prev => ({ ...prev, horasDiaCalculo: parseFloat(e.target.value) || 8 }))}
+                  onChange={(e) => cambiarRetribucion('horasDiaCalculo', parseFloat(e.target.value) || 8)}
                   className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
                 />
               </div>
@@ -3302,15 +2789,16 @@ return datosActivos.posiciones.map(pos => ({
           <span className="block text-[11px] font-medium text-slate-600 mb-1">Nombre (opcional)</span>
           <input value={modalDocumento.nombre} onChange={(e) => setModalDocumento(m => ({ ...m, nombre: e.target.value }))} placeholder="Si lo dejas vacío, el del archivo" className={`${CAMPO} w-full`} />
         </label>
-        <button
-          type="button"
-          onClick={() => setModalDocumento(m => ({ ...m, archivo: m.archivo ? '' : `${(m.tipo === 'Correo del cliente' ? 'correo_cliente.eml' : m.tipo === 'Presupuesto firmado por el cliente' ? `${datosActivos.codigoVersion}_firmado.pdf` : 'documento.pdf')}` }))}
-          className={`w-full rounded-xl border-2 border-dashed p-5 text-center ${modalDocumento.archivo ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-700'}`}
+        <label
+          className={`block w-full cursor-pointer rounded-xl border-2 border-dashed p-5 text-center ${modalDocumento.archivo ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-700'}`}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) setModalDocumento(m => ({ ...m, archivo: f })); }}
         >
+          <input type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) setModalDocumento(m => ({ ...m, archivo: f })); e.target.value = ''; }} />
           {modalDocumento.archivo
-            ? <><CheckCircle2 className="w-5 h-5 mx-auto mb-1" />{modalDocumento.archivo} (pulsa para quitarlo)</>
-            : <><Upload className="w-5 h-5 mx-auto mb-1" />Arrastra el archivo aquí o pulsa para elegirlo (PDF, Word, Excel, imagen o correo)</>}
-        </button>
+            ? <><CheckCircle2 className="w-5 h-5 mx-auto mb-1" />{modalDocumento.archivo.name} (pulsa para cambiarlo)</>
+            : <><Upload className="w-5 h-5 mx-auto mb-1" />Arrastra el archivo aquí o pulsa para elegirlo (PDF, JPG o PNG, hasta 10 MB)</>}
+        </label>
         <label className="flex items-center gap-2 text-slate-600">
           <input type="checkbox" checked={modalDocumento.interno} onChange={(e) => setModalDocumento(m => ({ ...m, interno: e.target.checked }))} className="accent-indigo-600" />
           Solo uso interno (no se envía al cliente)
@@ -3361,7 +2849,7 @@ return datosActivos.posiciones.map(pos => ({
       const t = eco.tarifaPVP || 0;
       const ancho = (v) => (t > 0 ? `${Math.max(0, (v / t) * 100)}%` : '0%');
       const filas = [
-        { id: 'salario', nombre: 'Salario bruto', valor: eco.salarioBrutoHora, color: 'bg-indigo-500' },
+        { id: 'salario', nombre: 'Salario de convenio', valor: eco.salarioConvenioHora ?? eco.salarioBrutoHora, color: 'bg-indigo-500' },
         ...eco.desgloseConceptos.map(c => ({ id: c.id, nombre: c.propio ? `${c.nombre} (propio del puesto)` : c.nombre, valor: c.importeHora, color: c.esLegal ? 'bg-amber-500' : 'bg-amber-300', interno: true })),
       ];
       const margenNegativo = eco.margenEuroHora < 0;
@@ -3420,6 +2908,7 @@ return datosActivos.posiciones.map(pos => ({
                 </table>
               )}
               {margenNegativo && <Notice tone="danger" icon={AlertTriangle}>La tarifa no cubre el coste: se pierde dinero en este puesto.</Notice>}
+              {eco.bajoConvenio && <Notice tone="danger" icon={AlertTriangle}>Salario por debajo del convenio (mínimo {euros(eco.bajoConvenio.minimoHora)}): no se puede enviar hasta subirlo.</Notice>}
               {!margenNegativo && eco.tarifaSugerida > 0 && Math.abs(eco.tarifaSugerida - t) >= 0.01 && (
                 <p className="text-[11px] text-slate-500">
                   Con el margen objetivo ({pct(eco.margenObjetivo)}) la tarifa sería <strong className="text-slate-700">{euros(eco.tarifaSugerida)}</strong>.
@@ -3565,22 +3054,25 @@ return datosActivos.posiciones.map(pos => ({
     // ==========================================
     const sinAcentos = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-    function PestanaEmpresa({ datos, editable, onCambiar, onEditar }) {
+    function PestanaEmpresa({ datos, editable, onCambiar, onEditar, onAlta }) {
       const [busqueda, setBusqueda] = useState('');
       const [abierto, setAbierto] = useState(false);
       const [alta, setAlta] = useState(null); // empresa nueva: datos mínimos para presupuestar
       const empresa = EMPRESAS_CLIENTE.find(e => e.id === datos.empresaId);
       const altaValida = alta && alta.nombre.trim() && alta.cif.trim() && alta.contacto.trim() && /\S+@\S+\.\S+/.test(alta.email);
-      const darDeAlta = () => {
-        // En real: alta en Empresas por la API, en estado «Borrador inicial», con este contacto como destinatario de presupuestos
-        const e = {
-          id: `comp-${Date.now()}`, nombre: alta.nombre.trim(), cif: alta.cif.trim().toUpperCase(), sector: alta.sector.trim(), ciudad: alta.ciudad.trim(),
-          convenio: alta.convenio, comercial: datos.comercial || '', nueva: true,
-          contactos: [{ nombre: alta.contacto.trim(), cargo: alta.cargo.trim(), email: alta.email.trim(), telefono: alta.telefono.trim() }],
-        };
-        EMPRESAS_CLIENTE.push(e);
+      // Alta en Empresas por la API, en borrador, con este contacto como destinatario de presupuestos
+      const [dandoDeAlta, setDandoDeAlta] = useState(false);
+      const darDeAlta = async () => {
+        setDandoDeAlta(true);
+        const e = await onAlta({
+          nombre: alta.nombre.trim(), cif: alta.cif.trim().toUpperCase(), sector: alta.sector.trim(), ciudad: alta.ciudad.trim(), convenio: alta.convenio,
+          contacto: { nombre: alta.contacto.trim(), cargo: alta.cargo.trim(), email: alta.email.trim(), telefono: alta.telefono.trim() },
+        });
+        setDandoDeAlta(false);
+        if (!e) return;
+        EMPRESAS_CLIENTE = [...EMPRESAS_CLIENTE, { ...e, nueva: true }];
         setAlta(null);
-        elegir(e);
+        elegir({ ...e, nueva: true });
       };
       const sugerencias = busqueda.trim().length < 2 ? [] : EMPRESAS_CLIENTE.filter(e => sinAcentos(`${e.nombre} ${e.cif} ${e.sector}`).includes(sinAcentos(busqueda.trim())));
 
@@ -3588,7 +3080,7 @@ return datosActivos.posiciones.map(pos => ({
         const c = e.contactos[0];
         onCambiar({
           empresaId: e.id, cliente: e.nombre, cif: e.cif, sector: e.sector, ciudad: e.ciudad, convenioEmpresa: e.convenio,
-          contacto: c ? `${c.nombre} (${c.cargo})` : '', emailContacto: c?.email || '', telefonoContacto: c?.telefono || '',
+          contactoId: c?.id || '', contacto: c ? `${c.nombre}${c.cargo ? ` (${c.cargo})` : ''}` : '', emailContacto: c?.email || '', telefonoContacto: c?.telefono || '',
           comercial: datos.comercial || e.comercial,
         });
         setBusqueda('');
@@ -3697,7 +3189,7 @@ return datosActivos.posiciones.map(pos => ({
               </div>
               <div className="flex flex-wrap justify-end gap-2 pt-1">
                 <Button size="sm" onClick={() => setAlta(null)}>Cancelar</Button>
-                <Button size="sm" variant="primary" icon={Check} disabled={!altaValida} onClick={darDeAlta}>Dar de alta y usarla</Button>
+                <Button size="sm" variant="primary" icon={Check} disabled={!altaValida || dandoDeAlta} onClick={darDeAlta}>Dar de alta y usarla</Button>
               </div>
             </div>
           )}
@@ -3732,7 +3224,7 @@ return datosActivos.posiciones.map(pos => ({
                     value={empresa.contactos.find(c => datos.contacto.startsWith(c.nombre))?.nombre || ''}
                     onChange={(e) => {
                       const c = empresa.contactos.find(x => x.nombre === e.target.value);
-                      if (c) onCambiar({ contacto: `${c.nombre} (${c.cargo})`, emailContacto: c.email, telefonoContacto: c.telefono });
+                      if (c) onCambiar({ contactoId: c.id || '', contacto: `${c.nombre}${c.cargo ? ` (${c.cargo})` : ''}`, emailContacto: c.email, telefonoContacto: c.telefono });
                     }}
                   >
                     <option value="">Elige un contacto</option>
@@ -3742,7 +3234,7 @@ return datosActivos.posiciones.map(pos => ({
                   <Notice tone="warning" icon={AlertTriangle}>Esta empresa no tiene contactos. Añádelo en Empresas o escríbelo aquí.</Notice>
                 ) : null}
                 {editable && (!empresa || empresa.contactos.length === 0) && (
-                  <input type="text" value={datos.contacto} onChange={(e) => onCambiar({ contacto: e.target.value })} placeholder="Nombre y cargo" className={`${CAMPO} w-full`} />
+                  <input type="text" value={datos.contacto} onChange={(e) => onCambiar({ contactoId: '', contacto: e.target.value })} placeholder="Nombre y cargo" className={`${CAMPO} w-full`} />
                 )}
                 <dl className="space-y-2">
                   {fila('Persona', datos.contacto)}
@@ -4000,8 +3492,6 @@ return datosActivos.posiciones.map(pos => ({
     // ==========================================
     // IMPORTES, REVISIÓN ANTES DE ENVIAR, PROPUESTA Y VERSIONES
     // ==========================================
-    const MARGEN_MINIMO = 15; // % por debajo del cual dirección tiene que aprobar (por confirmar)
-    const DIAS_RECORDATORIO = 5; // días sin respuesta tras enviar para avisar
     const eurosTotal = (n) => `${Math.round(Number(n) || 0).toLocaleString('es-ES')} €`;
     const horasFmt = (n) => (Number(n) || 0).toLocaleString('es-ES');
 
@@ -4028,7 +3518,9 @@ return datosActivos.posiciones.map(pos => ({
       const { ecos } = totalesDe(datos);
       const hoy = new Date().toISOString().slice(0, 10);
       const bajoCoste = datos.posiciones.filter((p, i) => ecos[i].tarifaPVP > 0 && ecos[i].margenEuroHora < 0).map(p => p.nombre);
-      const bajoMinimo = datos.posiciones.filter((p, i) => ecos[i].margenEuroHora >= 0 && ecos[i].margenPorcentaje < MARGEN_MINIMO).map(p => p.nombre);
+      const bajoMinimo = MARGEN_MINIMO == null ? [] : datos.posiciones.filter((p, i) => ecos[i].margenEuroHora >= 0 && ecos[i].margenPorcentaje < MARGEN_MINIMO).map(p => p.nombre);
+      // Pagar por debajo del convenio de la empresa usuaria se bloquea siempre (art. 11 de la Ley 14/1994)
+      const bajoConvenio = datos.posiciones.filter((p, i) => ecos[i].bajoConvenio).map(p => p.nombre);
       const aprobado = datos.aprobacion?.estado === 'aprobada';
       return [
         { ok: !!datos.cliente, tipo: 'error', texto: 'Empresa elegida', pestana: 'empresa' },
@@ -4037,8 +3529,9 @@ return datosActivos.posiciones.map(pos => ({
         { ok: !!datos.fechaValidez && datos.fechaValidez >= hoy, tipo: 'error', texto: 'Fecha de validez futura', pestana: 'empresa' },
         { ok: datos.posiciones.length > 0, tipo: 'error', texto: 'Al menos un puesto', pestana: 'posiciones' },
         { ok: datos.posiciones.every(p => Number(p.tarifaHoraOfertada) > 0), tipo: 'error', texto: 'Todos los puestos tienen tarifa', pestana: 'posiciones' },
+        { ok: bajoConvenio.length === 0, tipo: 'error', texto: bajoConvenio.length ? `Salario por debajo del convenio: ${bajoConvenio.join(', ')}. No se puede pagar menos que el convenio de la empresa usuaria.` : 'Ningún salario por debajo del convenio', pestana: 'posiciones' },
         { ok: bajoCoste.length === 0, tipo: 'error', texto: bajoCoste.length ? `Tarifa por debajo del coste: ${bajoCoste.join(', ')}` : 'Ninguna tarifa por debajo del coste', pestana: 'posiciones' },
-        { ok: bajoMinimo.length === 0 || aprobado, tipo: 'aprobacion', texto: bajoMinimo.length ? `Margen por debajo del ${MARGEN_MINIMO} %: ${bajoMinimo.join(', ')}${aprobado ? ' (aprobado por dirección)' : ''}` : `Margen de todos los puestos ≥ ${MARGEN_MINIMO} %`, pestana: 'posiciones', detalle: bajoMinimo },
+        { ok: bajoMinimo.length === 0 || aprobado, tipo: 'aprobacion', texto: MARGEN_MINIMO == null ? 'Sin margen mínimo (se configura en Mi ETT)' : bajoMinimo.length ? `Margen por debajo del ${MARGEN_MINIMO} %: ${bajoMinimo.join(', ')}${aprobado ? ' (aprobado por un responsable)' : ''}` : `Margen de todos los puestos ≥ ${MARGEN_MINIMO} %`, pestana: 'posiciones', detalle: bajoMinimo },
       ];
     }
 

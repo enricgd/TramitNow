@@ -1,7 +1,7 @@
 # Presupuestos: los parámetros retributivos tienen que salir del convenio (solo para desarrollo)
 
 - **Fecha**: 2026-11-09
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-16)
 - **Rama y commits**: `design`, sin cambios en la demo
 - **Cómo verlo**: Presupuestos → un presupuesto → Posiciones → «Editar» en un puesto → «Parámetros retributivos de
   convenio».

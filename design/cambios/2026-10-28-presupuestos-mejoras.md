@@ -1,7 +1,7 @@
 # Presupuestos: importes, revisión antes de enviar, propuesta, aceptar/rechazar, versiones, duplicar y seguimiento
 
 - **Fecha**: 2026-10-28
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-16)
 - **Rama y commits**: `design`, c36fd59
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/presupuestos → "Editar" en PRE-2026-0048 →
   "Enviar al cliente". Con "Ver como dirección" se puede aprobar el margen.

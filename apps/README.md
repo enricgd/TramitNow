@@ -68,9 +68,9 @@ reload();
   En el NAS, `VITE_API_URL` en `.env.production.local`.
 - Cuando la API gane una ruta, se añade al contrato y a las dos implementaciones.
 
-Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`) y Empresas
-(`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**). El
-resto de pantallas aún usan los datos de ejemplo que llevan dentro.
+Conectadas: la cabecera (`src/cabecera/useCabecera.ts`), Mi ETT (`src/views/mi-ett/useMiEtt.ts`), Empresas
+(`src/views/empresas/useEmpresas.ts`, la primera de punta a punta: **es la referencia para las siguientes**) y
+Presupuestos (`src/views/presupuestos/`). El resto de pantallas aún usan los datos de ejemplo que llevan dentro.
 
 #### Conectar una pantalla
 
@@ -161,6 +161,20 @@ web comprueba el enlace con Supabase Auth (`verifyOtp` con el `token_hash`), gua
 (`updateUser`) y entra. El enlace vale una vez. En local, la API necesita `AUTH_URL`, `INVITE_REDIRECT_URL` y
 `AUTH_SENDS_INVITES=false` en `apps/api/.env` (ver `.env.example`). En el modo demo el enlace abre la misma
 página y entra sin red.
+
+#### Presupuestos en la web
+
+- `src/views/presupuestos/usePresupuestos.ts` (datos y acciones) y `mapeo.ts` (la forma de la API ↔ la del diseño). La
+  vista guarda la versión actual: la cabecera con `PATCH /v1/quote-versions/{id}` y los puestos uno a uno (nuevos,
+  cambiados y quitados). Los estados, la aprobación, la versión nueva, el obsoleto y el PDF son acciones de la versión.
+- **Cálculo**: `src/data/calculoPresupuestos.ts` reexporta `apps/api/src/calc/quote.ts` (sin copiarlo). Lo usan el modo
+  demo y la vista previa mientras se edita; al abrir, se pinta lo que ha calculado el servidor (`calculation`).
+- Los costes legales (Seguridad Social e indemnización) se enseñan como dos conceptos del escandallo, pero salen de
+  `ssRates` y de la ley: no se editan en la pantalla. Los demás costes internos van en % sobre el salario por hora o €/h.
+- Ver costes y margen y aprobar: en real, quien tiene `quotes.approve_margin` lo ve como dirección; el resto, como
+  comercial (en la demo, el selector «Ver como»).
+- Aún sin hacer: crear peticiones desde un aceptado (fase 5), enviar por correo o a firma, recordatorios y el escandallo
+  en Excel («Disponible próximamente» en real).
 
 ## api
 
@@ -311,7 +325,10 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `GET /v1/catalog-types`: tipos de tabla maestra (lista cerrada) | token |
 | `/v1/catalog-items?type=` (obligatorio; `?q=`, `?status=`, `?parentId=`): tablas maestras de la ETT. Listar, ver, crear (`type` y `name`; `code` opcional), editar (el tipo no cambia) y dar de baja. Nombre único por tipo sin distinguir mayúsculas (409) | miembro; escribir, `catalogs.manage` |
 | `GET /v1/activity?entityType=&entityId=&includeChildren=`: historial de una ficha, lo último primero, paginado | quien ve la ficha (la facturación, con `clients.billing.manage`) |
-| `POST /v1/documents/uploads`, `POST /v1/documents`, `GET /v1/documents` (`?entityType=&entityId=&typeId=&status=&visibleInPortal=&expiresBefore=&q=&deleted=`), `GET`, `PATCH`, `DELETE /v1/documents/{id}`, `POST /v1/documents/{id}/restore`, `GET /v1/documents/{id}/download`: documentos de clientes y centros (ver "Documentos") | leer, quien ve la ficha; escribir, quien puede editarla (`clients.manage` en su sucursal) |
+| `POST /v1/documents/uploads`, `POST /v1/documents`, `GET /v1/documents` (`?entityType=&entityId=&typeId=&status=&visibleInPortal=&expiresBefore=&q=&deleted=`), `GET`, `PATCH`, `DELETE /v1/documents/{id}`, `POST /v1/documents/{id}/restore`, `GET /v1/documents/{id}/download`: documentos de clientes, centros y presupuestos (ver "Documentos") | leer, quien ve la ficha; escribir, quien puede editarla (`clients.manage` en su sucursal) |
+| `GET /v1/quotes` (`?q=&status=&salesRepId=&clientId=&branchId=&validity=valid\|expiring\|expired&noResponse=`), `GET /v1/quotes/{id}`, `GET /v1/quote-versions/{id}`, `GET /v1/quote-agreement-defaults?collectiveAgreementId=&agreementCategoryId=&date=`: presupuestos, versiones y tablas del convenio para un puesto | `module.comercial` o `quotes.manage`, en la sucursal del presupuesto |
+| `POST /v1/quotes`, `PATCH /v1/quotes/{id}`, `POST /v1/quotes/{id}/duplicate`, `POST /v1/quotes/{id}/obsolete`, `PATCH /v1/quote-versions/{id}`, `POST /v1/quote-versions/{id}/positions`, `PATCH`, `DELETE /v1/quote-positions/{id}`, `POST /v1/quote-positions/{id}/reset-from-agreement`, `GET /v1/quote-versions/{id}/review`, `POST /v1/quote-versions/{id}/request-approval` · `/send` · `/pending-signature` · `/accept` · `/reject` · `/new-version` · `/proposal-pdf` (ver "Presupuestos") | `quotes.manage` |
+| `POST /v1/quote-versions/{id}/approve` · `/reject-approval`: aprobar el margen por debajo del mínimo o pedir cambios | `quotes.approve_margin` |
 
 Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
 sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
@@ -324,6 +341,34 @@ API con otro nombre de columna) y `restorable` (eliminar recuperable: `?deleted=
 rol abarca la ETT). La web enseña el filtro «Todas las sucursales» si hay más de una y lo pasa como
 `?branchId=id1,id2`. Ver otras sucursales no está prohibido en todas las listas (los clientes los ven todos): el
 filtro es para trabajar, las RLS siguen mandando.
+
+### Presupuestos
+
+Una escritura cualquiera (cabecera, puesto, costes) recalcula la versión con `src/calc/quote.ts` y guarda el resultado
+(columnas `calc_*`): la respuesta trae `positions[].calculation` (desglose por hora: salario, vacaciones, Seguridad
+Social, indemnización de 12 días por año, costes internos y margen; tarifa sugerida; extras; avisos) y `totals`.
+
+- **Puestos desde el convenio**: con `agreementCategoryId` (categorías de `GET /v1/quote-agreement-defaults`), lo que no
+  se envíe de salario, plus, pagas, horas y vacaciones sale de la versión publicada; `manualFields` dice qué se cambió a
+  mano y `reset-from-agreement` lo devuelve. El salario de los extras que define el convenio (hora extra, nocturnidad)
+  sale de ahí.
+- **Errores propios**: 422 `salario_bajo_convenio` (salario, o el de un extra, por debajo del convenio de la empresa
+  usuaria: siempre bloquea) y 409 `requiere_aprobacion` (al enviar con un margen por debajo del mínimo sin aprobar).
+  `send` devuelve antes 422 `validacion` con un `details` por cada punto de la revisión que falla.
+- **Revisión antes de enviar**: `GET /v1/quote-versions/{id}/review` devuelve todos los puntos (cumplidos o no) con el
+  campo que hay que corregir; `send` usa la misma revisión.
+- **Costes y margen**: solo con `quotes.view_costs` (en `GET /v1/me` → `permissions`). Sin él, el cálculo trae a null
+  coste, Seguridad Social, indemnización, costes internos y margen, el desglose solo salario y vacaciones, y no se
+  pueden cambiar `costConcepts`, `ssRates` ni los `costs` de un puesto (403).
+- **PDF de la propuesta**: `proposal-pdf` lo genera con pdf-lib y lo guarda como documento del presupuesto; se
+  descarga como cualquier documento. No lleva nada interno.
+
+**Cálculo de presupuestos compartido con la web.** `apps/api/src/calc/quote.ts` es TypeScript puro, sin
+dependencias ni acceso a nada: la web lo puede importar tal cual para el modo demo (por ejemplo con un alias de Vite y
+de `tsconfig` a `../api/src/calc/quote.ts`). Está en `apps/api` porque es quien lo usa para guardar el cálculo y la
+imagen de la API solo copia esa carpeta; si mañana hay más código compartido, se mueve a un paquete propio. Los tipos
+de la Seguridad Social (`DEFAULT_SS_RATES`) y el AT/EP por CNAE (`AT_EP_BY_CNAE`) son de 2026 y están marcados
+[verificar].
 
 ### Documentos
 

@@ -74,6 +74,27 @@ export class Storage {
     return downloadName ? `${url}&download=${encodeURIComponent(downloadName)}` : url;
   }
 
+  /** Sube un fichero generado en el servidor (p. ej. el PDF de una propuesta). No sobrescribe. */
+  async upload(path: string, body: Uint8Array, mimeType: string): Promise<void> {
+    let res: Response;
+    try {
+      res = await fetch(`${this.config.url}/object/${this.objectPath(path)}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.config.serviceKey}`,
+          apikey: this.config.serviceKey,
+          'Content-Type': mimeType,
+        },
+        body,
+        signal: AbortSignal.timeout(20_000),
+      });
+    } catch (err) {
+      console.error('Storage no responde', err);
+      throw unavailable();
+    }
+    if (!res.ok) return this.fail(res, 'subir fichero');
+  }
+
   /** Tamaño y tipo del fichero subido, o null si no existe. */
   async info(path: string): Promise<ObjectInfo | null> {
     const res = await this.request('GET', `/object/info/authenticated/${this.objectPath(path)}`);

@@ -109,7 +109,8 @@ const servicios: BillableService[] = [
   servicio(444, 'DESPLAZAMIENTOS', 'Desplazamientos', 'per_unit', 0.26, 'km'),
 ];
 
-const ajustes: TenantSettings = { quoteMinMarginPercent: null, quoteNoResponseDays: 15 };
+// Los del diseño de Presupuestos (por defecto, en una ETT nueva: sin mínimo y 15 días).
+const ajustes: TenantSettings = { quoteMinMarginPercent: 15, quoteNoResponseDays: 5 };
 
 // Lo que aún no tiene API (los datos de ejemplo que tenía FichaEttView.jsx, con la misma forma).
 const ettSettings: EttSettings = {

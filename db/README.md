@@ -500,6 +500,50 @@ Precisiones sobre el formato (no lo cambian):
 Leer: cualquier miembro de la ETT (el representante, la autorización y el IBAN salen en CPD, contratos y facturas).
 Escribir: `tenant.manage`.
 
+## Fase 4: presupuestos
+
+Migración `20261117000100_quotes.sql`; pantalla `apps/web/src/views/PresupuestosView.jsx` y notas
+`design/cambios/*presupuestos*`. Tests: `db/tests/18_presupuestos.sql` y `apps/api/test/presupuestos.test.ts`.
+
+| Tabla | Qué |
+|---|---|
+| `quotes` | El presupuesto: número de la serie `quote` de su sociedad (`private.next_number`, sin huecos), sociedad, sucursal propietaria, cliente (NULL al duplicar «para otro cliente»), de qué presupuesto se creó y, si pasó a obsoleto, motivo, quién y cuándo. No se borra nunca |
+| `quote_versions` | Cada versión es una **copia completa**: cabecera (título, contacto, comercial, fechas, modalidad, forma de pago, IVA, garantía, notas, condiciones), margen objetivo (`percent` o `per_hour`), tipos de la Seguridad Social (`ss_rates`), costes internos (`cost_concepts`) y extras por defecto (`default_extras`) en jsonb, estado, aprobación del margen y quién/cuándo de cada paso. La actual es la de número más alto |
+| `quote_positions` | Puestos: convenio de la ETT, versión publicada del convenio global y categoría, periodo de esa versión y **mínimo por hora del convenio** (los dos los pone la base de datos), valores que dio el convenio (`agreement_values`) y campos cambiados a mano (`manual_fields`), parámetros retributivos, personas, horas, tarifa, margen propio, costes internos aplicados (`costs`) y conceptos extra (`extras`) |
+
+Estados de la versión: `draft` → `in_preparation` ↔ `draft` → `sent` → `pending_signature` → `accepted` / `rejected`
+(con motivo, tabla maestra `quote_rejection_reason`); `superseded` al crear la versión siguiente; `obsolete` cuando el
+presupuesto pasa a obsoleto (y se crea otro con número nuevo). Solo `draft` e `in_preparation` se editan.
+
+Reglas en la base de datos:
+
+- **Salario por debajo del convenio de la empresa usuaria**: bloquea siempre (art. 11 de la Ley 14/1994), sin
+  aprobación posible. `private.agreement_minimum_salary_hour()` calcula el mínimo desde las tablas publicadas (base
+  anual, o mensual × (12 + pagas), o diaria × 365, más el plus de convenio × 12, entre las horas anuales) y el trigger
+  compara `(base + plus × 12) / horas` del puesto. Error `TNSAL` (la API: 422 `salario_bajo_convenio`). El mínimo
+  se calcula siempre en la base de datos: no se puede falsear desde fuera.
+- **Margen por debajo del mínimo** (`tenants.quote_min_margin_percent`): al enviar, si algún puesto queda por debajo
+  y la versión no está aprobada, error `TNAPR` (409 `requiere_aprobacion`). Aprobar exige `quotes.approve_margin`;
+  quién pidió y quién decidió, y cuándo, los pone la base de datos. Cambiar el presupuesto (no el cálculo) anula la
+  aprobación. El margen de cada puesto lo calcula la API (`calc_margin_percent`): la base de datos solo lo compara.
+- Lo enviado no cambia (`TN409`); solo la versión actual cambia de estado; los puestos de una versión cerrada no se
+  tocan.
+- Documentos: `documents.entity_type` admite `quote` (escribe quien puede editar el presupuesto). Cada ETT tiene de
+  serie los tipos «Propuesta de presupuesto», «Presupuesto firmado por el cliente», «Condiciones o pliego del cliente» y
+  «Correo del cliente», y los motivos de rechazo de la pantalla (`private.seed_quote_catalogs`).
+- Historial: `quote`, `quote_version` (con resúmenes propios: «Envío al cliente (v1)», «Aprobación del margen»...)
+  y `quote_position`. Las columnas `calc_*` (el cálculo guardado) no cuentan como cambios.
+
+Permisos nuevos: `quotes.manage` (admin, director de zona, comercial), `quotes.approve_margin` (admin, director de
+zona) y `quotes.view_costs` (admin, director de zona; `20261117000200_quotes_view_costs.sql`): ver y cambiar costes
+internos y margen («Ver como comercial» de la pantalla). Sin él, la API no los devuelve ni deja cambiarlos. Leer: `module.comercial`, `quotes.manage` o `quotes.approve_margin`, en las sucursales a las que se tiene acceso.
+
+**Seguimiento de convenios por ETT (`tenant_agreement_*`): no se ha hecho.** Presupuestos no lo necesita: el puesto
+apunta directamente a la versión publicada del convenio global a través de `collective_agreements.global_agreement_id`
+y guarda la versión y el periodo usados. Queda para más adelante: avisar a la ETT de una versión nueva de un convenio
+que usa, qué presupuestos enviados o aceptados quedan con tablas antiguas, y enlazar `professional_categories` con las
+categorías del convenio global (`agreement_category_id`), que encaja mejor con Peticiones y Contratos.
+
 ## Probar en local
 
 Requisitos: Docker Desktop. No hace falta `psql` en el Mac.
@@ -607,6 +651,9 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
    sudo docker exec -it supabase-db psql -U postgres -d postgres -c "insert into public.platform_content_editors (user_id, note) select id, 'equipo de contenidos' from auth.users where email = 'CORREO'"
    ```
 
+8. Presupuestos (desde la fase 4): solo `migrate.sh`; la migración da a cada ETT los permisos, los motivos de rechazo y
+   los tipos de documento de serie. Para el PDF de la propuesta, la API necesita Storage (ya configurado en la fase 1).
+
 ### ETT de demostración y primer usuario
 
 1. En Supabase Studio (`http://192.168.2.8:8000`): Authentication > Add user > Create new user, con
@@ -637,6 +684,12 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
 - `companies.prevention_config_id` y `prevention_configurations` quedan para cuando se rediseñe esa pantalla.
 
 ## Pendiente
+
+- Fase 4: tipos de la Seguridad Social y AT/EP por CNAE de `apps/api/src/calc/quote.ts` marcados [verificar]; costes
+  internos y coeficientes de los extras por defecto, [por confirmar]. Si el margen mínimo es por puesto o sobre el total
+  (hoy por puesto, como la pantalla). Puestos «Otro / personalizado» sin tabla de convenio: no se puede
+  comprobar el art. 11 (hoy se permite enviarlos; ¿bloquear el envío?). Recordatorio al cliente y tarea de
+  aprobación en Inicio (fase 12). Crear peticiones desde un presupuesto aceptado (fase 5).
 
 - Fase 3: el margen mínimo, ¿solo en %, o también en €/h? (hoy %). Plazo máximo entre el boletín y la publicación en
   TramitNOW, y quién del equipo de contenidos extrae y quién revisa. Avisos de vencimiento de la garantía y del

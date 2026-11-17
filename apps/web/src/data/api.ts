@@ -166,6 +166,38 @@ export function apiRepositories(): Repositories {
     },
     contributionAccounts: crud('/contribution-accounts'),
     billableServices: crud('/billable-services'),
+    quotes: {
+      list: (query) => get('/quotes', query),
+      get: (id) => get(`/quotes/${id}`),
+      create: (body) => request('POST', '/quotes', { body }),
+      update: (id, body) => request('PATCH', `/quotes/${id}`, { body }),
+      duplicate: (id) => request('POST', `/quotes/${id}/duplicate`),
+      makeObsolete: (id, reason) => request('POST', `/quotes/${id}/obsolete`, { body: { reason } }),
+      agreementDefaults: ({ agreementCategoryId, ...query }) => get('/quote-agreement-defaults', { ...query, agreementCategoryId: agreementCategoryId ?? undefined }),
+      // Las categorías de la tabla vigente vienen con los valores por defecto del convenio.
+      agreementCategories: (collectiveAgreementId) =>
+        get<{ categories: { id: string; code: string; name: string; groupName: string | null; level: string | null }[] }>('/quote-agreement-defaults', { collectiveAgreementId }).then((r) =>
+          r.categories.map(({ groupName, ...c }) => ({ ...c, group: groupName })),
+        ),
+    },
+    quoteVersions: {
+      get: (id) => get(`/quote-versions/${id}`),
+      update: (id, body) => request('PATCH', `/quote-versions/${id}`, { body }),
+      addPosition: (id, body) => request('POST', `/quote-versions/${id}/positions`, { body }),
+      updatePosition: (id, body) => request('PATCH', `/quote-positions/${id}`, { body }),
+      removePosition: (id) => request('DELETE', `/quote-positions/${id}`),
+      resetPositionFromAgreement: (id, fields) => request('POST', `/quote-positions/${id}/reset-from-agreement`, { body: fields ? { fields } : {} }),
+      requestApproval: (id, notes) => request('POST', `/quote-versions/${id}/request-approval`, { body: { notes: notes ?? undefined } }),
+      approve: (id, notes) => request('POST', `/quote-versions/${id}/approve`, { body: { notes: notes ?? undefined } }),
+      rejectApproval: (id, notes) => request('POST', `/quote-versions/${id}/reject-approval`, { body: { notes } }),
+      review: (id) => get(`/quote-versions/${id}/review`),
+      send: (id) => request('POST', `/quote-versions/${id}/send`),
+      pendingSignature: (id) => request('POST', `/quote-versions/${id}/pending-signature`),
+      accept: (id) => request('POST', `/quote-versions/${id}/accept`),
+      reject: (id, body) => request('POST', `/quote-versions/${id}/reject`, { body }),
+      newVersion: (id) => request('POST', `/quote-versions/${id}/new-version`),
+      proposalPdf: (id) => request('POST', `/quote-versions/${id}/proposal-pdf`),
+    },
     tenantSettings: {
       get: () => get('/tenant-settings'),
       update: (body) => request('PATCH', '/tenant-settings', { body }),
