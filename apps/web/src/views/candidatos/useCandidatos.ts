@@ -176,7 +176,11 @@ export function useCandidatos() {
   /** Valor completo de un dato sensible (queda en la auditoría). No se guarda: quien lo pida lo enseña y lo olvida. */
   const revelar = useCallback(async (v: CandidatoVista, campo: 'dni' | 'nss' | 'iban'): Promise<string> => {
     const field = campo === 'dni' ? 'idDocument' : campo === 'nss' ? 'ssNumber' : 'iban';
-    const r = await repos.candidates.sensitive(v._id, [field]);
+    const r = await repos.candidates.sensitive(v._id, [field]).catch((e) => {
+      // Sin clave de cifrado configurada en la API, lo sensible no se puede leer (el resto funciona)
+      if (esError(e, 'servicio_no_disponible')) throw new ApiError(503, 'servicio_no_disponible', 'Los datos sensibles no están disponibles ahora: falta configurar el cifrado en el servidor.');
+      throw e;
+    });
     return (campo === 'dni' ? r.idDocument?.number : campo === 'nss' ? r.ssNumber : r.iban) ?? '';
   }, []);
 
