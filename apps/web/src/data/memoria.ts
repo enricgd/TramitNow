@@ -5,6 +5,7 @@ import { sampleNotifications, sampleSearch } from './ejemploCabecera';
 import { NOW, checkUniqueCode, delay, find, id, matches, newId, page, stamp, touch } from './memoriaBase';
 import { clientAddresses, memoryClientRepositories } from './memoriaEmpresas';
 import { memoryMiEttRepositories } from './memoriaMiEtt';
+import { memoryCandidateRepositories } from './memoriaCandidatos';
 import { memoryRequestRepositories } from './memoriaPeticiones';
 import { seleccionDemo } from './memoriaPeticionesSeleccion';
 import { memoryQuoteRepositories } from './memoriaPresupuestos';
@@ -105,7 +106,7 @@ const roles: Role[] = [
     'module.administracion', 'module.laboral', 'module.seleccion', 'module.comercial', 'tenant.manage',
     'companies.manage', 'branches.manage', 'catalogs.manage', 'users.manage', 'roles.manage', 'addresses.write',
     'labor_catalogs.manage', 'clients.manage', 'quotes.manage', 'quotes.approve_margin', 'quotes.view_costs',
-    'requests.manage',
+    'requests.manage', 'candidates.manage', 'personal_data.view', 'privacy.manage', 'privacy.audit',
   ]),
   role(31, 'laboral', 'Laboral', 'tenant', ['module.laboral', 'addresses.write', 'labor_catalogs.manage']),
   role(32, 'director_zona', 'Director de zona', 'branches', ['module.laboral', 'module.seleccion', 'module.comercial', 'addresses.write']),
@@ -514,6 +515,7 @@ export function memoryRepositories(): Repositories {
     ...miEtt,
     ...memoryQuoteRepositories(miEtt.tenantSettings.get),
     ...memoryRequestRepositories(),
+    ...memoryCandidateRepositories(miEtt.tenantSettings.get),
     // La selección se crea una vez y la pantalla trabaja sobre su copia.
     requestSelection: { get: () => delay(seleccion ??= seleccionDemo()) },
     search: sampleSearch(false),

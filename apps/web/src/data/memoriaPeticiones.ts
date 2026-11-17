@@ -124,7 +124,12 @@ function deQuote(q: Quote, p: QuotePosition) {
   };
 }
 
-async function datos() {
+// Una sola vez aunque la pidan a la vez varias pantallas (si no, cada llamada crearía sus propios ids)
+let creando: Promise<{ peticiones: Registro[]; siguiente: number }> | undefined;
+function datos() {
+  return (creando ??= crearDatos());
+}
+async function crearDatos() {
   if (!estado) {
     const quotes = await acceptedQuotes();
     const peticiones = SEMILLAS.map((s): Registro => {
@@ -183,15 +188,21 @@ function comprobaciones(r: Registro): PreCpdCheck[] {
   ];
 }
 
+function cuentaPlazas(r: Registro) {
+  const p = plazasDe(r);
+  const n = (st: string) => p.filter((x) => x.status === st).length;
+  return { open: n('open'), reserved: n('reserved'), covered: n('covered'), started: 0, left: 0, filled: n('covered') };
+}
+
 function resumen(r: Registro): ServiceRequestSummary {
   const dias = diasHasta(r.startDate);
   return {
     id: r.id, code: r.code, status: r.status, positionName: r.positionName, shiftName: r.shiftName, clientId: r.clientId, clientName: r.clientName,
     quoteId: r.quoteId, quoteCode: r.quoteCode, quoteVersionNumber: r.quoteVersionNumber, quotePositionId: r.quotePositionId, branchId: r.branchId,
     startDate: r.startDate, endDate: r.endDate, positionsCount: r.positionsCount,
-    slots: { open: r.positionsCount - r.filled, reserved: 0, covered: r.filled, started: 0, left: 0, filled: r.filled },
+    slots: cuentaPlazas(r),
     responsibleUserId: r.responsibleUserId, responsibleName: r.responsibleUserId ? (RESPONSABLES[r.responsibleUserId] ?? null) : null, daysToStart: dias,
-    startsSoonUncovered: ACTIVAS.includes(r.status) && dias !== null && dias >= 0 && dias <= 7 && r.filled < r.positionsCount,
+    startsSoonUncovered: ACTIVAS.includes(r.status) && dias !== null && dias >= 0 && dias <= 7 && cuentaPlazas(r).filled < r.positionsCount,
     cancelReason: r.cancelReason, preCpdStatus: r.preCpd.status, createdAt: r.createdAt,
   };
 }
@@ -203,7 +214,7 @@ async function ficha(r: Registro): Promise<ServiceRequest> {
   const quote = (await acceptedQuotes()).find((q) => q.id === r.quoteId);
   const centro = centroPorId(r.clientCenterId);
   const firmante = contactoPorId(r.clientSignerContactId);
-  const { quotePeople: _q, workplaceText, filled, preCpd, ...base } = copia(r);
+  const { quotePeople: _q, workplaceText, filled: _f, preCpd, ...base } = copia(r);
   const schedule = conHoras(r.schedule);
   return delay({
     ...base,
@@ -226,13 +237,13 @@ async function ficha(r: Registro): Promise<ServiceRequest> {
       missing: Math.max(0, r.quotePeople - enPeticiones),
       siblings: (r.status === 'cancelled' ? [...delPuesto, r] : delPuesto)
         .sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? '') || a.code.localeCompare(b.code))
-        .map((x) => ({ id: x.id, code: x.code, shiftName: x.shiftName, startDate: x.startDate, endDate: x.endDate, positionsCount: x.positionsCount, filled: x.filled, status: x.status, isThis: x.id === r.id })),
+        .map((x) => ({ id: x.id, code: x.code, shiftName: x.shiftName, startDate: x.startDate, endDate: x.endDate, positionsCount: x.positionsCount, filled: cuentaPlazas(x).filled, status: x.status, isThis: x.id === r.id })),
       otherPositions: (quote?.currentVersion.positions ?? [])
         .filter((p) => p.id !== r.quotePositionId)
         .map((p) => ({ quotePositionId: p.id, name: p.name, requests: vivas.filter((x) => x.quotePositionId === p.id).map((x) => ({ id: x.id, code: x.code })) }))
         .filter((p) => p.requests.length),
     },
-    slotList: Array.from({ length: r.positionsCount }, (_, i) => ({ id: `${r.id}-${i + 1}`, number: i + 1, status: i < filled ? 'covered' : 'open' })),
+    slotList: plazasDe(r),
     preCpd: { ...preCpd, checks: comprobaciones(r) },
     signedQuoteDocument: { documentId: `demo-presupuesto-${r.quoteId}`, name: `Presupuesto_${r.quoteCode}_v${r.quoteVersionNumber}_firmado.pdf`, kind: 'signed', date: (r.quoteAcceptedAt ?? r.createdAt).slice(0, 10) },
   });
@@ -271,6 +282,44 @@ async function crear(d: ServiceRequestCreate, texto?: (code: string) => string):
 const ESTADOS: Record<ServiceRequestStatus, string> = {
   new: 'Nueva', publishing: 'En difusión', selecting: 'En selección', covered: 'Cubierta', in_progress: 'En curso', closed: 'Cerrada', cancelled: 'Cancelada',
 };
+
+// ---------------------------------------------------------------------------
+// Plazas ocupadas por candidaturas (fase 6, memoriaCandidatos.ts)
+// ---------------------------------------------------------------------------
+
+type Ocupante = { applicationId: string; candidateId: string; candidateName: string; status: 'reserved' | 'covered' };
+/** Plazas ocupadas por una candidatura, por petición y número de plaza. Las `filled` de ejemplo van sin nombre. */
+const ocupacion = new Map<string, Map<number, Ocupante>>();
+function plazasDe(r: Registro) {
+  const o = ocupacion.get(r.id) ?? new Map<number, Ocupante>();
+  return Array.from({ length: r.positionsCount }, (_, i) => {
+    const n = i + 1;
+    const x = o.get(n);
+    if (x) return { id: `${r.id}-${n}`, number: n, status: x.status, applicationId: x.applicationId, candidateName: x.candidateName, candidateId: x.candidateId };
+    return { id: `${r.id}-${n}`, number: n, status: i < r.filled ? 'covered' : 'open', applicationId: null, candidateName: null, candidateId: null };
+  });
+}
+/** Petición de ejemplo por código o id (para las candidaturas de memoriaCandidatos.ts). */
+export async function peticionDemo(codeOrId: string) {
+  return (await datos()).peticiones.find((x) => x.code === codeOrId || x.id === codeOrId) ?? null;
+}
+/** Reserva o cubre una plaza (la indicada o la primera libre) para una candidatura. Devuelve su número. */
+export async function ocuparPlaza(requestId: string, slotId: string | null, ocupante: Ocupante): Promise<number> {
+  const r = await registro(requestId);
+  const o = ocupacion.get(r.id) ?? new Map<number, Ocupante>();
+  ocupacion.set(r.id, o);
+  const libres = plazasDe(r).filter((p) => p.status === 'open' || p.applicationId === ocupante.applicationId);
+  const p = slotId ? libres.find((x) => x.id === slotId) : libres[0];
+  if (!p) throw new ApiError(409, 'conflicto', slotId ? 'Esa plaza no está libre' : 'No quedan plazas por cubrir en esta petición');
+  for (const [n, x] of o) if (x.applicationId === ocupante.applicationId) o.delete(n);
+  o.set(p.number, ocupante);
+  return p.number;
+}
+/** Libera la plaza de una candidatura. */
+export function liberarPlaza(requestId: string, applicationId: string) {
+  const o = ocupacion.get(requestId);
+  if (o) for (const [n, x] of o) if (x.applicationId === applicationId) o.delete(n);
+}
 
 export function memoryRequestRepositories(): Pick<Repositories, 'requests'> {
   return {

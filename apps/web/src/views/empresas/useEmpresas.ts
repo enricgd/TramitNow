@@ -208,7 +208,7 @@ const IVA_GENERAL = 'Régimen general (21 %)';
 const IVA_RECARGO = 'Recargo de equivalencia';
 
 const DISENO_FACTURA: Record<InvoiceLayout, FacturacionVista['facturaDetalle']> = { by_concept: 'concepto', by_person: 'persona' };
-const ESTADOS_DOC: Record<StoredDocument['status'], string> = { validated: 'Validado', pending: 'Pendiente de validar', draft: 'Borrador' };
+const ESTADOS_DOC: Record<StoredDocument['status'], string> = { validated: 'Validado', pending: 'Pendiente de validar', draft: 'Borrador', rejected: 'Rechazado' };
 
 const tamanoLegible = (bytes: number) =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;

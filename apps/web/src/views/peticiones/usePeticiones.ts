@@ -10,6 +10,9 @@ import {
   ApiError,
   repos,
   useData,
+  type Application,
+  type ApplicationStage,
+  type CandidateSummary,
   type CatalogItem,
   type ClientCenter,
   type ClientContact,
@@ -21,7 +24,14 @@ import {
 } from '../../data';
 import { useSesion } from '../../sesion';
 import { esError, fechaHora, mensajeError, vacioANull } from '../comun/datos';
-import { documentoVista, estadoApi, horarioApi, horarioVista, peticionVista, presupuestoAceptadoVista, type PeticionVista } from './mapeo';
+import { documentoVista, estadoApi, horarioApi, horarioVista, perfilPuesto, peticionVista, presupuestoAceptadoVista, type PeticionVista } from './mapeo';
+
+/** Plaza de la API → estado de la vista (ESTADOS_PLAZA). */
+const PLAZA: Record<string, string> = { open: 'vacante', reserved: 'reservada', covered: 'cubierta', started: 'incorporada', left: 'baja' };
+/** Etapa de la candidatura → etapa del embudo de la vista (ETAPAS). */
+const ETAPA_EMBUDO: Partial<Record<ApplicationStage, string>> = {
+  registered: 'inscrito', preselected: 'preseleccionado', interview: 'entrevista', proposed: 'propuesto', confirmed: 'aceptado', discarded: 'descartado', withdrawn: 'descartado',
+};
 
 export { mensajeError };
 
@@ -125,6 +135,50 @@ export function usePeticiones() {
     [datosEtt],
   );
   type Ficha = Awaited<ReturnType<typeof abrir>>;
+
+  // ---- Selección (fase 6): plazas, embudo y candidatos de la petición, desde las candidaturas -----------------------
+
+  /** Plazas (con quién las ocupa), embudo y candidatos de una petición, en la forma de la vista. Solo contra la API. */
+  const seleccionDe = useCallback(async (p: PeticionVista) => {
+    const [r, apps] = await Promise.all([repos.requests.get(p._id), repos.applications.list({ requestId: p._id }).catch(() => [] as Application[])]);
+    const plazas = r.slotList.map((s) => ({
+      id: s.id, numero: s.number, estado: PLAZA[s.status] ?? 'vacante', candidatoId: s.candidateId ?? apps.find((a) => a.id === s.applicationId)?.candidateId ?? null,
+      nombre: s.candidateName ?? null, _applicationId: s.applicationId ?? null, fechaIncorporacion: p.inicio ? p.inicio.split('-').reverse().join('/') : null,
+      cpd: s.status === 'covered' ? 'sin_generar' : null, motivoBaja: null, bajaDe: null,
+    }));
+    const embudo = apps.map((a) => ({ id: a.candidateId, etapa: ETAPA_EMBUDO[a.stage] ?? 'inscrito', fecha: a.stageChangedAt.slice(0, 10), _applicationId: a.id }));
+    const candidatos = apps.map((a) => ({
+      id: a.candidateId, nombre: a.candidateName, puestoPrincipal: '', ubicacion: '', scoring: '—', origen: a.source ?? (a.origin === 'applied' ? 'Inscrito' : 'Bolsa'),
+      matchPosicion: [p.perfil], dni: '', telefono: '', email: '', experiencia: '', carnets: '', valoracionETT: '', estadoSeleccion: '',
+    }));
+    return { plazas, embudo, candidatos };
+  }, []);
+  /** La bolsa de candidatos para «Proponer candidato» (sin abrir fichas: no queda en la auditoría). */
+  const bolsa = useCallback(async (perfil: string) => {
+    const l = await repos.candidates.list({ limit: 300 }).then((x) => x.data, () => [] as CandidateSummary[]);
+    return l.map((c) => ({
+      id: c.id, nombre: `${c.firstName} ${c.lastName}`, puestoPrincipal: c.mainProfile?.name ?? '', ubicacion: c.city ?? '', scoring: '—', origen: c.source ?? 'Bolsa',
+      matchPosicion: [c.mainProfile ? perfilPuesto(c.mainProfile.name) : '', ...c.otherProfileNames.map(perfilPuesto)].filter((x) => x === perfil || x),
+      docOk: c.idDocument.state === 'ok', dni: c.idDocument.masked ?? '', telefono: c.phone ?? '', email: c.email ?? '', experiencia: '', carnets: '',
+      valoracionETT: '', estadoSeleccion: '',
+    }));
+  }, []);
+  /** Proponer a alguien para una plaza: crea la candidatura si no la tiene (desde la bolsa) y reserva la plaza. */
+  const proponer = useCallback(async (p: PeticionVista, candidateId: string, slotId: string | null) => {
+    const ya = (await repos.applications.list({ requestId: p._id, candidateId }))[0];
+    const app = ya ?? (await repos.applications.create({ candidateId, requestId: p._id, origin: 'sourced' }));
+    const r = await repos.applications.propose(app.id, slotId);
+    recargar();
+    return (r.requirements ?? []).filter((x) => !x.ok).map((x) => x.message);
+  }, [recargar]);
+  const confirmar = useCallback(async (applicationId: string) => { await repos.applications.confirm(applicationId); recargar(); }, [recargar]);
+  const retirar = useCallback(async (applicationId: string) => { await repos.applications.release(applicationId); recargar(); }, [recargar]);
+  /** Cambiar de etapa en el embudo (las propuestas y confirmaciones van por las plazas). */
+  const cambiarEtapa = useCallback(async (applicationId: string, etapa: string) => {
+    const stage = (Object.keys(ETAPA_EMBUDO) as ApplicationStage[]).find((k) => ETAPA_EMBUDO[k] === etapa);
+    if (!stage || ['proposed', 'confirmed'].includes(stage)) throw new ApiError(422, 'validacion', 'Para proponer o confirmar, usa las plazas');
+    await repos.applications.update(applicationId, { stage });
+  }, []);
 
   const conRecarga = useCallback(<T,>(p: Promise<T>) => p.then((x) => (recargar(), x)), [recargar]);
   /** Cambia la petición y devuelve la ficha nueva (con los contactos que ya tenía). */
@@ -241,6 +295,12 @@ export function usePeticiones() {
   const quitarDocumento = useCallback((documentId: string) => repos.documents.remove(documentId), []);
 
   return {
+    seleccionDe,
+    bolsa,
+    proponer,
+    confirmar,
+    retirar,
+    cambiarEtapa,
     listado: lista.data,
     cargando: lista.loading,
     error: lista.error ? mensajeError(lista.error) : null,

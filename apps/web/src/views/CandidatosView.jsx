@@ -10,620 +10,20 @@ import {
     Copy, Star, Hash, FileCheck2, UserX, AlertOctagon, Share2, ArrowUpRight,
     Grid, List, SlidersHorizontal, ArrowLeft, BookmarkCheck, UploadCloud, ChevronLeft
 } from 'lucide-react';
-import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar, SearchInput, Select, Field, TextInput, Interruptor, Segmented, Tabs, Drawer, Modal, Confirmar } from '../ui';
+import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar, SearchInput, Select, Field, TextInput, Interruptor, Segmented, Tabs, Drawer, Modal, Confirmar, CargandoPagina, ErrorCarga } from '../ui';
+import { DEMO } from '../modo';
+import { useCandidatos, mensajeError } from './candidatos/useCandidatos';
 import { PROVINCIAS_CP, POBLACIONES_CP } from './codigosPostales';
 
-// ==========================================
-// DEMO INITIAL DATA & CONFIGURATION
-// ==========================================
-// Peticiones con plazas por cubrir (las mismas que en Peticiones). Una petición = un puesto.
-const INITIAL_PETITIONS = [
-    {
-        id: 'PET-2026-0049',
-        client: 'Trans-Logística Ibérica Norte, S.L.',
-        cif: 'B-87654321',
-        workplace: 'HUB central Basauri (Bizkaia) - Nave 2',
-        status: 'En selección',
-        startDate: '2026-11-03',
-        positions: [
-            {
-                id: 'POS-0049',
-                title: 'Operario/a de almacén',
-                category: 'Logística',
-                turn: 'Turno de tarde (14:00 - 22:00)',
-                rate: 'Convenio de almacenes y logística (Bizkaia)',
-                requiredExperience: '6 meses en almacén o picking',
-                mandatoryRequirements: ['DNI/NIE en vigor', 'Disponibilidad inmediata'],
-                plazasTotal: 3,
-                plazas: [
-                    { plazaNum: 1, status: 'Vacante', candidateName: null, candidateId: null },
-                    { plazaNum: 2, status: 'Vacante', candidateName: null, candidateId: null },
-                    { plazaNum: 3, status: 'Vacante', candidateName: null, candidateId: null }
-                ]
-            }
-        ]
-    },
-    {
-        id: 'PET-2026-0050',
-        client: 'Trans-Logística Ibérica Norte, S.L.',
-        cif: 'B-87654321',
-        workplace: 'HUB central Basauri (Bizkaia) - Nave 2',
-        status: 'En selección',
-        startDate: '2026-11-10',
-        positions: [
-            {
-                id: 'POS-0050',
-                title: 'Carretillero/a',
-                category: 'Carretillero / Mozo especializado',
-                turn: 'Turno de tarde (14:00 - 22:00)',
-                rate: 'Convenio de almacenes y logística (Bizkaia)',
-                requiredExperience: '1 año con carretilla frontal o retráctil',
-                mandatoryRequirements: ['Carnet de carretillero en vigor (UNE 58451)', 'DNI/NIE en vigor'],
-                plazasTotal: 4,
-                plazas: [
-                    { plazaNum: 1, status: 'Cubierta', candidateName: 'Unai García Zabaleta', candidateId: 'CAN-0131', assignedDate: '2026-10-20' },
-                    { plazaNum: 2, status: 'Cubierta', candidateName: 'Carlos Manuel Ortiz Reyes', candidateId: 'CAN-0132', assignedDate: '2026-10-21' },
-                    { plazaNum: 3, status: 'Pendiente del cliente', candidateName: 'David Aranguren Sola', candidateId: 'CAN-0202', assignedDate: '2026-10-20' },
-                    { plazaNum: 4, status: 'Vacante', candidateName: null, candidateId: null }
-                ]
-            }
-        ]
-    },
-    {
-        id: 'PET-2026-0046',
-        client: 'Hostelería & Eventos Premium BCN, S.L.',
-        cif: 'B-99887766',
-        workplace: 'Recinto de congresos - Barcelona',
-        status: 'En difusión',
-        startDate: '2026-11-05',
-        positions: [
-            {
-                id: 'POS-0046',
-                title: 'Cocinero/a de partida',
-                category: 'Hostelería',
-                turn: 'Jornada partida (08:30 - 17:30)',
-                rate: 'ALEH - convenio estatal hostelería',
-                requiredExperience: '2 años en cocina de banquetes',
-                mandatoryRequirements: ['DNI/NIE en vigor', 'Carné de manipulador de alimentos'],
-                plazasTotal: 2,
-                plazas: [
-                    { plazaNum: 1, status: 'Vacante', candidateName: null, candidateId: null },
-                    { plazaNum: 2, status: 'Vacante', candidateName: null, candidateId: null }
-                ]
-            }
-        ]
-    },
-    {
-        id: 'PET-2026-0047',
-        client: 'Hostelería & Eventos Premium BCN, S.L.',
-        cif: 'B-99887766',
-        workplace: 'Recinto de congresos - Barcelona',
-        status: 'Nueva',
-        startDate: '2026-11-12',
-        positions: [
-            {
-                id: 'POS-0047',
-                title: 'Camarero/a de barra',
-                category: 'Hostelería',
-                turn: 'Turno de noche (22:00 - 06:00)',
-                rate: 'ALEH - convenio estatal hostelería',
-                requiredExperience: '6 meses en barra',
-                mandatoryRequirements: ['DNI/NIE en vigor', 'Carné de manipulador de alimentos'],
-                plazasTotal: 3,
-                plazas: [
-                    { plazaNum: 1, status: 'Vacante', candidateName: null, candidateId: null },
-                    { plazaNum: 2, status: 'Vacante', candidateName: null, candidateId: null },
-                    { plazaNum: 3, status: 'Vacante', candidateName: null, candidateId: null }
-                ]
-            }
-        ]
-    }
-];
-
-// Personas que ya trabajan, se incorporan o terminaron una misión (las mismas que en Contratos y altas,
-// Personal en misión y Horas e incidencias). Ficha resumida: el resto de datos se completa como en cualquier candidato.
-const LETRAS_DNI = 'TRWAGMYFPDXBNJZSQVHLCKE';
-const candidatoRecorrido = (n, nombreCompleto, { ciudad, provincia, km, centro, categoria, estado, mision, ultima, carnes = ['B'], turno, nie, dniCaducado, candidaturas }) => {
-    const [name, ...resto] = nombreCompleto.split(' ');
-    const lastName = resto.join(' ');
-    const dni = nie || `0000${String(n).padStart(4, '0')}${LETRAS_DNI[n % 23]}`;
-    const usuario = `${name}.${resto[0] || ''}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    return {
-        id: `CAN-0${n}`, name, lastName, dni, dniExpiry: nie || dniCaducado ? '2026-09-30' : '2030-06-30', dniStatus: 'OK',
-        phone: `+34 600 000 ${String(n).padStart(3, '0')}`, email: `${usuario}@email.example`,
-        city: ciudad, province: provincia, distance: `${km} km de ${centro}`,
-        nss: `${provincia === 'Barcelona' ? '08' : '48'}/0000${String(n).padStart(4, '0')}/00`, nssStatus: 'OK',
-        rgpdStatus: 'Vigente', rgpdSignedDate: '2026-06-15', source: 'Portal Web ETT', sourceId: `WEB-${n}`,
-        lastContactDate: '2026-10-20', lastContactBy: 'Ane Uriarte', lastContactType: 'Llamada',
-        status: estado, category: categoria, experienceYears: 2, drivingLicenses: carnes, hasCar: false,
-        preferredShift: turno, skills: [], languages: ['Español (Nativo)'],
-        activeCandidatures: mision ? [`${mision.petitionId} (Plaza ${mision.plazaNum})`] : [],
-        assignedMission: mision || null,
-        documents: [
-            { name: `DNI_${name}.pdf`, type: 'DNI', status: nie || dniCaducado ? 'Caducado' : 'Verificado', uploadDate: '2026-06-15' },
-            { name: `RGPD_${name}.pdf`, type: 'RGPD', status: 'Vigente', uploadDate: '2026-06-15' },
-            ...(carnes.some(x => /carretill/i.test(x)) ? [{ name: `Carne_carretillero_${name}.pdf`, type: 'Certificado', status: 'Verificado', uploadDate: '2026-06-15', expiry: n === 131 ? '2026-11-20' : '2028-05-31' }] : [])
-        ],
-        communications: ultima ? [{ date: `${ultima.fecha} 10:00`, user: 'Ane Uriarte', channel: 'Llamada', result: ultima.resultado, note: ultima.nota }] : [],
-        ...(candidaturas ? { candidaturas, activeCandidatures: candidaturas.map(x => `${x.petId} (${x.estado}${x.plaza ? `, plaza ${x.plaza}` : ''})`) } : {}),
-    };
-};
-const misionDe = (petitionId, client, positionTitle, plazaNum, startDate) => ({ petitionId, client, positionId: `POS-${petitionId.slice(-4)}`, positionTitle, plazaNum, startDate });
-const TRANSLOG = 'Trans-Logística Ibérica Norte, S.L.';
-const HOSTELERIA = 'Hostelería & Eventos Premium BCN, S.L.';
-const BIZKAIA = (ciudad, km) => ({ ciudad, provincia: 'Bizkaia', km, centro: 'Basauri' });
-const BCN = (ciudad, km) => ({ ciudad, provincia: 'Barcelona', km, centro: 'Barcelona' });
-// Personas en selección en Peticiones (las mismas, con la misma etapa: inscrito = Nuevo; el resto, En selección)
-const enSeleccion = (n, nombre, lugar, categoria, petId, etapa, fecha, opciones = {}) => candidatoRecorrido(n, nombre, {
-    ...lugar, categoria, turno: opciones.turno || 'Mañana / Tarde', carnes: opciones.carnes, dniCaducado: opciones.dniCaducado,
-    estado: etapa === 'inscrito' ? 'Nuevo' : 'En entrevista',
-    candidaturas: [{ petId, plaza: opciones.plaza || null, estado: etapa === 'propuesto' ? 'Propuesta al cliente' : 'En selección', fecha }],
-});
-const CARRETILLA = ['B', 'Carnet Carretillero UNE 58451'];
-const MANIPULADOR = ['Manipulador de alimentos'];
-const CANDIDATOS_SELECCION = [
-    enSeleccion(201, 'Nerea Barandiarán Goikoetxea', BIZKAIA('Barakaldo', 14), 'Operario/a de almacén', 'PET-2026-0049', 'entrevista', '2026-10-24', { carnes: ['B', ...MANIPULADOR] }),
-    enSeleccion(202, 'David Aranguren Sola', BIZKAIA('Santurtzi', 20), 'Carretillero/a', 'PET-2026-0050', 'propuesto', '2026-10-20', { carnes: CARRETILLA, turno: 'Mañana / Tarde / Noche', plaza: 3 }),
-    enSeleccion(203, 'Yeray Fernández Ramos', BIZKAIA('Bilbao', 8), 'Operario/a de almacén', 'PET-2026-0049', 'preseleccionado', '2026-10-25', { turno: 'Mañana' }),
-    enSeleccion(204, 'Kepa Iturriaga Elorrieta', BIZKAIA('Portugalete', 18), 'Carretillero/a', 'PET-2026-0050', 'entrevista', '2026-10-23', { carnes: CARRETILLA, turno: 'Tarde / Noche', dniCaducado: true }),
-    enSeleccion(205, 'Sofía Valderrama Galdós', BIZKAIA('Galdakao', 4), 'Preparador/a de pedidos', 'PET-2026-0049', 'entrevista', '2026-10-22'),
-    enSeleccion(206, 'Ibai Zubizarreta Lasa', BIZKAIA('Basauri', 1), 'Operario/a de almacén', 'PET-2026-0049', 'preseleccionado', '2026-10-26', { turno: 'Tarde' }),
-    enSeleccion(207, 'Leire Ortuzar Bengoa', BIZKAIA('Etxebarri', 3), 'Operario/a de almacén', 'PET-2026-0049', 'inscrito', '2026-10-27', { turno: 'Mañana' }),
-    enSeleccion(208, 'Gorka Bilbao Arrieta', BIZKAIA('Arrigorriaga', 5), 'Carretillero/a', 'PET-2026-0050', 'preseleccionado', '2026-10-26', { carnes: CARRETILLA, turno: 'Tarde' }),
-    enSeleccion(301, 'Marina Soler Bosch', BCN('Barcelona', 3), 'Camarero/a', 'PET-2026-0047', 'inscrito', '2026-10-27', { carnes: MANIPULADOR, turno: 'Jornada partida / Noche' }),
-    enSeleccion(302, 'Jordi Vila Mas', BCN("L'Hospitalet de Llobregat", 6), 'Cocinero/a', 'PET-2026-0046', 'entrevista', '2026-10-21', { carnes: MANIPULADOR, turno: 'Jornada partida' }),
-    enSeleccion(303, 'Fatima Zahra El Idrissi', BCN('Badalona', 9), 'Ayudante de cocina', 'PET-2026-0046', 'inscrito', '2026-10-27', { carnes: MANIPULADOR, turno: 'Jornada partida / Mañana', dniCaducado: true }),
-    enSeleccion(304, 'Álex Romero Gil', BCN('Barcelona', 4), 'Camarero/a de barra', 'PET-2026-0047', 'inscrito', '2026-10-28', { turno: 'Noche' }),
-];
-const CANDIDATOS_RECORRIDO = [
-    // PET-2026-0044: en misión desde el 10/10 (Personal en misión)
-    ...[['Garazi Uribe Arana', 1, 'Barcelona', 3], ['Pablo Ruiz Cano', 2, "L'Hospitalet de Llobregat", 6], ['Youssef Amrani', 4, 'Badalona', 9],
-        ['Lucía Ferrer Sanz', 5, 'Barcelona', 4], ['Marc Puig Soler', 6, 'Cornellà de Llobregat', 10], ['Aitana Roca Vidal', 7, 'Sant Adrià de Besòs', 8],
-        ['Daniel Sousa Prieto', 8, 'Barcelona', 2], ['Irene Campos Gil', 9, 'Esplugues de Llobregat', 7], ['Óscar León Mena', 10, 'Barcelona', 5]]
-        .map(([nombre, plaza, ciudad, km], i) => candidatoRecorrido(110 + i, nombre, {
-            ...BCN(ciudad, km), categoria: 'Camarero/a de sala', estado: 'Asignado/En misión', turno: 'Jornada partida',
-            mision: misionDe('PET-2026-0044', HOSTELERIA, 'Camarero/a de sala', plaza, '2026-10-10'),
-        })),
-    candidatoRecorrido(119, 'Sara Benítez Lago', {
-        ...BCN('Barcelona', 4), categoria: 'Camarero/a de sala', estado: 'No disponible', turno: 'Jornada partida',
-        ultima: { fecha: '2026-10-16', resultado: 'Baja voluntaria', nota: 'Deja la plaza 3 de PET-2026-0044 por motivos personales.' },
-    }),
-    // PET-2026-0031: terminaron el 30/09
-    ...['Clara Esteve Ros', 'Bruno Lage Costa', 'Nerea Olabarria Gil', 'Adrián Vela Soto', 'Paula Rius Ferrer', 'Sergio Navas Peña']
-        .map((nombre, i) => candidatoRecorrido(120 + i, nombre, {
-            ...BIZKAIA(['Basauri', 'Bilbao', 'Galdakao', 'Barakaldo', 'Etxebarri', 'Bilbao'][i], [1, 8, 4, 14, 3, 9][i]),
-            categoria: 'Operario/a de almacén', estado: 'Disponible', turno: 'Turno de mañana',
-            ultima: { fecha: '2026-09-30', resultado: 'Fin de misión', nota: 'Termina la campaña de verano en PET-2026-0031. Quiere repetir.' },
-        })),
-    // Se incorporan: siguen en Contratos y altas hasta su primer día
-    ...[['Jon Ander Etxebarria Bilbao', 1, 'Bilbao', 9], ['Ainhoa Larrazabal Urkijo', 2, 'Galdakao', 4], ['Mamadou Diallo', 3, 'Basauri', 1, 'X0000000T'],
-        ['Laura Morales San Sebastián', 4, 'Barakaldo', 14], ['Iker Agirrebeitia Mendia', 5, 'Etxebarri', 3]]
-        .map(([nombre, plaza, ciudad, km, nie], i) => candidatoRecorrido(126 + i, nombre, {
-            ...BIZKAIA(ciudad, km), categoria: 'Operario/a de almacén', estado: 'En incorporación', turno: 'Turno de mañana', nie,
-            mision: misionDe('PET-2026-0048', TRANSLOG, 'Operario/a de almacén', plaza, '2026-11-03'),
-        })),
-    ...[['Unai García Zabaleta', 1, 'Leioa', 16], ['Carlos Manuel Ortiz Reyes', 2, 'Bilbao', 8]]
-        .map(([nombre, plaza, ciudad, km], i) => candidatoRecorrido(131 + i, nombre, {
-            ...BIZKAIA(ciudad, km), categoria: 'Carretillero/a', estado: 'En incorporación', turno: 'Turno de tarde', carnes: ['B', 'Carnet Carretillero UNE 58451'],
-            mision: misionDe('PET-2026-0050', TRANSLOG, 'Carretillero/a', plaza, '2026-11-10'),
-            // Unai ya trabajó con la ETT el verano de 2025 (se ve en su portal: contrato pasado y nóminas)
-            candidaturas: i === 0 ? [
-                { petId: 'PET-2026-0050', plaza, estado: 'Confirmada', fecha: '2026-11-10' },
-                { petId: 'PET-2025-0087', plaza: null, estado: 'Finalizada', fecha: '2025-09-30', nota: 'Campaña de verano de 2025.' },
-            ] : undefined,
-        })),
-    ...[['Noa Serra Pons', 1, 'Barcelona', 3], ['Hugo Martín Vera', 2, 'Badalona', 9], ['Ane Goikoetxea Ruiz', 3, 'Barcelona', 5], ['Iván Molina Prat', 4, "L'Hospitalet de Llobregat", 6]]
-        .map(([nombre, plaza, ciudad, km], i) => candidatoRecorrido(133 + i, nombre, {
-            ...BCN(ciudad, km), categoria: 'Ayudante de cocina', estado: 'En incorporación', turno: 'Jornada partida',
-            mision: misionDe('PET-2026-0045', HOSTELERIA, 'Ayudante de cocina', plaza, '2026-11-05'),
-        })),
-    ...CANDIDATOS_SELECCION,
-];
-
-const CANDIDATOS_BASE = [
-    {
-        id: 'CAN-0101',
-        name: 'Carlos',
-        lastName: 'Gómez Moreno',
-        dni: '53982145X',
-        dniExpiry: '2028-11-14',
-        dniStatus: 'OK', // OK, Caducado, Falta
-        phone: '+34 611 234 567',
-        email: 'carlos.gomez@email.es',
-        city: 'Bilbao',
-        province: 'Bizkaia',
-        distance: '9 km de Basauri',
-        nss: '48/12345678/90',
-        nssStatus: 'OK',
-        rgpdStatus: 'Vigente', // Vigente, Proximo, Caducado, Sin consentimiento
-        rgpdSignedDate: '2025-09-12',
-        source: 'InfoJobs',
-        sourceId: 'INF-99824',
-        lastContactDate: '2026-10-22',
-        lastContactBy: 'Ana Gómez',
-        lastContactType: 'Llamada telefónica',
-        status: 'Disponible', // Nuevo, Pendiente de contactar, Contactado, En entrevista, Disponible, No disponible, Asignado/En misión, Descartado
-        category: 'Operario de almacén / Mozo',
-        experienceYears: 4,
-        drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
-        hasCar: true,
-        preferredShift: 'Indiferente (Mañana/Tarde/Noche)',
-        skills: ['Picking con PDA', 'Radiofrecuencia', 'Carretilla frontal', 'Transpaleta eléctrica'],
-        languages: ['Español (Nativo)'],
-        activeCandidatures: [],
-        assignedMission: null,
-        documents: [
-            { name: 'DNI_Anverso_Reverso.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-09-12' },
-            { name: 'Certificado_Carretillero_UNE.pdf', type: 'Certificado', status: 'Verificado', uploadDate: '2025-10-04' },
-            { name: 'Consentimiento_RGPD_Firmado.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2025-09-12' },
-            { name: 'CV_Carlos_Gomez_2026.pdf', type: 'CV', status: 'Actualizado', uploadDate: '2026-09-15' }
-        ],
-        communications: [
-            { date: '2026-10-22 11:30', user: 'Ana Gómez', channel: 'Llamada', result: 'Interesado y disponible', note: 'Disponible para incorporación inmediata en turno de mañana o noche.', nextAction: 'Presentar a PET-2026-0049' },
-            { date: '2026-09-15 09:40', user: 'Carlos M. (ETT)', channel: 'WhatsApp', result: 'Actualización CV', note: 'Envía carnet renovado de carretillero.' }
-        ]
-    },
-    {
-        id: 'CAN-0102',
-        name: 'Marta',
-        lastName: 'Rivas Valero',
-        dni: '48201934P',
-        dniExpiry: '2027-04-19',
-        dniStatus: 'OK',
-        phone: '+34 670 981 234',
-        email: 'marta.rivas@talent.org',
-        city: 'Basauri',
-        province: 'Bizkaia',
-        distance: '1 km de Basauri',
-        nss: '48/99887766/12',
-        nssStatus: 'OK',
-        rgpdStatus: 'Vigente',
-        rgpdSignedDate: '2025-06-20',
-        source: 'LinkedIn',
-        sourceId: 'IN-448190',
-        lastContactDate: '2026-10-18',
-        lastContactBy: 'Ana Gómez',
-        lastContactType: 'Email asignación',
-        status: 'Disponible',
-        category: 'Operario/a de almacén',
-        experienceYears: 3,
-        drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
-        hasCar: true,
-        preferredShift: 'Turno Mañana',
-        skills: ['Picking voz', 'Control de stock', 'Ubicaciones altas'],
-        languages: ['Español (Nativo)', 'Inglés (B1)'],
-        activeCandidatures: [],
-        assignedMission: null,
-        documents: [
-            { name: 'DNI_Marta_Rivas.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-06-20' },
-            { name: 'Afiliacion_SS_Marta.pdf', type: 'NSS', status: 'Verificado', uploadDate: '2025-06-20' },
-            { name: 'RGPD_Firmado_Digital.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2025-06-20' }
-        ],
-        communications: [
-            { date: '2026-10-18 16:15', user: 'Ana Gómez', channel: 'Email', result: 'Disponible', note: 'Termina su última misión. Prefiere turno de mañana.' }
-        ]
-    },
-    {
-        id: 'CAN-0103',
-        name: 'Mohamed',
-        lastName: 'El Amrani',
-        dni: 'X8923412K',
-        dniExpiry: '2026-09-10', // Caducado Demo
-        dniStatus: 'Caducado',
-        phone: '+34 633 445 566',
-        email: 'mohamed.elamrani@mail.com',
-        city: 'Barakaldo',
-        province: 'Bizkaia',
-        distance: '14 km de Basauri',
-        nss: '48/44332211/09',
-        nssStatus: 'OK',
-        rgpdStatus: 'Próximo a caducar',
-        rgpdSignedDate: '2024-03-15',
-        source: 'Portal Web ETT',
-        sourceId: 'WEB-1082',
-        lastContactDate: '2026-10-26',
-        lastContactBy: 'Lucía Santos',
-        lastContactType: 'SMS Recordatorio',
-        status: 'Pendiente de contactar',
-        category: 'Carretillero retráctil / Mozo',
-        experienceYears: 5,
-        drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
-        hasCar: true,
-        preferredShift: 'Turno Tarde / Noche',
-        skills: ['Carretilla retráctil 12m', 'Carga contenedores', 'SGA SAP'],
-        languages: ['Español (Fluido)', 'Árabe (Nativo)', 'Francés (Medio)'],
-        activeCandidatures: [],
-        assignedMission: null,
-        documents: [
-            { name: 'NIE_Amrani_Caducado.pdf', type: 'DNI/NIE', status: 'Caducado', uploadDate: '2024-03-15' },
-            { name: 'Carnet_Retractil_UNE.pdf', type: 'Certificado', status: 'Verificado', uploadDate: '2025-02-10' }
-        ],
-        communications: [
-            { date: '2026-10-10 10:15', user: 'Lucía Santos', channel: 'SMS', result: 'Solicitud renovación NIE', note: 'Enviado SMS automático para aportar resguardo renovación de tarjeta.' }
-        ]
-    },
-    {
-        id: 'CAN-0104',
-        name: 'Elena',
-        lastName: 'Sánchez Pascual',
-        dni: '02891277W',
-        dniExpiry: '2029-08-30',
-        dniStatus: 'OK',
-        phone: '+34 689 112 233',
-        email: 'elena.sanchez.p@fastmail.com',
-        city: 'Galdakao',
-        province: 'Bizkaia',
-        distance: '4 km de Basauri',
-        nss: 'FALTA',
-        nssStatus: 'Falta',
-        rgpdStatus: 'Vigente',
-        rgpdSignedDate: '2026-09-10',
-        source: 'Monster',
-        sourceId: 'MON-33419',
-        lastContactDate: '2026-10-23',
-        lastContactBy: 'Ana Gómez',
-        lastContactType: 'WhatsApp',
-        status: 'En entrevista',
-        category: 'Reponedora / Moza de almacén',
-        experienceYears: 2,
-        drivingLicenses: ['B'],
-        hasCar: false,
-        preferredShift: 'Turno Mañana o Tarde',
-        skills: ['Reposición lineal', 'Inventarios', 'Etiquetado', 'Trato al cliente'],
-        languages: ['Español (Nativo)'],
-        activeCandidatures: ['PET-2026-0049 (En selección)'],
-        assignedMission: null,
-        documents: [
-            { name: 'DNI_Elena_Sanchez.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2026-09-10' },
-            { name: 'RGPD_Firmado.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2026-09-10' }
-        ],
-        communications: [
-            { date: '2026-10-23 12:00', user: 'Ana Gómez', channel: 'WhatsApp', result: 'Citada para entrevista', note: 'Entrevista telefónica técnica completada favorablemente. Pendiente aportar NSS.' }
-        ]
-    },
-    {
-        id: 'CAN-0105',
-        name: 'David',
-        lastName: 'Castillo Ruiz',
-        dni: '50449912K',
-        dniExpiry: '2030-01-14',
-        dniStatus: 'OK',
-        phone: '+34 654 321 987',
-        email: 'david.castillo@example.com',
-        city: 'Bilbao (Santutxu)',
-        province: 'Bizkaia',
-        distance: '6 km de Basauri',
-        nss: '48/77665544/88',
-        nssStatus: 'OK',
-        rgpdStatus: 'Vigente',
-        rgpdSignedDate: '2025-11-20',
-        source: 'InfoJobs',
-        sourceId: 'INF-88123',
-        lastContactDate: '2026-10-20',
-        lastContactBy: 'Ana Gómez',
-        lastContactType: 'Llamada',
-        status: 'En entrevista',
-        category: 'Operario de almacén y logística',
-        experienceYears: 3,
-        drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
-        hasCar: true,
-        preferredShift: 'Turno Mañana',
-        skills: ['Picking radiofrecuencia', 'Preparación pedidos', 'Paletizado'],
-        languages: ['Español (Nativo)'],
-        activeCandidatures: ['PET-2026-0050 (En selección)'],
-        assignedMission: null,
-        documents: [
-            { name: 'DNI_David_Castillo.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-11-20' },
-            { name: 'Certificado_Carretillas.pdf', type: 'Certificado', status: 'Verificado', uploadDate: '2025-11-20' },
-            { name: 'RGPD_ETT_Global.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2025-11-20' }
-        ],
-        communications: [
-            { date: '2026-10-20 15:40', user: 'Ana Gómez', channel: 'Llamada', result: 'Validada disponibilidad', note: 'Disponible para el turno de tarde de PET-2026-0050. Pendiente de entrevista.' }
-        ]
-    },
-    {
-        id: 'CAN-0106',
-        name: 'Laura',
-        lastName: 'Méndez Herrero',
-        dni: '00000001R',
-        dniExpiry: '2028-05-11',
-        dniStatus: 'OK',
-        phone: '+34 612 889 900',
-        email: 'laura.mendez@example.com',
-        city: 'Getxo',
-        province: 'Bizkaia',
-        distance: '20 km de Basauri',
-        nss: '19/11223344/55',
-        nssStatus: 'OK',
-        rgpdStatus: 'Caducado', // Demo RGPD Caducado
-        rgpdSignedDate: '2023-11-01',
-        source: 'Alta Manual',
-        sourceId: 'MAN-901',
-        lastContactDate: '2026-09-08',
-        lastContactBy: 'Javier Pons',
-        lastContactType: 'Email',
-        status: 'Disponible',
-        category: 'Carretillera retráctil y frontal',
-        experienceYears: 6,
-        drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
-        hasCar: true,
-        preferredShift: 'Turno Mañana o Tarde',
-        skills: ['Trilateral', 'Retráctil 14m', 'Gestión de stocks', 'PRL Nivel Básico'],
-        languages: ['Español (Nativo)'],
-        activeCandidatures: [],
-        assignedMission: null,
-        documents: [
-            { name: 'DNI_Laura_Mendez.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2023-11-01' },
-            { name: 'RGPD_Caducado.pdf', type: 'RGPD', status: 'Caducado', uploadDate: '2023-11-01' }
-        ],
-        communications: [
-            { date: '2026-09-08 17:00', user: 'Javier Pons', channel: 'Email', result: 'Sondeo de interés', note: 'Indica que busca turnos fijos.' }
-        ]
-    },
-    {
-        id: 'CAN-0107',
-        name: 'Andrés',
-        lastName: 'Vidal Colomer',
-        dni: '47182930Q',
-        dniExpiry: '2027-10-22',
-        dniStatus: 'OK',
-        phone: '+34 644 123 789',
-        email: 'andres.vidal@empresa.com',
-        city: 'Durango',
-        province: 'Bizkaia',
-        distance: '22 km de Basauri',
-        nss: '48/65432109/88',
-        nssStatus: 'OK',
-        rgpdStatus: 'Vigente',
-        rgpdSignedDate: '2026-10-01',
-        source: 'LinkedIn',
-        sourceId: 'IN-778219',
-        lastContactDate: '2026-10-24',
-        lastContactBy: 'Ana Gómez',
-        lastContactType: 'Email',
-        status: 'Nuevo',
-        category: 'Reponedor / Mozo de carga y descarga',
-        experienceYears: 1,
-        drivingLicenses: ['B'],
-        hasCar: true,
-        preferredShift: 'Turno Noche',
-        skills: ['Carga nocturna', 'Uso transpaleta manual', 'Clasificación paquetería'],
-        languages: ['Español (Nativo)'],
-        activeCandidatures: [],
-        assignedMission: null,
-        documents: [
-            { name: 'DNI_Andres_Vidal.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2026-10-01' },
-            { name: 'RGPD_Andres.pdf', type: 'RGPD', status: 'Vigente', uploadDate: '2026-10-01' }
-        ],
-        communications: [
-            { date: '2026-10-24 09:15', user: 'Ana Gómez', channel: 'Email', result: 'Envío cuestionario', note: 'Perfil recibido hoy desde LinkedIn. Buen encaje para turno nocturno.' }
-        ]
-    },
-    {
-        id: 'CAN-0108',
-        name: 'Javier',
-        lastName: 'Navarro Gil',
-        dni: '51928374M',
-        dniExpiry: '2028-09-09',
-        dniStatus: 'OK',
-        phone: '+34 622 901 823',
-        email: 'javier.navarro@example.com',
-        city: 'Etxebarri',
-        province: 'Bizkaia',
-        distance: '3 km de Basauri',
-        nss: '48/90123456/77',
-        nssStatus: 'OK',
-        rgpdStatus: 'Vigente',
-        rgpdSignedDate: '2025-08-14',
-        source: 'Portal Web ETT',
-        sourceId: 'WEB-9921',
-        lastContactDate: '2026-10-15',
-        lastContactBy: 'Ana Gómez',
-        lastContactType: 'Llamada asignación',
-        status: 'Disponible',
-        category: 'Reponedor nocturno / Carretillero',
-        experienceYears: 4,
-        drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
-        hasCar: true,
-        preferredShift: 'Turno Noche',
-        skills: ['Carga/descarga', 'Manejo apiladores', 'Trabajo en equipo'],
-        languages: ['Español (Nativo)'],
-        activeCandidatures: [],
-        assignedMission: null,
-        documents: [
-            { name: 'DNI_Javier_Navarro.pdf', type: 'DNI', status: 'Verificado', uploadDate: '2025-08-14' },
-            { name: 'SS_Javier.pdf', type: 'NSS', status: 'Verificado', uploadDate: '2025-08-14' }
-        ],
-        communications: [
-            { date: '2026-10-15 11:20', user: 'Ana Gómez', channel: 'Llamada', result: 'Disponible', note: 'Disponible para turno de noche en Basauri.' }
-        ]
-    },
-    ...CANDIDATOS_RECORRIDO,
-];
-
-// Estado del candidato -> texto y color. Mismos colores que el resto de la app (ver src/ui/Badge.tsx).
+// Datos: useCandidatos (candidatos/useCandidatos.ts), de la API o, en la demo, de memoriaCandidatos.ts. La pantalla
+// trabaja con los candidatos en la forma del diseño (candidatos/mapeo.ts). Los datos sensibles (DNI/NIE, NSS, IBAN)
+// llegan tapados y «ver» los pide a la API, que lo registra; el valor no se guarda.
 // ==========================================
 // LISTADOS HOMOGÉNEOS (perfiles, carnés, habilidades e idiomas)
 // Cada valor tiene un nombre único y sus sinónimos: se busca por cualquiera de ellos y se guarda siempre el nombre.
 // En real serán tablas maestras ampliables desde la ficha.
 // ==========================================
 const item = (nombre, grupo, ...sinonimos) => ({ nombre, grupo, sinonimos });
-const CATALOGOS_INICIALES = {
-    perfiles: [
-        item('Operario/a de almacén', 'Logística', 'mozo de almacén', 'mozo', 'moza de almacén', 'operario de almacén / mozo', 'operario de almacén y logística', 'mozo de almacén y picking', 'operario logístico'),
-        item('Preparador/a de pedidos', 'Logística', 'picking', 'preparadora de pedidos', 'pickeador'),
-        item('Carretillero/a', 'Logística', 'carretillero', 'carretillera', 'conductor de carretilla', 'toro', 'carretillero retráctil', 'carretillero frontal', 'mozo especializado', 'carretillero / mozo especializado', 'carretillero retráctil / mozo', 'carretillera retráctil y frontal', 'carretillero / mozo frontal'),
-        item('Reponedor/a', 'Logística', 'reponedor', 'reponedor nocturno', 'reponedora', 'repositor', 'reponedora / moza de almacén', 'reponedor / carga y descarga', 'reponedora / inventarista'),
-        item('Mozo/a de carga y descarga', 'Logística', 'carga y descarga', 'descargador'),
-        item('Inventarista', 'Logística', 'auxiliar de inventario'),
-        item('Conductor/a repartidor/a', 'Transporte', 'repartidor', 'repartidora', 'driver', 'conductor / repartidor', 'chófer de reparto'),
-        item('Conductor/a de camión', 'Transporte', 'camionero', 'camionera', 'conductor C+E', 'trailero'),
-        item('Operario/a de producción', 'Industria', 'peón', 'peón de fábrica', 'operario de fábrica', 'operaria de producción'),
-        item('Operario/a de envasado', 'Industria', 'envasador', 'envasadora', 'operario de línea'),
-        item('Soldador/a', 'Industria', 'soldadora', 'soldador TIG', 'soldador MIG'),
-        item('Mecánico/a de mantenimiento', 'Industria', 'técnico de mantenimiento', 'mantenimiento industrial'),
-        item('Electricista', 'Industria', 'oficial electricista'),
-        item('Camarero/a', 'Hostelería', 'camarera', 'camarero de sala', 'camarero/a de sala', 'camarera de sala', 'mesero'),
-        item('Camarero/a de barra', 'Hostelería', 'barman', 'bartender', 'coctelero'),
-        item('Cocinero/a', 'Hostelería', 'cocinera', 'jefe de partida', 'chef'),
-        item('Ayudante de cocina', 'Hostelería', 'pinche', 'auxiliar de cocina'),
-        item('Friegaplatos', 'Hostelería', 'office', 'lavaplatos'),
-        item('Camarero/a de pisos', 'Hostelería', 'camarera de pisos', 'gobernanta', 'limpieza de habitaciones'),
-        item('Dependiente/a', 'Comercio', 'dependienta', 'vendedor', 'vendedora', 'dependiente de tienda'),
-        item('Cajero/a', 'Comercio', 'cajera'),
-        item('Promotor/a', 'Comercio', 'promotora', 'azafato de promoción'),
-        item('Azafato/a de eventos', 'Comercio', 'azafata', 'azafata de eventos', 'azafato'),
-        item('Limpiador/a', 'Limpieza', 'limpiadora', 'personal de limpieza', 'limpieza'),
-        item('Administrativo/a', 'Oficina', 'administrativa', 'auxiliar administrativo', 'auxiliar administrativa'),
-        item('Recepcionista', 'Oficina', 'recepción'),
-        item('Teleoperador/a', 'Oficina', 'teleoperadora', 'agente de call center', 'call center'),
-        item('Peón agrícola', 'Agricultura', 'jornalero', 'jornalera', 'recolector', 'temporero'),
-        item('Peón de construcción', 'Construcción', 'peón de obra', 'peón albañil'),
-        item('Albañil', 'Construcción', 'oficial de albañilería'),
-        item('Auxiliar de geriatría', 'Cuidados', 'gerocultor', 'gerocultora', 'auxiliar de residencia'),
-        item('Celador/a', 'Cuidados', 'celadora'),
-    ],
-    carnes: [
-        item('Permiso B', 'Permiso de conducir', 'carnet B', 'carné B', 'B', 'carnet de coche'),
-        item('Permiso C1', 'Permiso de conducir', 'C1'),
-        item('Permiso C', 'Permiso de conducir', 'C', 'carnet de camión'),
-        item('Permiso C+E', 'Permiso de conducir', 'C+E', 'CE', 'carnet de tráiler'),
-        item('Permiso D', 'Permiso de conducir', 'D', 'carnet de autobús'),
-        item('CAP', 'Permiso de conducir', 'certificado de aptitud profesional'),
-        item('ADR (mercancías peligrosas)', 'Permiso de conducir', 'ADR', 'mercancías peligrosas'),
-        item('Carné de carretillero', 'Carné profesional', 'carnet carretillero', 'carnet carretillero UNE 58451', 'carnet de carretillas', 'UNE 58451', 'carné de carretillas', 'carnet toro'),
-        item('Plataforma elevadora (PEMP)', 'Carné profesional', 'PEMP', 'plataforma elevadora', 'carnet de plataforma'),
-        item('Puente grúa', 'Carné profesional', 'carnet puente grúa'),
-        item('Manipulador/a de alimentos', 'Carné profesional', 'manipuladora de alimentos', 'carnet de manipulador', 'manipulador'),
-        item('Formación PRL 20 h', 'Prevención', 'PRL 20h', 'PRL básico 20 h'),
-        item('Formación PRL 60 h', 'Prevención', 'PRL 60h', 'PRL básico 60h', 'PRL nivel básico'),
-        item('Otros', 'Otros', 'otro', 'otros carnés', 'otros permisos'),
-    ],
-    habilidades: [
-        item('Picking con radiofrecuencia', 'Almacén', 'picking RF', 'picking radiofrecuencia', 'picking con PDA', 'radiofrecuencia', 'PDA', 'picking por radiofrecuencia'),
-        item('Picking por voz', 'Almacén', 'picking voz', 'voice picking'),
-        item('Preparación de pedidos', 'Almacén', 'preparación pedidos'),
-        item('Carretilla frontal', 'Almacén', 'frontal'),
-        item('Carretilla retráctil', 'Almacén', 'retráctil', 'carretilla retráctil 12m', 'retráctil 14m'),
-        item('Carretilla trilateral', 'Almacén', 'trilateral'),
-        item('Transpaleta eléctrica', 'Almacén', 'apilador', 'manejo apiladores', 'apilador eléctrico'),
-        item('Transpaleta manual', 'Almacén', 'uso transpaleta manual', 'transpaleta'),
-        item('Paletizado', 'Almacén', 'paletizar', 'filmado'),
-        item('Carga y descarga', 'Almacén', 'carga/descarga', 'carga nocturna', 'carga contenedores', 'descarga de camiones'),
-        item('Ubicación en altura', 'Almacén', 'ubicaciones altas'),
-        item('Control de stock', 'Almacén', 'gestión de stocks', 'stock'),
-        item('Inventario', 'Almacén', 'inventarios', 'recuento'),
-        item('Reposición', 'Almacén', 'reposición lineal', 'reponer'),
-        item('Etiquetado', 'Almacén', 'etiquetar'),
-        item('Clasificación de paquetería', 'Almacén', 'clasificación paquetería', 'sorter'),
-        item('SGA / SAP', 'Herramientas', 'SGA SAP', 'SAP', 'SGA', 'sistema de gestión de almacén'),
-        item('Ofimática', 'Herramientas', 'office', 'excel', 'word'),
-        item('Atención al cliente', 'Personales', 'trato al cliente', 'servicio al cliente'),
-        item('Trabajo en equipo', 'Personales', 'equipo'),
-        item('Disponibilidad horaria', 'Personales', 'disponibilidad', 'disponibilidad inmediata', 'incorporación rápida'),
-    ],
-    idiomas: ['Español', 'Inglés', 'Francés', 'Alemán', 'Italiano', 'Portugués', 'Catalán', 'Euskera', 'Gallego', 'Árabe', 'Rumano', 'Chino'],
-};
 const NIVELES_IDIOMA = ['Nativo', 'C2', 'C1', 'B2', 'B1', 'A2', 'A1'];
 // Niveles escritos a mano en datos antiguos
 const NIVEL_EQUIVALENTE = { fluido: 'C1', alto: 'C1', medio: 'B1', intermedio: 'B1', basico: 'A2', 'básico': 'A2', nativa: 'Nativo', nativo: 'Nativo' };
@@ -635,31 +35,6 @@ const buscarExacto = (lista, texto) => {
 };
 const canonico = (lista, texto) => buscarExacto(lista, texto)?.nombre || texto;
 const canonicos = (lista, valores = []) => [...new Set(valores.map(v => canonico(lista, v)))];
-const normalizarIdioma = (texto) => {
-    const m = texto.match(/^\s*([^(]+?)\s*(?:\((.+)\))?\s*$/);
-    if (!m) return texto;
-    const idioma = CATALOGOS_INICIALES.idiomas.find(i => normalizarTexto(i) === normalizarTexto(m[1])) || m[1];
-    const nivel = m[2] ? (NIVEL_EQUIVALENTE[normalizarTexto(m[2])] || m[2]) : 'B1';
-    return `${idioma} (${nivel})`;
-};
-// Pasa los valores escritos a mano al nombre del listado. Si el texto antiguo traía varios perfiles
-// ("Reponedor nocturno / Carretillero"), el primero es el principal y los demás pasan a otros perfiles.
-const perfilesDeTexto = (texto = '') => {
-    const entero = buscarExacto(CATALOGOS_INICIALES.perfiles, texto);
-    if (entero) return [entero.nombre];
-    return [...new Set(texto.split('/').map(p => canonico(CATALOGOS_INICIALES.perfiles, p.trim())).filter(Boolean))];
-};
-const homogeneizar = (c) => {
-    const [principal, ...resto] = perfilesDeTexto(c.category);
-    return {
-    ...c,
-    category: principal || c.category,
-    otherProfiles: [...new Set([...resto, ...canonicos(CATALOGOS_INICIALES.perfiles, c.otherProfiles)])].filter(p => p !== principal),
-    drivingLicenses: canonicos(CATALOGOS_INICIALES.carnes, c.drivingLicenses),
-    skills: canonicos(CATALOGOS_INICIALES.habilidades, c.skills),
-    languages: [...new Set((c.languages || []).map(normalizarIdioma))],
-    };
-};
 // Texto con nombres y sinónimos de perfiles, carnés y habilidades, para que la búsqueda encuentre por cualquiera
 const textoBuscable = (c, catalogos) => {
     const con = (lista, valores) => valores.flatMap(v => { const x = buscarExacto(lista, v); return x ? [x.nombre, ...x.sinonimos] : [v]; });
@@ -832,48 +207,6 @@ const turnosDesde = (texto = '') => {
     return TURNOS.filter(x => t.includes(x.texto.toLowerCase().slice(0, 4))).map(x => x.id);
 };
 
-// Caducidades de ejemplo de documentos que no son el DNI ni el RGPD
-const CADUCIDADES_DEMO = {
-    'Certificado_Carretillero_UNE.pdf': '2026-11-15',
-    'Carnet_Retractil_UNE.pdf': '2026-09-30',
-    'Certificado_Carretillas.pdf': '2029-11-20',
-};
-const TIPO_NORMALIZADO = { DNI: 'DNI/NIE', NSS: 'Seguridad Social' };
-
-const cpDePoblacion = (ciudad = '') => Object.entries(POBLACIONES_CP).find(([, p]) => ciudad.startsWith(p))?.[0] || '';
-// Datos personales y experiencia de ejemplo de los candidatos de la base (el resto los tiene sin rellenar)
-const DATOS_EXTRA = {
-    'CAN-0101': { fechaNacimiento: '1992-04-18', nacionalidad: 'Española', direccion: 'C/ Ejemplo 3, 2º B', iban: 'ES00 0000 0000 0000 0000 0101',
-        experiencias: [{ empresa: 'Distribuciones Ejemplo, S.L.', puesto: 'Operario/a de almacén', desde: '2021-03', hasta: '2025-12', funciones: 'Picking con PDA y carga de camiones.' }],
-        formacion: [{ titulo: 'Curso de carretillas elevadoras (UNE 58451)', centro: 'Centro de formación de ejemplo', anio: '2022' }] },
-    'CAN-0102': { fechaNacimiento: '1995-09-02', nacionalidad: 'Española', direccion: 'Av. Ejemplo 14, 1º A', iban: 'ES00 0000 0000 0000 0000 0102',
-        experiencias: [{ empresa: 'Logística Ejemplo, S.A.', puesto: 'Preparador/a de pedidos', desde: '2023-01', hasta: '2026-06', funciones: 'Preparación de pedidos y control de stock.' }] },
-    'CAN-0103': { fechaNacimiento: '1988-12-11', nacionalidad: 'Marroquí', direccion: 'C/ Ejemplo 22, bajo' },
-    'CAN-0104': { fechaNacimiento: '1999-06-25', nacionalidad: 'Española' },
-    'CAN-0105': { fechaNacimiento: '1993-02-14', nacionalidad: 'Española', direccion: 'C/ Ejemplo 7, 3º D', iban: 'ES00 0000 0000 0000 0000 0105' },
-};
-const completarCandidato = (c) => ({
-    ...c,
-    fechaNacimiento: '', nacionalidad: '', direccion: '', iban: '', experiencias: [], formacion: [],
-    codigoPostal: cpDePoblacion(c.city),
-    ...DATOS_EXTRA[c.id],
-    otherProfiles: c.otherProfiles || [],
-    turnos: c.turnos || turnosDesde(c.preferredShift),
-    incorporacion: c.incorporacion || 'Inmediata',
-    incorporacionFecha: c.incorporacionFecha || '',
-    radioKm: c.radioKm ?? 25,
-    notasDisponibilidad: c.notasDisponibilidad || '',
-    avisoAutomatico: c.avisoAutomatico ?? true,
-    documents: (c.documents || []).map((d, i) => {
-        const type = d.type === 'Certificado' ? (/carretill|retractil/i.test(d.name) ? 'Carné de carretillero' : 'Otro') : (TIPO_NORMALIZADO[d.type] || d.type);
-        let expiry = d.expiry ?? CADUCIDADES_DEMO[d.name] ?? null;
-        if (type === 'DNI/NIE') expiry = c.dniExpiry;
-        if (type === 'RGPD' && d.expiry === undefined) {
-            expiry = c.rgpdStatus === 'Caducado' ? '2025-11-01' : c.rgpdStatus === 'Próximo a caducar' ? '2026-11-20' : sumarAnios(c.rgpdSignedDate || d.uploadDate, 3);
-        }
-        return { ...d, id: d.id || `${c.id}-doc-${i}`, type, expiry };
-    }),
-});
 // Los estados de DNI, NSS y RGPD de la lista salen de los datos y de los documentos
 const sincronizarEstados = (c) => {
     const dDni = diasPara(c.dniExpiry);
@@ -887,18 +220,6 @@ const sincronizarEstados = (c) => {
     };
 };
 
-// Puesto, turno, cliente y centro de cada petición (las mismas que en Peticiones). Una petición = un puesto.
-const PETICIONES_INFO = {
-    'PET-2026-0031': { puesto: 'Mozo/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-07-01', fin: '2026-09-30' },
-    'PET-2026-0044': { puesto: 'Camarero/a de sala', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-10-10', fin: '2026-11-30' },
-    'PET-2026-0045': { puesto: 'Ayudante de cocina', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-11-05', fin: '2026-11-30' },
-    'PET-2026-0046': { puesto: 'Cocinero/a de partida', turno: 'Jornada partida', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-11-05', fin: '2026-11-30' },
-    'PET-2026-0047': { puesto: 'Camarero/a de barra', turno: 'Turno de noche', cliente: HOSTELERIA, centro: 'Recinto de congresos - Barcelona', inicio: '2026-11-12', fin: '2026-11-30' },
-    'PET-2026-0048': { puesto: 'Operario/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-03', fin: '2027-01-29' },
-    'PET-2026-0049': { puesto: 'Operario/a de almacén', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-03', fin: '2027-01-29' },
-    'PET-2025-0087': { puesto: 'Mozo/a de almacén', turno: 'Turno de mañana', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2025-07-01', fin: '2025-09-30' },
-    'PET-2026-0050': { puesto: 'Carretillero/a', turno: 'Turno de tarde', cliente: TRANSLOG, centro: 'HUB central Basauri (Bizkaia) - Nave 2', inicio: '2026-11-10', fin: '2027-01-29' },
-};
 // Estados de una candidatura, en el orden del recorrido (los mismos pasos que la plaza en Peticiones)
 const ESTADOS_CANDIDATURA = {
     'En selección': { tono: 'accent', texto: 'Pendiente de entrevista o de proponerla al cliente.', activa: true },
@@ -909,27 +230,6 @@ const ESTADOS_CANDIDATURA = {
     'Baja': { tono: 'neutral', texto: 'Dejó la plaza antes de terminar.', activa: false },
     'Descartada': { tono: 'danger', texto: 'No sigue en el proceso de selección.', activa: false },
 };
-// Candidaturas de ejemplo a partir de los datos de cada persona
-const candidaturasIniciales = (c) => {
-    const lista = [];
-    if (c.assignedMission) {
-        lista.push({ petId: c.assignedMission.petitionId, plaza: c.assignedMission.plazaNum, estado: c.status === 'En incorporación' ? 'Confirmada' : 'En misión', fecha: c.assignedMission.startDate });
-    }
-    (c.activeCandidatures || []).forEach(s => {
-        const petId = s.slice(0, 13);
-        if (!lista.some(x => x.petId === petId) && PETICIONES_INFO[petId]) lista.push({ petId, plaza: null, estado: 'En selección', fecha: c.lastContactDate });
-    });
-    (c.communications || []).forEach(m => {
-        const petId = (m.note.match(/PET-\d{4}-\d{4}/) || [])[0];
-        if (!petId || lista.some(x => x.petId === petId)) return;
-        if (m.result === 'Fin de misión') lista.push({ petId, plaza: null, estado: 'Finalizada', fecha: m.date.slice(0, 10), nota: m.note });
-        if (m.result === 'Baja voluntaria') lista.push({ petId, plaza: Number((m.note.match(/plaza (\d+)/) || [])[1]) || null, estado: 'Baja', fecha: m.date.slice(0, 10), nota: m.note });
-    });
-    return lista;
-};
-
-const INITIAL_CANDIDATES = CANDIDATOS_BASE.map(c => homogeneizar(completarCandidato(c))).map(c => ({ ...c, candidaturas: c.candidaturas || candidaturasIniciales(c) }));
-
 const ESTADO_CANDIDATO = {
     'Disponible': { tone: 'success', label: 'Disponible' },
     'Asignado/En misión': { tone: 'info', label: 'En misión' },
@@ -949,13 +249,90 @@ const RGPD = {
     'Sin consentimiento': { tone: 'warning', label: 'Sin firma', icon: AlertCircle },
 };
 
+// Dato sensible (documento de identidad, NSS, IBAN): llega tapado; «ver» lo pide a la API, que lo registra en la
+// auditoría. El valor solo vive aquí mientras se ve: no se guarda en el candidato, ni en caché ni en localStorage.
+function DatoSensible({ valor, puedeVer, onVer, className = 'font-mono' }) {
+    const [visible, setVisible] = useState(null);
+    const [cargando, setCargando] = useState(false);
+    useEffect(() => { setVisible(null); }, [valor]);
+    if (!valor) return null;
+    const tapado = valor.includes('•');
+    const alternar = async () => {
+        if (visible !== null) { setVisible(null); return; }
+        setCargando(true);
+        const v = await onVer();
+        setCargando(false);
+        if (typeof v === 'string') setVisible(v);
+    };
+    return (
+        <span className="inline-flex items-center gap-1.5">
+            <span className={className}>{visible ?? valor}</span>
+            {tapado && puedeVer && (
+                <button type="button" onClick={alternar} disabled={cargando} className="inline-flex items-center gap-0.5 text-[11px] font-normal text-indigo-600 hover:text-indigo-800">
+                    <Eye className="w-3 h-3" />{cargando ? '...' : visible !== null ? 'ocultar' : 'ver'}
+                </button>
+            )}
+        </span>
+    );
+}
+
+// Auditoría de accesos de una persona (privacy.audit): quién abrió su ficha, vio un dato sensible, descargó un
+// documento o exportó sus datos. Solo se lee: no se puede cambiar ni borrar.
+function AccesosCandidato({ candidato, cargar }) {
+    const [lista, setLista] = useState(null);
+    const [error, setError] = useState(null);
+    useEffect(() => {
+        let vigente = true;
+        setLista(null);
+        cargar(candidato).then(l => vigente && setLista(l), e => vigente && setError(e?.message || String(e)));
+        return () => { vigente = false; };
+    }, [candidato._id]);
+    if (error) return <Notice tone="danger" icon={AlertCircle}>{error}</Notice>;
+    if (!lista) return <div className="text-xs text-slate-500">Cargando accesos...</div>;
+    return (
+        <div className="space-y-3 text-xs">
+            <p className="text-slate-600">Quién ha abierto su ficha, visto un dato sensible, descargado un documento o exportado sus datos. Se conserva 2 años y no se puede cambiar ni borrar. Los listados no se registran.</p>
+            {lista.length === 0 ? <EmptyState icon={Shield} title="Sin accesos registrados" /> : (
+                <table className="w-full text-left">
+                    <thead><tr className="border-b border-slate-200 text-[11px] text-slate-500"><th className="py-1.5 font-medium">Cuándo</th><th className="py-1.5 font-medium">Quién</th><th className="py-1.5 font-medium">Qué</th></tr></thead>
+                    <tbody>
+                        {lista.map(a => (
+                            <tr key={a.id} className="border-b border-slate-100 last:border-0">
+                                <td className="py-1.5 text-slate-600 whitespace-nowrap">{a.fecha}</td>
+                                <td className="py-1.5 text-slate-800">{a.usuario}</td>
+                                <td className="py-1.5 text-slate-800">{a.accion}{a.detalle ? <span className="text-slate-500"> · {a.detalle}</span> : null}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </div>
+    );
+}
+
 // ==========================================
 // MAIN APPLICATION COMPONENT
 // ==========================================
 export default function CandidatosView() {
     // State
-    const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
-    const [petitions, setPetitions] = useState(INITIAL_PETITIONS);
+    // Datos (useCandidatos): la pantalla trabaja sobre su copia y la cambia con lo que devuelve la API
+    const can = useCandidatos();
+    const [candidates, setCandidates] = useState([]);
+    const [petitions, setPetitions] = useState([]);
+    useEffect(() => { if (can.listado) setCandidates(can.listado); }, [can.listado]);
+    useEffect(() => { setPetitions(can.peticiones); }, [can.peticiones]);
+    const PETICIONES_INFO = can.peticionesInfo;
+    // Llama a la API y avisa si falla. Devuelve lo que devuelve la acción, o undefined.
+    const ejecutar = async (accion, titulo, mensaje, tipo = 'success') => {
+        try {
+            const r = await accion();
+            if (titulo) showToast(titulo, typeof mensaje === 'function' ? mensaje(r) : mensaje, tipo);
+            return r;
+        } catch (e) {
+            showToast('No se ha podido hacer', mensajeError(e), 'error');
+            return undefined;
+        }
+    };
     
     // View mode
     const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
@@ -969,13 +346,14 @@ export default function CandidatosView() {
     const [categoryFilter, setCategoryFilter] = useState('ALL');
     const [skillFilter, setSkillFilter] = useState('ALL'); // 'carne:…' | 'habilidad:…' | 'idioma:…'
     // Listados homogéneos; se amplían al añadir un valor nuevo desde la ficha
-    const [catalogos, setCatalogos] = useState(CATALOGOS_INICIALES);
+    const [catalogos, setCatalogos] = useState({ perfiles: [], carnes: [], habilidades: [], idiomas: [] });
+    useEffect(() => { if (can.catalogos) setCatalogos(can.catalogos); }, [can.catalogos]);
     const anadirACatalogo = (tipo, nombre, grupo = 'Añadidos') => {
         setCatalogos(prev => ({
             ...prev,
             [tipo]: tipo === 'idiomas' ? [...prev.idiomas, nombre] : [...prev[tipo], item(nombre, grupo)],
         }));
-        showToast('Añadido al listado', `«${nombre}» ya se puede elegir en todos los candidatos.`, 'info');
+        ejecutar(() => can.anadirACatalogo(tipo, nombre, grupo), 'Añadido al listado', `«${nombre}» ya se puede elegir en todos los candidatos.`, 'info');
     };
     const [savedPreset, setSavedPreset] = useState('ALL'); // 'ALL', 'AVAILABLE_NOW', 'DOC_PENDING', 'ASSIGNED'
 
@@ -997,8 +375,8 @@ export default function CandidatosView() {
         candidate: null,
         candidatesBatch: [], // For bulk assignment
         step: 1, // 1: petición, 2: plaza y modalidad, 3: comprobaciones y confirmar
-        selectedPetitionId: 'PET-2026-0049',
-        selectedPositionId: 'POS-0049',
+        selectedPetitionId: '',
+        selectedPositionId: '',
         selectedPlazaNum: 1,
         assignmentMode: 'seleccion', // 'seleccion' (entrevista antes de proponer) | 'propuesta' (proponer al cliente para una plaza)
         busquedaPeticion: '',
@@ -1057,6 +435,19 @@ export default function CandidatosView() {
         setCandidates(prev => prev.map(aplicar));
         setSelectedCandidateForDetail(prev => (prev && prev.id === id ? aplicar(prev) : prev));
     };
+    // Pone en la lista y en la ficha abierta el candidato que devuelve la API
+    const ponerCandidato = (vm) => {
+        if (!vm) return;
+        setCandidates(prev => prev.map(c => (c._id === vm._id ? vm : c)));
+        setSelectedCandidateForDetail(prev => (prev && prev._id === vm._id ? vm : prev));
+    };
+    // Abre la ficha: enseña la fila al momento y la completa con la ficha de la API (queda en la auditoría de accesos)
+    const abrirFicha = async (c) => {
+        setSelectedCandidateForDetail(c);
+        setDetailTab('resumen');
+        const vm = await ejecutar(() => can.abrir(c));
+        if (vm) setSelectedCandidateForDetail(prev => (prev && prev._id === vm._id ? vm : prev));
+    };
 
     const SECCIONES_EDICION = { personal: 'Datos personales', profesional: 'Perfil y carnés', disponibilidad: 'Disponibilidad' };
     const empezarEdicion = (seccion) => setEdicion({ seccion, datos: JSON.parse(JSON.stringify(selectedCandidateForDetail)), errores: {} });
@@ -1065,70 +456,77 @@ export default function CandidatosView() {
         const cp = v.replace(/\D/g, '').slice(0, 5);
         setEdicion(e => ({ ...e, datos: { ...e.datos, codigoPostal: cp, ...(cp.length >= 2 && PROVINCIAS_CP[cp.slice(0, 2)] ? { province: PROVINCIAS_CP[cp.slice(0, 2)] } : {}), ...(POBLACIONES_CP[cp] ? { city: POBLACIONES_CP[cp] } : {}) } }));
     };
-    const guardarEdicion = () => {
+    const guardarEdicion = async () => {
         const d = edicion.datos;
         const errores = {};
+        // Lo sensible llega tapado: solo se comprueba (y se guarda) si se ha escrito uno nuevo
+        const nuevo = (k) => d[k] && !d[k].includes('•') && d[k] !== selectedCandidateForDetail[k];
         if (edicion.seccion === 'personal') {
             if (!d.name.trim()) errores.name = 'Obligatorio';
             if (!d.lastName.trim()) errores.lastName = 'Obligatorio';
-            if (!/^[XYZ]?\d{7,8}[A-Z]$/i.test(d.dni.trim())) errores.dni = 'Formato de DNI o NIE no válido';
+            if (nuevo('dni') && !/^[XYZ]?\d{7,8}[A-Z]$/i.test(d.dni.trim())) errores.dni = 'Formato de DNI o NIE no válido';
             if (!d.phone.trim()) errores.phone = 'Obligatorio';
             if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) errores.email = 'Email no válido';
             if (d.codigoPostal && !/^\d{5}$/.test(d.codigoPostal)) errores.codigoPostal = 'Cinco cifras';
-            if (d.iban && !/^ES\d{22}$/.test(d.iban.replace(/\s/g, '').toUpperCase())) errores.iban = 'IBAN español: ES y 22 cifras';
+            if (nuevo('iban') && !/^ES\d{22}$/.test(d.iban.replace(/\s/g, '').toUpperCase())) errores.iban = 'IBAN español: ES y 22 cifras';
         }
         if (edicion.seccion === 'disponibilidad' && d.incorporacion === 'A partir de una fecha' && !d.incorporacionFecha) errores.incorporacionFecha = 'Indica la fecha';
         if (Object.keys(errores).length) { setEdicion(e => ({ ...e, errores })); return; }
         const seccion = SECCIONES_EDICION[edicion.seccion];
-        actualizarCandidato(d.id, (c) => ({
-            ...d,
-            communications: c.communications,
-            documents: edicion.seccion === 'personal' ? c.documents.map(doc => (doc.type === 'DNI/NIE' ? { ...doc, expiry: d.dniExpiry } : doc)) : c.documents,
-            preferredShift: d.turnos?.length ? TURNOS.filter(t => d.turnos.includes(t.id)).map(t => t.texto).join(' / ') : 'Sin indicar',
-        }), { result: 'Datos actualizados', note: `${seccion} modificados.` });
+        const vm = await ejecutar(() => can.guardar(edicion.seccion, d, selectedCandidateForDetail), 'Cambios guardados', `${seccion} de ${d.name} ${d.lastName} actualizados.`);
+        if (!vm) return;
+        ponerCandidato(vm);
         setEdicion(null);
-        showToast('Cambios guardados', `${seccion} de ${d.name} ${d.lastName} actualizados.`);
     };
     const cambiarPestanaFicha = (id) => { setEdicion(null); setDetailTab(id); };
 
-    const eliminarCandidato = () => {
+    // Eliminar = supresión RGPD: la API anonimiza la ficha (datos personales, documentos e historial)
+    const eliminarCandidato = async () => {
         const c = candidatoAEliminar;
-        setCandidates(prev => prev.filter(x => x.id !== c.id));
+        const ok = await ejecutar(() => can.suprimir(c, 'Derecho de supresión (RGPD)').then(() => true), 'Candidato eliminado', `Se han borrado los datos personales y documentos de ${c.name} ${c.lastName}.`);
+        if (!ok) return;
+        setCandidates(prev => prev.filter(x => x._id !== c._id));
         setSelectedIds(prev => prev.filter(x => x !== c.id));
         setCandidatoAEliminar(null);
         setSelectedCandidateForDetail(null);
-        showToast('Candidato eliminado', `Se han borrado los datos y documentos de ${c.name} ${c.lastName}.`);
     };
+    // Ver un dato sensible: la API lo registra; el valor no se guarda
+    const revelar = (c, campo) => ejecutar(() => can.revelar(c, campo));
+    // Derecho de acceso: descarga un JSON con todo (queda en la auditoría)
+    const exportarCandidato = (c) => ejecutar(() => can.exportar(c), 'Datos exportados', `Se ha descargado el fichero con los datos de ${c.name} ${c.lastName}.`, 'info');
 
     // Documentos: subir, renovar, validar y eliminar
-    const guardarDocumento = () => {
+    const guardarDocumento = async () => {
         const c = selectedCandidateForDetail;
         const { doc, tipo, archivo, expiry } = docModal;
-        const nuevo = { id: `${c.id}-doc-${Date.now()}`, name: archivo, type: tipo, status: 'Pendiente de validar', uploadDate: hoyIso(), expiry: expiry || null };
-        actualizarCandidato(c.id, (x) => ({
-            documents: doc ? x.documents.map(dd => (dd.id === doc.id ? nuevo : dd)) : [...x.documents, nuevo],
-            ...(tipo === 'DNI/NIE' && expiry ? { dniExpiry: expiry } : {}),
-            ...(tipo === 'RGPD' ? { rgpdSignedDate: hoyIso() } : {}),
-        }), { result: doc ? 'Documento renovado' : 'Documento subido', note: doc ? `${doc.name} sustituido por ${archivo}.` : `${archivo} (${tipo}).` });
+        const vm = await ejecutar(() => can.subirDocumento(c, { tipo, archivo, caducidad: expiry || null, sustituye: doc?.id || null }),
+            doc ? 'Documento renovado' : 'Documento subido', `${archivo.name} queda pendiente de validar.`);
+        if (!vm) return;
+        ponerCandidato(vm);
         setDocModal(null);
-        showToast(doc ? 'Documento renovado' : 'Documento subido', `${archivo} queda pendiente de validar.`);
     };
-    const validarDocumento = (doc) => {
-        actualizarCandidato(selectedCandidateForDetail.id, (x) => ({ documents: x.documents.map(d => (d.id === doc.id ? { ...d, status: 'Verificado', validadoPor: 'Usuario Demo', validadoEl: hoyIso(), motivoRechazo: undefined } : d)) }), { result: 'Documento validado', note: doc.name });
-        showToast('Documento validado', `${doc.type}: comprobado y correcto.`);
+    const validarDocumento = async (doc) => {
+        ponerCandidato(await ejecutar(() => can.validarDocumento(selectedCandidateForDetail, doc.id), 'Documento validado', `${doc.type}: comprobado y correcto.`));
     };
-    const rechazarDocumento = (doc) => {
+    const rechazarDocumento = async (doc) => {
         const motivo = rechazo.motivo === 'Otro' ? rechazo.nota || 'Otro' : rechazo.motivo;
-        actualizarCandidato(selectedCandidateForDetail.id, (x) => ({ documents: x.documents.map(d => (d.id === doc.id ? { ...d, status: 'Rechazado', motivoRechazo: motivo, validadoPor: 'Usuario Demo', validadoEl: hoyIso() } : d)) }), { result: 'Documento rechazado', note: `${doc.name}: ${motivo}` });
+        const vm = await ejecutar(() => can.rechazarDocumento(selectedCandidateForDetail, doc.id, motivo), 'Documento rechazado', `${doc.type}: ${motivo}. Pide al candidato que lo envíe de nuevo.`, 'info');
+        if (!vm) return;
+        ponerCandidato(vm);
         setRechazo(null);
-        showToast('Documento rechazado', `${doc.type}: ${motivo}. Pide al candidato que lo envíe de nuevo.`, 'info');
     };
-    const eliminarDocumento = () => {
+    const eliminarDocumento = async () => {
         const doc = docAEliminar;
-        actualizarCandidato(selectedCandidateForDetail.id, (x) => ({ documents: x.documents.filter(d => d.id !== doc.id) }), { result: 'Documento eliminado', note: doc.name });
+        const vm = await ejecutar(() => can.quitarDocumento(selectedCandidateForDetail, doc.id), 'Documento eliminado', doc.name);
+        if (!vm) return;
+        ponerCandidato(vm);
         setDocAEliminar(null);
-        showToast('Documento eliminado', doc.name);
     };
+    const descargarDocumento = async (doc) => {
+        const hay = await ejecutar(() => can.descargarDocumento(doc.id));
+        if (hay === false) showToast('Sin fichero', DEMO ? 'En la demo los documentos de ejemplo no tienen fichero.' : 'No se encuentra el fichero.', 'info');
+    };
+
     const abrirAvisoDocs = (c, docs) => {
         const lineas = docs.map(d => {
             const e = estadoDocumento(d);
@@ -1141,13 +539,16 @@ export default function CandidatosView() {
             recordar: true,
         });
     };
-    const enviarAvisoDocs = () => {
+
+    // El correo real llega más adelante: de momento queda marcado el aviso en cada documento y en el historial
+    const enviarAvisoDocs = async () => {
         const c = selectedCandidateForDetail;
-        actualizarCandidato(c.id, (x) => ({ documents: x.documents.map(d => (avisoDocs.docIds.includes(d.id) ? { ...d, avisoEnviado: hoyIso() } : d)) }), {
-            channel: 'Email', result: 'Aviso de renovación', note: `${avisoDocs.asunto}${avisoDocs.recordar ? '. Se le recordará cada 7 días hasta que lo renueve.' : '.'}`,
-        });
+        const nota = `${avisoDocs.asunto}${avisoDocs.recordar ? '. Se le recordará cada 7 días hasta que lo renueve.' : '.'}`;
+        const vm = await ejecutar(() => can.avisarRenovacion(c, avisoDocs.docIds, nota), 'Aviso registrado',
+            DEMO ? `Email enviado a ${c.email}.` : `Aviso de renovación anotado. El envío por correo llega más adelante: avisa a ${c.email || 'la persona'} por tu cuenta.`, DEMO ? 'success' : 'info');
+        if (!vm) return;
+        ponerCandidato(vm);
         setAvisoDocs(null);
-        showToast('Aviso enviado', `Email enviado a ${c.email}.`);
     };
 
     // Calculate filtered candidates
@@ -1216,10 +617,11 @@ export default function CandidatosView() {
     };
 
     // Start Assign Wizard for a single candidate
-    const startAssignWizard = (candidate, petId = 'PET-2026-0049', step = 1) => {
+    const startAssignWizard = (candidate, petId = petitions[0]?.id, step = 1) => {
         // Una petición = un puesto: el puesto es el único de la petición
         const pet = petitions.find(p => p.id === petId) || petitions[0];
         const pos = pet?.positions[0];
+        if (!pet) { showToast('No hay peticiones activas', 'Las candidaturas se crean sobre una petición activa de la sucursal de la cabecera.', 'info'); return; }
         
         const blockers = [];
         const warnings = [];
@@ -1252,6 +654,19 @@ export default function CandidatosView() {
             overrideReason: ''
         });
     };
+
+    // Al elegir una petición en el asistente, se piden sus plazas con quién ocupa cada una
+    useEffect(() => {
+        if (!wizardState.isOpen || !wizardState.selectedPetitionId) return;
+        let vigente = true;
+        can.cargarPeticion(wizardState.selectedPetitionId).then(p => {
+            if (!vigente || !p) return;
+            setPetitions(prev => prev.map(x => (x.id === p.id ? p : x)));
+            setWizardState(w => (w.selectedPetitionId === p.id && !p.positions[0].plazas.some(z => z.plazaNum === Number(w.selectedPlazaNum) && z.status === 'Vacante')
+                ? { ...w, selectedPlazaNum: p.positions[0].plazas.find(z => z.status === 'Vacante')?.plazaNum || null } : w));
+        }, () => {});
+        return () => { vigente = false; };
+    }, [wizardState.isOpen, wizardState.selectedPetitionId]);
 
     // Recalculate wizard compatibility whenever step or position changes
     const runWizardCompatibilityCheck = (petId, posId, candidate) => {
@@ -1296,69 +711,35 @@ export default function CandidatosView() {
         return { blockers, warnings };
     };
 
-    // Confirmar el asistente: candidatura en selección o propuesta al cliente (la plaza queda pendiente del cliente)
-    const confirmAssignmentWizard = () => {
+    // Confirmar el asistente: candidatura en selección o propuesta al cliente (reserva la plaza hasta que el cliente la confirme)
+    const confirmAssignmentWizard = async () => {
         const { candidate, selectedPetitionId, selectedPlazaNum, assignmentMode } = wizardState;
         if (!candidate) return;
         const pet = petitions.find(p => p.id === selectedPetitionId);
         const pos = pet?.positions[0];
         const propuesta = assignmentMode === 'propuesta';
         const nombre = `${candidate.name} ${candidate.lastName}`;
-        const hoy = hoyIso();
-
-        if (propuesta) {
-            setPetitions(prev => prev.map(p => (p.id !== selectedPetitionId ? p : {
-                ...p,
-                positions: p.positions.map(position => ({
-                    ...position,
-                    plazas: position.plazas.map(plz => (plz.plazaNum === Number(selectedPlazaNum)
-                        ? { ...plz, status: 'Pendiente del cliente', candidateName: nombre, candidateId: candidate.id, assignedDate: hoy }
-                        : plz)),
-                })),
-            })));
-        }
-
-        const estado = propuesta ? 'Propuesta al cliente' : 'En selección';
-        const aplicar = (c) => {
-            if (c.id !== candidate.id) return c;
-            const otras = (c.candidaturas || []).filter(x => x.petId !== selectedPetitionId);
-            const log = {
-                date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-                user: 'Ana Gómez',
-                channel: 'ERP Sistema',
-                result: propuesta ? 'Propuesta al cliente' : 'Candidatura iniciada',
-                note: `${selectedPetitionId} · ${pos?.title} · ${pet?.client}${propuesta ? ` · plaza ${selectedPlazaNum}` : ''}.${wizardState.overrideReason ? ` ${wizardState.overrideReason}` : ''}`,
-            };
-            return {
-                ...c,
-                status: ['Asignado/En misión', 'En incorporación'].includes(c.status) ? c.status : 'En entrevista',
-                candidaturas: [{ petId: selectedPetitionId, plaza: propuesta ? Number(selectedPlazaNum) : null, estado, fecha: hoy, nota: wizardState.overrideReason }, ...otras],
-                activeCandidatures: [`${selectedPetitionId} (${estado}${propuesta ? `, plaza ${selectedPlazaNum}` : ''})`, ...(c.activeCandidatures || []).filter(x => !x.includes(selectedPetitionId))],
-                communications: [log, ...c.communications],
-            };
-        };
-        setCandidates(prev => prev.map(aplicar));
-        setSelectedCandidateForDetail(prev => (prev ? aplicar(prev) : prev));
+        const slotId = pos?.plazas.find(x => x.plazaNum === Number(selectedPlazaNum))?._slotId || null;
+        const r = await ejecutar(() => can.asignar(candidate, selectedPetitionId, propuesta ? 'propuesta' : 'seleccion', slotId, wizardState.overrideReason));
+        if (!r) return;
+        ponerCandidato(r.ficha);
         setWizardState(prev => ({ ...prev, isOpen: false }));
         showToast(
             propuesta ? 'Propuesta enviada al cliente' : 'Candidatura iniciada',
             propuesta
-                ? `${nombre} propuesto/a para la plaza ${selectedPlazaNum} de ${selectedPetitionId}. El cliente la confirma en Peticiones.`
+                ? `${nombre} propuesto/a para la plaza ${selectedPlazaNum} de ${selectedPetitionId}. El cliente la confirma en Peticiones.${r.avisos.length ? ` Aviso: ${r.avisos.join(', ').toLowerCase()}.` : ''}`
                 : `${nombre} en selección para ${selectedPetitionId} · ${pos?.title}.`,
-            'success'
+            r.avisos.length ? 'info' : 'success'
         );
     };
     // Cambia el estado de una candidatura desde la ficha (por ejemplo, descartarla)
-    const cambiarCandidatura = (candidatoId, petId, estado) => {
-        const aplicar = (c) => (c.id !== candidatoId ? c : {
-            ...c,
-            candidaturas: c.candidaturas.map(x => (x.petId === petId ? { ...x, estado, fecha: hoyIso() } : x)),
-            activeCandidatures: (c.activeCandidatures || []).filter(x => !x.includes(petId)),
-        });
-        setCandidates(prev => prev.map(aplicar));
-        setSelectedCandidateForDetail(prev => (prev ? aplicar(prev) : prev));
-        showToast('Candidatura actualizada', `${petId}: ${estado.toLowerCase()}.`, 'success');
+    const cambiarCandidatura = async (candidatoId, petId, estado) => {
+        const c = selectedCandidateForDetail;
+        const x = (c?.candidaturas || []).find(y => y.petId === petId);
+        if (!c || !x?._id) return;
+        ponerCandidato(await ejecutar(() => can.cambiarCandidatura(c, x._id, estado), 'Candidatura actualizada', `${petId}: ${estado.toLowerCase()}.`));
     };
+
 
     // Contact Handler
     const openContactModal = (candidate) => {
@@ -1370,134 +751,49 @@ export default function CandidatosView() {
         setContactNote('');
     };
 
-    const submitContactAction = () => {
+    const submitContactAction = async () => {
         if (!contactModalCandidate) return;
-
-        const newLog = {
-            date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-            user: 'Ana Gómez (Consultora)',
-            channel: contactChannel,
-            result: contactResult,
-            note: `${contactNote ? contactNote + ' — ' : ''}${contactMessage.substring(0, 100)}...`
-        };
-
-        const updatedCandidates = candidates.map(c => {
-            if (c.id !== contactModalCandidate.id) return c;
-            return {
-                ...c,
-                lastContactDate: new Date().toISOString().split('T')[0],
-                lastContactBy: 'Ana Gómez',
-                lastContactType: contactChannel,
-                status: c.status === 'Nuevo' || c.status === 'Pendiente de contactar' ? 'Contactado' : c.status,
-                communications: [newLog, ...c.communications]
-            };
-        });
-
-        setCandidates(updatedCandidates);
-        showToast('Contacto registrado', `Actividad de ${contactChannel} guardada en el historial de ${contactModalCandidate.name}.`, 'info');
+        const c = contactModalCandidate;
+        const vm = await ejecutar(() => can.contactar(c, {
+            channel: contactChannel, result: contactResult,
+            note: `${contactNote ? contactNote + ' — ' : ''}${contactMessage.substring(0, 100)}${contactMessage.length > 100 ? '...' : ''}`,
+        }), 'Contacto registrado', `Actividad de ${contactChannel} guardada en el historial de ${c.name}.`, 'info');
+        if (!vm) return;
+        ponerCandidato(vm);
         setContactModalCandidate(null);
     };
 
-    // Quick Create submit
-    const handleQuickCreateSubmit = (e) => {
+    // Alta rápida
+    const handleQuickCreateSubmit = async (e) => {
         e.preventDefault();
         const form = e.target;
-        const newCan = {
-            id: `CAN-0${candidates.length + 101}`,
-            name: form.name.value,
-            lastName: form.lastName.value,
-            dni: form.dni.value,
-            dniExpiry: form.dniExpiry.value || '2028-12-31',
-            dniStatus: form.dni.value ? 'OK' : 'Falta',
-            phone: form.phone.value,
-            email: form.email.value,
-            city: form.city.value || 'Basauri',
-            province: form.province.value || 'Bizkaia',
-            distance: 'A calcular',
-            nss: form.nss.value || 'FALTA',
-            nssStatus: form.nss.value ? 'OK' : 'Falta',
-            rgpdStatus: form.rgpdAccept.checked ? 'Vigente' : 'Sin consentimiento',
-            rgpdSignedDate: form.rgpdAccept.checked ? new Date().toISOString().split('T')[0] : null,
-            source: 'Alta Rápida',
-            sourceId: `RAP-${Math.floor(1000 + Math.random() * 9000)}`,
-            lastContactDate: new Date().toISOString().split('T')[0],
-            lastContactBy: 'Ana Gómez',
-            lastContactType: 'Alta manual',
-            status: 'Disponible',
-            category: form.category.value || 'Operario de almacén',
-            experienceYears: Number(form.experience.value) || 1,
-            drivingLicenses: form.hasForklift.checked ? ['B', 'Carnet Carretillero UNE 58451'] : ['B'],
-            hasCar: true,
-            preferredShift: 'Indiferente',
-            skills: ['Disponibilidad horaria', 'Incorporación rápida'],
-            languages: ['Español (Nativo)'],
-            activeCandidatures: [],
-            assignedMission: null,
-            documents: [
-                { name: 'Ficha_Alta_Rapida.pdf', type: 'Ficha', status: 'Verificado', uploadDate: new Date().toISOString().split('T')[0] }
-            ],
-            communications: [
-                { date: new Date().toISOString().replace('T', ' ').substring(0, 16), user: 'Ana Gómez', channel: 'ERP', result: 'Alta Rápida registrada', note: 'Candidato dado de alta mediante formulario rápido.' }
-            ]
+        const datos = {
+            name: form.name.value, lastName: form.lastName.value, dni: form.dni.value.trim(), dniExpiry: form.dniExpiry.value, phone: form.phone.value,
+            email: form.email.value, city: form.city.value, nss: form.nss.value.trim(), category: form.category.value, experience: form.experience.value,
+            carretillero: form.hasForklift.checked, rgpd: form.rgpdAccept.checked,
         };
-
-        setCandidates([homogeneizar(completarCandidato(newCan)), ...candidates]);
+        const vm = await ejecutar(() => can.crear(datos), 'Candidato creado', `Alta rápida de ${datos.name} ${datos.lastName} completada.`);
+        if (!vm) return;
+        setCandidates(prev => [vm, ...prev.filter(x => x._id !== vm._id)]);
         setIsQuickCreateOpen(false);
-        showToast('Candidato creado', `Alta rápida de ${newCan.name} ${newCan.lastName} completada con éxito.`, 'success');
     };
 
-    // Portal Import Simulator
-    const handleImportFromPortal = (portalName) => {
-        const importedNames = [
-            { name: 'Raúl', lastName: 'Jiménez Ortega', dni: '03918234D', cat: 'Carretillero / Mozo frontal', exp: 3 },
-            { name: 'Beatriz', lastName: 'Navas Serrano', dni: '52819203K', cat: 'Reponedora / Inventarista', exp: 2 },
-            { name: 'Kevin', lastName: 'García Dos Santos', dni: 'Y1829384Z', cat: 'Mozo de almacén y picking', exp: 4 }
+    // Importar de portales: en la demo crea un candidato de ejemplo; en real, la conexión con los portales llega más adelante
+    const handleImportFromPortal = async (portalName) => {
+        if (!DEMO) { setIsImportPortalOpen(false); showToast('Disponible próximamente', 'La importación desde portales de empleo llega con la difusión en portales (fase 7 del plan).', 'info'); return; }
+        const importados = [
+            { name: 'Raúl', lastName: 'Jiménez Ortega', dni: '00000411C', category: 'Carretillero/a', experience: 3 },
+            { name: 'Beatriz', lastName: 'Navas Serrano', dni: '00000412K', category: 'Reponedor/a', experience: 2 },
+            { name: 'Kevin', lastName: 'García Dos Santos', dni: 'X0000413E', category: 'Operario/a de almacén', experience: 4 },
         ];
-        const rand = importedNames[Math.floor(Math.random() * importedNames.length)];
-        
-        const newCan = {
-            id: `CAN-0${candidates.length + 101}`,
-            name: rand.name,
-            lastName: rand.lastName,
-            dni: rand.dni,
-            dniExpiry: '2028-06-15',
-            dniStatus: 'OK',
-            phone: `+34 6${Math.floor(10000000 + Math.random() * 90000000)}`,
-            email: `${rand.name.toLowerCase()}.${rand.lastName.split(' ')[0].toLowerCase()}@candidato.es`,
-            city: 'Basauri',
-            province: 'Bizkaia',
-            distance: '3 km de Basauri',
-            nss: '48/99112233/44',
-            nssStatus: 'OK',
-            rgpdStatus: 'Vigente',
-            rgpdSignedDate: new Date().toISOString().split('T')[0],
-            source: portalName,
-            sourceId: `${portalName.substring(0, 3).toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`,
-            lastContactDate: new Date().toISOString().split('T')[0],
-            lastContactBy: 'Sincronizador API',
-            lastContactType: 'Importación portal',
-            status: 'Nuevo',
-            category: rand.cat,
-            experienceYears: rand.exp,
-            drivingLicenses: ['B', 'Carnet Carretillero UNE 58451'],
-            hasCar: true,
-            preferredShift: 'Turno Mañana o Tarde',
-            skills: ['Picking radiofrecuencia', 'Disponibilidad inmediata', 'Importado API'],
-            languages: ['Español (Nativo)'],
-            activeCandidatures: [],
-            assignedMission: null,
-            documents: [
-                { name: `CV_Sincronizado_${portalName}.pdf`, type: 'CV', status: 'Verificado', uploadDate: new Date().toISOString().split('T')[0] }
-            ],
-            communications: [
-                { date: new Date().toISOString().replace('T', ' ').substring(0, 16), user: 'API Conector', channel: portalName, result: 'Candidatura importada', note: `Perfil sincronizado automáticamente desde ${portalName}.` }
-            ]
-        };
-
-        setCandidates([homogeneizar(completarCandidato(newCan)), ...candidates]);
+        const x = importados[Math.floor(Math.random() * importados.length)];
+        const vm = await ejecutar(() => can.crear({ ...x, dniExpiry: '2028-06-15', phone: '+34 600 000 413', email: `${x.name.toLowerCase()}@example.com`, city: 'Basauri', carretillero: x.category === 'Carretillero/a', rgpd: true, source: portalName }),
+            'Importación completada', `1 nuevo candidato importado desde ${portalName}: ${x.name} ${x.lastName}.`);
+        if (!vm) return;
+        setCandidates(prev => [vm, ...prev.filter(y => y._id !== vm._id)]);
         setIsImportPortalOpen(false);
-        showToast('Importación completada', `1 nuevo candidato importado desde ${portalName}: ${newCan.name} ${newCan.lastName}.`, 'success');
     };
+
 
     const renderStatusBadge = (status) => {
         const e = ESTADO_CANDIDATO[status] ?? { tone: 'neutral', label: status };
@@ -1563,6 +859,15 @@ export default function CandidatosView() {
         setStatusFilter('ALL');
         setDocFilter('ALL');
     };
+
+    if (!can.listado && can.cargando) return <CargandoPagina texto="Cargando candidatos" />;
+    if (can.error && !can.listado) {
+        return (
+            <Page>
+                <ErrorCarga titulo="No se han podido cargar los candidatos" mensaje={can.error} onReintentar={can.recargar} />
+            </Page>
+        );
+    }
 
     return (
         <>
@@ -1757,7 +1062,7 @@ export default function CandidatosView() {
                                                         <div className="min-w-0">
                                                             <button
                                                                 type="button"
-                                                                onClick={() => setSelectedCandidateForDetail(c)}
+                                                                onClick={() => abrirFicha(c)}
                                                                 className="font-medium text-slate-900 hover:text-indigo-700 text-left whitespace-nowrap"
                                                             >
                                                                 {c.name} {c.lastName}
@@ -1807,7 +1112,7 @@ export default function CandidatosView() {
                                                     <div className="flex items-center justify-end gap-1">
                                                         <Button size="sm" icon={Briefcase} onClick={() => startAssignWizard(c)}>Asignar</Button>
                                                         <IconButton icon={PhoneCall} title="Contactar" onClick={() => openContactModal(c)} />
-                                                        <IconButton icon={Eye} title="Ver ficha" onClick={() => setSelectedCandidateForDetail(c)} />
+                                                        <IconButton icon={Eye} title="Ver ficha" onClick={() => abrirFicha(c)} />
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1826,7 +1131,7 @@ export default function CandidatosView() {
                                             <div className="min-w-0">
                                                 <button
                                                     type="button"
-                                                    onClick={() => setSelectedCandidateForDetail(c)}
+                                                    onClick={() => abrirFicha(c)}
                                                     className="font-medium text-sm text-slate-900 hover:text-indigo-700 text-left"
                                                 >
                                                     {c.name} {c.lastName}
@@ -1891,20 +1196,23 @@ export default function CandidatosView() {
                                 { id: 'documentos', label: 'Documentos y RGPD', alert: docsPorRenovar(selectedCandidateForDetail).length > 0 },
                                 { id: 'candidaturas', label: 'Candidaturas' },
                                 { id: 'historial', label: 'Historial' },
+                                ...(can.puedeAuditar ? [{ id: 'accesos', label: 'Accesos' }] : []),
                             ]}
                         />
                     }
                     footer={
                         <>
-                            <Button variant="ghost" icon={Trash2} className="mr-auto text-rose-600! hover:bg-rose-50!" onClick={() => setCandidatoAEliminar(selectedCandidateForDetail)}>Eliminar</Button>
+                            {can.puedePrivacidad && <Button variant="ghost" icon={Trash2} className="text-rose-600! hover:bg-rose-50!" onClick={() => setCandidatoAEliminar(selectedCandidateForDetail)}>Eliminar</Button>}
+                            {can.puedePrivacidad && <Button variant="ghost" icon={Download} className="mr-auto" title="Derecho de acceso: todos sus datos en un fichero" onClick={() => exportarCandidato(selectedCandidateForDetail)}>Exportar datos</Button>}
+                            {!can.puedePrivacidad && <span className="mr-auto" />}
                             <Button icon={PhoneCall} onClick={() => openContactModal(selectedCandidateForDetail)}>Contactar</Button>
                             <Button
                                 variant="primary"
                                 icon={Briefcase}
                                 onClick={() => {
-                                    const can = selectedCandidateForDetail;
+                                    const candidato = selectedCandidateForDetail;
                                     setSelectedCandidateForDetail(null);
-                                    startAssignWizard(can);
+                                    startAssignWizard(candidato);
                                 }}
                             >
                                 Asignar a petición
@@ -1980,7 +1288,7 @@ export default function CandidatosView() {
                                                     <AlertOctagon className="w-4 h-4 text-rose-600" />
                                                 )}
                                             </div>
-                                            <p className="text-sm font-mono font-semibold text-slate-900">{selectedCandidateForDetail.dni}</p>
+                                            <p className="text-sm font-semibold text-slate-900"><DatoSensible valor={selectedCandidateForDetail.dni} puedeVer={can.puedeVerSensibles} onVer={() => revelar(selectedCandidateForDetail, 'dni')} /></p>
                                             <p className="text-[11px] text-slate-500 mt-0.5">
                                                 {selectedCandidateForDetail.dniStatus === 'OK' ? `Válido hasta el ${fechaES(selectedCandidateForDetail.dniExpiry)}` : `Caducado el ${fechaES(selectedCandidateForDetail.dniExpiry)}`}
                                             </p>
@@ -2004,7 +1312,7 @@ export default function CandidatosView() {
                                                 <span className="text-xs font-semibold text-slate-700">Seguridad Social (NSS)</span>
                                                 <Check className={`w-4 h-4 ${selectedCandidateForDetail.nssStatus === 'OK' ? 'text-emerald-600' : 'text-amber-600'}`} />
                                             </div>
-                                            <p className="text-sm font-mono font-semibold text-slate-900">{selectedCandidateForDetail.nss}</p>
+                                            <p className="text-sm font-semibold text-slate-900"><DatoSensible valor={selectedCandidateForDetail.nss} puedeVer={can.puedeVerSensibles} onVer={() => revelar(selectedCandidateForDetail, 'nss')} /></p>
                                             <p className="text-[11px] text-slate-500 mt-0.5">
                                                 {selectedCandidateForDetail.nssStatus === 'OK' ? 'Listo para trámites de afiliación' : 'Pendiente de aportar resguardo'}
                                             </p>
@@ -2112,7 +1420,7 @@ export default function CandidatosView() {
                                             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <Dato label="Nombre y apellidos">{c.name} {c.lastName}</Dato>
                                                 <Dato label="DNI o NIE">
-                                                    <span className="font-mono">{c.dni}</span>
+                                                    <DatoSensible valor={c.dni} puedeVer={can.puedeVerSensibles} onVer={() => revelar(c, 'dni')} />
                                                     {c.dniStatus === 'Caducado' && <span className="ml-2"><Badge tone="danger">Caducado</Badge></span>}
                                                 </Dato>
                                                 <Dato label="Caducidad del documento">{fechaES(c.dniExpiry)}</Dato>
@@ -2122,8 +1430,8 @@ export default function CandidatosView() {
                                                 <Dato label="Nacionalidad">{c.nacionalidad || <span className="text-amber-700">Falta</span>}</Dato>
                                                 <Dato label="Dirección">{c.direccion ? `${c.direccion}${c.codigoPostal ? ` · ${c.codigoPostal}` : ''}` : <span className="text-amber-700">Falta</span>}</Dato>
                                                 <Dato label="Población y provincia">{c.city}{c.province ? `, ${c.province}` : ''}</Dato>
-                                                <Dato label="Número de la Seguridad Social">{c.nss ? <span className="font-mono">{c.nss}</span> : <span className="text-amber-700">Falta: no se puede tramitar el alta</span>}</Dato>
-                                                <Dato label="Cuenta bancaria (IBAN)">{c.iban ? <span className="font-mono">{c.iban}</span> : <span className="text-amber-700">Falta: necesaria para la nómina</span>}</Dato>
+                                                <Dato label="Número de la Seguridad Social">{c.nss ? <DatoSensible valor={c.nss} puedeVer={can.puedeVerSensibles} onVer={() => revelar(c, 'nss')} /> : <span className="text-amber-700">Falta: no se puede tramitar el alta</span>}</Dato>
+                                                <Dato label="Cuenta bancaria (IBAN)">{c.iban ? <DatoSensible valor={c.iban} puedeVer={can.puedeVerSensibles} onVer={() => revelar(c, 'iban')} /> : <span className="text-amber-700">Falta: necesaria para la nómina</span>}</Dato>
                                             </dl>
                                         ))}
 
@@ -2308,7 +1616,7 @@ export default function CandidatosView() {
                                             </Notice>
                                         )}
 
-                                        <SectionTitle actions={<Button size="sm" variant="primary" icon={FileUp} onClick={() => setDocModal({ tipo: TIPOS_DOCUMENTO_CANDIDATO[0], archivo: '', expiry: '' })}>Subir documento</Button>}>
+                                        <SectionTitle actions={<Button size="sm" variant="primary" icon={FileUp} onClick={() => setDocModal({ tipo: TIPOS_DOCUMENTO_CANDIDATO[0], archivo: null, expiry: '' })}>Subir documento</Button>}>
                                             Documentos
                                         </SectionTitle>
 
@@ -2335,9 +1643,9 @@ export default function CandidatosView() {
                                                         </div>
                                                         <div className="flex items-center gap-1 self-end sm:self-center shrink-0">
                                                             {doc.est.id === 'pendiente' && <Button size="sm" variant="ghost" icon={Check} onClick={() => validarDocumento(doc)}>Validar</Button>}
-                                                            {['caducado', 'pronto'].includes(doc.est.id) && <Button size="sm" icon={RefreshCw} onClick={() => setDocModal({ doc, tipo: doc.type, archivo: '', expiry: '' })}>Renovar</Button>}
+                                                            {['caducado', 'pronto'].includes(doc.est.id) && <Button size="sm" icon={RefreshCw} onClick={() => setDocModal({ doc, tipo: doc.type, archivo: null, expiry: '' })}>Renovar</Button>}
                                                             <Button size="sm" variant="ghost" icon={Eye} onClick={() => setDocVer(doc.id)}>Ver</Button>
-                                                            <IconButton icon={Download} title="Descargar" onClick={() => showToast('Descarga', `${doc.name} (simulado).`, 'info')} />
+                                                            <IconButton icon={Download} title="Descargar" onClick={() => descargarDocumento(doc)} />
                                                             <IconButton icon={Trash2} title="Eliminar" className="hover:text-rose-600 hover:bg-rose-50" onClick={() => setDocAEliminar(doc)} />
                                                         </div>
                                                     </div>
@@ -2370,7 +1678,7 @@ export default function CandidatosView() {
                                 const tarjeta = (x) => {
                                     const info = PETICIONES_INFO[x.petId] || { puesto: '—', turno: '', cliente: '', centro: '' };
                                     const e = ESTADOS_CANDIDATURA[x.estado] || { tono: 'neutral', texto: '' };
-                                    const destino = x.estado === 'En misión' ? ['#/mision', 'Personal en misión'] : x.estado === 'Confirmada' ? ['#/laboral', 'Contratos y altas'] : ['#/peticiones', 'Ver en Peticiones'];
+                                    const destino = x.estado === 'En misión' ? ['#/mision', 'Personal en misión'] : x.estado === 'Confirmada' ? ['#/laboral', 'Contratos y altas'] : [`#/peticiones/${x.petId}`, 'Ver en Peticiones'];
                                     return (
                                         <div key={x.petId} className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-2">
                                             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -2412,6 +1720,8 @@ export default function CandidatosView() {
                                     </div>
                                 );
                             })()}
+
+                            {detailTab === 'accesos' && <AccesosCandidato candidato={selectedCandidateForDetail} cargar={can.auditoria} />}
 
                             {detailTab === 'historial' && (
                                 <div className="space-y-4 text-xs">
@@ -3107,8 +2417,8 @@ export default function CandidatosView() {
                         onClose={() => { setDocVer(null); setRechazo(null); }}
                         size="max-w-3xl"
                         footer={<>
-                            <Button variant="ghost" icon={Download} className="mr-auto" onClick={() => showToast('Descarga', `${doc.name} (simulado).`, 'info')}>Descargar</Button>
-                            {['caducado', 'pronto', 'rechazado'].includes(est.id) && <Button icon={RefreshCw} onClick={() => { setDocVer(null); setDocModal({ doc, tipo: doc.type, archivo: '', expiry: '' }); }}>Renovar</Button>}
+                            <Button variant="ghost" icon={Download} className="mr-auto" onClick={() => descargarDocumento(doc)}>Descargar</Button>
+                            {['caducado', 'pronto', 'rechazado'].includes(est.id) && <Button icon={RefreshCw} onClick={() => { setDocVer(null); setDocModal({ doc, tipo: doc.type, archivo: null, expiry: '' }); }}>Renovar</Button>}
                             {doc.status !== 'Rechazado' && !rechazo && <Button icon={X} onClick={() => setRechazo({ motivo: 'Ilegible o borroso', nota: '' })}>Rechazar</Button>}
                             {doc.status !== 'Verificado' && est.id !== 'caducado' && <Button variant="primary" icon={Check} onClick={() => validarDocumento(doc)}>Es correcto</Button>}
                         </>}
@@ -3127,7 +2437,7 @@ export default function CandidatosView() {
                                                 <div><span className="text-slate-500">Válido hasta</span><br />{fechaES(c.dniExpiry)}</div>
                                             </div>
                                         </div>
-                                        <div className="absolute bottom-2 left-3 font-mono text-sm text-slate-900">{c.dni}</div>
+                                        <div className="absolute bottom-2 left-3 text-sm text-slate-900"><DatoSensible valor={c.dni} puedeVer={can.puedeVerSensibles} onVer={() => revelar(c, 'dni')} /></div>
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="rotate-[-20deg] text-2xl font-semibold text-indigo-900/10">EJEMPLO</span></div>
                                     </div>
                                 ) : (
@@ -3203,16 +2513,14 @@ export default function CandidatosView() {
                         <div className="rounded-xl border-2 border-dashed border-slate-200 p-5 text-center space-y-2">
                             <UploadCloud className="w-6 h-6 text-slate-400 mx-auto" />
                             {docModal.archivo ? (
-                                <div className="font-medium text-slate-900">{docModal.archivo}</div>
+                                <div className="font-medium text-slate-900">{docModal.archivo.name}</div>
                             ) : (
                                 <div className="text-slate-500">PDF, JPG o PNG · hasta 10 MB</div>
                             )}
-                            <Button
-                                size="sm"
-                                onClick={() => setDocModal(m => ({ ...m, archivo: `${m.tipo.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ]+/g, '_')}_${selectedCandidateForDetail.lastName.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf` }))}
-                            >
-                                {docModal.archivo ? 'Cambiar archivo' : 'Elegir archivo (simulado)'}
-                            </Button>
+                            <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                                <input type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) setDocModal(m => ({ ...m, archivo: f })); e.target.value = ''; }} />
+                                {docModal.archivo ? 'Cambiar archivo' : 'Elegir archivo'}
+                            </label>
                         </div>
                         <Field label={docModal.tipo === 'DNI/NIE' ? 'Caduca el (obligatorio)' : 'Caduca el (si caduca)'} hint={`Avisaremos al candidato ${DIAS_AVISO_CADUCIDAD} días antes.`}>
                             <TextInput type="date" value={docModal.expiry} onChange={(e) => setDocModal(m => ({ ...m, expiry: e.target.value }))} />
@@ -3231,7 +2539,7 @@ export default function CandidatosView() {
                     alternativa={['caducado', 'pronto'].includes(estadoDocumento(docAEliminar).id) ? {
                         label: 'Renovarlo en su lugar',
                         icon: RefreshCw,
-                        onClick: () => { const doc = docAEliminar; setDocAEliminar(null); setDocModal({ doc, tipo: doc.type, archivo: '', expiry: '' }); },
+                        onClick: () => { const doc = docAEliminar; setDocAEliminar(null); setDocModal({ doc, tipo: doc.type, archivo: null, expiry: '' }); },
                     } : undefined}
                 >
                     Se borra el archivo {docAEliminar.name}.

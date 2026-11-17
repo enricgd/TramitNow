@@ -86,6 +86,12 @@ const catalogItems: CatalogItem[] = [
   ...['Pedido u orden de compra del cliente', 'Evaluación de riesgos del cliente', 'CPD previo (condiciones de la puesta a disposición)', 'Otro documento'].map((n, i) =>
     item(714 + i, 'document_type', n),
   ),
+  // Candidatos (fase 6): documentos de la persona, con su código (los de la migración de la fase 6).
+  ...([
+    ['candidate_id_document', 'DNI o NIE'], ['candidate_work_permit', 'Permiso de trabajo y residencia'], ['candidate_ss', 'Seguridad Social'],
+    ['candidate_privacy_consent', 'Consentimiento RGPD'], ['candidate_forklift', 'Carné de carretillero'], ['candidate_driving_license', 'Permiso de conducir'],
+    ['candidate_prl', 'Formación PRL'], ['candidate_food_handler', 'Manipulador de alimentos'], ['candidate_medical', 'Reconocimiento médico'], ['candidate_cv', 'CV'],
+  ] as const).map(([code, n], i) => ({ ...item(720 + i, 'document_type', n), code })),
 ];
 const catalogId = (type: CatalogItemType, name: string) => catalogItems.find((i) => i.type === type && i.name === name)!.id;
 
@@ -186,6 +192,26 @@ const contacts: ClientContact[] = [
     email: 'mferrer@premiumeventsbcn.example', phone: '+34 600 000 124', roles: ['operations'], validatesHours: true,
   }),
 ];
+
+/** Documentos de ejemplo de los candidatos (memoriaCandidatos.ts): se añaden al primer uso. */
+export function sembrarDocumentos(lista: Omit<StoredDocument, 'typeId' | 'typeName' | 'retentionRequired'>[], tipoPorCodigo: (code: string) => string) {
+  for (const d of lista) {
+    const t = catalogItems.find((x) => x.code === tipoPorCodigo(d.notes ?? '')) ?? catalogItems.find((x) => x.name === 'Otro documento')!;
+    documents.push({ ...d, notes: null, typeId: t.id, typeName: t.name, retentionRequired: t.retentionRequired });
+  }
+}
+/** Documentos vivos de una entidad (los de un candidato, para sus avisos y su supresión). */
+export const documentosDeEntidad = (entityType: StoredDocument['entityType'], entityId: string) => documents.filter((d) => d.entityType === entityType && d.entityId === entityId && !d.deletedAt);
+/** Supresión RGPD en la demo: el documento desaparece. */
+export const quitarDocumentoDemo = (documentId: string) => {
+  const i = documents.findIndex((d) => d.id === documentId);
+  if (i >= 0) documents.splice(i, 1);
+};
+/** Código del tipo de documento por id (para los documentos de candidatos). */
+export const codigoTipoDocumento = (typeId: string) => catalogItems.find((x) => x.id === typeId)?.code ?? null;
+/** Lo avisa la memoria de candidatos para la auditoría (descargar un documento de un candidato). */
+let alAbrirDocumentoDeCandidato: (d: StoredDocument) => void = () => {};
+export const alDescargarDocumentoDeCandidato = (f: (d: StoredDocument) => void) => { alAbrirDocumentoDeCandidato = f; };
 
 /** Centro y contacto de ejemplo por id (los usan las peticiones de ejemplo, memoriaPeticiones.ts). */
 export const centroPorId = (centerId: string | null) => (centerId ? centers.find((c) => c.id === centerId) : undefined);
@@ -590,8 +616,20 @@ export function memoryClientRepositories(): Pick<
         return delay(d);
       },
       downloadUrl: async (documentId) => {
-        findVivo(documents, documentId);
+        const d = findVivo(documents, documentId);
+        if (d.entityType === 'candidate') alAbrirDocumentoDeCandidato(d);
         return delay(ficheros.get(documentId) ?? null);
+      },
+      async reject(documentId, reason) {
+        const d = findVivo(documents, documentId);
+        Object.assign(d, { status: 'rejected', rejectionReason: reason, validatedBy: DEMO_USER.id, validatedByName: DEMO_USER.name, validatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        log('document', documentId, d.entityId, 'update', `Documento rechazado: ${d.name} (${reason})`);
+        return delay(d);
+      },
+      async renewalNotice(documentId) {
+        const d = findVivo(documents, documentId);
+        d.renewalNoticeSentAt = new Date().toISOString();
+        return delay(d);
       },
     },
     portalAccess: {

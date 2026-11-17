@@ -95,6 +95,21 @@ import type {
   Role,
   SearchResult,
   RequestSelection,
+  AccessLogEntry,
+  AccessLogQuery,
+  Application,
+  ApplicationStage,
+  Candidate,
+  CandidateCatalog,
+  CandidateCatalogItem,
+  CandidateConsent,
+  CandidateContact,
+  CandidateCreate,
+  CandidateInput,
+  CandidateQuery,
+  CandidateSensitive,
+  CandidateSummary,
+  SensitiveField,
   RequestSource,
   RequestSourceQuery,
   RequestUseCase,
@@ -216,6 +231,10 @@ export interface Repositories {
     restore(id: string): Promise<StoredDocument>;
     /** URL temporal para ver o descargar el fichero (null si en la demo no hay fichero). */
     downloadUrl(id: string): Promise<string | null>;
+    /** Fase 6: rechaza un documento (de candidato) con su motivo. */
+    reject(id: string, reason: string): Promise<StoredDocument>;
+    /** Fase 6: marca que se ha avisado de la renovación (el correo real, más adelante). */
+    renewalNotice(id: string): Promise<StoredDocument>;
   };
   /** Usuarios de la ETT: alta con invitación, rol, estado y alcance. Requiere `users.manage`. */
   memberships: {
@@ -313,6 +332,46 @@ export interface Repositories {
     newVersion(id: string): Promise<QuoteVersion>;
     /** Genera el PDF de la propuesta en el servidor y lo guarda como documento del presupuesto (se descarga con documents). */
     proposalPdf(id: string): Promise<{ documentId: string; name: string }>;
+  };
+  /** Candidatos (fase 6, fase6-backend.md): bolsa común a toda la ETT. Escribir exige candidates.manage. */
+  candidates: {
+    list(query?: CandidateQuery): Promise<Page<CandidateSummary>>;
+    /** Auditado (view_record). */
+    get(id: string): Promise<Candidate>;
+    create(data: CandidateCreate): Promise<Candidate>;
+    update(id: string, data: CandidateInput): Promise<Candidate>;
+    checkDuplicate(data: { idDocumentType: string; idDocumentNumber: string }): Promise<{ valid: boolean; duplicate: { id: string; code: string; name: string } | null }>;
+    /** Valores completos (personal_data.view, auditado). No guardarlos. */
+    sensitive(id: string, fields: SensitiveField[]): Promise<CandidateSensitive>;
+    /** Supresión RGPD (privacy.manage, auditado). 409 si tiene una candidatura confirmada. */
+    anonymize(id: string, reason: string): Promise<Candidate>;
+    /** Derecho de acceso (privacy.manage, auditado): todo lo de la persona, en JSON. */
+    exportData(id: string): Promise<unknown>;
+    addConsent(id: string, data: { purpose: 'talent_pool' | 'health_data'; noticeId?: string | null; givenAt?: string; channel: CandidateConsent['channel']; documentId?: string | null }): Promise<CandidateConsent>;
+    withdrawConsent(consentId: string): Promise<CandidateConsent>;
+    /** [Pedido al backend.] Historial de contactos. */
+    contacts(id: string): Promise<CandidateContact[]>;
+    addContact(id: string, data: { channel: string; result: string; note?: string | null; nextAction?: string | null }): Promise<CandidateContact>;
+  };
+  /** Tablas maestras de candidatos con sinónimos. */
+  candidateCatalog: {
+    list(catalog: CandidateCatalog, q?: string): Promise<CandidateCatalogItem[]>;
+    /** Si ya existe (por nombre o sinónimo), devuelve el existente. */
+    create(data: { catalog: CandidateCatalog; name: string; group?: string | null; synonyms?: string[] }): Promise<CandidateCatalogItem>;
+  };
+  /** Candidaturas (persona × petición). */
+  applications: {
+    list(query: { requestId?: string; candidateId?: string; stage?: ApplicationStage }): Promise<Application[]>;
+    create(data: { candidateId: string; requestId: string; origin: 'applied' | 'sourced'; source?: string | null; notes?: string | null }): Promise<Application>;
+    update(id: string, data: { stage?: ApplicationStage; notes?: string | null; discardReason?: string | null }): Promise<Application>;
+    /** Reserva una plaza por cubrir (la indicada o la primera). */
+    propose(id: string, slotId?: string | null): Promise<Application & { requirements?: { code: string; ok: boolean; message: string }[] }>;
+    confirm(id: string): Promise<Application>;
+    release(id: string): Promise<Application>;
+  };
+  /** Auditoría de accesos a datos personales (privacy.audit). */
+  accessLog: {
+    list(query?: AccessLogQuery): Promise<Page<AccessLogEntry>>;
   };
   /** Peticiones (fase 5, fase5-backend.md). Escribir y el CPD previo exigen requests.manage. */
   requests: {

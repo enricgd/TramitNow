@@ -125,6 +125,8 @@ const NOMBRE_CARNE = { carretilla: 'Carné de carretillero', manipulador: 'Manip
 const REQUISITO_CARNE = { carretillero: 'carretilla', camarero: 'manipulador', camarero_barra: 'manipulador', ayudante_cocina: 'manipulador', cocinero: 'manipulador', envasado: 'manipulador' };
 const comprobarRequisitos = (c, pet, plantilla) => {
     const carne = REQUISITO_CARNE[pet.perfil];
+    // Contra la API la lista de la bolsa no trae carnés ni turnos: solo se comprueba la documentación (la API avisa al proponer)
+    if (c.carnes === undefined) return [{ id: 'doc', texto: 'Documentación en vigor', ok: c.docOk !== false }];
     return [
         { id: 'carne', texto: carne ? NOMBRE_CARNE[carne] : 'Sin carné específico', ok: !carne || (c.carnes || []).includes(carne) },
         { id: 'turno', texto: HORARIO_TEMPLATES[plantilla]?.nombre || 'Turno', ok: (c.turnos || []).includes(plantilla) },
@@ -496,6 +498,7 @@ export default function PeticionesView() {
         setFicha(d);
         setHorarios(prev => ({ ...prev, [id]: d.horario }));
         setPeticionId(id);
+        cargarSeleccion(d.peticion);
         setActiveTab('resumen');
         setHorarioChangesUnsaved(false);
         setContenidoComun(contenidoDe(d.peticion, d.horario));
@@ -553,6 +556,7 @@ export default function PeticionesView() {
         setFicha(d);
         setHorarios(prev => ({ ...prev, [nueva.id]: d.horario }));
         setPeticionId(nueva.id);
+        cargarSeleccion(d.peticion);
         setContenidoComun(contenidoDe(d.peticion, d.horario));
         setPortales(prev => prev.map(x => ({ ...x, activo: false })));
         setActiveTab('resumen');
@@ -659,7 +663,26 @@ export default function PeticionesView() {
     const cambiarPlaza = (petId, plazaId, cambios) => {
         setPlazas(prev => ({ ...prev, [petId]: (prev[petId] || []).map(p => (p.id === plazaId ? { ...p, ...cambios } : p)) }));
     };
+    // Al proponer a alguien contra la API: la bolsa de candidatos (sin abrir fichas)
+    useEffect(() => {
+        if (seleccion || !assignCandidateModal) return;
+        pet.bolsa(peticion.perfil).then(l => setCandidatosPool(prev => [...prev, ...l.filter(c => !prev.some(x => x.id === c.id))]), () => {});
+    }, [assignCandidateModal]);
+    // Selección contra la API (fase 6): plazas, embudo y candidatos de la petición abierta, desde sus candidaturas
+    const cargarSeleccion = async (p = peticion) => {
+        if (seleccion || !p?._id) return;
+        const r = await ejecutar(() => pet.seleccionDe(p));
+        if (!r) return;
+        setPlazas(prev => ({ ...prev, [p.id]: r.plazas }));
+        setEmbudo(prev => ({ ...prev, [p.id]: r.embudo }));
+        setCandidatosPool(prev => [...r.candidatos.filter(c => !prev.some(x => x.id === c.id)), ...prev.map(x => r.candidatos.find(c => c.id === x.id) ? { ...x, ...r.candidatos.find(c => c.id === x.id), matchPosicion: [...new Set([...(x.matchPosicion || []), p.perfil])] } : x)]);
+    };
     const cambiarEtapa = (petId, candidatoId, etapa) => {
+        if (!seleccion) {
+            const app = (embudo[petId] || []).find(x => x.id === candidatoId)?._applicationId;
+            if (app) ejecutar(() => pet.cambiarEtapa(app, etapa)).then(r => r !== undefined && cargarSeleccion());
+            return;
+        }
         setEmbudo(prev => {
             const lista = prev[petId] || [];
             const existe = lista.some(x => x.id === candidatoId);
@@ -675,8 +698,16 @@ export default function PeticionesView() {
         return null;
     };
 
-    const handleAssignCandidateToPlaza = (petId, plazaId, candidato) => {
+    const handleAssignCandidateToPlaza = async (petId, plazaId, candidato) => {
         const plaza = (plazas[petId] || []).find(p => p.id === plazaId);
+        if (!seleccion) {
+            const avisos = await ejecutar(() => pet.proponer(peticion, candidato.id, plazaId));
+            if (avisos === undefined) return;
+            setAssignCandidateModal(null);
+            showToast(`${candidato.nombre} propuesto/a para la plaza ${plaza?.numero}. Confírmalo cuando responda el cliente.${avisos.length ? ` Aviso: ${avisos.join(', ').toLowerCase()}.` : ''}`, avisos.length ? 'error' : 'success');
+            cargarSeleccion();
+            return;
+        }
         cambiarPlaza(petId, plazaId, {
             estado: 'reservada', candidatoId: candidato.id, nombre: candidato.nombre, dni: candidato.dni, telefono: candidato.telefono,
             email: candidato.email, scoring: candidato.scoring, foto: candidato.foto, fechaIncorporacion: fechaCorta(peticion.inicio),
@@ -688,18 +719,27 @@ export default function PeticionesView() {
             ? `${candidato.nombre} propuesto/a para la plaza ${plaza?.numero}. El cliente lo confirmará en su portal.`
             : `${candidato.nombre} propuesto/a para la plaza ${plaza?.numero}. Confírmalo cuando responda el cliente.`);
     };
-    const confirmarPlaza = (petId, plaza) => {
+    const confirmarPlaza = async (petId, plaza) => {
+        if (!seleccion) {
+            if ((await ejecutar(() => pet.confirmar(plaza._applicationId).then(() => true), `Plaza ${plaza.numero} cubierta: ${plaza.nombre} confirmado/a por el cliente. Su CPD, contrato y alta llegan con Contratos y altas (fase 7).`))) cargarSeleccion();
+            return;
+        }
         cambiarPlaza(petId, plaza.id, { estado: 'cubierta', cpd: 'enviado' });
         cambiarEtapa(petId, plaza.candidatoId, 'aceptado');
         showToast(`Plaza ${plaza.numero} cubierta. CPD de ${plaza.nombre} generado y enviado a firma a ${peticion.emailContacto}.`);
     };
-    const retirarPropuesta = (petId, plaza) => {
+    const retirarPropuesta = async (petId, plaza) => {
+        if (!seleccion) {
+            if ((await ejecutar(() => pet.retirar(plaza._applicationId).then(() => true), `Propuesta de ${plaza.nombre} retirada. Vuelve a entrevista.`))) cargarSeleccion();
+            return;
+        }
         cambiarPlaza(petId, plaza.id, { ...plazaVacante, cpd: null });
         cambiarEtapa(petId, plaza.candidatoId, 'entrevista');
         showToast(`Propuesta de ${plaza.nombre} retirada. Vuelve a entrevista.`);
     };
-    const recordarCpd = (plaza) => showToast(`Recordatorio de firma del CPD de ${plaza.nombre} enviado a ${peticion.emailContacto}.`);
+    const recordarCpd = (plaza) => soloDemo(`Recordatorio de firma del CPD de ${plaza.nombre} enviado a ${peticion.emailContacto}.`, 'el CPD de cada persona y su firma (fase 7 del plan)');
     const confirmarBaja = () => {
+        if (!seleccion) { setBajaPlaza(null); soloDemo('', 'las bajas de una plaza, con Contratos y altas (fase 7 del plan)'); return; }
         const { plaza, motivo, notas } = bajaPlaza;
         cambiarPlaza(peticion.id, plaza.id, { ...plazaVacante, estado: 'baja', motivoBaja: notas ? `${motivo}: ${notas}` : motivo, bajaDe: plaza.nombre, cpd: null });
         if (plaza.candidatoId) cambiarEtapa(peticion.id, plaza.candidatoId, 'descartado');
@@ -1232,14 +1272,14 @@ export default function PeticionesView() {
                                                     {cuenta(['cubierta', 'incorporada'])} cubiertas · {cuenta(['reservada'])} {cuenta(['reservada']) === 1 ? 'pendiente' : 'pendientes'} del cliente · {cuenta(['vacante', 'baja'])} por cubrir
                                                 </p>
                                             </div>
-                                            <Button variant="primary" icon={UserPlus} disabled={!libre || !seleccion} onClick={() => libre && setAssignCandidateModal({ posId: peticion.id, plaza: libre })}>
+                                            <Button variant="primary" icon={UserPlus} disabled={!libre || !pet.puedeEditar} onClick={() => libre && setAssignCandidateModal({ posId: peticion.id, plaza: libre })}>
                                                 Proponer candidato
                                             </Button>
                                         </div>
                                         <div className="px-4 pt-3">
                                             {!seleccion ? (
                                             <Notice tone="info" icon={Info}>
-                                                Proponer personas para cada plaza, la confirmación del cliente y el CPD de cada persona llegan con Selección (fase 6 del plan). De momento se ven las plazas por cubrir.
+                                                Propón personas para cada plaza y pulsa «Confirmar» cuando el cliente responda (aún no hay portal de empresas). El CPD de cada persona, el contrato y el alta llegan con Contratos y altas (fase 7).
                                             </Notice>
                                             ) : (
                                             <Notice tone={portalesPropios[peticion.id]?.empresa ? 'info' : 'warning'} icon={Info}>
@@ -1291,7 +1331,7 @@ export default function PeticionesView() {
                                                                     ) : <span className="text-slate-400">—</span>}
                                                                 </td>
                                                                 <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                                                                    {plaza.estado === 'vacante' && seleccion && <Button size="sm" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Proponer</Button>}
+                                                                    {plaza.estado === 'vacante' && <Button size="sm" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Proponer</Button>}
                                                                     {plaza.estado === 'baja' && <Button size="sm" variant="primary" onClick={() => setAssignCandidateModal({ posId: peticion.id, plaza })}>Buscar sustituto</Button>}
                                                                     {plaza.estado === 'reservada' && (
                                                                         <span className="inline-flex gap-1">
@@ -1338,9 +1378,7 @@ export default function PeticionesView() {
                                                 })}
                                             </div>
                                         </div>
-                                        {!seleccion ? (
-                                            <EmptyState icon={Users} title="Aún no hay candidatos" text="Los candidatos llegan con Selección y la difusión en portales (fases 6 y 7 del plan)." />
-                                        ) : visibles.length === 0 ? (
+                                        {visibles.length === 0 ? (
                                             <EmptyState
                                                 icon={Users}
                                                 title={filtroEtapa ? 'Nadie en esta etapa' : 'Aún no hay candidatos'}
