@@ -154,6 +154,7 @@ const summaryFields = {
   shiftName: z.string().nullable(),
   clientId: z.guid(),
   clientName: z.string(),
+  clientCenterName: z.string().nullable().openapi({ description: 'Centro de trabajo del cliente; null si la petición no lo indica' }),
   quoteId: z.guid(),
   quoteCode: z.string(),
   quoteVersionNumber: z.number().int(),
@@ -207,7 +208,6 @@ const RequestSchema = z
     companyId: z.guid(),
     clientTaxId: z.string().nullable(),
     clientCenterId: z.guid().nullable(),
-    clientCenterName: z.string().nullable(),
     clientSignerContactId: z.guid().nullable(),
     clientSignerContactName: z.string().nullable(),
     clientSignerContactEmail: z.string().nullable(),
@@ -341,7 +341,8 @@ const UseCaseSchema = z
 const seesCosts = (ctx: TenantContext) => ctx.permissions.has(VIEW_COSTS);
 
 const summarySelect = (tx: Tx, tenantId: string) => tx`
-  select r.id, r.code, r.status, r.position_name, r.shift_name, r.client_id, c.legal_name as client_name, r.quote_id,
+  select r.id, r.code, r.status, r.position_name, r.shift_name, r.client_id, c.legal_name as client_name,
+         cc.name as client_center_name, r.quote_id,
          q.code as quote_code, v.version_number as quote_version_number, r.quote_position_id, r.branch_id,
          to_char(r.start_date, 'YYYY-MM-DD') as start_date, to_char(r.end_date, 'YYYY-MM-DD') as end_date,
          r.positions_count, s.slots, r.responsible_user_id, rp.full_name as responsible_name,
@@ -355,6 +356,7 @@ const summarySelect = (tx: Tx, tenantId: string) => tx`
   join public.quotes q on q.tenant_id = r.tenant_id and q.id = r.quote_id
   join public.quote_versions v on v.tenant_id = r.tenant_id and v.id = r.quote_version_id
   left join public.profiles rp on rp.id = r.responsible_user_id
+  left join public.client_centers cc on cc.tenant_id = r.tenant_id and cc.id = r.client_center_id
   cross join lateral (
     select jsonb_build_object(
       'open', count(*) filter (where sl.status = 'open'),
@@ -372,7 +374,6 @@ interface DetailRow extends RequestSummary {
   companyId: string;
   clientTaxId: string | null;
   clientCenterId: string | null;
-  clientCenterName: string | null;
   clientCenterAddress: string | null;
   clientSignerContactId: string | null;
   clientSignerContactName: string | null;
@@ -440,7 +441,7 @@ interface DetailRow extends RequestSummary {
 async function loadDetail(tx: Tx, tenantId: string, id: string) {
   const [row] = await tx<DetailRow[]>`
     with base as (${summarySelect(tx, tenantId)} and r.id = ${id})
-    select b.*, r.company_id, c.tax_id as client_tax_id, r.client_center_id, cc.name as client_center_name,
+    select b.*, r.company_id, c.tax_id as client_tax_id, r.client_center_id,
            nullif(concat_ws(', ', nullif(concat_ws(' ', a.street_type, a.street, a.number, a.door), ''),
                             nullif(concat_ws(' ', a.postal_code, a.city), '')), '') as client_center_address,
            r.client_signer_contact_id, ct.name as client_signer_contact_name, ct.position as client_signer_contact_position,
@@ -572,7 +573,6 @@ function present(d: Detail, ctx: TenantContext): RequestOut {
     companyId: r.companyId,
     clientTaxId: r.clientTaxId,
     clientCenterId: r.clientCenterId,
-    clientCenterName: r.clientCenterName,
     clientSignerContactId: r.clientSignerContactId,
     clientSignerContactName: r.clientSignerContactName,
     clientSignerContactEmail: r.clientSignerContactEmail,

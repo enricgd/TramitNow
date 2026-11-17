@@ -155,6 +155,18 @@ const listFields = {
   }),
   documentAlerts: z.object({ expired: z.number().int(), expiring: z.number().int() }),
   activeApplications: z.number().int(),
+  currentApplication: z.object({
+    applicationId: z.guid(),
+    requestId: z.guid(),
+    requestCode: z.string(),
+    slotNumber: z.number().int().nullable().openapi({ description: 'Solo desde propuesta (con plaza)' }),
+    positionName: z.string(),
+    clientName: z.string(),
+    stage: z.enum(['registered', 'preselected', 'interview', 'proposed', 'confirmed', 'on_mission']),
+    stageChangedAt: Timestamp,
+  }).nullable().openapi({
+    description: 'La candidatura confirmada o en misión; si no hay, la activa más reciente (inscrito, preseleccionado, entrevista o propuesto)',
+  }),
   lastContactAt: Timestamp.nullable(),
   anonymized: z.boolean(),
   createdAt: Timestamp,
@@ -223,7 +235,7 @@ const ListQuery = PaginationQuery.extend({
   documents: z.enum(['alerts', 'missing', 'ok', 'pending', 'id_or_ss_pending', 'privacy_pending']).optional()
     .openapi({
       description: 'alerts: documentos caducados o por caducar; missing: sin documento de identidad o sin consentimiento de bolsa; ' +
-        'ok: documentación y RGPD correctos; pending: documentación o RGPD pendiente; id_or_ss_pending: DNI o NSS pendiente ' +
+        'ok: documentación y RGPD correctos; pending: lo contrario de ok (DNI o NSS, RGPD o algún documento caducado); id_or_ss_pending: DNI o NSS pendiente ' +
         '(sin número, sin el documento escaneado o caducado); privacy_pending: sin consentimiento de bolsa vigente. Sin descifrar nada',
     }),
   poolConsent: z.enum(['valid', 'expiring', 'expired', 'none']).optional()
@@ -314,7 +326,7 @@ interface SummaryRow {
   mainProfile: Summary['mainProfile']; otherProfileNames: string[] | null; experienceYears: number | null; idDocumentType: Summary['idDocument']['type'];
   idDocumentHint: string | null; hasIdDocument: boolean; hasIdScan: boolean; idDocumentExpiresOn: string | null; ssNumberHint: string | null;
   ibanHint: string | null; poolExpiresAt: string | null; poolState: Summary['poolConsent']['state'];
-  docsExpired: number; docsExpiring: number; activeApplications: number; lastContactAt: string | null;
+  docsExpired: number; docsExpiring: number; activeApplications: number; currentApplication: Summary['currentApplication']; lastContactAt: string | null;
   anonymized: boolean; createdAt: string;
 }
 
@@ -341,6 +353,16 @@ const summarySelect = (tx: Tx, tenantId: string) => tx`
             and d.expires_on between current_date and current_date + t.candidate_document_notice_days) as docs_expiring,
          (select count(*)::int from public.applications ap where ap.tenant_id = c.tenant_id and ap.candidate_id = c.id
             and ap.stage in ('registered', 'preselected', 'interview', 'proposed', 'confirmed')) as active_applications,
+         (select jsonb_build_object('applicationId', ap.id, 'requestId', rq.id, 'requestCode', rq.code,
+                                    'slotNumber', sl.slot_number, 'positionName', rq.position_name,
+                                    'clientName', cl.legal_name, 'stage', ap.stage, 'stageChangedAt', ap.stage_changed_at)
+          from public.applications ap
+          join public.requests rq on rq.tenant_id = ap.tenant_id and rq.id = ap.request_id
+          join public.clients cl on cl.tenant_id = rq.tenant_id and cl.id = rq.client_id
+          left join public.request_slots sl on sl.tenant_id = ap.tenant_id and sl.id = ap.slot_id
+          where ap.tenant_id = c.tenant_id and ap.candidate_id = c.id
+            and ap.stage in ('registered', 'preselected', 'interview', 'proposed', 'confirmed', 'on_mission')
+          order by ap.stage in ('confirmed', 'on_mission') desc, ap.stage_changed_at desc limit 1) as current_application,
          c.last_contact_at, c.anonymized_at is not null as anonymized, c.created_at
   from public.candidates c
   join public.tenants t on t.id = c.tenant_id
@@ -371,6 +393,7 @@ function presentSummary(r: SummaryRow): Summary {
     poolConsent: { state: r.poolState, expiresAt: r.poolExpiresAt },
     documentAlerts: { expired: r.docsExpired, expiring: r.docsExpiring },
     activeApplications: r.activeApplications,
+    currentApplication: r.currentApplication,
     lastContactAt: r.lastContactAt,
     anonymized: r.anonymized,
     createdAt: r.createdAt,
@@ -482,7 +505,7 @@ function documentsCondition(tx: Tx, filter: DocsFilter) {
     case 'privacy_pending':
       return SQL_PRIVACY_PENDING(tx);
     case 'pending':
-      return tx`(${SQL_ID_OR_SS_PENDING(tx)} or ${SQL_PRIVACY_PENDING(tx)})`;
+      return tx`(${SQL_ID_OR_SS_PENDING(tx)} or ${SQL_PRIVACY_PENDING(tx)} or x.docs_expired > 0)`;
     case 'ok':
       return tx`(not ${SQL_ID_OR_SS_PENDING(tx)} and not ${SQL_PRIVACY_PENDING(tx)} and x.docs_expired = 0)`;
   }
@@ -492,7 +515,8 @@ function documentsState(r: SummaryRow) {
   const today = new Date().toISOString().slice(0, 10);
   const idOrSsPending = !r.hasIdDocument || !r.hasIdScan || (r.idDocumentExpiresOn !== null && r.idDocumentExpiresOn < today) || r.ssNumberHint === null;
   const privacyPending = r.poolState === 'none' || r.poolState === 'expired';
-  return { idOrSsPending, privacyPending, pending: idOrSsPending || privacyPending, ok: !idOrSsPending && !privacyPending && r.docsExpired === 0 };
+  const pending = idOrSsPending || privacyPending || r.docsExpired > 0;
+  return { idOrSsPending, privacyPending, pending, ok: !pending };
 }
 
 // ---------------------------------------------------------------------------
@@ -1266,7 +1290,7 @@ export const candidates = createRouter()
           poolConsentExpired: z.number().int(),
           documentation: z.object({
             ok: z.number().int().openapi({ description: 'Documentación y RGPD correctos (documents=ok)' }),
-            pending: z.number().int().openapi({ description: 'Documentación o RGPD pendiente (documents=pending)' }),
+            pending: z.number().int().openapi({ description: 'Lo contrario de ok: DNI o NSS, RGPD o algún documento caducado (documents=pending). ok + pending = total' }),
             idOrSsPending: z.number().int().openapi({ description: 'DNI o NSS pendiente (documents=id_or_ss_pending)' }),
             privacyPending: z.number().int().openapi({ description: 'RGPD pendiente (documents=privacy_pending)' }),
           }),
