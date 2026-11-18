@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Preguntas TramitNOW</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #5d6576; --line: #e2e5eb;
+    --accent: #2457d6; --accent-soft: #e9efff; --ok: #1d7a46; --ok-soft: #e4f4ea;
+    --wait: #8a5a00; --wait-soft: #fff3d6; --todo: #a23a2a; --todo-soft: #fde8e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b1f27; --text: #e6e9ef; --muted: #9aa3b2; --line: #2c323d;
+      --accent: #7ea2ff; --accent-soft: #1f2a44; --ok: #6fd39b; --ok-soft: #173326;
+      --wait: #f2c46b; --wait-soft: #3a2f14; --todo: #ff9c8a; --todo-soft: #3d1f1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; }
+  h2 { font-size: 1.05rem; margin: 32px 0 4px; }
+  .quien { color: var(--muted); font-size: .9rem; margin: 0 0 12px; }
+  .intro { color: var(--muted); margin: 0 0 20px; }
+  .barra { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--line);
+           display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .barra label { display: flex; gap: 8px; align-items: center; font-size: .9rem; color: var(--muted); }
+  input[type=text], textarea { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line);
+           border-radius: 8px; padding: 8px 10px; width: 100%; }
+  .barra input { width: 200px; }
+  .filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+  .filtros button { font: inherit; font-size: .85rem; border: 1px solid var(--line); background: var(--card); color: var(--text);
+           border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+  .filtros button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tarjeta { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 12px 0; }
+  .cabeza { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+  .cabeza h3 { font-size: 1rem; margin: 0; }
+  .num { color: var(--muted); font-weight: 600; margin-right: 4px; }
+  .estado { font-size: .75rem; font-weight: 600; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+  .estado.contestada { background: var(--ok-soft); color: var(--ok); }
+  .estado.aplazada { background: var(--wait-soft); color: var(--wait); }
+  .estado.pendiente { background: var(--todo-soft); color: var(--todo); }
+  .verificar { display: inline-block; font-size: .75rem; color: var(--wait); background: var(--wait-soft); border-radius: 6px; padding: 1px 8px; margin-top: 6px; }
+  .contexto { color: var(--muted); font-size: .92rem; margin: 8px 0 0; }
+  .respuesta { margin-top: 12px; background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; }
+  .respuesta .quienfecha { font-size: .8rem; color: var(--muted); }
+  .respuesta p { margin: 4px 0 0; white-space: pre-wrap; }
+  form { margin-top: 12px; display: grid; gap: 8px; }
+  .opcion { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+  .opcion input { margin-top: 4px; }
+  .opcion .prop { font-size: .75rem; font-weight: 600; color: var(--accent); margin-left: 6px; white-space: nowrap; }
+  .acciones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .boton { font: inherit; border: 0; border-radius: 8px; padding: 8px 16px; background: var(--accent); color: #fff; cursor: pointer; }
+  .boton[disabled] { opacity: .6; cursor: default; }
+  .enlace { font: inherit; font-size: .9rem; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; }
+  .error { color: var(--todo); font-size: .9rem; }
+  details { margin-top: 10px; font-size: .9rem; }
+  details li { margin: 6px 0; color: var(--muted); }
+  .vacio { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="titulo">Preguntas</h1>
+  <p class="intro" id="intro"></p>
+  <div class="barra">
+    <label>Tu nombre <input type="text" id="nombre" maxlength="80" autocomplete="name" placeholder="Para saber quién contesta"></label>
+    <div class="filtros" id="filtros" role="group" aria-label="Filtrar"></div>
+  </div>
+  <div id="lista"><p class="vacio">Cargando…</p></div>
+</main>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const el = (tag, attrs = {}, ...hijos) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'class') n.className = v;
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+      else if (v !== false && v != null) n.setAttribute(k, v === true ? '' : v);
+    }
+    for (const h of hijos.flat()) if (h != null && h !== false) n.append(h);
+    return n;
+  };
+  const guardado = (k, v) => { try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch { return ''; } };
+  const fecha = (iso) => new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  let datos = null, respuestas = [], filtro = 'todas';
+  const abiertas = new Set();
+
+  const ultima = (id) => respuestas.filter((r) => r.preguntaId === id).at(-1);
+  const historial = (id) => respuestas.filter((r) => r.preguntaId === id);
+  const estado = (id) => { const u = ultima(id); return !u ? 'pendiente' : u.opcion === 'aplazar' ? 'aplazada' : 'contestada'; };
+  const textoOpcion = (p, id) => id === 'otra' ? 'Otra respuesta' : id === 'aplazar' ? 'Lo miramos más adelante'
+    : (p.opciones.find((o) => o.id === id) || {}).texto || id;
+  const ETIQUETA = { pendiente: 'Pendiente', aplazada: 'Más adelante', contestada: 'Contestada' };
+
+  function pintarFiltros() {
+    const cuenta = { todas: datos.preguntas.length, pendiente: 0, aplazada: 0, contestada: 0 };
+    datos.preguntas.forEach((p) => cuenta[estado(p.id)]++);
+    const f = $('#filtros'); f.replaceChildren();
+    [['todas', 'Todas'], ['pendiente', 'Pendientes'], ['aplazada', 'Más adelante'], ['contestada', 'Contestadas']].forEach(([id, txt]) =>
+      f.append(el('button', { type: 'button', 'aria-pressed': String(filtro === id), onclick: () => { filtro = id; pintar(); } }, `${txt} (${cuenta[id]})`)));
+  }
+
+  function formulario(p, n) {
+    const u = ultima(p.id);
+    const err = el('span', { class: 'error', role: 'alert' });
+    const coment = el('textarea', { name: 'comentario', rows: 2, maxlength: 4000, placeholder: 'Comentario (obligatorio si eliges «Otra respuesta»)' });
+    const opciones = [...p.opciones.map((o) => ({ ...o })), { id: 'otra', texto: 'Otra respuesta (escríbela abajo)' }, { id: 'aplazar', texto: 'Lo miramos más adelante' }];
+    const boton = el('button', { class: 'boton', type: 'submit' }, 'Guardar respuesta');
+    const form = el('form', {
+      onsubmit: async (e) => {
+        e.preventDefault();
+        err.textContent = '';
+        const nombre = $('#nombre').value.trim();
+        const opcion = (form.querySelector('input[type=radio]:checked') || {}).value;
+        if (!nombre) { err.textContent = 'Escribe tu nombre arriba.'; $('#nombre').focus(); return; }
+        if (!opcion) { err.textContent = 'Elige una opción.'; return; }
+        if (opcion === 'otra' && !coment.value.trim()) { err.textContent = 'Escribe tu respuesta en el comentario.'; coment.focus(); return; }
+        boton.disabled = true;
+        try {
+          const r = await fetch('api/respuestas', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preguntaId: p.id, opcion, comentario: coment.value, nombre }) });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error || 'No se ha podido guardar');
+          respuestas.push(j); abiertas.delete(p.id); pintar();
+        } catch (ex) { err.textContent = ex.message + '. Vuelve a intentarlo.'; boton.disabled = false; }
+      },
+    },
+      opciones.map((o) => el('label', { class: 'opcion' },
+        el('input', { type: 'radio', name: 'op-' + p.id, value: o.id, checked: u ? u.opcion === o.id : !!o.propuesta }),
+        el('span', {}, o.texto, o.propuesta ? el('span', { class: 'prop' }, 'Propuesta') : null))),
+      coment,
+      el('div', { class: 'acciones' }, boton, u ? el('button', { class: 'enlace', type: 'button', onclick: () => { abiertas.delete(p.id); pintar(); } }, 'Cancelar') : null, err));
+    return form;
+  }
+
+  function tarjeta(p, n) {
+    const u = ultima(p.id), est = estado(p.id), hist = historial(p.id);
+    return el('article', { class: 'tarjeta', id: p.id },
+      el('div', { class: 'cabeza' },
+        el('h3', {}, el('span', { class: 'num' }, n + '.'), p.pregunta),
+        el('span', { class: 'estado ' + est }, ETIQUETA[est])),
+      p.verificar ? el('span', { class: 'verificar' }, 'A confirmar por la asesoría') : null,
+      p.contexto ? el('p', { class: 'contexto' }, p.contexto) : null,
+      u ? el('div', { class: 'respuesta' },
+        el('div', { class: 'quienfecha' }, `${u.nombre} · ${fecha(u.fecha)}`),
+        el('p', {}, el('strong', {}, textoOpcion(p, u.opcion))),
+        u.comentario ? el('p', {}, u.comentario) : null) : null,
+      !u || abiertas.has(p.id) ? formulario(p, n)
+        : el('div', { class: 'acciones', style: 'margin-top:8px' }, el('button', { class: 'enlace', type: 'button', onclick: () => { abiertas.add(p.id); pintar(); } }, 'Cambiar la respuesta')),
+      hist.length > 1 ? el('details', {}, el('summary', {}, `Historial (${hist.length} respuestas)`),
+        el('ul', {}, hist.slice().reverse().map((r) => el('li', {}, `${fecha(r.fecha)} · ${r.nombre}: ${textoOpcion(p, r.opcion)}${r.comentario ? ' — ' + r.comentario : ''}`)))) : null);
+  }
+
+  function pintar() {
+    pintarFiltros();
+    const lista = $('#lista'); lista.replaceChildren();
+    let n = 0, alguna = false;
+    datos.bloques.forEach((b) => {
+      const ps = datos.preguntas.map((p) => ({ p, n: datos.preguntas.indexOf(p) + 1 })).filter(({ p }) => p.bloque === b.id);
+      const visibles = ps.filter(({ p }) => filtro === 'todas' || estado(p.id) === filtro);
+      if (!visibles.length) return;
+      alguna = true;
+      lista.append(el('h2', {}, `${b.id}. ${b.titulo}`), el('p', { class: 'quien' }, 'Decide: ' + b.quien));
+      visibles.forEach(({ p, n }) => lista.append(tarjeta(p, n)));
+    });
+    if (!alguna) lista.append(el('p', { class: 'vacio' }, 'No hay preguntas con este filtro.'));
+  }
+
+  async function cargar() {
+    try {
+      const [d, r] = await Promise.all([fetch('api/preguntas').then((x) => x.json()), fetch('api/respuestas').then((x) => x.json())]);
+      datos = d; respuestas = r;
+      document.title = d.titulo; $('#titulo').textContent = d.titulo; $('#intro').textContent = d.intro;
+      pintar();
+    } catch { $('#lista').replaceChildren(el('p', { class: 'error' }, 'No se han podido cargar las preguntas. Recarga la página.')); }
+  }
+
+  const nombre = $('#nombre');
+  nombre.value = guardado('preguntas-nombre');
+  nombre.addEventListener('change', () => guardado('preguntas-nombre', nombre.value.trim()));
+  cargar();
+})();
+</script>
+</body>
+</html>

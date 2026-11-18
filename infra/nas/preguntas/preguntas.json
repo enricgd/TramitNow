@@ -1,0 +1,232 @@
+{
+  "titulo": "Preguntas para la fase 7: contratos y altas",
+  "intro": "Antes de construir los contratos y las altas hay que decidir estas cosas. Cada pregunta trae nuestra propuesta marcada. Las marcadas «a confirmar por la asesoría» son puntos legales. Si nada encaja, elige «Otra respuesta» y escríbela; si aún no lo sabéis, «Lo miramos más adelante».",
+  "bloques": [
+    { "id": "A", "titulo": "Firma electrónica", "quien": "Enric" },
+    { "id": "B", "titulo": "Prevención de riesgos laborales", "quien": "Producto con laboral" },
+    { "id": "C", "titulo": "Controles del art. 8 de la Ley 14/1994 (cuándo no se puede ceder a un trabajador)", "quien": "Laboral / asesoría" },
+    { "id": "D", "titulo": "Contratos", "quien": "Laboral" },
+    { "id": "E", "titulo": "Alta en la Seguridad Social", "quien": "Laboral" },
+    { "id": "F", "titulo": "Plazos", "quien": "Laboral / asesoría" },
+    { "id": "G", "titulo": "Expediente y permisos", "quien": "Producto" }
+  ],
+  "preguntas": [
+    {
+      "id": "firma-integracion", "bloque": "A",
+      "pregunta": "¿Integramos ya un proveedor de firma electrónica, o empezamos sin él?",
+      "contexto": "El CPD y el contrato tienen que ir firmados. Sin integración, la app genera el PDF, se firma fuera y se sube; sale antes y no hay que contratar nada aún, pero da más trabajo a la ETT. Con integración, se firma en el móvil y el documento vuelve solo, pero hay que elegir y contratar proveedor antes y la fase dura más. Pasar de lo primero a lo segundo después es directo.",
+      "opciones": [
+        { "id": "sin", "texto": "Sin integración por ahora: se genera el PDF, se firma fuera y se sube", "propuesta": true },
+        { "id": "con", "texto": "Integrar el proveedor ya" }
+      ]
+    },
+    {
+      "id": "firma-proveedor", "bloque": "A",
+      "pregunta": "¿Qué proveedor de firma usaremos cuando toque?",
+      "contexto": "No bloquea la fase 7. Una ETT firma muchos documentos de poco valor (contratos de días sueltos, adendas, CPD), así que el precio por firma pesa mucho. Signaturit y Validated ID son españoles, con firma avanzada y API; Docusign suele ser más caro en volumen; Firmafy es sencillo y barato, falta ver si su API da para todo.",
+      "opciones": [
+        { "id": "precios", "texto": "Pedir precio a Signaturit y Validated ID para 500 y 2.000 documentos al mes y decidir con esos números", "propuesta": true },
+        { "id": "signaturit", "texto": "Signaturit" },
+        { "id": "validatedid", "texto": "Validated ID (ViDSigner)" },
+        { "id": "docusign", "texto": "Docusign" },
+        { "id": "firmafy", "texto": "Firmafy" }
+      ]
+    },
+    {
+      "id": "firma-tipo", "bloque": "A", "verificar": true,
+      "pregunta": "¿Qué tipo de firma basta para cada documento?",
+      "contexto": "La firma simple (pulsar «firmo» o dibujar la firma) es barata pero prueba poco quién firmó. La avanzada identifica al firmante, por ejemplo con un código por SMS, y guarda pruebas (móvil, hora, dispositivo): se defiende mucho mejor si un trabajador dice que no firmó.",
+      "opciones": [
+        { "id": "mixta", "texto": "Avanzada para contrato, prórrogas y CPD; simple para documentos menores (acuse de formación PRL, entrega de EPI)", "propuesta": true },
+        { "id": "avanzada", "texto": "Avanzada para todo" },
+        { "id": "simple", "texto": "Simple para todo" }
+      ]
+    },
+    {
+      "id": "firmante-ett", "bloque": "A",
+      "pregunta": "¿Quién firma por la ETT: uno por ETT o uno por sucursal?",
+      "contexto": "En Mi ETT ya hay un representante con su DNI, que sale en el CPD. Algunas ETT grandes tienen un apoderado por sucursal (por ejemplo, el director de zona).",
+      "opciones": [
+        { "id": "uno", "texto": "Uno por ETT ahora, con el modelo preparado para poner otro en una sucursal si una ETT lo pide", "propuesta": true },
+        { "id": "sucursal", "texto": "Uno por sucursal desde el principio" }
+      ]
+    },
+    {
+      "id": "prl-riesgos", "bloque": "B",
+      "pregunta": "¿Quién redacta los riesgos de cada puesto?",
+      "contexto": "La empresa usuaria está obligada a informar de los riesgos del puesto antes del CPD (RD 216/1999). Hoy el texto de riesgos es obligatorio para generar el CPD previo.",
+      "opciones": [
+        { "id": "cliente-valida-ett", "texto": "Los rellena el cliente o el comercial con él, y la ETT los revisa y valida; más adelante, plantillas por tipo de puesto", "propuesta": true },
+        { "id": "ett", "texto": "Los redacta la ETT (su técnico de PRL) con lo que diga el cliente" },
+        { "id": "documento", "texto": "El cliente envía su evaluación en un documento y la ETT solo lo adjunta" }
+      ]
+    },
+    {
+      "id": "prl-bloqueo", "bloque": "B", "verificar": true,
+      "pregunta": "¿Bloqueamos el inicio de la misión si no consta la formación PRL y la vigilancia de la salud?",
+      "contexto": "Son responsabilidad de la ETT (art. 12 de la Ley 14/1994).",
+      "opciones": [
+        { "id": "bloquear", "texto": "Sí, bloquear", "propuesta": true },
+        { "id": "avisar", "texto": "Solo avisar" }
+      ]
+    },
+    {
+      "id": "epis", "bloque": "B",
+      "pregunta": "¿Registramos la entrega de los EPI con la firma del trabajador?",
+      "contexto": "Los equipos de protección individual que necesita el puesto ya se guardan en la petición.",
+      "opciones": [
+        { "id": "paso", "texto": "Sí, como un paso más del expediente, sin bloquear", "propuesta": true },
+        { "id": "bloquea", "texto": "Sí, y que bloquee el inicio de la misión" },
+        { "id": "no", "texto": "No, de momento" }
+      ]
+    },
+    {
+      "id": "art8-huelga", "bloque": "C", "verificar": true,
+      "pregunta": "Sustituir a trabajadores en huelga: ¿cómo lo controlamos?",
+      "contexto": "La ley prohíbe ceder trabajadores para sustituir a los que están en huelga en la empresa usuaria. Nosotros no podemos saberlo si el cliente no lo dice.",
+      "opciones": [
+        { "id": "declaracion-bloqueo", "texto": "El cliente declara en el CPD que no hay huelga; si se marca huelga en el centro, se bloquea", "propuesta": true },
+        { "id": "declaracion", "texto": "Solo la declaración del cliente, sin bloqueo" }
+      ]
+    },
+    {
+      "id": "art8-peligrosos", "bloque": "C", "verificar": true,
+      "pregunta": "Trabajos especialmente peligrosos: ¿qué hacemos?",
+      "contexto": "Ya se guarda si el puesto está en la lista de trabajos especialmente peligrosos (RD 216/1999). La ley permite algunos con condiciones que fija la negociación colectiva.",
+      "opciones": [
+        { "id": "bloquear-excepcion", "texto": "Bloquear, salvo que la ETT marque la excepción e indique en qué se basa", "propuesta": true },
+        { "id": "bloquear", "texto": "Bloquear siempre" },
+        { "id": "avisar", "texto": "Solo avisar" }
+      ]
+    },
+    {
+      "id": "art8-amortizados", "bloque": "C", "verificar": true,
+      "pregunta": "Puestos amortizados en los 12 meses anteriores: ¿cómo lo controlamos?",
+      "contexto": "No se puede ceder para cubrir puestos que el cliente amortizó en los 12 meses anteriores por despido improcedente o por los arts. 50, 51 y 52 c) del Estatuto de los Trabajadores. No podemos comprobarlo nosotros.",
+      "opciones": [
+        { "id": "declaracion", "texto": "Declaración del cliente en el CPD, guardando quién y cuándo", "propuesta": true },
+        { "id": "documento", "texto": "Declaración y, además, un documento que lo justifique" }
+      ]
+    },
+    {
+      "id": "art8-otra-ett", "bloque": "C",
+      "pregunta": "Ceder trabajadores a otra ETT: ¿cómo lo controlamos?",
+      "contexto": "Una ETT no puede ceder trabajadores a otra ETT.",
+      "opciones": [
+        { "id": "bloquear", "texto": "Bloquear si el cliente está marcado como ETT", "propuesta": true },
+        { "id": "avisar", "texto": "Solo avisar" }
+      ]
+    },
+    {
+      "id": "modalidades", "bloque": "D", "verificar": true,
+      "pregunta": "¿Qué modalidades de contrato entran en la primera versión?",
+      "contexto": "Las posibles: circunstancias de la producción, sustitución, formativo y fijo-discontinuo de ETT.",
+      "opciones": [
+        { "id": "dos", "texto": "Circunstancias de la producción y sustitución; el resto, después", "propuesta": true },
+        { "id": "formativo", "texto": "Esas dos y también el formativo" },
+        { "id": "todas", "texto": "Todas, también el fijo-discontinuo" }
+      ]
+    },
+    {
+      "id": "dias-sueltos", "bloque": "D", "verificar": true,
+      "pregunta": "Misiones de días sueltos (por ejemplo, hostelería): ¿un contrato por día o uno por periodo?",
+      "contexto": "Los contratos muy cortos tienen un recargo de cotización.",
+      "opciones": [
+        { "id": "por-mision", "texto": "Un contrato por misión con sus días, con aviso del recargo de los contratos cortos", "propuesta": true },
+        { "id": "por-dia", "texto": "Un contrato por cada día" }
+      ]
+    },
+    {
+      "id": "plantillas", "bloque": "D",
+      "pregunta": "¿Los contratos salen de una plantilla común o de una propia de cada ETT?",
+      "contexto": "",
+      "opciones": [
+        { "id": "comun-clausulas", "texto": "Modelo común con los datos que pide Contrat@, más cláusulas propias de cada ETT", "propuesta": true },
+        { "id": "propia", "texto": "Plantilla completa propia de cada ETT" },
+        { "id": "comun", "texto": "Solo el modelo común" }
+      ]
+    },
+    {
+      "id": "contrata-copia-basica", "bloque": "D", "verificar": true,
+      "pregunta": "Comunicación a Contrat@ y copia básica a la representación de los trabajadores: ¿cómo lo hacemos?",
+      "contexto": "Hay un plazo de 10 días para comunicar el contrato y para entregar la copia básica.",
+      "opciones": [
+        { "id": "manual", "texto": "En la fase 7 se registra a mano y la app avisa del plazo; la integración, después", "propuesta": true },
+        { "id": "integrar", "texto": "Integrar Contrat@ ya" }
+      ]
+    },
+    {
+      "id": "alta-bloqueo", "bloque": "E",
+      "pregunta": "¿Bloqueamos el inicio de la misión si no está registrada el alta en la Seguridad Social?",
+      "contexto": "El alta tiene que ser previa al inicio del trabajo.",
+      "opciones": [
+        { "id": "bloquear", "texto": "Sí, bloquear y guardar el justificante del alta", "propuesta": true },
+        { "id": "avisar", "texto": "Solo avisar" }
+      ]
+    },
+    {
+      "id": "sistema-red", "bloque": "E",
+      "pregunta": "¿Cuándo integramos el Sistema RED?",
+      "contexto": "Necesita la autorización RED de cada ETT.",
+      "opciones": [
+        { "id": "despues", "texto": "No en la fase 7: primero registro manual", "propuesta": true },
+        { "id": "ya", "texto": "Integrarlo ya" }
+      ]
+    },
+    {
+      "id": "plazo-mision", "bloque": "F", "verificar": true,
+      "pregunta": "Duración máxima de la misión por modalidad: ¿con cuántos días de antelación avisamos?",
+      "contexto": "Por ejemplo, 6 meses en circunstancias de la producción, ampliables por convenio sectorial.",
+      "opciones": [
+        { "id": "15-7", "texto": "Máximos legales configurables por ETT, con avisos a 15 y a 7 días del fin", "propuesta": true },
+        { "id": "30-15", "texto": "Avisos a 30 y a 15 días" }
+      ]
+    },
+    {
+      "id": "baja-ss", "bloque": "F", "verificar": true,
+      "pregunta": "Baja en la Seguridad Social tras el cese: ¿avisamos con el plazo de 3 días naturales?",
+      "contexto": "",
+      "opciones": [
+        { "id": "aviso", "texto": "Sí, aviso automático con ese plazo", "propuesta": true },
+        { "id": "no", "texto": "No hace falta aviso" }
+      ]
+    },
+    {
+      "id": "indemnizacion", "bloque": "F", "verificar": true,
+      "pregunta": "Indemnización de fin de contrato (12 días por año, art. 11 de la Ley 14/1994): ¿cuándo la calculamos?",
+      "contexto": "",
+      "opciones": [
+        { "id": "fase8", "texto": "En la fase 8 (personal en misión), con el cierre y el finiquito", "propuesta": true },
+        { "id": "fase7", "texto": "Ya en la fase 7" }
+      ]
+    },
+    {
+      "id": "pasos-bloqueo", "bloque": "G",
+      "pregunta": "Pasos del expediente (documentación → CPD firmado → contrato → PRL → alta → inicio): ¿qué bloquea qué?",
+      "contexto": "",
+      "opciones": [
+        { "id": "legales", "texto": "Solo bloquean los pasos legales (CPD, alta y formación PRL); el resto avisa y se puede saltar indicando el motivo", "propuesta": true },
+        { "id": "estricto", "texto": "Todos los pasos en orden estricto" },
+        { "id": "ninguno", "texto": "Ninguno bloquea, solo avisos" }
+      ]
+    },
+    {
+      "id": "permisos-pasos", "bloque": "G",
+      "pregunta": "¿Quién puede marcar cada paso del expediente?",
+      "contexto": "Por ejemplo, selección hace la documentación y administración laboral hace el contrato y el alta.",
+      "opciones": [
+        { "id": "por-paso", "texto": "Un permiso por tipo de paso, como en presupuestos", "propuesta": true },
+        { "id": "todos", "texto": "Cualquiera con acceso al expediente" }
+      ]
+    },
+    {
+      "id": "cpd-cliente-firma", "bloque": "G",
+      "pregunta": "¿El cliente firma el CPD dentro de la app ya, o esperamos al área de empresas?",
+      "contexto": "El área de empresas está prevista en la fase 11.",
+      "opciones": [
+        { "id": "fase11", "texto": "Esperar a la fase 11; mientras, por correo o con el proveedor de firma", "propuesta": true },
+        { "id": "ya", "texto": "Que el cliente firme ya en la app" }
+      ]
+    }
+  ]
+}

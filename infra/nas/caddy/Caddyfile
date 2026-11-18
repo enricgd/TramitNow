@@ -40,9 +40,18 @@
 	@ejemplo host ejemplo.{$DOMAIN}
 	handle @ejemplo {
 		header X-Robots-Tag "noindex, nofollow"
-		root * /srv/ejemplo
-		try_files {path} /index.html
-		file_server
+
+		# Preguntas abiertas para el equipo (infra/nas/preguntas): sin datos personales.
+		@preguntas path_regexp preguntas (?i)^/preguntastorre(/.*)?$
+		handle @preguntas {
+			reverse_proxy preguntas:3000
+		}
+
+		handle {
+			root * /srv/ejemplo
+			try_files {path} /index.html
+			file_server
+		}
 	}
 
 	handle {

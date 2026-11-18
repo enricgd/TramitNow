@@ -72,6 +72,21 @@ services:
       - caddy-data:/data
       - caddy-config:/config
 
+  # Página de preguntas abiertas para el equipo (infra/nas/preguntas): Caddy la publica en
+  # ejemplo.{DOMAIN}/preguntasTorre/. Sin base de datos: las respuestas van a ../../preguntas-datos/respuestas.jsonl.
+  # El código se copia con deploy-preguntas.sh; no hay imagen propia.
+  preguntas:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["node", "server.js"]
+    environment:
+      PORT: 3000
+      DATA_FILE: /data/respuestas.jsonl
+    volumes:
+      - ../../preguntas:/app:ro
+      - ../../preguntas-datos:/data
+
   # pg_dump diario de toda la base de datos; conserva 14 días.
   backup:
     image: postgres:17-alpine
