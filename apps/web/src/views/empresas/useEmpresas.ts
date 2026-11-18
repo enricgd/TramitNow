@@ -30,6 +30,7 @@ import {
   type StoredDocument,
 } from '../../data';
 import { useSesion } from '../../sesion';
+import { cantidad } from '../../ui/formato';
 import {
   codigoPais,
   direccionVista,
@@ -212,7 +213,7 @@ const ESTADOS_DOC: Record<StoredDocument['status'], string> = { validated: 'Vali
 
 const tamanoLegible = (bytes: number) =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-const euros = (n: number) => `${n.toLocaleString('es-ES')} €`;
+const euros = (n: number) => `${cantidad(n)} €`;
 
 function preparacion(contactos: ClientContact[] | null, centros: ClientCenter[] | null, facturacion: ClientBilling | null) {
   const readiness: Preparacion = {

@@ -6,3 +6,4 @@ export { Tabs, Segmented, type Tab } from './Tabs';
 export { Drawer, Modal, Confirmar } from './Overlay';
 export { SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, CAMPO } from './Fields';
 export { CargandoPagina, ErrorCarga, Proximamente } from './Estados';
+export { numero, euros, eurosHora, porcentaje, cantidad, fecha, fechaHora } from './formato';

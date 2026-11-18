@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   type LucideIcon,
 } from 'lucide-react';
-import { Page, PageHeader, Card, SectionTitle, KpiTile, Badge, Button, IconButton, Tabs, EmptyState, type Tone } from './ui';
+import { Page, PageHeader, Card, SectionTitle, KpiTile, Badge, Button, IconButton, Tabs, EmptyState, numero, type Tone } from './ui';
 
 // Datos de ejemplo del panel. Cuando haya backend, saldrán de apps/api (tareas, agenda e indicadores del usuario).
 type Tarea = {
@@ -403,7 +403,7 @@ function GraficoBarras({ datos }: { datos: { semana: string; valor: number }[] }
         ))}
       </div>
       <p className="mt-2 text-[11px] text-slate-500">
-        Esta semana: <span className="font-semibold text-slate-800">{datos[datos.length - 1].valor}</span> · media de las últimas 8: {media.toFixed(1).replace('.', ',')}
+        Esta semana: <span className="font-semibold text-slate-800">{datos[datos.length - 1].valor}</span> · media de las últimas 8: {numero(media, 1)}
       </p>
     </div>
   );

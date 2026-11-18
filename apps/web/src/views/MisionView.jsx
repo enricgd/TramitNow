@@ -8,7 +8,7 @@ import {
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput,
     Select, Field, TextInput, Modal, Drawer
-} from '../ui';
+, fecha, numero } from '../ui';
 import { contactoDemo } from './personasDemo';
 
 // ==========================================
@@ -70,7 +70,8 @@ const INITIAL_MISIONES = [
 // UTILIDADES
 // ==========================================
 const hoyIso = () => new Date().toISOString().slice(0, 10);
-const fechaES = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+// Formato único de fechas de la web (ui/formato.ts)
+const fechaES = (iso) => fecha(iso);
 const diasEntre = (a, b) => Math.round((new Date(`${b}T00:00:00`) - new Date(`${a}T00:00:00`)) / 86400000);
 const diasHasta = (iso) => diasEntre(hoyIso(), iso);
 const mesesEntre = (a, b) => diasEntre(a, b) / 30.44;
@@ -418,7 +419,7 @@ export default function MisionView() {
                             </div>
                             {total > MESES_MAXIMOS && (
                                 <Notice tone="warning" icon={AlertTriangle}>
-                                    Con esta prórroga el contrato dura {total.toFixed(1).replace('.', ',')} meses. Por circunstancias de la producción el máximo es {MESES_MAXIMOS} meses (12 si lo amplía el convenio).
+                                    Con esta prórroga el contrato dura {numero(total, 1)} meses. Por circunstancias de la producción el máximo es {MESES_MAXIMOS} meses (12 si lo amplía el convenio).
                                 </Notice>
                             )}
                         </div>

@@ -30,11 +30,13 @@ import HorasView from './views/HorasView.jsx';
 import FacturacionView from './views/FacturacionView.jsx';
 import Inicio from './Inicio';
 import Header from './Header';
+import { useData } from './data';
+import { useSesion } from './sesion';
 
 export type CurrentUser = { name: string; email: string; role: string };
 
 // Estructura común sacada de design/laboral.html. Las entradas sin vista aún salen deshabilitadas.
-type NavItem = { id: string; label: string; icon: LucideIcon; view?: ComponentType; badge?: string };
+type NavItem = { id: string; label: string; icon: LucideIcon; view?: ComponentType; badge?: ComponentType<{ isActive: boolean }> };
 // pie: el grupo va fijo al final de la barra, separado del trabajo diario.
 type NavSection = { title?: string; pie?: boolean; items: NavItem[] };
 
@@ -53,7 +55,7 @@ const NAV: NavSection[] = [
   {
     title: 'Operativa',
     items: [
-      { id: 'peticiones', label: 'Peticiones', icon: Inbox, view: PeticionesView, badge: '14' },
+      { id: 'peticiones', label: 'Peticiones', icon: Inbox, view: PeticionesView, badge: ContadorPeticiones },
       { id: 'candidatos', label: 'Candidatos', icon: Users, view: CandidatosView },
       { id: 'seleccion', label: 'Selección', icon: UserCheck },
     ],
@@ -191,12 +193,24 @@ function SidebarLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
         <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
         <span>{item.label}</span>
       </span>
-      {item.badge && (
-        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${isActive ? 'bg-indigo-700/80' : 'bg-slate-800 text-slate-400'}`}>
-          {item.badge}
-        </span>
-      )}
+      {item.badge && <item.badge isActive={isActive} />}
       {!item.badge && isActive && <ArrowRight className="w-3.5 h-3.5" />}
     </a>
+  );
+}
+
+/** Número del menú de Peticiones: las mismas que cuenta el título del listado (las de la sucursal de la cabecera). */
+function ContadorPeticiones({ isActive }: { isActive: boolean }) {
+  const { sucursal } = useSesion();
+  // Se vuelve a contar al entrar o salir de Peticiones (por si se ha creado o cancelado alguna)
+  const total = useData((r) => r.requests.list({ branchId: sucursal ?? undefined, limit: 1 }).then((p) => p.pagination.total), [sucursal, isActive]);
+  if (total.data == null) return null;
+  return (
+    <span
+      title={`${total.data} ${total.data === 1 ? 'petición' : 'peticiones'} en ${sucursal ? 'esta sucursal' : 'todas las sucursales'}`}
+      className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${isActive ? 'bg-indigo-700/80' : 'bg-slate-800 text-slate-400'}`}
+    >
+      {total.data}
+    </span>
   );
 }

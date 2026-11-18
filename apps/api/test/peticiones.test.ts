@@ -358,6 +358,8 @@ describe('duplicar, permisos y aislamiento', () => {
       useCase: 'production_unforeseen', quotePositionId: positionId, hazardousWork: true,
     });
     expect(res.body.id).not.toBe(requestId);
+    const rows = (await call('GET', '/v1/requests?limit=200', { token: seleccion })).body.data;
+    expect(rows.find((r: { id: string }) => r.id === res.body.id).clientCenterName).toBe('Nave ficticia 1');
   });
 
   it('otra ETT no la ve y sin requests.manage no se escribe', async () => {

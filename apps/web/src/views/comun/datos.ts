@@ -16,9 +16,8 @@ export function mensajeError(e: unknown): string {
 
 export const esError = (e: unknown, code: string) => e instanceof ApiError && e.code === code;
 
-export const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-export const fechaHora = (iso: string) =>
-  new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+// Las fechas, con el formato único de la web (ui/formato.ts).
+export { fecha as fechaCorta, fechaHora } from '../../ui/formato';
 export const normalizar = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 export const vacioANull = (texto: string | undefined | null) => (texto?.trim() ? texto.trim() : null);
 

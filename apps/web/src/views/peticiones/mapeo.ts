@@ -1,6 +1,7 @@
 // Traducción entre las peticiones de la API (fase 5, fase5-backend.md) y la forma que usa PeticionesView.jsx (la del
 // diseñador). En la vista una petición se identifica por su código (`id`: «PET2026-00001»); el id de la API va en `_id`.
 import type { PreCpdStatus, RequestScheduleDay, RequestSource, ServiceRequest, ServiceRequestStatus, ServiceRequestSummary, StoredDocument } from '../../data';
+import { eurosHora } from '../../ui/formato';
 
 export const ESTADOS: Record<ServiceRequestStatus, string> = {
   new: 'Nueva',
@@ -20,8 +21,7 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', '
 /** Plantillas de turno de la vista (HORARIO_TEMPLATES) por nombre. */
 const PLANTILLAS: Record<string, string> = { 'Turno de mañana': 'manana', 'Turno de tarde': 'tarde', 'Turno de noche': 'noche', 'Jornada partida': 'partida' };
 
-const euroHora = (n: number | null | undefined) =>
-  n == null ? 'Sin indicar' : `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/h`;
+const euroHora = (n: number | null | undefined) => (n == null ? 'Sin indicar' : eurosHora(n));
 
 /**
  * Perfil del puesto para la selección de ejemplo (requisitos de carné y candidatos de cada puesto). Solo lo usa la

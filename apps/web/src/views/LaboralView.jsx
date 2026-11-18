@@ -8,7 +8,7 @@ import {
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput,
     Select, Segmented, Field, TextInput, Modal, Drawer
-} from '../ui';
+, fecha } from '../ui';
 import { contactoDemo } from './personasDemo';
 
 // ==========================================
@@ -106,7 +106,8 @@ const INITIAL_ACTIVIDAD = [
 // ==========================================
 // UTILIDADES
 // ==========================================
-const fechaES = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+// Formato único de fechas de la web (ui/formato.ts)
+const fechaES = (iso) => fecha(iso);
 const diasHasta = (iso) => Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
 const restarDias = (iso, n) => { const d = new Date(`${iso}T00:00:00`); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
 const hechos = (e) => PASOS.filter(p => e.pasos[p.id].estado === 'hecho').length;

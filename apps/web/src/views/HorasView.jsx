@@ -9,7 +9,7 @@ import {
 import {
     Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, IconButton, Badge, Avatar,
     SearchInput, Select, Field, TextInput, Modal, Drawer, Tabs
-} from '../ui';
+, fecha, cantidad } from '../ui';
 import { SUCURSALES, SUCURSALES_USUARIO, veVariasSucursales, sucursalDeCliente, sucursal } from './sucursalesDemo';
 
 // ==========================================
@@ -116,7 +116,8 @@ const MAX_HORAS_DIA = 9;
 // UTILIDADES
 // ==========================================
 const hoyIso = () => new Date().toISOString().slice(0, 10);
-const fechaES = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+// Formato único de fechas de la web (ui/formato.ts)
+const fechaES = (iso) => fecha(iso);
 const ddmm = (iso) => fechaES(iso).slice(0, 5);
 const sumar = (iso, n) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const diaSemana = (iso) => (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7;
@@ -124,12 +125,8 @@ const lunesDe = (iso) => sumar(iso, -diaSemana(iso));
 const diasDe = (lunes) => Array.from({ length: 7 }, (_, i) => sumar(lunes, i));
 const mesDe = (iso) => iso.slice(0, 7);
 const nombreMes = (mes) => `${MESES[Number(mes.slice(5)) - 1]} de ${mes.slice(0, 4)}`;
-const fmtH = (n) => {
-    if (n == null) return '';
-    const r = Math.round(n * 100) / 100;
-    return String(r).replace('.', ',');
-};
-const fmtTotal = (n) => (Math.round(n * 100) / 100).toLocaleString('es-ES', { maximumFractionDigits: 2 });
+const fmtH = (n) => (n == null ? '' : cantidad(n));
+const fmtTotal = (n) => cantidad(n);
 const clave = (petId, lunes) => `${petId}|${lunes}`;
 const enMision = (p, fecha) => fecha >= p.inicio && fecha <= p.fin;
 const previsto = (pet, fecha) => pet.diasEspeciales[fecha] ?? pet.horario[diaSemana(fecha)];
