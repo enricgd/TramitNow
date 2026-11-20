@@ -54,6 +54,15 @@
 		}
 	}
 
+	# Web corporativa (web-corporativa/, deploy-web-corporativa.sh). Sin indexar mientras esté en este dominio provisional.
+	@web host web.{$DOMAIN}
+	handle @web {
+		header X-Robots-Tag "noindex, nofollow"
+		root * /srv/corporativa
+		try_files {path} /index.html
+		file_server
+	}
+
 	handle {
 		abort
 	}
