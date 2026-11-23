@@ -284,6 +284,68 @@ recalcular todas las huellas.
 Si se activan algún día las claves asimétricas de Supabase Auth (`JWT_KEYS`, ES256), la API tendrá que
 verificar con el JWKS en vez de con `JWT_SECRET`.
 
+## ETT de demostración
+
+Una ETT aparte de DEMO, con datos inventados, para enseñar el producto en `demo.<dominio>`: «Ejemplo Trabajo
+Temporal, S.L.» (código `DEMOSTRACION`, nombre comercial «Ejemplo ETT»). Se carga en dos pasos. Antes, la API
+desplegada con las migraciones hasta la fase 6 y las claves de datos personales puestas (sección anterior).
+
+1. **Seed** (`db/seeds/ett-demostracion.sql`): crea la ETT, su sociedad, tres sucursales (Bizkaia, Madrid y
+   Barcelona) y Mi ETT completa: datos legales con el representante, CCC, garantía, IBAN de facturación, series y el
+   texto legal de la bolsa de candidatos. Hace administrador de la ETT a un usuario que ya existe, sin quitarle las
+   demás ETT ni cambiarle la activa. Va en una transacción y falla si la ETT ya existe. Desde el Mac:
+
+   ```bash
+   ssh Enric@192.168.2.8 'sudo -n docker exec -i supabase-db psql -U postgres -d postgres -v email=EL_EMAIL' < db/seeds/ett-demostracion.sql
+   ```
+
+2. **Contenido** (`apps/api/scripts/sembrar-demostracion.ts`): lo ejecuta Enric desde el Mac con su usuario. Entra en
+   Supabase Auth con su contraseña, cambia la ETT activa a DEMOSTRACION, lo crea todo **por la API** (cálculos,
+   snapshots, series y cifrado de verdad) y al acabar le deja la ETT activa que tenía. La contraseña se pide por el
+   terminal sin mostrarla. Si la ETT ya tiene clientes, no hace nada. Tarda menos de un minuto.
+
+   ```bash
+   cd apps/api
+   ```
+
+   ```bash
+   API_URL=https://api.henrik11.duckdns.org AUTH_URL=https://api.henrik11.duckdns.org/auth/v1 ANON_KEY=LA_ANON_KEY npx tsx scripts/sembrar-demostracion.ts EL_EMAIL
+   ```
+
+   `ANON_KEY` es la del `proyecto/.env` del NAS (la misma que `VITE_SUPABASE_ANON_KEY` de la web; es pública). Para
+   verla en la web, cambia de ETT activa en la cabecera.
+
+Qué crea:
+
+- 7 clientes con centros, contactos, facturación y documentos.
+- Convenios propios de la ETT, sin enlazar al catálogo global.
+- 11 presupuestos en todos los estados: borrador, en preparación, margen pendiente de aprobar, enviado, pendiente de
+  firma, aceptado, rechazado y uno con versión 2.
+- 9 peticiones con plazas, horario, riesgos y el CPD previo en todos sus estados.
+- 40 candidatos con documentos (algunos caducados, pendientes o rechazados), consentimientos (vigentes, caducados o
+  retirados) y candidaturas en todas las etapas hasta «confirmada».
+
+Todo es ficticio:
+
+- DNI 0000xxxx y NIE X00xxxxx con su letra.
+- Números de la Seguridad Social, CCC e IBAN de relleno con su control.
+- Correos `.example`.
+- Los ficheros son un PDF de una página que dice que es ficticio.
+
+Las fechas son relativas al día en que se carga.
+
+En local:
+
+```bash
+docker exec -i tramitnow-db-local psql -U postgres -d postgres -v email=demo@example.test < db/seeds/ett-demostracion.sql
+```
+
+Después, con la API y la web en marcha (la web hace de proxy de Storage para subir los ficheros):
+
+```bash
+cd apps/api && set -a && . ../../db/local/dev.env && set +a && DEMOSTRACION_PASSWORD="$DEMO_PASSWORD" npx tsx scripts/sembrar-demostracion.ts "$DEMO_EMAIL"
+```
+
 ## Pasar a SSD
 
 Las rutas del proyecto son absolutas. Para moverlo: parar, mover toda la carpeta `tramitnow/`
