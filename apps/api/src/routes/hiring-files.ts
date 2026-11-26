@@ -70,6 +70,8 @@ const summaryFields = {
     .nullable().openapi({ description: 'Lo primero que bloquea; si no, el primer paso legal pendiente; si no, el primer aviso' }),
   warnings: z.number().int(),
   startDate: z.string().nullable(),
+  endDate: z.string().nullable().openapi({ description: 'Fin previsto: el de la petición' }),
+  responsibleName: z.string().nullable().openapi({ description: 'Responsable de la petición' }),
   requestId: z.guid(),
   requestCode: z.string(),
   requestStatus: z.string(),
@@ -240,6 +242,7 @@ const ContractUpdate = z.strictObject(contractFields).partial().openapi('Employm
 // ---------------------------------------------------------------------------
 interface FileRow {
   id: string; status: 'open' | 'cancelled'; cancelReason: string | null; startDate: string | null; requestId: string;
+  endDate: string | null; responsibleName: string | null;
   requestCode: string; requestStatus: string; positionName: string; shiftName: string | null; positionsCount: number;
   slotNumber: number | null; branchId: string; clientId: string; clientName: string; clientCenterName: string | null;
   candidateId: string; candidateCode: string; candidateName: string; candidatePhone: string | null; candidateEmail: string | null;
@@ -263,6 +266,7 @@ interface DocRow {
 
 const fileSelect = (tx: Tx, tenantId: string) => tx`
   select f.id, f.status, f.cancel_reason, to_char(f.start_date, 'YYYY-MM-DD') as start_date, f.request_id, r.code as request_code,
+         to_char(r.end_date, 'YYYY-MM-DD') as end_date, rp.full_name as responsible_name,
          r.status as request_status, r.position_name, r.shift_name, r.positions_count, s.slot_number, r.branch_id, r.client_id,
          cl.legal_name as client_name, cc.name as client_center_name, f.candidate_id, c.code as candidate_code,
          trim(c.first_name || ' ' || coalesce(c.last_name, '')) as candidate_name, c.phone as candidate_phone,
@@ -282,6 +286,7 @@ const fileSelect = (tx: Tx, tenantId: string) => tx`
   join public.candidates c on c.tenant_id = f.tenant_id and c.id = f.candidate_id
   left join public.request_slots s on s.tenant_id = f.tenant_id and s.id = f.slot_id
   left join public.profiles sp on sp.id = f.ss_registration_recorded_by
+  left join public.profiles rp on rp.id = r.responsible_user_id
   where f.tenant_id = ${tenantId}
 `;
 
@@ -357,7 +362,7 @@ function presentSummary({ row: r, status: s }: Computed): Summary {
   return {
     id: r.id, status: r.status, cancelReason: r.cancelReason, state: s.state, ready: s.ready, complete: s.complete,
     completedSteps: s.completedSteps, steps: s.steps, issues: s.issues, nextTask: s.nextTask, warnings: s.warnings,
-    startDate: r.startDate, requestId: r.requestId, requestCode: r.requestCode, requestStatus: r.requestStatus,
+    startDate: r.startDate, endDate: r.endDate, responsibleName: r.responsibleName, requestId: r.requestId, requestCode: r.requestCode, requestStatus: r.requestStatus,
     positionName: r.positionName, shiftName: r.shiftName, positionsCount: r.positionsCount, slotNumber: r.slotNumber,
     branchId: r.branchId, clientId: r.clientId, clientName: r.clientName, clientCenterName: r.clientCenterName,
     candidateId: r.candidateId, candidateCode: r.candidateCode, candidateName: r.candidateName, candidatePhone: r.candidatePhone,

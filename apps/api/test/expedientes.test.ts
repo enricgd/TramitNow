@@ -110,7 +110,7 @@ describe('apertura y estado', () => {
     const row = list.body.data[0];
     fileId = row.id;
     expect(row).toMatchObject({
-      status: 'open', state: 'pending', ready: false, complete: false, startDate: START, slotNumber: 1, requestCode: expect.stringMatching(/^PET/),
+      status: 'open', state: 'pending', ready: false, complete: false, startDate: START, endDate: day(120), slotNumber: 1, requestCode: expect.stringMatching(/^PET/),
       candidateName: 'Persona Ficticia Expediente', clientName: 'Cliente Ficticio de Expedientes, S.L.', idDocument: { type: 'dni' },
     });
     expect(row.steps.map((s: Step) => s.id)).toEqual(['documentation', 'cpd', 'contract', 'prl', 'ss_registration']);
