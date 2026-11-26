@@ -1347,6 +1347,10 @@ export type HiringFileSummary = {
   nextTask: { step: HiringStepId | null; code: string; severity: HiringSeverity; message: string } | null;
   warnings: number;
   startDate: string | null;
+  /** Fin previsto: el de la petición. */
+  endDate: string | null;
+  /** Responsable de la petición. */
+  responsibleName: string | null;
   requestId: string;
   requestCode: string;
   requestStatus: string;

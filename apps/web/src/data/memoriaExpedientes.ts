@@ -155,7 +155,7 @@ async function vista(r: Registro, peticiones: Map<string, ServiceRequest>): Prom
   });
   return {
     id: r.id, status: 'open', cancelReason: null, ...st,
-    startDate: r.startDate, requestId: p?.id ?? '', requestCode: r.requestCode, requestStatus: p?.status ?? 'covered', positionName: p?.positionName ?? '', shiftName: p?.shiftName ?? null,
+    startDate: r.startDate, endDate: p?.endDate ?? null, responsibleName: p?.responsibleName ?? null, requestId: p?.id ?? '', requestCode: r.requestCode, requestStatus: p?.status ?? 'covered', positionName: p?.positionName ?? '', shiftName: p?.shiftName ?? null,
     positionsCount: p?.positionsCount ?? 0, slotNumber: r.slotNumber, branchId: p?.branchId ?? '', clientId: p?.clientId ?? '', clientName: p?.clientName ?? '', clientCenterName: p?.clientCenterName ?? null,
     candidateId: r.candidateId, candidateCode: r.candidateCode, candidateName: r.nombre, candidatePhone: persona?.telefono ?? null, candidateEmail: persona?.email ?? null,
     idDocument: { type: persona?.dni?.startsWith('X') ? 'nie' : 'dni', masked: enmascarar(persona?.dni ?? null) },

@@ -2124,7 +2124,7 @@ export default function PeticionesView() {
                                     {peticion.salarioBajoConvenio && <Notice tone="danger" icon={AlertTriangle}>El convenio vigente{peticion.tramoBajoConvenio ? ` desde el ${fechaCorta(peticion.tramoBajoConvenio.from)}` : ''} pide para esta categoría {peticion.tramoBajoConvenio?.minimumSalaryHour != null ? `${eurosHora(peticion.tramoBajoConvenio.minimumSalaryHour)}, ` : ''}más que el salario de la petición. No se puede generar el CPD: haz una versión nueva del presupuesto y una petición nueva.</Notice>}
                                     {faltan.length > 0 && (
                                         <div className="rounded-lg border border-slate-200 p-3 space-y-1.5 text-xs">
-                                            <div className="font-medium text-slate-800">{bloquean.length ? (bloquean.length === 1 ? 'Falta 1 dato para generarlo' : `Faltan ${bloquean.length} datos para generarlo`) : 'Se puede generar, pero conviene revisar'}</div>
+                                            <div className="font-medium text-slate-800">{bloquean.some(c => c.field === 'art8') ? 'No se puede generar: el art. 8 de la Ley 14/1994 no permite la cesión' : bloquean.length ? (bloquean.length === 1 ? 'Falta 1 dato para generarlo' : `Faltan ${bloquean.length} datos para generarlo`) : 'Se puede generar, pero conviene revisar'}</div>
                                             <ul className="space-y-1">
                                                 {faltan.map(c => (
                                                     <li key={c.code} className={`flex items-start gap-1.5 ${c.blocking ? 'text-rose-700' : 'text-amber-700'}`}>

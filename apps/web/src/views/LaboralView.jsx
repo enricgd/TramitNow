@@ -321,7 +321,7 @@ export default function LaboralView() {
                             </Select>
                             <Select value={filtroPaso} onChange={(ev) => setFiltroPaso(ev.target.value)} aria-label="Paso pendiente">
                                 <option value="">Cualquier paso</option>
-                                {PASOS.map(p => <option key={p.id} value={p.id}>Falta: {p.texto.toLowerCase()}</option>)}
+                                {PASOS.map(p => <option key={p.id} value={p.id}>Falta: {p.texto}</option>)}
                             </Select>
                             <Select value={filtroPeticion} onChange={(ev) => setFiltroPeticion(ev.target.value)} aria-label="Petición">
                                 <option value="">Todas las peticiones</option>

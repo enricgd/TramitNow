@@ -197,6 +197,18 @@ página y entra sin red.
   «Confirmar» la cubre (a mano, hasta que haya portal de empresas) y «Retirar» la libera. Bajas, CPD de cada persona y
   portales siguen para la fase 7.
 
+#### Contratos y altas en la web (fase 7, parte 1)
+
+- `src/views/laboral/useLaboral.ts` y `mapeo.ts`, con `fase7-backend.md` (`/v1/hiring-files`, `/v1/employment-contracts`,
+  y en la petición `/declarations`, `/cpd-signed` y `/hazardous-exception`). La API calcula los pasos, los avisos,
+  «listo para empezar» y la próxima tarea; la demo usa su mismo módulo (`src/data/calculoExpedientes.ts` reexporta
+  `apps/api/src/lib/hiring.ts`, como `calculoPresupuestos.ts`).
+- Lo de fuera (firma del CPD y del contrato, Contrat@, Sistema RED) se registra a mano con fecha y justificante: los
+  justificantes se suben como documentos del expediente (`entityType: 'hiring_file'`) y el CPD firmado, de la petición.
+- Un permiso por paso (`hiring_files.documentation|cpd|contract|prl|ss`): sin él no sale el botón.
+- Peticiones: declaraciones del art. 8, excepción de peligroso y los bloqueos explicados (`EXPLICACION_BLOQUEO` en
+  `peticiones/mapeo.ts`). Empresas: «Esta empresa es una ETT» (`isEtt`).
+
 #### Candidatos en la web
 
 - `src/views/candidatos/useCandidatos.ts` y `mapeo.ts`, con el contrato de la fase 6 (`/v1/candidates`,
