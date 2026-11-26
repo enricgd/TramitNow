@@ -28,3 +28,6 @@ archive/firebase-legacy/**/*-generated/
 infra/nas/supabase/
 infra/nas/backups/
 infra/nas/proyecto/
+
+# Documentos internos que no van al repositorio (inversores, contratos...)
+privado/
