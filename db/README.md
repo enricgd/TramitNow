@@ -649,6 +649,39 @@ Permisos nuevos: `candidates.manage` (admin, director de zona, selección y labo
 laboral), `privacy.manage` y `privacy.audit` (admin; la ETT puede dárselos a un rol de responsable de protección de
 datos). Leer candidatos: `candidates.manage`, `module.seleccion` o `module.laboral`.
 
+## Fase 7: contratos y altas (parte 1: expediente y bloqueos legales)
+
+Migración `20261126000100_hiring_files.sql`; pantalla `apps/web/src/views/LaboralView.jsx`; decisiones en
+`docs/plan-desarrollo.md`, «Decisiones tomadas (19/11/2026)». Tests: `db/tests/21_expedientes.sql` y
+`apps/api/test/expedientes.test.ts`.
+
+| Tabla | Qué |
+|---|---|
+| `hiring_files` | Expediente por persona y plaza. Lo abre la base de datos al confirmar la candidatura (`applications_hiring_file`; a mano no se crean) y lo cancela si deja de estar confirmada; si se vuelve a confirmar, se reabre. Fecha de inicio (la de la petición, editable), formación PRL con su certificado, vigilancia de la salud (**solo** `fit`, `unfit` o `waived` y la fecha: nunca el diagnóstico), entrega de EPI y alta en la Seguridad Social con su justificante (quién y cuándo) |
+| `employment_contracts` | Contratos del expediente, registrados a mano: de momento `production` (claves 402/502, con fecha de fin) y `substitution` (410/510, con la causa) [verificar]. Firma (fecha y documento), Contrat@ (fecha, referencia y justificante) y copia básica. Varios por expediente: las partes 2 y 4 añaden por día, formativo y fijo-discontinuo |
+| `request_declarations` | Declaraciones del art. 8 de la empresa usuaria: huelga en el centro (8.a) y puestos amortizados en los 12 meses anteriores (8.c). Solo se añaden (vale la última); qué contacto declara, canal, fecha, justificante y quién lo registra |
+
+Además:
+
+- `clients.is_ett` (art. 8.d) y, en `requests`, el CPD firmado por la empresa usuaria (fecha y documento, a nivel de
+  petición) y la excepción de trabajos especialmente peligrosos (art. 8.b) con su base, quién y cuándo. Esas columnas
+  solo las cambia `hiring_files.cpd` (trigger `requests_hiring_columns`).
+- Riesgos del puesto (pregunta 5): el CPD previo vale con el texto o con la evaluación de riesgos del cliente adjunta
+  (tipo `request_risk_assessment`); lo comprueba la API.
+- Permisos por paso (pregunta 22): `hiring_files.view`, `.documentation`, `.cpd`, `.contract`, `.prl` y `.ss`.
+  Admin y laboral, todos; selección, ver y documentación; director de zona, ver. Siempre en la sucursal de la petición.
+  El trigger `hiring_files_before_write` comprueba qué columnas cambia cada permiso.
+- Documentos con `entity_type` `hiring_file` y tipos nuevos (contrato, certificado PRL, aptitud, EPI, alta, Contrat@,
+  copia básica, CPD firmado y declaración del art. 8), de conservación obligatoria salvo el de EPI. Los justificantes
+  tienen que ser del propio expediente (o de la petición).
+- Plazos que avisan, por ETT: `tenants.contract_communication_days` y `basic_copy_days` (10 [verificar]).
+- `private.candidate_legal_retention()` ya devuelve contratos y altas: quien los tiene no se anonimiza.
+- Historial: `hiring_file` (padre, la petición), `employment_contract` (padre, el expediente) y `request_declaration`.
+
+«Listo para empezar» no se guarda: lo calcula la API (`apps/api/src/lib/hiring.ts`) a la fecha de inicio. Bloquean
+el CPD firmado, el art. 8, el contrato firmado que cubra el inicio, la formación PRL, la vigilancia de la salud y el
+alta anterior al inicio; la documentación, el EPI, Contrat@ y la copia básica solo avisan (pregunta 21 aplazada).
+
 ## Probar en local
 
 Requisitos: Docker Desktop. No hace falta `psql` en el Mac.
@@ -767,6 +800,9 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
     (`infra/nas/README.md`, «Claves de datos personales»). Después, `migrate.sh`: da a cada ETT los permisos, las tablas
     maestras de perfiles, carnés, habilidades e idiomas y los tipos de documento del candidato.
 
+11. Expedientes (desde la fase 7): solo `migrate.sh`; da a cada ETT los permisos por paso, los tipos de documento de
+    los expedientes y abre el expediente de las candidaturas que ya estaban confirmadas.
+
 ### ETT de demostración y primer usuario
 
 1. En Supabase Studio (`http://192.168.2.8:8000`): Authentication > Add user > Create new user, con
@@ -805,7 +841,7 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
   aprobación en Inicio (fase 12).
 
 - Fase 5: lista de supuestos de utilización y sus duraciones orientativas, [verificar] con quien lleve lo laboral.
-  Controles del art. 8 de la Ley 14/1994 (pendiente de decidir; bloquea las fases 7 a 9). Si «Cubierta» y «En curso»
+  Controles del art. 8 de la Ley 14/1994: hechos en la fase 7. Si «Cubierta» y «En curso»
   pasan solos (al cubrir todas las plazas y al llegar el inicio). Firma electrónica y envío real del CPD (proveedor
   pendiente). Portales de empleo y portales propios de la ETT. Candidatos, CPD por persona, contratos y altas (fases 6 y 7).
 
@@ -823,6 +859,11 @@ El Postgres del NAS está dentro de Docker (contenedor `supabase-db`) y solo se 
   `GET /v1/candidates?poolConsent=expired` o `GET /v1/privacy/retention` y se anonimizan uno a uno). Fase 7: rellenar
   `private.candidate_legal_retention()` con los plazos de conservación de contratos y nóminas [verificar]. Volver a
   cifrar con la clave nueva al rotar. Envío real de correos. Datos de los trabajadores (fase 7) con el mismo cifrado.
+- Fase 7 (parte 1) [verificar]: plazos de Contrat@ y copia básica (10 días); claves de contrato por modalidad; plazo
+  de conservación de contratos y altas (4 años); si la renuncia a la vigilancia de la salud vale en el puesto; si un
+  documento de identidad o un permiso de trabajo caducados deben bloquear (hoy avisan, pregunta 21); si el anexo de la
+  evaluación de riesgos cumple el RD 216/1999. Partes 2 a 4: contratos generados y por día, firma en la app, formativo y
+  fijo-discontinuo. Tareas programadas de avisos (Contrat@, copia básica).
 - Más catálogos oficiales globales: ocupaciones CNO-11 (y el código de 8 dígitos del SEPE para Contrat@),
   grupos y clases de la CNAE (hoy solo secciones y divisiones, en `cnae_activities`), regímenes de la Seguridad Social, tipos de documento de identidad (`client_centers.cnae_code` y
   `ss_regime_code` pasarán a FK). `professional_categories.cno_code`

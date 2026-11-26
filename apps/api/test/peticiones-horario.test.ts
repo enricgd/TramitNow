@@ -35,7 +35,7 @@ describe('horario', () => {
 describe('comprobaciones del CPD previo', () => {
   const base = {
     useCase: 'production_unforeseen', useCaseJustification: 'Campaña', clientCenterId: 'c', startDate: '2026-12-01',
-    endDate: '2027-02-28', weeklyHours: 37.5, tasks: 'Tareas', risks: 'Riesgos', ettAuthorizationNumber: '1',
+    endDate: '2027-02-28', weeklyHours: 37.5, tasks: 'Tareas', risks: 'Riesgos', risksDocument: false, ettAuthorizationNumber: '1',
     ettRepresentativeName: 'Rep', ettRepresentativeIdNumber: '00000000T', belowAgreement: false, agreementCategoryUnmatched: false, clientSignerContactId: 's',
     positionsCount: 2, quotePeople: 4, peopleInRequests: 4,
   };
@@ -48,6 +48,11 @@ describe('comprobaciones del CPD previo', () => {
     const checks = preCpdChecks({ ...base, risks: '  ', useCaseJustification: null, endDate: null, peopleInRequests: 5 });
     const failed = checks.filter((c) => !c.ok);
     expect(failed.map((c) => [c.code, c.blocking])).toEqual([['use_case', true], ['risks', true], ['end_date', false], ['people', false]]);
+  });
+
+  it('los riesgos valen escritos o con la evaluación del cliente adjunta (pregunta 5)', () => {
+    expect(preCpdChecks({ ...base, risks: null, risksDocument: true }).find((c) => c.code === 'risks')?.ok).toBe(true);
+    expect(preCpdChecks({ ...base, risks: null }).find((c) => c.code === 'risks')?.ok).toBe(false);
   });
 
   it('la duración por encima de lo habitual del supuesto solo avisa', () => {

@@ -81,7 +81,7 @@ describe('facturación de la sociedad y ajustes', () => {
   });
 
   it('margen mínimo y días sin respuesta', async () => {
-    expect((await call('GET', '/v1/tenant-settings', { token: seleccion })).body).toEqual({ quoteMinMarginPercent: null, quoteNoResponseDays: 15, candidatePoolRetentionMonths: 24, candidateDocumentNoticeDays: 30, accessLogRetentionMonths: 24 });
+    expect((await call('GET', '/v1/tenant-settings', { token: seleccion })).body).toEqual({ quoteMinMarginPercent: null, quoteNoResponseDays: 15, candidatePoolRetentionMonths: 24, candidateDocumentNoticeDays: 30, accessLogRetentionMonths: 24, contractCommunicationDays: 10, basicCopyDays: 10 });
     const saved = await call('PATCH', '/v1/tenant-settings', { token: admin, body: { quoteMinMarginPercent: 12.5 } });
     expect(saved.body).toMatchObject({ quoteMinMarginPercent: 12.5, quoteNoResponseDays: 15, candidatePoolRetentionMonths: 24 });
     expect((await call('PATCH', '/v1/tenant-settings', { token: seleccion, body: { quoteNoResponseDays: 5 } })).status).toBe(403);

@@ -69,6 +69,7 @@ const clientFields = {
   email: z.email().max(200).nullable(),
   website: nullableText(250),
   onlineCpdPricePrinting: z.boolean(),
+  isEtt: z.boolean().openapi({ description: 'La empresa es una ETT: no se le puede ceder personal (art. 8.d de la Ley 14/1994)' }),
   observations: z.string().max(8000).nullable(),
 };
 
@@ -98,7 +99,7 @@ export const clients = crudRoutes({
   createDefaults: { status: ClientStatus.default('active'), taxIdType: clientFields.taxIdType.default('nif') },
   columns: `id, company_id, branch_id, code, legal_name, trade_name, tax_id_type, tax_id, owner_user_id, client_type_id,
     business_group_id, activity, sector_code, default_agreement_id, to_char(start_date, 'YYYY-MM-DD') as start_date,
-    status, blocked, blocked_reason, address_id, phone, fax, email, website, online_cpd_price_printing, observations,
+    status, blocked, blocked_reason, address_id, phone, fax, email, website, online_cpd_price_printing, is_ett, observations,
     private.client_readiness(tenant_id, id) as readiness, created_at, updated_at, deleted_at`,
   permission: 'clients.manage',
   search: ['code', 'legal_name', 'trade_name', 'tax_id'],

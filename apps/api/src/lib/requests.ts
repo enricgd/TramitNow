@@ -122,6 +122,8 @@ export interface PreCpdInput {
   weeklyHours: number | null;
   tasks: string | null;
   risks: string | null;
+  /** Evaluación de riesgos del cliente adjunta a la petición (pregunta 5): vale en lugar del texto. */
+  risksDocument: boolean;
   ettAuthorizationNumber: string | null;
   ettRepresentativeName: string | null;
   ettRepresentativeIdNumber: string | null;
@@ -161,8 +163,8 @@ export function preCpdChecks(r: PreCpdInput): PreCpdCheck[] {
     check('start_date', r.startDate !== null, true, 'Fecha de inicio', 'startDate'),
     check('schedule', (r.weeklyHours ?? 0) > 0, true, 'Horario con al menos un día laborable', 'schedule'),
     check('tasks', filled(r.tasks), true, 'Tareas del puesto', 'tasks'),
-    check('risks', filled(r.risks), true,
-      'Riesgos del puesto según la evaluación del cliente (RD 216/1999, art. 2). Si no hay, indícalo', 'risks'),
+    check('risks', filled(r.risks) || r.risksDocument, true,
+      'Riesgos del puesto según la evaluación del cliente (RD 216/1999, art. 2): escríbelos o adjunta su evaluación de riesgos', 'risks'),
     check('ett_authorization', filled(r.ettAuthorizationNumber), true,
       'N.º de autorización administrativa de la ETT (Mi ETT → Datos legales)', 'ettAuthorization'),
     check('ett_representative', filled(r.ettRepresentativeName) && filled(r.ettRepresentativeIdNumber), true,

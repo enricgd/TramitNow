@@ -964,6 +964,20 @@ Notas: Puede disparar eventos de comunicación y generación documental.
 > - Etapas de la candidatura: registered, preselected, interview, proposed, confirmed, discarded y withdrawn;
 >   on_mission, finished y left para la fase 7.
 
+> Decisiones de la fase 7, parte 1 (26/11/2026; ver `docs/plan-desarrollo.md`, «Decisiones tomadas (19/11/2026)»):
+>
+> - **Expediente por persona y plaza** (`hiring_files`), abierto al confirmar la candidatura; cancelado si deja de
+>   estarlo. «Listo para empezar» se calcula (no se guarda). Bloquean solo los pasos legales: CPD firmado, art. 8,
+>   contrato, formación PRL, vigilancia de la salud y alta anterior al inicio. Documentación, EPI, Contrat@ y copia
+>   básica avisan (pregunta 21 aplazada).
+> - **Art. 8**: cliente ETT (campo en clientes), declaraciones del cliente sobre huelga y puestos amortizados (solo se
+>   añaden; las registra la ETT en su nombre hasta que firme en la app) y trabajos peligrosos con excepción y base.
+> - **CPD firmado** a nivel de petición (registro a mano). **Riesgos**: texto o evaluación del cliente adjunta.
+> - **Contratos** registrados a mano (producción y sustitución) en una tabla aparte para que quepan varios por
+>   expediente (partes 2 y 4).
+> - **Vigilancia de la salud**: solo apto, no apto o renuncia y la fecha (RGPD).
+> - **Permisos por paso** (pregunta 22): ver, documentación, CPD, contrato, PRL y alta.
+
 #### candidates
 
 Candidatos/personas disponibles para asignación.

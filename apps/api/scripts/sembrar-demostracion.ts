@@ -523,7 +523,7 @@ const AL = { city: 'Alcalá de Henares', province: '28', postal: '28806' };
 
 const CANDIDATES: CandidateDef[] = [
   // Logística (Bizkaia)
-  { first: 'Carlos', last: 'Gómez Ibarra', ...BI, profile: 'Carretillero/a', others: ['Operario/a de almacén'], attrs: ['Carné de carretillero', 'Carretilla frontal', 'Carretilla retráctil', 'PRL 20 h'], langs: [['Español', 'native'], ['Euskera', 'B1']], years: 8, shifts: ['morning', 'night'], status: 'in_selection', source: 'infojobs', id: 'dni', ss: true, consent: 'valid', car: true, docs: ['scan', 'forklift', 'prl', 'cv'], apps: [{ req: 'carretillas', stage: 'proposed', origin: 'applied' }], contact: { channel: 'phone', result: 'Interesado; disponible para noche', next: 'Presentar al cliente', req: 'carretillas', daysAgo: 2 } },
+  { first: 'Carlos', last: 'Gómez Ibarra', ...BI, profile: 'Carretillero/a', others: ['Operario/a de almacén'], attrs: ['Carné de carretillero', 'Carretilla frontal', 'Carretilla retráctil', 'PRL 20 h'], langs: [['Español', 'native'], ['Euskera', 'B1']], years: 8, shifts: ['morning', 'night'], status: 'in_selection', source: 'infojobs', id: 'dni', ss: true, consent: 'valid', car: true, docs: ['scan', 'forklift', 'prl', 'cv'], apps: [{ req: 'carretillas', stage: 'confirmed', origin: 'applied' }], contact: { channel: 'phone', result: 'Interesado; disponible para noche', next: 'Presentar al cliente', req: 'carretillas', daysAgo: 2 } },
   { first: 'Marta', last: 'Rivas Echevarría', ...BA, profile: 'Operario/a de almacén', others: ['Preparador/a de pedidos'], attrs: ['Picking con radiofrecuencia', 'SGA / SAP', 'PRL 20 h'], langs: [['Español', 'native'], ['Inglés', 'B2']], years: 5, shifts: ['morning', 'afternoon'], status: 'unavailable', source: 'database', id: 'dni', ss: true, consent: 'valid', docs: ['scan', 'prl', 'cv'], apps: [{ req: 'manana', stage: 'confirmed', origin: 'sourced' }] },
   { first: 'Mohamed', last: 'Amrani El Idrissi', ...BI, profile: 'Carretillero/a', attrs: ['Carné de carretillero', 'Carretilla retráctil'], langs: [['Árabe', 'native'], ['Español', 'C1'], ['Francés', 'B2']], years: 6, shifts: ['night', 'weekends'], status: 'available', source: 'walk_in', id: 'nie', idExpired: true, ss: true, consent: 'valid', docs: ['scan', 'forklift', 'prl_expired'], apps: [{ req: 'carretillas', stage: 'interview', origin: 'applied' }], contact: { channel: 'whatsapp', result: 'Pendiente de renovar el NIE', next: 'Traer el NIE renovado', daysAgo: 4 }, nationality: 'MA' },
   { first: 'Elena', last: 'Sánchez Aguirre', ...BI, profile: 'Preparador/a de pedidos', others: ['Operario/a de almacén'], attrs: ['Picking por voz', 'Picking con radiofrecuencia'], langs: [['Español', 'native']], years: 3, shifts: ['afternoon'], status: 'in_selection', source: 'candidate_portal', id: 'dni', ss: true, consent: 'valid', docs: ['scan', 'cv'], apps: [{ req: 'tarde', stage: 'preselected', origin: 'applied' }] },
@@ -542,7 +542,7 @@ const CANDIDATES: CandidateDef[] = [
   { first: 'Josu', last: 'Etxeberria Alonso', ...BA, profile: 'Operario/a de almacén', attrs: ['Paletizado', 'Transpaleta eléctrica'], langs: [['Español', 'native']], years: 9, shifts: ['morning'], status: 'available', source: 'database', id: 'dni', ss: true, consent: 'valid', docs: ['scan', 'prl'], apps: [{ req: 'verano', stage: 'confirmed', origin: 'sourced' }] },
   // Hostelería (Barcelona)
   { first: 'Jordi', last: 'Puig Ferrer', ...BC, profile: 'Camarero/a', attrs: ['Atención al cliente', 'Manipulador de alimentos'], langs: [['Catalán', 'native'], ['Español', 'native'], ['Inglés', 'C1']], years: 7, shifts: ['afternoon', 'night', 'weekends'], status: 'in_selection', source: 'linkedin', id: 'dni', ss: true, consent: 'valid', docs: ['scan', 'food', 'cv'], apps: [{ req: 'sala', stage: 'proposed', origin: 'sourced' }] },
-  { first: 'Núria', last: 'Soler Vila', ...HO, profile: 'Camarero/a', attrs: ['Manipulador de alimentos'], langs: [['Catalán', 'native'], ['Español', 'native'], ['Francés', 'B2']], years: 4, shifts: ['night', 'weekends'], status: 'in_selection', source: 'candidate_portal', id: 'dni', ss: true, consent: 'valid', docs: ['scan', 'food'], apps: [{ req: 'sala', stage: 'proposed', origin: 'applied' }] },
+  { first: 'Núria', last: 'Soler Vila', ...HO, profile: 'Camarero/a', attrs: ['Manipulador de alimentos'], langs: [['Catalán', 'native'], ['Español', 'native'], ['Francés', 'B2']], years: 4, shifts: ['night', 'weekends'], status: 'in_selection', source: 'candidate_portal', id: 'dni', ss: true, consent: 'valid', docs: ['scan', 'food'], apps: [{ req: 'sala', stage: 'confirmed', origin: 'applied' }] },
   { first: 'Lucía', last: 'Fernández Roig', ...BC, profile: 'Camarero/a', attrs: ['Atención al cliente'], langs: [['Español', 'native'], ['Inglés', 'B2'], ['Italiano', 'B1']], years: 3, shifts: ['night', 'weekends'], status: 'in_selection', source: 'infojobs', id: 'dni', ss: true, consent: 'none', docs: ['scan', 'food_expired'], apps: [{ req: 'sala', stage: 'interview', origin: 'applied' }], contact: { channel: 'phone', result: 'Renovar el carné de manipulador antes de empezar', daysAgo: 5 } },
   { first: 'Pau', last: 'Martí Casals', ...HO, profile: 'Camarero/a', langs: [['Catalán', 'native'], ['Español', 'native']], years: 2, shifts: ['weekends'], status: 'in_selection', source: 'candidate_portal', id: 'dni', ss: true, consent: 'none', docs: ['scan'], apps: [{ req: 'sala', stage: 'preselected', origin: 'applied' }] },
   { first: 'Valentina', last: 'Rossi', ...BC, profile: 'Camarero/a', attrs: ['Manipulador de alimentos'], langs: [['Italiano', 'native'], ['Español', 'C1'], ['Inglés', 'C1']], years: 6, shifts: ['afternoon', 'night'], status: 'in_selection', source: 'linkedin', id: 'nie', ss: true, consent: 'valid', docs: ['scan', 'food', 'cv'], apps: [{ req: 'sala', stage: 'registered', origin: 'sourced' }], nationality: 'IT' },
@@ -659,6 +659,100 @@ async function candidates(ctx: Ctx, reqs: Record<string, { id: string; slots: Js
 }
 
 // ---------------------------------------------------------------------------
+// Expedientes (fase 7): las candidaturas confirmadas abren su expediente; aquí se registran pasos para que haya
+// expedientes completos, listos, pendientes y uno bloqueado («no apto»).
+// ---------------------------------------------------------------------------
+interface FilePlan {
+  contract?: { signed?: number; contrata?: number; basicCopy?: number; end: number };
+  prl?: number;
+  health?: { result: 'fit' | 'unfit' | 'waived'; at: number };
+  ppe?: number;
+  ss?: { at: number; proof: boolean };
+}
+const REQUEST_FILES: Record<string, { declared: boolean; cpdSigned: number | null; start: number; people: Record<string, FilePlan> }> = {
+  verano: {
+    declared: true, cpdSigned: -165, start: -160,
+    people: {
+      'Ainhoa Bilbao Etxebarria': { contract: { signed: -162, contrata: -158, basicCopy: -155, end: -70 }, prl: -163, health: { result: 'fit', at: -164 }, ppe: -160, ss: { at: -161, proof: true } },
+      'Josu Etxeberria Alonso': { contract: { signed: -162, contrata: -157, basicCopy: -155, end: -70 }, prl: -163, health: { result: 'waived', at: -164 }, ppe: -160, ss: { at: -161, proof: true } },
+    },
+  },
+  manana: {
+    declared: true, cpdSigned: -12, start: -10,
+    people: {
+      'Marta Rivas Echevarría': { contract: { signed: -11, basicCopy: -8, end: 110 }, prl: -12, health: { result: 'fit', at: -13 }, ss: { at: -11, proof: true } },
+      'David Castillo Urrutia': { contract: { signed: -11, contrata: -9, end: 110 }, prl: -12, health: { result: 'fit', at: -13 }, ppe: -10, ss: { at: -11, proof: true } },
+    },
+  },
+  citricos: {
+    declared: true, cpdSigned: -23, start: -21,
+    people: {
+      'Antonio García Navarro': { contract: { signed: -22, contrata: -18, basicCopy: -15, end: 130 }, prl: -23, health: { result: 'fit', at: -24 }, ppe: -21, ss: { at: -22, proof: true } },
+      'Rosa Martínez Hernández': { contract: { signed: -22, contrata: -18, basicCopy: -15, end: 130 }, prl: -23, health: { result: 'waived', at: -24 }, ppe: -21, ss: { at: -22, proof: true } },
+      'Abdelkader Mansouri': { contract: { signed: -22, contrata: -18, end: 130 }, prl: -23, health: { result: 'fit', at: -24 }, ppe: -21, ss: { at: -22, proof: false } },
+    },
+  },
+  carretillas: { declared: false, cpdSigned: null, start: 3, people: { 'Carlos Gómez Ibarra': { prl: -2 } } },
+  sala: { declared: true, cpdSigned: null, start: 12, people: { 'Núria Soler Vila': { contract: { end: 40 }, health: { result: 'unfit', at: -1 } } } },
+};
+
+async function hiringFiles(ctx: Ctx, reqs: Record<string, { id: string }>) {
+  const t = (code: string) => {
+    const id = ctx.docType[code];
+    if (!id) throw new Error(`Falta el tipo de documento ${code}: aplica las migraciones de la fase 7`);
+    return id;
+  };
+  let n = 0;
+  for (const [key, plan] of Object.entries(REQUEST_FILES)) {
+    const requestId = reqs[key]!.id;
+    const contact = (await get(`/v1/requests/${requestId}`)).clientSignerContactId as string | null;
+    if (plan.declared) {
+      for (const kind of ['strike', 'downsized_positions']) {
+        await post(`/v1/requests/${requestId}/declarations`, {
+          kind, affirmative: false, contactId: contact, channel: kind === 'strike' ? 'email' : 'paper', declaredAt: day(Math.min(plan.start - 3, -1)),
+          notes: 'Declaración de ejemplo registrada por la ETT en nombre del cliente',
+        });
+      }
+    }
+    if (plan.cpdSigned !== null) {
+      const d = await uploadDocument('request', requestId, t('request_cpd_signed'), `CPD firmado ${key}.pdf`, { validate: true });
+      await put(`/v1/requests/${requestId}/cpd-signed`, { documentId: d.id, signedAt: day(plan.cpdSigned) });
+    }
+    const files = (await get(`/v1/hiring-files?requestId=${requestId}&limit=50`)).data as Json[];
+    for (const [name, p] of Object.entries(plan.people)) {
+      const f = files.find((x) => x.candidateName === name);
+      if (!f) throw new Error(`No se abrió el expediente de ${name}`);
+      const file = (suffix: string) => `${suffix} ${name.split(' ').slice(0, 2).join(' ')}.pdf`.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (p.contract) {
+        const signedDoc = p.contract.signed !== undefined
+          ? await uploadDocument('hiring_file', f.id, t('hiring_contract'), file('Contrato firmado'), { validate: true }) : null;
+        await post(`/v1/hiring-files/${f.id}/contracts`, {
+          kind: 'production', contractKey: '402', startDate: day(plan.start), endDate: day(p.contract.end),
+          ...(signedDoc ? { signedAt: day(p.contract.signed!), documentId: signedDoc.id } : {}),
+          ...(p.contract.contrata !== undefined ? { contrataCommunicatedAt: day(p.contract.contrata), contrataReference: `EJ${String(1000 + n)}` } : {}),
+          ...(p.contract.basicCopy !== undefined ? { basicCopyDeliveredAt: day(p.contract.basicCopy) } : {}),
+        });
+      }
+      const body: Record<string, unknown> = {};
+      if (p.prl !== undefined) {
+        const cert = await uploadDocument('hiring_file', f.id, t('hiring_prl_training'), file('Formacion PRL'), { validate: true });
+        Object.assign(body, { prlTrainingDate: day(p.prl), prlTrainingHours: 20, prlTrainingDocumentId: cert.id });
+      }
+      if (p.health) Object.assign(body, { healthSurveillanceResult: p.health.result, healthSurveillanceDate: day(p.health.at) });
+      if (p.ppe !== undefined) Object.assign(body, { ppeDeliveredAt: day(p.ppe), ppeNotes: 'Calzado de seguridad y chaleco' });
+      if (p.ss) {
+        const proof = p.ss.proof ? await uploadDocument('hiring_file', f.id, t('hiring_ss_registration'), file('Alta SS'), { validate: true }) : null;
+        Object.assign(body, { ssRegistrationDate: day(p.ss.at), ...(proof ? { ssRegistrationDocumentId: proof.id } : {}) });
+      }
+      if (Object.keys(body).length) await patch(`/v1/hiring-files/${f.id}`, body);
+      n++;
+    }
+  }
+  const all = await get('/v1/hiring-files?limit=1');
+  console.log(`  ${all.facets.total} expedientes: ${all.facets.complete} completos, ${all.facets.ready} listos, ${all.facets.pending} pendientes, ${all.facets.blocked} bloqueados`);
+}
+
+// ---------------------------------------------------------------------------
 // Principal
 // ---------------------------------------------------------------------------
 async function main() {
@@ -694,6 +788,8 @@ async function main() {
     const reqs = await requests(ctx, cl, qs);
     console.log('Candidatos, documentos y candidaturas…');
     await candidates(ctx, reqs);
+    console.log('Expedientes de contratación…');
+    await hiringFiles(ctx, reqs);
     await finishRequests(reqs);
     console.log(`Listo: ETT ${TENANT_CODE} rellenada.`);
   } finally {
