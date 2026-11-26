@@ -310,6 +310,8 @@ function empresaBase(c: Client, dir: DireccionVista, ctx: Contexto) {
     sector: sectorDe(ctx.cat, c.sectorCode),
     sectorCode: c.sectorCode ?? '',
     notes: c.observations ?? '',
+    /** Fase 7 (art. 8 de la Ley 14/1994): es una ETT; no se le puede ceder personal. */
+    esEtt: !!c.isEtt,
     lastActivity: `Actualizada: ${haceCuanto(c.updatedAt).toLowerCase()}`,
     createdAt: c.createdAt.slice(0, 10),
     branchId: c.branchId,
@@ -486,6 +488,8 @@ export type DatosEmpresa = {
   sector: string;
   defaultAgreementId: string;
   notes: string;
+  /** El cliente es una ETT (no se le puede ceder personal). */
+  esEtt?: boolean;
   borrador?: boolean;
 };
 export type DatosContacto = {
@@ -615,6 +619,8 @@ export function useEmpresas({ busqueda: escrita, eliminadas, pagina, seleccionad
       sectorCode: d.sector || null,
       defaultAgreementId: d.defaultAgreementId || null,
       observations: vacioANull(d.notes),
+      // Solo si se marca o se desmarca (así no se manda a una API que aún no lo tenga)
+      ...(d.esEtt || (esEdicion && ficha?.client.isEtt) ? { isEtt: !!d.esEtt } : {}),
     };
     const dir = { address: d.address, postalCode: d.postalCode, city: d.city, province: d.province, country: d.country };
 

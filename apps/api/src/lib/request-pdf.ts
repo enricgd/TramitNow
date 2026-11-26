@@ -34,7 +34,15 @@ export interface PreCpdData {
   qualification: string | null;
   requiredLicenses: string | null;
   tasks: string;
-  risks: string;
+  risks: string | null;
+  /** Evaluación de riesgos del cliente adjunta: se cita como anexo. */
+  risksAnnex: string | null;
+  art8: {
+    strike: { affirmative: boolean; declaredAt: string; contactName: string | null } | null;
+    downsizedPositions: { affirmative: boolean; declaredAt: string; contactName: string | null } | null;
+    hazardousWork: boolean;
+    hazardousExceptionBasis: string | null;
+  };
   ppe: string | null;
   startDate: string;
   endDate: string | null;
@@ -98,6 +106,10 @@ export async function renderPreCpdPdf(d: PreCpdData): Promise<Uint8Array> {
   field('Cualificación requerida', d.qualification);
   field('Carnés o acreditaciones', d.requiredLicenses);
   field('Riesgos profesionales del puesto', d.risks);
+  if (d.risksAnnex) {
+    field(d.risks ? 'Evaluación de riesgos (anexo)' : 'Riesgos profesionales del puesto',
+      `Según la evaluación de riesgos de la empresa usuaria, que se adjunta como anexo a estas condiciones («${d.risksAnnex}»).`);
+  }
   field('Equipos de protección individual', d.ppe);
 
   section('Duración, jornada y horario');
@@ -125,6 +137,18 @@ export async function renderPreCpdPdf(d: PreCpdData): Promise<Uint8Array> {
   w.y -= 4;
   w.text('La retribución de las personas puestas a disposición es, como mínimo, la del convenio de la empresa usuaria ' +
     '(art. 11 de la Ley 14/1994). Los precios no incluyen el IVA.', { size: 8.5, color: MUTED });
+
+  section('Declaraciones de la empresa usuaria (art. 8 de la Ley 14/1994)');
+  const declared = (x: { affirmative: boolean; declaredAt: string; contactName: string | null } | null) =>
+    x ? ` Registrado el ${fecha(x.declaredAt)}${x.contactName ? ` (${x.contactName})` : ''}.` : '';
+  w.text(pdfSafe('La empresa usuaria declara que:'), { size: 9.5, gap: 2 });
+  w.text(pdfSafe(`- No hay huelga en el centro de trabajo ni se va a sustituir a personas en huelga.${declared(d.art8.strike)}`), { size: 9.5, gap: 2 });
+  w.text(pdfSafe('- En los doce meses anteriores no ha amortizado los puestos que se cubren por despido improcedente o por las ' +
+    `causas de los artículos 50, 51 y 52.c) del Estatuto de los Trabajadores.${declared(d.art8.downsizedPositions)}`), { size: 9.5, gap: 2 });
+  w.text(pdfSafe(d.art8.hazardousWork
+    ? `- El puesto implica trabajos especialmente peligrosos. Excepción aplicada: ${d.art8.hazardousExceptionBasis ?? ''}.`
+    : '- El puesto no implica trabajos especialmente peligrosos para la seguridad y la salud.'), { size: 9.5, gap: 2 });
+  w.text(pdfSafe('- No es una empresa de trabajo temporal.'), { size: 9.5, gap: 4 });
 
   // Firmas
   w.ensure(130);

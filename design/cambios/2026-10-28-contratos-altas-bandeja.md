@@ -1,7 +1,7 @@
 # Contratos y altas: bandeja de expedientes, flujo alineado con Peticiones y sin datos internos
 
 - **Fecha**: 2026-10-28
-- **Estado**: pendiente <!-- el agente de Enric lo cambia a "incorporado (AAAA-MM-DD)" -->
+- **Estado**: incorporado (2026-11-26), con datos de la API en la fase 7 (ver «Al incorporarlo», al final)
 - **Rama y commits**: `design`, 2fbd1cb
 - **Cómo verlo**: `npm --prefix apps/web run dev` → http://localhost:5173/#/laboral → pulsar una petición o una persona.
 
@@ -112,3 +112,14 @@ acordado. Se rehace con el sistema común:
   - Los avisos por email al pedir documentos (con el enlace al portal de candidatos).
 - Hay entradas del menú (Personal en misión, Horas e incidencias) que siguen deshabilitadas. El paso siguiente
   natural después del alta sería "Personal en misión".
+
+## Al incorporarlo (fase 7, parte 1, 2026-11-26)
+
+- Los expedientes vienen de la API (`/v1/hiring-files`): los abre al confirmar la candidatura y calcula el estado de
+  cada paso, los avisos, «listo para empezar» y la próxima tarea. Se conservan la bandeja, las dos vistas, los
+  indicadores, el detalle de la petición y el panel del expediente.
+- Las acciones simuladas («Enviar a firmar», «Recordar», «Marcar firmado», «Comunicar alta» al Sistema RED) pasan a
+  ser **registros a mano** con fecha y justificante; la firma y el Sistema RED llegan más adelante.
+- Quitado: las acciones de grupo («Enviar contratos a firmar», «Comunicar altas»), la actividad del detalle de la
+  petición y el filtro por responsable (la API no lo tiene). Ver la nota 2026-11-26-fase7-expediente-y-art8.md.
+

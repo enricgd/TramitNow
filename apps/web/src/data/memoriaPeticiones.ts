@@ -4,12 +4,15 @@
 // duplicar, horario y CPD previo con sus comprobaciones.
 // Todo es ficticio. Sin efectos al cargarse (ver vite.config.ts): los datos se crean la primera vez que se usan.
 import { delay, id, newId, page } from './memoriaBase';
-import { centroPorId, contactoPorId, log } from './memoriaEmpresas';
+import { art8Issues } from './calculoExpedientes';
+import { centroPorId, clientePorId, codigoTipoDocumento, contactoPorId, documentosDeEntidad, log } from './memoriaEmpresas';
 import { acceptedQuotes } from './memoriaPresupuestos';
 import type { Repositories } from './repositorios';
 import {
   ApiError,
   type PreCpd,
+  type RequestArt8,
+  type RequestDeclaration,
   type PreCpdCheck,
   type Quote,
   type QuotePosition,
@@ -88,6 +91,7 @@ type Registro = Omit<
   ServiceRequest,
   | 'slots' | 'responsibleName' | 'daysToStart' | 'startsSoonUncovered' | 'preCpdStatus' | 'weeklyHours' | 'distribution' | 'slotList' | 'preCpd'
   | 'clientCenterName' | 'clientSignerContactName' | 'clientSignerContactEmail' | 'clientSignerContactPhone' | 'signedQuoteDocument' | 'agreementCheck'
+  | 'risksDocument' | 'art8' | 'cpdSigned'
 > & {
   quotePositionId: string;
   quotePeople: number;
@@ -95,6 +99,10 @@ type Registro = Omit<
   workplaceText: string | null;
   filled: number;
   preCpd: Omit<PreCpd, 'checks'>;
+  /** Fase 7: declaraciones del art. 8 (vale la última de cada tipo), excepción de peligroso y CPD firmado. */
+  declaraciones?: RequestDeclaration[];
+  excepcion?: { basis: string; byName: string | null; at: string } | null;
+  cpdFirmado?: ServiceRequest['cpdSigned'];
 };
 let estado: { peticiones: Registro[]; siguiente: number } | undefined;
 const ahora = () => new Date().toISOString();
@@ -152,6 +160,19 @@ async function crearDatos() {
         cancelledAt: s.status === 'cancelled' ? '2026-09-01T09:00:00.000Z' : null, closedAt: s.status === 'closed' ? '2026-10-01T09:00:00.000Z' : null,
       };
     });
+    // Las que ya tienen CPD previo: con las declaraciones del art. 8 registradas (fase 7)
+    for (const r of peticiones.filter((x) => x.preCpd.status !== 'pending')) {
+      const contacto = contactoPorId(r.clientSignerContactId);
+      const d = (kind: RequestDeclaration['kind']): RequestDeclaration => ({
+        id: newId(), kind, affirmative: false, contactId: contacto?.id ?? null, contactName: contacto?.name ?? null, channel: 'email', declaredAt: r.createdAt.slice(0, 10),
+        documentId: null, notes: null, recordedByName: r.createdByName, recordedAt: r.createdAt,
+      });
+      r.declaraciones = [d('strike'), d('downsized_positions')];
+      // CPD firmado por la empresa usuaria en las que ya tienen personas incorporándose o trabajando
+      if (['covered', 'in_progress', 'closed'].includes(r.status)) {
+        r.cpdFirmado = { signedAt: r.createdAt.slice(0, 10), documentId: `demo-cpd-${r.id}`, documentName: `CPD_firmado_${r.code}.pdf`, recordedByName: r.createdByName, recordedAt: r.createdAt };
+      }
+    }
     estado = { peticiones, siguiente: 53 };
   }
   return estado;
@@ -166,6 +187,43 @@ async function registro(requestId: string) {
 const ACTIVAS: ServiceRequestStatus[] = ['new', 'publishing', 'selecting', 'covered', 'in_progress'];
 const diasHasta = (iso: string | null) => (iso ? Math.round((new Date(`${iso}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86_400_000) : null);
 
+// ---- Art. 8 de la Ley 14/1994 (fase 7) -------------------------------------------------------------------------
+const TEXTO_ART8: Record<string, string> = {
+  client_is_ett: 'La empresa usuaria no es una ETT (art. 8.d)',
+  strike: 'Sin huelga en el centro (art. 8.a)',
+  downsized_positions: 'Sin puestos amortizados en los 12 meses anteriores (art. 8.c)',
+  hazardous_work: 'Trabajo especialmente peligroso: con excepción o no lo es (art. 8.b)',
+  strike_undeclared: 'Declaración del cliente sobre huelga en el centro',
+  downsized_positions_undeclared: 'Declaración del cliente sobre puestos amortizados',
+};
+const ultima = (r: Registro, kind: RequestDeclaration['kind']) =>
+  [...(r.declaraciones ?? [])].filter((d) => d.kind === kind).sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))[0] ?? null;
+function art8Entrada(r: Registro) {
+  return {
+    clientIsEtt: !!clientePorId(r.clientId)?.isEtt, hazardousWork: !!r.hazardousWork, hazardousException: !!r.excepcion,
+    strike: ultima(r, 'strike'), downsizedPositions: ultima(r, 'downsized_positions'),
+  };
+}
+function art8De(r: Registro): RequestArt8 {
+  const e = art8Entrada(r);
+  return {
+    clientIsEtt: e.clientIsEtt, hazardousWork: e.hazardousWork, hazardousException: r.excepcion ?? null,
+    declarations: { strike: e.strike, downsizedPositions: e.downsizedPositions },
+    history: [...(r.declaraciones ?? [])].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)),
+    issues: art8Issues(e, true),
+  };
+}
+/** La evaluación de riesgos del cliente adjunta: el último documento de la petición de ese tipo. */
+function documentoDeRiesgos(r: Registro) {
+  const d = documentosDeEntidad('request', r.id).filter((x) => codigoTipoDocumento(x.typeId) === 'request_risk_assessment').pop();
+  return d ? { documentId: d.id, name: d.name } : null;
+}
+/** Lo que el expediente necesita de la petición (memoriaExpedientes.ts). */
+export async function legalDePeticion(requestId: string) {
+  const r = await registro(requestId);
+  return { preCpdStatus: r.preCpd.status, signedAt: r.cpdFirmado?.signedAt ?? null, signedDocumentId: r.cpdFirmado?.documentId ?? null, art8: art8De(r), entrada: art8Entrada(r) };
+}
+
 /** Las comprobaciones del CPD previo, como la API. */
 function comprobaciones(r: Registro): PreCpdCheck[] {
   const supuesto = SUPUESTOS.find((x) => x.code === r.useCase);
@@ -177,7 +235,12 @@ function comprobaciones(r: Registro): PreCpdCheck[] {
     c('start_date', !!r.startDate, true, 'Fecha de inicio', 'startDate'),
     c('schedule', r.schedule.some((d) => d.working), true, 'Al menos un día laborable en el horario', 'schedule'),
     c('tasks', !!r.tasks?.trim(), true, 'Tareas del puesto', 'tasks'),
-    c('risks', !!r.risks?.trim(), true, 'Riesgos del puesto (vale «Sin riesgos específicos según la evaluación del cliente»)', 'risks'),
+    c('risks', !!r.risks?.trim() || !!documentoDeRiesgos(r), true, 'Riesgos del puesto: el texto o la evaluación de riesgos del cliente adjunta', 'risks'),
+    // Art. 8 de la Ley 14/1994 (fase 7): las prohibiciones bloquean; que falte una declaración solo avisa (el CPD previo la recoge)
+    ...(['client_is_ett', 'strike', 'downsized_positions', 'hazardous_work', 'strike_undeclared', 'downsized_positions_undeclared'] as const).map((code) => {
+      const i = art8Issues(art8Entrada(r), false).find((x) => x.code === code);
+      return c(`art8_${code}`, !i, !code.endsWith('_undeclared'), i?.message ?? TEXTO_ART8[code], 'art8');
+    }),
     c('ett_authorization', true, true, 'N.º de autorización de la ETT (Mi ETT → Datos legales)', null),
     c('ett_representative', true, true, 'Representante legal de la ETT, con su documento', null),
     c('salary_agreement', true, true, 'Salario no inferior al convenio publicado actual', null),
@@ -246,6 +309,9 @@ async function ficha(r: Registro): Promise<ServiceRequest> {
     },
     slotList: plazasDe(r),
     preCpd: { ...preCpd, checks: comprobaciones(r) },
+    risksDocument: documentoDeRiesgos(r),
+    art8: art8De(r),
+    cpdSigned: r.cpdFirmado ?? null,
     signedQuoteDocument: { documentId: `demo-presupuesto-${r.quoteId}`, name: `Presupuesto_${r.quoteCode}_v${r.quoteVersionNumber}_firmado.pdf`, kind: 'signed', date: (r.quoteAcceptedAt ?? r.createdAt).slice(0, 10) },
   });
 }
@@ -416,6 +482,8 @@ export function memoryRequestRepositories(): Pick<Repositories, 'requests'> {
       useCases: async () => delay(SUPUESTOS),
       async generatePreCpd(requestId) {
         const r = await registro(requestId);
+        const art8 = comprobaciones(r).filter((c) => c.field === 'art8' && c.blocking && !c.ok);
+        if (art8.length) throw new ApiError(422, 'art8_bloqueado', 'El art. 8 de la Ley 14/1994 no permite la cesión', art8.map((c) => ({ path: c.code, message: c.message })));
         const fallan = comprobaciones(r).filter((c) => c.blocking && !c.ok);
         if (fallan.length) throw new ApiError(409, 'cpd_incompleto', 'Faltan datos para el CPD previo', fallan.map((c) => ({ path: c.field ?? c.code, message: c.message })));
         Object.assign(r.preCpd, { status: 'generated', outdated: false, generatedAt: ahora(), generatedByName: YO.name, sentAt: null, sentTo: null, reviewedAt: null });
@@ -435,6 +503,44 @@ export function memoryRequestRepositories(): Pick<Repositories, 'requests'> {
         if (r.preCpd.status !== 'sent') throw new ApiError(409, 'conflicto', 'Solo se marca como revisado un CPD previo enviado');
         Object.assign(r.preCpd, { status: 'reviewed', reviewedAt: ahora() });
         log('request', r.id, null, 'update', 'CPD previo revisado por el cliente');
+        return ficha(r);
+      },
+      async declare(requestId, d) {
+        const r = await registro(requestId);
+        if (!d.declaredAt) throw new ApiError(400, 'validacion', 'Falta la fecha de la declaración', [{ path: 'declaredAt', message: 'Obligatorio' }]);
+        const contacto = contactoPorId(d.contactId ?? null);
+        if (d.contactId && contacto?.clientId !== r.clientId) throw new ApiError(422, 'validacion', 'El contacto tiene que ser del cliente de la petición');
+        const nueva: RequestDeclaration = {
+          id: newId(), kind: d.kind, affirmative: d.affirmative, contactId: d.contactId ?? null, contactName: contacto?.name ?? null, channel: d.channel,
+          declaredAt: d.declaredAt, documentId: d.documentId ?? null, notes: d.notes ?? null, recordedByName: YO.name, recordedAt: ahora(),
+        };
+        r.declaraciones = [...(r.declaraciones ?? []), nueva];
+        if (r.preCpd.status !== 'pending') r.preCpd.outdated = true;
+        log('request', r.id, null, 'update', `Declaración del cliente (art. 8): ${d.kind === 'strike' ? (d.affirmative ? 'hay huelga en el centro' : 'no hay huelga') : d.affirmative ? 'amortizó estos puestos' : 'no ha amortizado estos puestos'}`);
+        return ficha(r);
+      },
+      async setCpdSigned(requestId, d) {
+        const r = await registro(requestId);
+        if (!d.documentId) {
+          r.cpdFirmado = null;
+          log('request', r.id, null, 'update', 'CPD firmado: registro deshecho');
+          return ficha(r);
+        }
+        const bloqueos = art8Issues(art8Entrada(r), false).filter((i) => i.severity === 'blocked');
+        if (bloqueos.length) throw new ApiError(422, 'art8_bloqueado', 'El art. 8 de la Ley 14/1994 no permite la cesión', bloqueos.map((i) => ({ path: `art8_${i.code}`, message: i.message })));
+        const doc = documentosDeEntidad('request', r.id).find((x) => x.id === d.documentId);
+        if (!doc) throw new ApiError(422, 'validacion', 'El documento tiene que ser de la petición');
+        if (!d.signedAt) throw new ApiError(400, 'validacion', 'Falta la fecha de firma');
+        r.cpdFirmado = { signedAt: d.signedAt, documentId: doc.id, documentName: doc.name, recordedByName: YO.name, recordedAt: ahora() };
+        log('request', r.id, null, 'update', `CPD firmado por la empresa usuaria el ${d.signedAt}`);
+        return ficha(r);
+      },
+      async setHazardousException(requestId, basis) {
+        const r = await registro(requestId);
+        if (basis !== null && (basis.trim().length < 10 || basis.trim().length > 2000)) throw new ApiError(400, 'validacion', 'La base de la excepción: de 10 a 2000 caracteres', [{ path: 'basis', message: 'De 10 a 2000 caracteres' }]);
+        r.excepcion = basis === null ? null : { basis: basis.trim(), byName: YO.name, at: ahora() };
+        if (r.preCpd.status !== 'pending') r.preCpd.outdated = true;
+        log('request', r.id, null, 'update', basis === null ? 'Excepción de trabajo peligroso quitada' : 'Excepción de trabajo peligroso registrada');
         return ficha(r);
       },
     },

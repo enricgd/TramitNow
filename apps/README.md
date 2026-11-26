@@ -197,6 +197,18 @@ página y entra sin red.
   «Confirmar» la cubre (a mano, hasta que haya portal de empresas) y «Retirar» la libera. Bajas, CPD de cada persona y
   portales siguen para la fase 7.
 
+#### Contratos y altas en la web (fase 7, parte 1)
+
+- `src/views/laboral/useLaboral.ts` y `mapeo.ts`, con `fase7-backend.md` (`/v1/hiring-files`, `/v1/employment-contracts`,
+  y en la petición `/declarations`, `/cpd-signed` y `/hazardous-exception`). La API calcula los pasos, los avisos,
+  «listo para empezar» y la próxima tarea; la demo usa su mismo módulo (`src/data/calculoExpedientes.ts` reexporta
+  `apps/api/src/lib/hiring.ts`, como `calculoPresupuestos.ts`).
+- Lo de fuera (firma del CPD y del contrato, Contrat@, Sistema RED) se registra a mano con fecha y justificante: los
+  justificantes se suben como documentos del expediente (`entityType: 'hiring_file'`) y el CPD firmado, de la petición.
+- Un permiso por paso (`hiring_files.documentation|cpd|contract|prl|ss`): sin él no sale el botón.
+- Peticiones: declaraciones del art. 8, excepción de peligroso y los bloqueos explicados (`EXPLICACION_BLOQUEO` en
+  `peticiones/mapeo.ts`). Empresas: «Esta empresa es una ETT» (`isEtt`).
+
 #### Candidatos en la web
 
 - `src/views/candidatos/useCandidatos.ts` y `mapeo.ts`, con el contrato de la fase 6 (`/v1/candidates`,
@@ -374,6 +386,9 @@ const data = await withTenant(c, { permission: 'companies.manage' }, async (tx, 
 | `GET /v1/candidates/{id}/sensitive?fields=`: documento, Seguridad Social, IBAN y salud completos (auditado) | `personal_data.view` |
 | `GET /v1/candidates/{id}/export`, `POST /v1/candidates/{id}/anonymize`, `POST /v1/privacy-notices`, `GET /v1/privacy/retention` | `privacy.manage` |
 | `GET /v1/access-log`: auditoría de accesos | `privacy.audit` |
+| `GET /v1/hiring-files` (`?q=&requestId=&candidateId=&clientId=&branchId=&state=&missingStep=&startFrom=&startTo=`, con `facets`), `GET /v1/hiring-files/{id}` | un permiso `hiring_files.*` en la sucursal de la petición |
+| `PATCH /v1/hiring-files/{id}` (PRL y vigilancia de la salud: `hiring_files.prl`; alta: `hiring_files.ss`; inicio y notas: cualquier permiso de paso), `POST /v1/hiring-files/{id}/contracts`, `PATCH /v1/employment-contracts/{id}`, `POST /v1/employment-contracts/{id}/cancel` (ver "Expedientes") | `hiring_files.contract` para los contratos |
+| `POST /v1/requests/{id}/declarations`, `PUT /v1/requests/{id}/cpd-signed`, `PUT /v1/requests/{id}/hazardous-exception` (art. 8 y CPD firmado) | `hiring_files.cpd` (las dos últimas, también `requests.manage`) |
 
 Los catálogos de la ETT y las direcciones usan la plantilla `src/lib/crud.ts` (rutas CRUD de una tabla por ETT
 sin más reglas que las suyas); lo que tenga lógica propia, como la sucursal por defecto, se escribe aparte.
@@ -451,6 +466,17 @@ cálculo, que no cambian aunque el presupuesto cambie después (`conditions` en 
   ficha de la petición dice quién ocupa cada plaza.
 - **RGPD**: consentimientos con la versión del texto (`/privacy-notices`), exportación (derecho de acceso),
   anonimización (supresión) y `GET /v1/privacy/retention` (plazo cumplido).
+
+### Expedientes
+
+- Uno por persona y plaza: lo abre la base de datos al confirmar la candidatura. Cinco pasos (documentación, CPD
+  firmado y art. 8, contrato, PRL y alta). Cada paso trae su estado y sus avisos (`blocked`, `required` o `warning`), y
+  el expediente, `ready`, `complete`, `state` y `nextTask`. Lo calcula `src/lib/hiring.ts` (funciones puras) a la fecha
+  de inicio; la web no calcula nada.
+- Art. 8 de la Ley 14/1994: cliente ETT, huelga y puestos amortizados (declaraciones del cliente que registra la ETT) y
+  trabajos especialmente peligrosos sin excepción. Bloquean el CPD previo (422 `art8_bloqueado`), el CPD firmado y el
+  expediente; que falte una declaración avisa en el CPD previo (que la recoge para firmarla) y bloquea el expediente.
+- Vigilancia de la salud: solo apto, no apto o renuncia. Nunca el diagnóstico.
 
 ### Documentos
 

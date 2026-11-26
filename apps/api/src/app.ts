@@ -32,6 +32,7 @@ import { quotes } from './routes/quotes.js';
 import { requests } from './routes/requests.js';
 import { candidates } from './routes/candidates.js';
 import { applications } from './routes/applications.js';
+import { hiringFiles } from './routes/hiring-files.js';
 import { roles } from './routes/roles.js';
 
 // Mensajes de validación en español.
@@ -109,6 +110,7 @@ export function createApp(options: {
   app.route('/v1', requests);
   app.route('/v1', candidates);
   app.route('/v1', applications);
+  app.route('/v1', hiringFiles);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
     type: 'http',

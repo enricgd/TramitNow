@@ -268,6 +268,8 @@ export type Client = Stamped & {
   sectorCode: string | null;
   /** Convenio por defecto: lo heredan los centros sin convenio propio. */
   defaultAgreementId: string | null;
+  /** Fase 7 (art. 8.d de la Ley 14/1994): la empresa es una ETT; no se le puede ceder personal. */
+  isEtt?: boolean;
   /** Solo lectura, en las listas: centros y contactos activos y si tiene datos de facturación. */
   readiness?: ClientReadiness;
 } & Deleted;
@@ -420,7 +422,7 @@ export type ActivityEntry = {
 };
 export type ActivityQuery = PageQuery & { entityType: ActivityEntityType; entityId: string; includeChildren?: boolean };
 
-export type DocumentEntityType = 'client' | 'client_center' | 'quote' | 'request' | 'candidate';
+export type DocumentEntityType = 'client' | 'client_center' | 'quote' | 'request' | 'candidate' | 'hiring_file';
 export type DocumentStatus = 'pending' | 'validated' | 'draft' | 'rejected';
 export type StoredDocument = Stamped & {
   entityType: DocumentEntityType;
@@ -984,9 +986,10 @@ export type RequestServiceData = {
   useCase: string | null;
   useCaseJustification: string | null;
   workdayType: 'full' | 'part' | null;
-  /** Trabajo especialmente peligroso: solo se guarda (el control del art. 8 está pendiente). */
+  /** Trabajo especialmente peligroso (art. 8.b de la Ley 14/1994): bloquea el CPD salvo excepción con su base. */
   hazardousWork: boolean;
 };
+
 
 /** Ficha. */
 export type ServiceRequest = ServiceRequestSummary &
@@ -1022,6 +1025,12 @@ export type ServiceRequest = ServiceRequestSummary &
     slotList: { id: string; number: number; status: string; applicationId?: string | null; candidateName?: string | null; candidateId?: string | null }[];
     preCpd: PreCpd;
     signedQuoteDocument: { documentId: string; name: string; kind: 'signed' | 'proposal'; date: string } | null;
+    /** Fase 7: evaluación de riesgos del cliente adjunta (documento `request_risk_assessment`); vale en lugar del texto. */
+    risksDocument?: { documentId: string; name: string } | null;
+    /** Fase 7: art. 8 de la Ley 14/1994 (cliente ETT, peligroso, huelga, puestos amortizados). */
+    art8?: RequestArt8;
+    /** Fase 7: CPD firmado por la empresa usuaria (registro a mano). Paso «CPD» de los expedientes. */
+    cpdSigned?: { signedAt: string; documentId: string; documentName: string | null; recordedByName: string | null; recordedAt: string } | null;
   };
 
 export type ServiceRequestQuery = PageQuery & {
@@ -1286,3 +1295,175 @@ export type CandidateContact = { id: string; contactedAt: string; channel: Conta
 
 export type AccessLogEntry = { id: string; occurredAt: string; actorUserId: string | null; actorName: string | null; action: string; candidateId: string | null; candidateCode: string | null; details: Record<string, unknown> | null };
 export type AccessLogQuery = PageQuery & { candidateId?: string; actorUserId?: string; action?: string; from?: string; to?: string };
+
+
+// ---------------------------------------------------------------------------
+// Fase 7 (parte 1): expediente de contratación (fase7-backend.md). Uno por persona y plaza; lo abre la base de datos
+// al confirmar la candidatura. La API calcula el estado de cada paso, los avisos, «listo» y la próxima tarea.
+// ---------------------------------------------------------------------------
+
+export type HiringStepId = 'documentation' | 'cpd' | 'contract' | 'prl' | 'ss_registration';
+/** blocked: prohibición (no se puede empezar); required: paso legal pendiente; warning: solo avisa. */
+export type HiringSeverity = 'blocked' | 'required' | 'warning';
+export type HiringIssue = { code: string; severity: HiringSeverity; message: string; dueDate?: string };
+export type HiringStep = { id: HiringStepId; name: string; state: 'done' | 'in_progress' | 'pending' | 'blocked'; requiredForReady: boolean; issues: HiringIssue[] };
+
+export type RequestDeclaration = {
+  id: string;
+  kind: 'strike' | 'downsized_positions';
+  /** true: lo hay (hay huelga / hubo amortización) y bloquea; false: el cliente declara que no. */
+  affirmative: boolean;
+  contactId: string | null;
+  contactName: string | null;
+  channel: 'email' | 'paper' | 'phone' | 'in_person' | 'app' | 'other';
+  declaredAt: string;
+  documentId: string | null;
+  notes: string | null;
+  recordedByName: string | null;
+  recordedAt: string;
+};
+export type RequestDeclarationInput = Pick<RequestDeclaration, 'kind' | 'affirmative' | 'channel' | 'declaredAt'> & { contactId?: string | null; documentId?: string | null; notes?: string | null };
+export type RequestArt8 = {
+  clientIsEtt: boolean;
+  hazardousWork: boolean;
+  hazardousException: { basis: string; byName: string | null; at: string } | null;
+  declarations: { strike: RequestDeclaration | null; downsizedPositions: RequestDeclaration | null };
+  history: RequestDeclaration[];
+  issues: HiringIssue[];
+};
+
+export type HiringFileSummary = {
+  id: string;
+  status: 'open' | 'cancelled';
+  cancelReason: string | null;
+  state: 'ready' | 'pending' | 'blocked' | 'cancelled';
+  ready: boolean;
+  /** Los cinco pasos hechos y sin avisos de documentación. */
+  complete: boolean;
+  completedSteps: number;
+  steps: HiringStep[];
+  /** Del expediente, fuera de los pasos (p. ej. falta la fecha de inicio). */
+  issues: HiringIssue[];
+  nextTask: { step: HiringStepId | null; code: string; severity: HiringSeverity; message: string } | null;
+  warnings: number;
+  startDate: string | null;
+  /** Fin previsto: el de la petición. */
+  endDate: string | null;
+  /** Responsable de la petición. */
+  responsibleName: string | null;
+  requestId: string;
+  requestCode: string;
+  requestStatus: string;
+  positionName: string;
+  shiftName: string | null;
+  positionsCount: number;
+  slotNumber: number | null;
+  branchId: string;
+  clientId: string;
+  clientName: string;
+  clientCenterName: string | null;
+  candidateId: string;
+  candidateCode: string;
+  candidateName: string;
+  candidatePhone: string | null;
+  candidateEmail: string | null;
+  idDocument: { type: string | null; masked: string | null };
+  applicationId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EmploymentContract = {
+  id: string;
+  kind: 'production' | 'substitution';
+  contractKey: string;
+  contractKeyName: string;
+  startDate: string;
+  endDate: string | null;
+  substitutionReason: string | null;
+  signedAt: string | null;
+  documentId: string | null;
+  contrataCommunicatedAt: string | null;
+  contrataReference: string | null;
+  contrataDocumentId: string | null;
+  contrataDueDate: string;
+  basicCopyDeliveredAt: string | null;
+  basicCopyDocumentId: string | null;
+  basicCopyDueDate: string | null;
+  status: 'active' | 'cancelled';
+  cancelReason: string | null;
+  notes: string | null;
+  createdByName: string | null;
+  createdAt: string;
+};
+type ContractFields = Omit<EmploymentContract, 'id' | 'kind' | 'contractKeyName' | 'contrataDueDate' | 'basicCopyDueDate' | 'status' | 'cancelReason' | 'createdByName' | 'createdAt'>;
+export type EmploymentContractCreate = { kind: EmploymentContract['kind']; contractKey: string; startDate: string } & Partial<ContractFields>;
+export type EmploymentContractUpdate = Partial<ContractFields>;
+
+export type HiringFile = HiringFileSummary & {
+  notes: string | null;
+  prl: {
+    trainingDate: string | null;
+    trainingHours: number | null;
+    trainingDocumentId: string | null;
+    /** Solo apto, no apto o renuncia: nunca el diagnóstico. */
+    healthSurveillanceResult: 'fit' | 'unfit' | 'waived' | null;
+    healthSurveillanceDate: string | null;
+    healthSurveillanceDocumentId: string | null;
+    ppeDeliveredAt: string | null;
+    ppeNotes: string | null;
+    ppeDocumentId: string | null;
+  };
+  ssRegistration: { date: string | null; documentId: string | null; recordedByName: string | null; recordedAt: string | null };
+  contracts: EmploymentContract[];
+  /** De la petición: se registra en la petición (cpd-signed, declarations). */
+  cpd: { preCpdStatus: string; signedAt: string | null; signedDocumentId: string | null; art8: RequestArt8 };
+  documentation: {
+    idDocumentExpiresOn: string | null;
+    idScan: 'validated' | 'pending' | null;
+    ssNumber: { masked: string } | null;
+    iban: { masked: string } | null;
+    documents: { id: string; typeCode: string | null; typeName: string; name: string; status: string; expiresOn: string | null; expiredAtStart: boolean }[];
+  };
+};
+
+export type HiringFileUpdate = Partial<{
+  startDate: string | null;
+  notes: string | null;
+  prlTrainingDate: string | null;
+  prlTrainingHours: number | null;
+  prlTrainingDocumentId: string | null;
+  healthSurveillanceResult: 'fit' | 'unfit' | 'waived' | null;
+  healthSurveillanceDate: string | null;
+  healthSurveillanceDocumentId: string | null;
+  ppeDeliveredAt: string | null;
+  ppeNotes: string | null;
+  ppeDocumentId: string | null;
+  ssRegistrationDate: string | null;
+  ssRegistrationDocumentId: string | null;
+}>;
+
+export type HiringFileQuery = PageQuery & {
+  q?: string;
+  requestId?: string;
+  candidateId?: string;
+  clientId?: string;
+  branchId?: string;
+  /** Por defecto, los abiertos. complete: los cinco pasos hechos. */
+  state?: 'ready' | 'pending' | 'blocked' | 'cancelled' | 'complete' | 'all';
+  /** «Falta: …»: el paso no está hecho. */
+  missingStep?: HiringStepId;
+  startFrom?: string;
+  startTo?: string;
+};
+export type HiringFileFacets = {
+  total: number;
+  ready: number;
+  pending: number;
+  blocked: number;
+  complete: number;
+  cancelled: number;
+  missingByStep: Record<HiringStepId, number>;
+  /** Empiezan en 7 días o menos y no están listos. */
+  startingSoonNotReady: number;
+};

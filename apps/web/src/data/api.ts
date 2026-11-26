@@ -232,6 +232,14 @@ export function apiRepositories(): Repositories {
     accessLog: {
       list: (query) => get('/access-log', query),
     },
+    hiringFiles: {
+      list: (query) => get('/hiring-files', query),
+      get: (id) => get(`/hiring-files/${id}`),
+      update: (id, body) => request('PATCH', `/hiring-files/${id}`, { body }),
+      addContract: (id, body) => request('POST', `/hiring-files/${id}/contracts`, { body }),
+      updateContract: (id, body) => request('PATCH', `/employment-contracts/${id}`, { body }),
+      cancelContract: (id, reason) => request('POST', `/employment-contracts/${id}/cancel`, { body: { reason } }),
+    },
     requests: {
       list: (query) => get('/requests', query),
       get: (id) => get(`/requests/${id}`),
@@ -246,6 +254,9 @@ export function apiRepositories(): Repositories {
       generatePreCpd: (id) => request('POST', `/requests/${id}/pre-cpd`),
       markPreCpdSent: (id, body = {}) => request('POST', `/requests/${id}/pre-cpd/sent`, { body }),
       markPreCpdReviewed: (id) => request('POST', `/requests/${id}/pre-cpd/reviewed`),
+      declare: (id, body) => request('POST', `/requests/${id}/declarations`, { body }),
+      setCpdSigned: (id, body) => request('PUT', `/requests/${id}/cpd-signed`, { body }),
+      setHazardousException: (id, basis) => request('PUT', `/requests/${id}/hazardous-exception`, { body: { basis } }),
     },
     tenantSettings: {
       get: () => get('/tenant-settings'),

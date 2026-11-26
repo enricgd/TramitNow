@@ -283,7 +283,22 @@ describe('CPD previo', () => {
     expect(upd.status).toBe(200);
     expect(upd.body.hazardousWork).toBe(true);
     expect(upd.body.quoteAcceptedAt).toBeTruthy();
-    expect(upd.body.preCpd.checks.filter((c: { ok: boolean; blocking: boolean }) => c.blocking && !c.ok)).toEqual([]);
+    // Trabajo especialmente peligroso (art. 8.b): bloquea hasta que la ETT marque la excepción con su base (fase 7).
+    const blocking = (b: { preCpd: { checks: { code: string; ok: boolean; blocking: boolean }[] } }) =>
+      b.preCpd.checks.filter((c) => c.blocking && !c.ok).map((c) => c.code);
+    expect(blocking(upd.body)).toEqual(['art8_hazardous_work']);
+    // Que falten las declaraciones del cliente solo avisa en el CPD previo (van en el PDF para firmarlas).
+    expect(upd.body.preCpd.checks.filter((c: { field: string; blocking: boolean }) => c.field === 'art8' && !c.blocking)
+      .map((c: { code: string }) => c.code)).toEqual(['art8_strike_undeclared', 'art8_downsized_positions_undeclared']);
+    const denied = await call('POST', `/v1/requests/${requestId}/pre-cpd`, { token: seleccion });
+    expect(denied.status).toBe(422);
+    expect(denied.body.error).toMatchObject({ code: 'art8_bloqueado', details: [{ path: 'art8_hazardous_work' }] });
+    const basis = { basis: 'Excepción ficticia para la prueba: tareas sin exposición según la evaluación del cliente' };
+    expect((await call('PUT', `/v1/requests/${requestId}/hazardous-exception`, { token: seleccion, body: basis })).status).toBe(403);
+    const exc = await call('PUT', `/v1/requests/${requestId}/hazardous-exception`, { token: admin, body: basis });
+    expect(exc.status).toBe(200);
+    expect(exc.body.art8.hazardousException).toMatchObject({ basis: basis.basis });
+    expect(blocking(exc.body)).toEqual([]);
     const res = await call('POST', `/v1/requests/${requestId}/pre-cpd`, { token: seleccion });
     expect(res.status).toBe(201);
     const docs = await call('GET', `/v1/documents?entityType=request&entityId=${requestId}`, { token: seleccion });

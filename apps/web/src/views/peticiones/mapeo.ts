@@ -122,6 +122,12 @@ export function peticionVista(r: ServiceRequestSummary & Partial<ServiceRequest>
           otrosPuestos: d.otherPositions.flatMap((p) => p.requests.map((x) => ({ id: x.code, puesto: p.name }))),
         }
       : null,
+    // Fase 7, art. 8 de la Ley 14/1994: lo que el cliente declara (registrado por la ETT) y la excepción de peligroso
+    declaraciones: { huelga: r.art8?.declarations.strike ?? null, amortizacion: r.art8?.declarations.downsizedPositions ?? null },
+    excepcionPeligroso: r.art8?.hazardousException ?? null,
+    clienteEsEtt: !!r.art8?.clientIsEtt,
+    evaluacionRiesgos: r.risksDocument ?? null,
+    cpdFirmado: r.cpdSigned ?? null,
     // Datos del servicio, para la ventana «Datos del servicio» (en la forma de la API)
     servicio: {
       clientCenterId: r.clientCenterId ?? null,
@@ -191,3 +197,21 @@ export function presupuestoAceptadoVista(s: RequestSource) {
 export function documentoVista(d: StoredDocument) {
   return { id: d.id, tipo: d.typeName, nombre: d.name, fecha: d.uploadedAt.slice(0, 10), autor: d.uploadedByName ?? '—' };
 }
+
+/**
+ * Bloqueos legales de la petición (códigos de la API y de las comprobaciones del CPD previo) explicados en lenguaje
+ * claro: qué pasa y qué hacer.
+ */
+export const EXPLICACION_BLOQUEO: Record<string, string> = {
+  client_is_ett: 'El cliente está marcado como ETT en Empresas. La ley no permite ceder personal a otra ETT (art. 8.d de la Ley 14/1994). Si es un error, quita la marca en la ficha del cliente.',
+  hazardous_work: 'Es un trabajo especialmente peligroso. Solo se puede ceder personal con una excepción marcada por la ETT y su base (convenio o acuerdo que lo permite, con la formación y la vigilancia de la salud específicas). Regístrala aquí.',
+  strike: 'El cliente ha declarado una huelga en el centro. No se puede ceder personal para sustituir a quienes la hacen (art. 8.a de la Ley 14/1994).',
+  strike_undeclared: 'Falta la declaración del cliente de que no hay huelga en el centro. El CPD previo la recoge para que la firme; también puedes registrarla aquí: quién, cuándo y cómo.',
+  downsized_positions: 'El cliente amortizó estos puestos en los 12 meses anteriores (despido improcedente, colectivo u objetivo). No se pueden cubrir con una ETT (art. 8.c de la Ley 14/1994).',
+  downsized_positions_undeclared: 'Falta la declaración del cliente de que no ha amortizado estos puestos en los 12 meses anteriores. El CPD previo la recoge; también puedes registrarla aquí.',
+  risks: 'Falta la información de riesgos del puesto: escríbela en «Datos del servicio» o sube la evaluación de riesgos del cliente (tipo «Evaluación de riesgos del cliente») en Documentos.',
+  salario_bajo_convenio: 'El salario de la petición queda por debajo del convenio de la empresa usuaria. No se puede pagar menos (art. 11 de la Ley 14/1994): haz una versión nueva del presupuesto.',
+  art8_bloqueado: 'El art. 8 de la Ley 14/1994 no permite ceder personal en esta petición. Mira las declaraciones del cliente y el trabajo peligroso en «Contratos y altas» de la petición.',
+};
+// Los códigos de las comprobaciones del CPD previo y los de la API llevan el prefijo «art8_»
+for (const k of ['client_is_ett', 'hazardous_work', 'strike', 'strike_undeclared', 'downsized_positions', 'downsized_positions_undeclared']) EXPLICACION_BLOQUEO[`art8_${k}`] = EXPLICACION_BLOQUEO[k];

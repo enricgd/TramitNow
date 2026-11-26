@@ -1,6 +1,14 @@
 // Contrato de la capa de datos. Las pantallas solo conocen esto: no saben si los datos vienen de la API
 // (api.ts) o son de ejemplo (memoria.ts). Cada operación corresponde a una ruta de apps/api.
 import type {
+  EmploymentContractCreate,
+  EmploymentContractUpdate,
+  HiringFile,
+  HiringFileFacets,
+  HiringFileQuery,
+  HiringFileSummary,
+  HiringFileUpdate,
+  RequestDeclarationInput,
   ActivityEntry,
   ActivityQuery,
   CatalogItem,
@@ -381,6 +389,17 @@ export interface Repositories {
     confirm(id: string): Promise<Application>;
     release(id: string): Promise<Application>;
   };
+  /** Expedientes de contratación (fase 7, fase7-backend.md): Contratos y altas. Los abre la API al confirmar. */
+  hiringFiles: {
+    /** Con los recuentos (KPI) de los mismos filtros salvo `state` y `missingStep`. */
+    list(query?: HiringFileQuery): Promise<Page<HiringFileSummary> & { facets: HiringFileFacets }>;
+    get(id: string): Promise<HiringFile>;
+    /** PRL (formación, vigilancia de la salud, EPI), alta en la SS, fecha de inicio y notas. */
+    update(id: string, data: HiringFileUpdate): Promise<HiringFile>;
+    addContract(id: string, data: EmploymentContractCreate): Promise<HiringFile>;
+    updateContract(contractId: string, data: EmploymentContractUpdate): Promise<HiringFile>;
+    cancelContract(contractId: string, reason: string): Promise<HiringFile>;
+  };
   /** Auditoría de accesos a datos personales (privacy.audit). */
   accessLog: {
     list(query?: AccessLogQuery): Promise<Page<AccessLogEntry>>;
@@ -404,6 +423,12 @@ export interface Repositories {
     /** Sin firma electrónica: el CPD previo se envía a mano y aquí se marca. */
     markPreCpdSent(id: string, data?: { sentTo?: string | null; notes?: string | null }): Promise<ServiceRequest>;
     markPreCpdReviewed(id: string): Promise<ServiceRequest>;
+    /** Fase 7, art. 8: declaración del cliente (huelga, puestos amortizados) registrada por la ETT. Vale la última. */
+    declare(id: string, data: RequestDeclarationInput): Promise<ServiceRequest>;
+    /** Fase 7: CPD firmado por la empresa usuaria (documento de la petición); `documentId: null` lo deshace. */
+    setCpdSigned(id: string, data: { documentId: string; signedAt: string } | { documentId: null }): Promise<ServiceRequest>;
+    /** Fase 7: excepción del trabajo especialmente peligroso, con su base (null la quita). */
+    setHazardousException(id: string, basis: string | null): Promise<ServiceRequest>;
   };
 
   // -------------------------------------------------------------------------

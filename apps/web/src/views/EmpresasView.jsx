@@ -752,6 +752,12 @@ return (
                 </div>
               </div>
 
+              {currentCompany.esEtt && (
+                <Notice tone="danger" icon={AlertTriangle}>
+                  <strong>Marcada como ETT.</strong> No se le puede ceder personal (art. 8 de la Ley 14/1994): sus peticiones no pueden generar el CPD previo. Si es un error, quita la marca en «Editar datos».
+                </Notice>
+              )}
+
               <div className="pt-4 border-t border-slate-100">
                 <div className="text-slate-400 text-[11px] font-semibold mb-1">Observaciones Comerciales</div>
                 <div className="bg-slate-50 p-3 rounded-lg text-slate-700 text-xs leading-relaxed border border-slate-200">
@@ -1664,6 +1670,7 @@ return (
       const [sector, setSector] = useState(initialData?.sectorCode || ''); // división CNAE
       const [defaultAgreementId, setDefaultAgreementId] = useState(initialData?.defaultAgreementId || '');
       const [notes, setNotes] = useState(initialData?.notes || '');
+      const [esEtt, setEsEtt] = useState(!!initialData?.esEtt);
 
       // Validación & Duplicados Demo
       const [errors, setErrors] = useState({});
@@ -1714,6 +1721,7 @@ const ok = await onSave({
     sector,
     defaultAgreementId,
     notes,
+    esEtt,
     borrador,
 });
 if (!ok) setIsSubmitting(false);
@@ -1962,6 +1970,16 @@ if (!ok) setIsSubmitting(false);
               placeholder="Detalles sobre picos de campaña, requerimientos de carnet de carretillero, etc."
               className="w-full px-3 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
             ></textarea>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-3">
+            <label className="flex items-start gap-2 text-slate-700">
+              <input type="checkbox" checked={esEtt} onChange={(e) => { setEsEtt(e.target.checked); onChange(); }} className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+              <span>
+                <span className="font-semibold">Esta empresa es una ETT</span>
+                <span className="block text-[11px] text-slate-500 mt-0.5">La ley no permite ceder personal a otra empresa de trabajo temporal (art. 8 de la Ley 14/1994). Si la marcas, sus peticiones no pueden generar el CPD previo ni sus expedientes empezar.</span>
+              </span>
+            </label>
           </div>
         </div>
       )}
