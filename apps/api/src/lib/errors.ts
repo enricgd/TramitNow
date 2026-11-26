@@ -26,6 +26,7 @@ export const errorCodes = [
   'salario_bajo_convenio',
   'requiere_aprobacion',
   'cpd_incompleto',
+  'art8_bloqueado',
 ] as const;
 export type ErrorCode = (typeof errorCodes)[number];
 

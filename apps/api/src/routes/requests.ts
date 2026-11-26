@@ -25,6 +25,8 @@ import {
   nullableText,
   paginated,
 } from '../lib/openapi.js';
+import { art8Issues } from '../lib/hiring.js';
+import { Art8Schema, DeclarationChannel, DeclarationKind, loadArt8, loadRisksDocuments } from '../lib/hiring-data.js';
 import { renderPreCpdPdf } from '../lib/request-pdf.js';
 import {
   type PreCpdCheck,
@@ -40,6 +42,7 @@ import { requireStorage } from '../lib/storage.js';
 import { type PositionCalc, PositionCalcSchema, hideCalculationCosts } from './quotes.js';
 
 const MANAGE = 'requests.manage';
+const CPD = 'hiring_files.cpd';
 const VIEW_COSTS = 'quotes.view_costs';
 const tags = ['Peticiones'];
 const ACTIVE = ['new', 'publishing', 'selecting', 'covered', 'in_progress'] as const;
@@ -228,7 +231,13 @@ const RequestSchema = z
     workdayType: z.enum(['full', 'part']),
     schedule: z.array(ScheduleDayOut),
     weeklyHours: z.number().nullable(),
-    legalChecks: z.null().openapi({ description: 'Reservado para los controles del art. 8 de la Ley 14/1994 (pendiente de decidir)' }),
+    legalChecks: z.null().openapi({ description: 'Obsoleto: los controles del art. 8 están en `art8`' }),
+    risksDocument: z.object({ documentId: z.guid(), name: z.string() }).nullable()
+      .openapi({ description: 'Evaluación de riesgos del cliente adjunta (tipo request_risk_assessment): vale en lugar del texto y sale como anexo del CPD previo' }),
+    art8: Art8Schema,
+    cpdSigned: z.object({
+      signedAt: z.string(), documentId: z.guid(), documentName: z.string().nullable(), recordedByName: z.string().nullable(), recordedAt: Timestamp,
+    }).nullable().openapi({ description: 'CPD firmado por la empresa usuaria (registro a mano). Paso «CPD» de los expedientes' }),
     cancelledAt: Timestamp.nullable(),
     closedAt: Timestamp.nullable(),
     createdByName: z.string().nullable(),
@@ -372,6 +381,11 @@ const summarySelect = (tx: Tx, tenantId: string) => tx`
 
 interface DetailRow extends RequestSummary {
   companyId: string;
+  cpdSignedAt: string | null;
+  cpdSignedDocumentId: string | null;
+  cpdSignedDocumentName: string | null;
+  cpdSignedRecordedByName: string | null;
+  cpdSignedRecordedAt: string | null;
   clientTaxId: string | null;
   clientCenterId: string | null;
   clientCenterAddress: string | null;
@@ -447,6 +461,10 @@ async function loadDetail(tx: Tx, tenantId: string, id: string) {
            r.client_signer_contact_id, ct.name as client_signer_contact_name, ct.position as client_signer_contact_position,
            ct.email as client_signer_contact_email, coalesce(ct.phone, ct.mobile) as client_signer_contact_phone,
            r.quote_version_id, qv.title as quote_title, qv.accepted_at as quote_accepted_at, r.hazardous_work,
+           to_char(r.cpd_signed_at, 'YYYY-MM-DD') as cpd_signed_at, r.cpd_signed_document_id,
+           (select d.name from public.documents d where d.tenant_id = r.tenant_id and d.id = r.cpd_signed_document_id) as cpd_signed_document_name,
+           (select p.full_name from public.profiles p where p.id = r.cpd_signed_recorded_by) as cpd_signed_recorded_by_name,
+           r.cpd_signed_recorded_at,
            r.order_reference, r.notes, r.tasks, r.qualification, r.risks, r.ppe, r.required_licenses, r.use_case,
            r.use_case_justification, r.workday_type, r.schedule, r.weekly_hours::float8 as weekly_hours, r.cancelled_at,
            r.closed_at, cb.full_name as created_by_name, r.updated_at, r.position_description, r.collective_agreement_id,
@@ -541,6 +559,8 @@ async function loadDetail(tx: Tx, tenantId: string, id: string) {
     order by t.code = 'quote_signed' desc, d.uploaded_at desc limit 1
   `;
 
+  const risksDocument = (await loadRisksDocuments(tx, tenantId, [id])).get(id) ?? null;
+  const art8 = (await loadArt8(tx, tenantId, [id])).get(id)!;
   const checks = preCpdChecks({
     useCase: row.useCase,
     useCaseJustification: row.useCaseJustification,
@@ -550,6 +570,7 @@ async function loadDetail(tx: Tx, tenantId: string, id: string) {
     weeklyHours: row.weeklyHours,
     tasks: row.tasks,
     risks: row.risks,
+    risksDocument: risksDocument !== null,
     ettAuthorizationNumber: row.ettAuthorizationNumber,
     ettRepresentativeName: row.ettRepresentativeName,
     ettRepresentativeIdNumber: row.ettRepresentativeIdNumber,
@@ -560,8 +581,12 @@ async function loadDetail(tx: Tx, tenantId: string, id: string) {
     quotePeople: row.quotePeople,
     peopleInRequests: inRequests,
   });
+  // Art. 8 en el CPD previo: las prohibiciones bloquean; que falte una declaración solo avisa (va en el CPD para firmarla).
+  for (const i of art8Issues(art8.input, false)) {
+    checks.push({ code: `art8_${i.code}`, ok: false, blocking: i.severity === 'blocked', message: i.message, field: 'art8' });
+  }
 
-  return { row, agreementCheck, siblings, otherPositions, inRequests, slotList, signed: signed ?? null, checks };
+  return { row, agreementCheck, siblings, otherPositions, inRequests, slotList, signed: signed ?? null, checks, risksDocument, art8 };
 }
 type Detail = Awaited<ReturnType<typeof loadDetail>>;
 
@@ -594,6 +619,19 @@ function present(d: Detail, ctx: TenantContext): RequestOut {
     schedule: r.schedule,
     weeklyHours: r.weeklyHours,
     legalChecks: null,
+    risksDocument: d.risksDocument,
+    art8: {
+      clientIsEtt: d.art8.clientIsEtt,
+      hazardousWork: d.art8.hazardousWork,
+      hazardousException: d.art8.hazardousException,
+      declarations: { strike: d.art8.strike, downsizedPositions: d.art8.downsizedPositions },
+      history: d.art8.history,
+      issues: art8Issues(d.art8.input, true),
+    },
+    cpdSigned: r.cpdSignedAt
+      ? { signedAt: r.cpdSignedAt, documentId: r.cpdSignedDocumentId!, documentName: r.cpdSignedDocumentName,
+          recordedByName: r.cpdSignedRecordedByName, recordedAt: r.cpdSignedRecordedAt! }
+      : null,
     cancelledAt: r.cancelledAt,
     closedAt: r.closedAt,
     createdByName: r.createdByName,
@@ -739,6 +777,27 @@ function requireOpen(status: string) {
 }
 
 const storageOf = (c: Context<AppEnv>) => requireStorage(c.get('storage'));
+const DeclarationBody = z
+  .strictObject({
+    kind: DeclarationKind,
+    affirmative: z.boolean(),
+    contactId: z.guid().nullable().optional().openapi({ description: 'Contacto del cliente que declara' }),
+    channel: DeclarationChannel.openapi({ description: 'Cómo la hizo: correo, papel, teléfono, en persona, en la app u otro' }),
+    declaredAt: date,
+    documentId: z.guid().nullable().optional(),
+    notes: z.string().trim().max(1000).nullable().optional(),
+  })
+  .openapi('RequestDeclarationCreate');
+const CpdSignedBody = z
+  .union([
+    z.strictObject({ documentId: z.guid(), signedAt: date }),
+    z.strictObject({ documentId: z.null(), signedAt: z.null().optional() }),
+  ])
+  .openapi('RequestCpdSigned');
+const HazardousExceptionBody = z
+  .strictObject({ basis: z.string().trim().min(10).max(2000).nullable() })
+  .openapi('RequestHazardousException');
+
 const RequestOk = { 200: jsonContent(RequestSchema, 'Petición'), ...errorResponses(400, 401, 403, 404, 409, 422) };
 const RequestCreated = { 201: jsonContent(RequestSchema, 'Petición creada'), ...errorResponses(400, 401, 403, 404, 409, 422) };
 
@@ -1006,7 +1065,10 @@ export const requests = createRouter()
         'Genera en el servidor las condiciones de la puesta a disposición (ETT y autorización, empresa usuaria, supuesto y ' +
         'justificación, puesto, tareas, riesgos y EPIs, centro, fechas, jornada y horario, retribución y precio, firmas) y ' +
         'las guarda como documento de la petición (tipo «CPD previo»). El estado pasa a generado. 409 `cpd_incompleto` si ' +
-        'falta algo que bloquea (en `details`); 422 `salario_bajo_convenio` si el convenio vigente pide más.',
+        'falta algo que bloquea (en `details`); 422 `salario_bajo_convenio` si el convenio vigente pide más; 422 ' +
+        '`art8_bloqueado` si lo prohíbe el art. 8 de la Ley 14/1994 (cliente ETT, huelga declarada, puestos amortizados o ' +
+        'trabajo especialmente peligroso sin excepción; códigos en `details[].path`). Los riesgos valen escritos o con la ' +
+        'evaluación de riesgos del cliente adjunta (sale como anexo).',
       security: bearerSecurity,
       request: { params: IdParams },
       responses: {
@@ -1022,6 +1084,11 @@ export const requests = createRouter()
         const r = d.row;
         requireOpen(r.status);
         const failed = d.checks.filter((x: PreCpdCheck) => x.blocking && !x.ok);
+        const art8 = failed.filter((x) => x.field === 'art8');
+        if (art8.length) {
+          throw new ApiError(422, 'art8_bloqueado', `No se puede ceder personal en esta petición: ${art8.map((x) => x.message).join('; ')}`,
+            art8.map((x) => ({ path: x.code, message: x.message })));
+        }
         if (failed.some((x) => x.code === 'salary_agreement')) {
           const first = d.agreementCheck!.periods.find((p) => p.belowAgreement)!;
           throw new ApiError(422, 'salario_bajo_convenio',
@@ -1059,7 +1126,16 @@ export const requests = createRouter()
           qualification: r.qualification,
           requiredLicenses: r.requiredLicenses,
           tasks: r.tasks!,
-          risks: r.risks!,
+          risks: r.risks,
+          risksAnnex: d.risksDocument?.name ?? null,
+          art8: {
+            strike: d.art8.strike ? { affirmative: d.art8.strike.affirmative, declaredAt: d.art8.strike.declaredAt, contactName: d.art8.strike.contactName } : null,
+            downsizedPositions: d.art8.downsizedPositions
+              ? { affirmative: d.art8.downsizedPositions.affirmative, declaredAt: d.art8.downsizedPositions.declaredAt, contactName: d.art8.downsizedPositions.contactName }
+              : null,
+            hazardousWork: d.art8.hazardousWork,
+            hazardousExceptionBasis: d.art8.hazardousException?.basis ?? null,
+          },
           ppe: r.ppe,
           startDate: r.startDate!,
           endDate: r.endDate,
@@ -1150,6 +1226,110 @@ export const requests = createRouter()
           update public.requests set pre_cpd_status = 'reviewed', pre_cpd_reviewed_at = now(), pre_cpd_reviewed_by = ${ctx.userId}
            where tenant_id = ${ctx.tenantId} and id = ${id}
         `;
+        return loadRequest(tx, ctx, id);
+      });
+      return c.json(request, 200);
+    },
+  )
+  // -------------------------------------------------------------------------
+  // Fase 7: art. 8 y CPD firmado (permiso hiring_files.cpd)
+  // -------------------------------------------------------------------------
+  .openapi(
+    createRoute({
+      method: 'post',
+      path: '/requests/{id}/declarations',
+      tags,
+      summary: 'Registrar una declaración del art. 8 de la empresa usuaria',
+      description:
+        `Requiere \`${CPD}\`. Huelga en el centro (art. 8.a) o puestos amortizados en los 12 meses anteriores (art. 8.c). ` +
+        'Solo se añaden: vale la última de cada tipo. Mientras el cliente no firme en la app, la registra la ETT en su nombre: ' +
+        'qué contacto declara (del cliente de la petición), cómo y cuándo; quién la registra lo pone la API. `affirmative: true` ' +
+        '(hay huelga / hubo amortización) bloquea el CPD previo y los expedientes. El justificante, si lo hay, es un documento ' +
+        'de la petición (tipo «Declaración de la empresa usuaria (art. 8)»).',
+      security: bearerSecurity,
+      request: { params: IdParams, body: jsonBody(DeclarationBody) },
+      responses: { 201: jsonContent(RequestSchema, 'Petición'), ...errorResponses(400, 401, 403, 404, 409, 422) },
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const request = await withTenant(c, { permission: CPD }, async (tx, ctx) => {
+        await findRequest(tx, ctx.tenantId, id);
+        await tx`
+          insert into public.request_declarations ${tx({
+            tenantId: ctx.tenantId, requestId: id, kind: body.kind, affirmative: body.affirmative, contactId: body.contactId ?? null,
+            channel: body.channel, declaredAt: body.declaredAt, documentId: body.documentId ?? null, notes: body.notes ?? null,
+          })}
+        `;
+        return loadRequest(tx, ctx, id);
+      });
+      return c.json(request, 201);
+    },
+  )
+  .openapi(
+    createRoute({
+      method: 'put',
+      path: '/requests/{id}/cpd-signed',
+      tags,
+      summary: 'Registrar el CPD firmado por la empresa usuaria',
+      description:
+        `Requiere \`${CPD}\` (y \`${MANAGE}\`, que edita la petición). Registro a mano: el documento firmado, ya subido a la ` +
+        'petición (tipo «CPD firmado por la empresa usuaria»), y la fecha de la firma. Es el paso «CPD» de todos los ' +
+        'expedientes de la petición. 422 `art8_bloqueado` si el art. 8 lo prohíbe. `null` en el cuerpo lo deshace.',
+      security: bearerSecurity,
+      request: { params: IdParams, body: jsonBody(CpdSignedBody) },
+      responses: RequestOk,
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const request = await withTenant(c, { permission: CPD }, async (tx, ctx) => {
+        await findRequest(tx, ctx.tenantId, id);
+        if (body.documentId) {
+          const blocked = art8Issues((await loadArt8(tx, ctx.tenantId, [id])).get(id)!.input, false).filter((i) => i.severity === 'blocked');
+          if (blocked.length) {
+            throw new ApiError(422, 'art8_bloqueado', `No se puede ceder personal en esta petición: ${blocked.map((i) => i.message).join('; ')}`,
+              blocked.map((i) => ({ path: i.code, message: i.message })));
+          }
+          if (body.signedAt! > new Date().toISOString().slice(0, 10)) {
+            throw new ApiError(422, 'validacion', 'La fecha de la firma no puede ser futura', [{ path: 'signedAt', message: 'Fecha futura' }]);
+          }
+        }
+        const updated = await tx`
+          update public.requests set cpd_signed_at = ${body.documentId ? body.signedAt! : null}, cpd_signed_document_id = ${body.documentId}
+           where tenant_id = ${ctx.tenantId} and id = ${id} returning id
+        `;
+        if (!updated.length) throw new ApiError(403, 'sin_permiso', `Para registrar el CPD firmado hace falta también ${MANAGE} en la sucursal`);
+        return loadRequest(tx, ctx, id);
+      });
+      return c.json(request, 200);
+    },
+  )
+  .openapi(
+    createRoute({
+      method: 'put',
+      path: '/requests/{id}/hazardous-exception',
+      tags,
+      summary: 'Marcar o quitar la excepción de trabajos especialmente peligrosos',
+      description:
+        `Requiere \`${CPD}\` (y \`${MANAGE}\`). Art. 8.b de la Ley 14/1994: con \`hazardousWork\` la petición queda ` +
+        'bloqueada salvo que la ETT marque la excepción con su base (texto de 10 a 2000 caracteres). Se guarda quién y cuándo. ' +
+        '`basis: null` la quita. El CPD previo, si estaba generado, queda desactualizado.',
+      security: bearerSecurity,
+      request: { params: IdParams, body: jsonBody(HazardousExceptionBody) },
+      responses: RequestOk,
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const request = await withTenant(c, { permission: CPD }, async (tx, ctx) => {
+        const r = await findRequest(tx, ctx.tenantId, id);
+        requireOpen(r.status);
+        const updated = await tx`
+          update public.requests set hazardous_exception_basis = ${body.basis}
+           where tenant_id = ${ctx.tenantId} and id = ${id} returning id
+        `;
+        if (!updated.length) throw new ApiError(403, 'sin_permiso', `Para la excepción hace falta también ${MANAGE} en la sucursal`);
         return loadRequest(tx, ctx, id);
       });
       return c.json(request, 200);

@@ -196,11 +196,15 @@ const settingsFields = {
     .openapi({ description: 'Días antes de caducar un documento del candidato para avisar (30 por defecto)' }),
   accessLogRetentionMonths: z.number().int().min(12).max(120)
     .openapi({ description: 'Meses que se conserva la auditoría de accesos (24 por defecto) [verificar]' }),
+  contractCommunicationDays: z.number().int().min(1).max(60)
+    .openapi({ description: 'Días desde el inicio del contrato para comunicarlo a Contrat@ (10 por defecto) [verificar]' }),
+  basicCopyDays: z.number().int().min(1).max(60)
+    .openapi({ description: 'Días desde la firma para entregar la copia básica (10 por defecto) [verificar]' }),
 };
 const TenantSettingsSchema = z.object(settingsFields).openapi('TenantSettings');
 const settingsColumns = (tx: Tx) => tx`
   quote_min_margin_percent::float8 as quote_min_margin_percent, quote_no_response_days, candidate_pool_retention_months,
-  candidate_document_notice_days, access_log_retention_months
+  candidate_document_notice_days, access_log_retention_months, contract_communication_days, basic_copy_days
 `;
 const TenantSettingsUpdate = z.strictObject(settingsFields).partial().openapi('TenantSettingsUpdate');
 

@@ -324,6 +324,8 @@ Qué crea:
 - 9 peticiones con plazas, horario, riesgos y el CPD previo en todos sus estados.
 - 40 candidatos con documentos (algunos caducados, pendientes o rechazados), consentimientos (vigentes, caducados o
   retirados) y candidaturas en todas las etapas hasta «confirmada».
+- 9 expedientes (fase 7) de las candidaturas confirmadas: completos, listos, pendientes y uno bloqueado («no apto»), con
+  declaraciones del art. 8, CPD firmados, contratos, PRL y altas. Necesita la migración de la fase 7.
 
 Todo es ficticio:
 
