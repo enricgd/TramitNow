@@ -13,6 +13,7 @@ import {
 import { Page, PageHeader, Card, SectionTitle, KpiTile, EmptyState, Notice, Button, Badge, Avatar, SearchInput, Select, SelectConAlta, Field, TextInput, Interruptor, Tabs, Segmented, Modal, CargandoPagina, ErrorCarga, CAMPO , fecha, cantidad, eurosHora } from '../ui';
 import { DEMO } from '../modo';
 import { usePeticiones, mensajeError } from './peticiones/usePeticiones';
+import { EXPLICACION_BLOQUEO } from './peticiones/mapeo';
 
 // Datos: usePeticiones (peticiones/usePeticiones.ts), de la API o, en la demo, de memoriaPeticiones.ts. Plazas con
 // personas, candidatos, CPD de cada persona y portales (fases 6 y 7) solo tienen datos de ejemplo en la demo.
@@ -31,6 +32,8 @@ const tonoEstado = (estado) => ESTADOS_PETICION.find(e => e.estado === estado)?.
 const ESTADOS_ACTIVOS = ['Nueva', 'En difusión', 'En selección', 'Cubierta', 'En curso'];
 // Formato único de fechas de la web (ui/formato.ts)
 const fechaCorta = (iso) => (iso ? fecha(iso) : '');
+// Cómo declara el cliente lo del art. 8
+const CANALES_DECLARACION = { email: 'Por correo', paper: 'En papel firmado', phone: 'Por teléfono', in_person: 'En persona', app: 'En la app', other: 'Otro' };
 const diasHasta = (iso) => Math.round((new Date(`${iso}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
 // Peticiones del mismo puesto del mismo presupuesto (por ejemplo, otro turno), del reparto que da la API
 const hermanasDe = (p, lista) => (p.reparto?.hermanas || []).filter(h => !h.esta).map(h => ({ ...h, ...(lista.find(x => x.id === h.id) || {}) }));
@@ -370,6 +373,26 @@ export default function PeticionesView() {
         const doc = (ficha?.documentos || []).find(d => d.tipo.startsWith('CPD previo'));
         const hay = doc ? await ejecutar(() => pet.descargarDocumento(doc.id)) : false;
         if (hay === false) showToast(DEMO ? 'En la demo no hay PDF: mira las condiciones en «Ver condiciones».' : 'No se encuentra el PDF: vuelve a generarlo.', 'info');
+    };
+    // Declaraciones del cliente del art. 8 (huelga, puestos amortizados), registradas por la ETT en su nombre
+    const [declaracion, setDeclaracion] = useState(null); // { tipo, hay, contactId, fecha, canal, nota }
+    const abrirDeclaracion = (tipo) => {
+        const d = peticion.declaraciones?.[tipo];
+        setDeclaracion({ tipo, hay: d ? d.affirmative : false, contactId: d?.contactId || ficha?.peticion.servicio.clientSignerContactId || '', fecha: new Date().toISOString().slice(0, 10), canal: d?.channel || 'email', nota: '' });
+    };
+    // Excepción del trabajo especialmente peligroso (art. 8.b), con su base
+    const [excepcion, setExcepcion] = useState(null); // { base }
+    const guardarExcepcion = async (base) => {
+        const r = await ejecutar(() => pet.excepcionPeligroso(ficha, base), base === null ? 'Excepción quitada.' : 'Excepción registrada.');
+        if (!r) return;
+        ponerFichaEntera(r);
+        setExcepcion(null);
+    };
+    const guardarDeclaracion = async () => {
+        const r = await ejecutar(() => pet.declarar(ficha, declaracion.tipo, declaracion), 'Declaración del cliente registrada.');
+        if (!r) return;
+        ponerFichaEntera(r);
+        setDeclaracion(null);
     };
     const guardarDatosServicio = async () => {
         const r = await ejecutar(() => pet.guardarServicio(ficha, datosServicio), 'Datos del servicio guardados.');
@@ -2105,13 +2128,55 @@ export default function PeticionesView() {
                                             <ul className="space-y-1">
                                                 {faltan.map(c => (
                                                     <li key={c.code} className={`flex items-start gap-1.5 ${c.blocking ? 'text-rose-700' : 'text-amber-700'}`}>
-                                                        {c.blocking ? <X className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />}{c.message}
+                                                        {c.blocking ? <X className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
+                                                        <span>{c.message}{EXPLICACION_BLOQUEO[c.code] && <span className="block text-[11px] text-slate-600">{EXPLICACION_BLOQUEO[c.code]}</span>}</span>
                                                     </li>
                                                 ))}
                                             </ul>
                                             {pet.puedeEditar && !cerrada && <Button size="sm" icon={Edit3} onClick={() => setDatosServicio({ ...peticion.servicio, positionsCount: peticion.solicitados })}>Completar datos del servicio</Button>}
                                         </div>
                                     )}
+                                    {/* Art. 8 de la Ley 14/1994: lo que declara el cliente y la excepción de trabajo peligroso */}
+                                    <div className="rounded-lg border border-slate-200 p-3 space-y-2 text-xs">
+                                        <div className="font-medium text-slate-800">Declaraciones del cliente (art. 8 de la Ley 14/1994)</div>
+                                        {[{ tipo: 'huelga', texto: 'No hay huelga en el centro de trabajo', contrario: 'Hay huelga en el centro' },
+                                          { tipo: 'amortizacion', texto: 'No ha amortizado estos puestos en los 12 meses anteriores', contrario: 'Ha amortizado estos puestos' }].map(x => {
+                                            const d = peticion.declaraciones?.[x.tipo];
+                                            return (
+                                                <div key={x.tipo} className="flex flex-wrap items-start justify-between gap-2">
+                                                    <div className="flex items-start gap-1.5 min-w-0">
+                                                        {!d ? <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" /> : !d.affirmative ? <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-600" /> : <X className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600" />}
+                                                        <div>
+                                                            <div className={d?.affirmative ? 'text-rose-700' : 'text-slate-800'}>{d?.affirmative ? x.contrario : x.texto}</div>
+                                                            <div className="text-[11px] text-slate-500">{d ? `Lo declara ${d.contactName || 'el cliente'} el ${fechaCorta(d.declaredAt)} · ${CANALES_DECLARACION[d.channel] || d.channel}${d.notes ? ` · ${d.notes}` : ''} · registrado por ${d.recordedByName || '—'}` : 'Sin registrar: el CPD previo la recoge para que el cliente la firme; los expedientes no estarán listos sin ella'}</div>
+                                                        </div>
+                                                    </div>
+                                                    {pet.puedeEditar && !cerrada && <Button size="sm" variant={d ? 'ghost' : 'secondary'} onClick={() => abrirDeclaracion(x.tipo)}>{d ? 'Cambiar' : 'Registrar'}</Button>}
+                                                </div>
+                                            );
+                                        })}
+                                        {peticion.servicio?.hazardousWork && (
+                                            <div className="flex flex-wrap items-start justify-between gap-2 pt-2 border-t border-slate-100">
+                                                <div className="flex items-start gap-1.5 min-w-0">
+                                                    {peticion.excepcionPeligroso ? <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-600" /> : <X className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600" />}
+                                                    <div>
+                                                        <div className="text-slate-800">Trabajo especialmente peligroso{peticion.excepcionPeligroso ? ': con excepción' : ': sin excepción (bloquea)'}</div>
+                                                        <div className="text-[11px] text-slate-500">{peticion.excepcionPeligroso ? `Base: ${peticion.excepcionPeligroso.basis} · ${peticion.excepcionPeligroso.byName || '—'}, ${fechaCorta(peticion.excepcionPeligroso.at)}` : 'Sin la excepción de la ETT y su base no se puede ceder personal para este puesto (art. 8.b).'}</div>
+                                                    </div>
+                                                </div>
+                                                {pet.puedeEditar && !cerrada && <Button size="sm" variant={peticion.excepcionPeligroso ? 'ghost' : 'secondary'} onClick={() => setExcepcion({ base: peticion.excepcionPeligroso?.basis || '' })}>{peticion.excepcionPeligroso ? 'Cambiar' : 'Registrar excepción'}</Button>}
+                                            </div>
+                                        )}
+                                        {peticion.clienteEsEtt && (
+                                            <div className="flex items-start gap-1.5 pt-2 border-t border-slate-100 text-rose-700">
+                                                <X className="w-3.5 h-3.5 mt-0.5 shrink-0" />El cliente está marcado como ETT en Empresas: no se le puede ceder personal (art. 8.d).
+                                            </div>
+                                        )}
+                                        <div className="flex items-start gap-1.5 pt-2 border-t border-slate-100">
+                                            {peticion.cpdFirmado ? <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-600" /> : <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0 text-slate-400" />}
+                                            <div className="text-slate-800">{peticion.cpdFirmado ? `CPD firmado por la empresa el ${fechaCorta(peticion.cpdFirmado.signedAt)}` : 'CPD firmado por la empresa: sin registrar (se registra en Contratos y altas)'}</div>
+                                        </div>
+                                    </div>
                                     <div className="flex flex-wrap gap-2">
                                         <Button icon={Eye} onClick={() => setVerCpdPrevio(true)}>Ver condiciones</Button>
                                         {(previo.estado === 'sin_generar' || previo.desactualizado)
@@ -2657,11 +2722,13 @@ export default function PeticionesView() {
                                 <Field label="Carnés y acreditaciones"><TextInput value={d.requiredLicenses || ''} onChange={poner('requiredLicenses')} placeholder="Vacío: ninguno" /></Field>
                             </div>
                             {texto('risks', 'Riesgos del puesto', 'Vale «Sin riesgos específicos según la evaluación del cliente»')}
+                            <p className="-mt-2 text-[11px] text-slate-500">{peticion.evaluacionRiesgos ? `Adjunta la evaluación de riesgos del cliente (${peticion.evaluacionRiesgos.name}): vale en lugar del texto y sale como anexo del CPD previo.` : 'O sube la evaluación de riesgos del cliente en Documentos (tipo «Evaluación de riesgos del cliente»): vale en lugar del texto.'}</p>
                             <Field label="EPIs"><TextInput value={d.ppe || ''} onChange={poner('ppe')} placeholder="Equipos de protección que necesita el puesto" /></Field>
                             <label className="flex items-center gap-2 text-slate-700">
                                 <input type="checkbox" checked={!!d.hazardousWork} onChange={(e) => setDatosServicio(x => ({ ...x, hazardousWork: e.target.checked }))} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                 Trabajo especialmente peligroso
                             </label>
+                            {d.hazardousWork && <p className="-mt-2 text-[11px] text-slate-500">Sin la excepción de la ETT y su base no se puede ceder personal (art. 8.b). Se registra en «Contratos y altas» de la petición.</p>}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <Field label="Plazas"><TextInput type="number" min="1" value={d.positionsCount} onChange={poner('positionsCount')} /></Field>
                                 <Field label="Inicio"><TextInput type="date" value={d.startDate || ''} onChange={poner('startDate')} /></Field>
@@ -2681,6 +2748,71 @@ export default function PeticionesView() {
                     </Modal>
                 );
             })()}
+
+            {/* DECLARACIÓN DEL CLIENTE (art. 8): qué contacto, cuándo y cómo */}
+            {declaracion && ficha && (
+                <Modal
+                    title={declaracion.tipo === 'huelga' ? 'Declaración: huelga en el centro' : 'Declaración: puestos amortizados'}
+                    subtitle={`${peticion.id} · ${peticion.clienteNombre} · en nombre del cliente`}
+                    onClose={() => setDeclaracion(null)}
+                    size="max-w-md"
+                    footer={<>
+                        <Button onClick={() => setDeclaracion(null)}>Cancelar</Button>
+                        <Button variant="primary" icon={Check} onClick={guardarDeclaracion}>Registrar</Button>
+                    </>}
+                >
+                    <div className="space-y-4 text-xs">
+                        <Field label="Qué declara el cliente">
+                            <div className="space-y-1.5">
+                                {[{ v: false, t: declaracion.tipo === 'huelga' ? 'No hay huelga en el centro de trabajo' : 'No ha amortizado estos puestos en los 12 meses anteriores' },
+                                  { v: true, t: declaracion.tipo === 'huelga' ? 'Hay huelga en el centro (bloquea la cesión)' : 'Sí los ha amortizado (bloquea la cesión)' }].map(o => (
+                                    <label key={String(o.v)} className="flex items-center gap-2 text-slate-700">
+                                        <input type="radio" name="declara" checked={declaracion.hay === o.v} onChange={() => setDeclaracion(x => ({ ...x, hay: o.v }))} className="text-indigo-600 focus:ring-indigo-500" />{o.t}
+                                    </label>
+                                ))}
+                            </div>
+                        </Field>
+                        <Field label="Contacto del cliente que lo declara">
+                            <Select value={declaracion.contactId} onChange={(e) => setDeclaracion(x => ({ ...x, contactId: e.target.value }))} className="w-full">
+                                <option value="">Elige el contacto</option>
+                                {ficha.contactos.map(c => <option key={c.id} value={c.id}>{c.nombre}{c.cargo ? ` (${c.cargo})` : ''}</option>)}
+                            </Select>
+                        </Field>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Field label="Fecha"><TextInput type="date" value={declaracion.fecha} onChange={(e) => setDeclaracion(x => ({ ...x, fecha: e.target.value }))} /></Field>
+                            <Field label="Cómo">
+                                <Select value={declaracion.canal} onChange={(e) => setDeclaracion(x => ({ ...x, canal: e.target.value }))} className="w-full">
+                                    {Object.entries(CANALES_DECLARACION).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
+                                </Select>
+                            </Field>
+                        </div>
+                        <Field label="Nota (opcional)"><TextInput value={declaracion.nota} onChange={(e) => setDeclaracion(x => ({ ...x, nota: e.target.value }))} placeholder="Por ejemplo: respuesta al correo del 12/11" /></Field>
+                        <p className="text-[11px] text-slate-500">La ETT lo registra en nombre del cliente. Vale la última declaración de cada tipo; las anteriores quedan en el historial con quién las registró.</p>
+                    </div>
+                </Modal>
+            )}
+
+            {/* EXCEPCIÓN DEL TRABAJO ESPECIALMENTE PELIGROSO (art. 8.b) */}
+            {excepcion && ficha && (
+                <Modal
+                    title="Excepción: trabajo especialmente peligroso"
+                    subtitle={`${peticion.id} · art. 8.b de la Ley 14/1994`}
+                    onClose={() => setExcepcion(null)}
+                    size="max-w-md"
+                    footer={<>
+                        {peticion.excepcionPeligroso && <Button variant="ghost" className="mr-auto text-rose-600!" onClick={() => guardarExcepcion(null)}>Quitar la excepción</Button>}
+                        <Button onClick={() => setExcepcion(null)}>Cancelar</Button>
+                        <Button variant="primary" icon={Check} disabled={excepcion.base.trim().length < 10} onClick={() => guardarExcepcion(excepcion.base)}>Registrar</Button>
+                    </>}
+                >
+                    <div className="space-y-3 text-xs">
+                        <p className="text-slate-600">Los trabajos especialmente peligrosos no se pueden cubrir con una ETT salvo excepción: indica en qué se basa (convenio o acuerdo que lo permite, formación y vigilancia de la salud específicas).</p>
+                        <Field label="Base de la excepción" hint="De 10 a 2000 caracteres. Queda con quién y cuándo la registró.">
+                            <textarea rows={4} value={excepcion.base} onChange={(e) => setExcepcion({ base: e.target.value })} className={`${CAMPO} w-full`} placeholder="Por ejemplo: art. 8.b de la Ley 14/1994 y convenio sectorial…, con formación específica de 20 h" />
+                        </Field>
+                    </div>
+                </Modal>
+            )}
 
             {/* CANCELAR UNA PETICIÓN: pide el motivo */}
             {cancelar && (

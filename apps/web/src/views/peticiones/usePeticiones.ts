@@ -11,6 +11,7 @@ import {
   repos,
   useData,
   type Application,
+  type RequestDeclaration,
   type ApplicationStage,
   type CandidateSummary,
   type CatalogItem,
@@ -23,8 +24,8 @@ import {
   type ServiceRequestInput,
 } from '../../data';
 import { useSesion } from '../../sesion';
-import { esError, fechaHora, mensajeError, vacioANull } from '../comun/datos';
-import { documentoVista, estadoApi, horarioApi, horarioVista, perfilPuesto, peticionVista, presupuestoAceptadoVista, type PeticionVista } from './mapeo';
+import { esError, fechaHora, mensajeError as mensajeErrorComun, vacioANull } from '../comun/datos';
+import { EXPLICACION_BLOQUEO, documentoVista, estadoApi, horarioApi, horarioVista, perfilPuesto, peticionVista, presupuestoAceptadoVista, type PeticionVista } from './mapeo';
 
 /** Plaza de la API → estado de la vista (ESTADOS_PLAZA). */
 const PLAZA: Record<string, string> = { open: 'vacante', reserved: 'reservada', covered: 'cubierta', started: 'incorporada', left: 'baja' };
@@ -33,7 +34,15 @@ const ETAPA_EMBUDO: Partial<Record<ApplicationStage, string>> = {
   registered: 'inscrito', preselected: 'preseleccionado', interview: 'entrevista', proposed: 'propuesto', confirmed: 'aceptado', discarded: 'descartado', withdrawn: 'descartado',
 };
 
-export { mensajeError };
+/** Como mensajeError, pero los bloqueos legales (art. 8, convenio, riesgos) con su explicación en lenguaje claro. */
+export function mensajeError(e: unknown) {
+  if (e instanceof ApiError) {
+    const explicadas = [e.code, ...(e.details?.map((d) => d.path) ?? [])].map((c) => EXPLICACION_BLOQUEO[c]).filter(Boolean);
+    if (EXPLICACION_BLOQUEO[e.code]) return EXPLICACION_BLOQUEO[e.code];
+    if (explicadas.length) return `${e.message}. ${[...new Set(explicadas)].join(' ')}`;
+  }
+  return mensajeErrorComun(e);
+}
 
 /** Tipos de documento que se suben a una petición (los de la tabla maestra con estos nombres). */
 const TIPOS_DOC = ['Presupuesto firmado por el cliente', 'Pedido u orden de compra del cliente', 'Evaluación de riesgos del cliente', 'Correo del cliente', 'Otro documento'];
@@ -182,13 +191,12 @@ export function usePeticiones() {
 
   const conRecarga = useCallback(<T,>(p: Promise<T>) => p.then((x) => (recargar(), x)), [recargar]);
   /** Cambia la petición y devuelve la ficha nueva (con los contactos que ya tenía). */
-  const cambiar = useCallback(
-    (f: Ficha, data: ServiceRequestInput) =>
-      conRecarga(
-        repos.requests.update(f.peticion._id, data).then(async (r) => ({ ...f, peticion: vistaFicha(r, f._contactos), horario: horarioVista(r), actividad: await actividadDe(r.id) })),
-      ),
+  const conFicha = useCallback(
+    (f: Ficha, p: Promise<ServiceRequest>) =>
+      conRecarga(p.then(async (r) => ({ ...f, peticion: vistaFicha(r, f._contactos), horario: horarioVista(r), actividad: await actividadDe(r.id) }))),
     [conRecarga],
   );
+  const cambiar = useCallback((f: Ficha, data: ServiceRequestInput) => conFicha(f, repos.requests.update(f.peticion._id, data)), [conFicha]);
 
   const cambiarEstado = useCallback(
     (p: PeticionVista, estado: string, motivoCancelacion?: string) => {
@@ -197,6 +205,23 @@ export function usePeticiones() {
       return conRecarga(repos.requests.update(p._id, { status, ...(status === 'cancelled' ? { cancelReason: vacioANull(motivoCancelacion) } : {}) }).then((r) => peticionVista(r)));
     },
     [conRecarga],
+  );
+  /** Declaración del cliente del art. 8 (huelga / puestos amortizados), registrada por la ETT en su nombre. */
+  /** `hay`: el cliente declara que sí (hay huelga / amortizó los puestos), y bloquea; si no, declara que no. */
+  const declarar = useCallback(
+    (f: Ficha, tipo: 'huelga' | 'amortizacion', d: { hay: boolean; contactId: string; fecha: string; canal: RequestDeclaration['channel']; nota: string }) => {
+      if (!d.contactId) throw new ApiError(400, 'validacion', 'Elige el contacto del cliente que lo declara');
+      if (!d.fecha) throw new ApiError(400, 'validacion', 'Pon la fecha de la declaración');
+      return conFicha(f, repos.requests.declare(f.peticion._id, {
+        kind: tipo === 'huelga' ? 'strike' : 'downsized_positions', affirmative: d.hay, contactId: d.contactId, channel: d.canal, declaredAt: d.fecha, notes: vacioANull(d.nota),
+      }));
+    },
+    [conFicha],
+  );
+  /** Excepción del trabajo especialmente peligroso con su base (null la quita). */
+  const excepcionPeligroso = useCallback(
+    (f: Ficha, base: string | null) => conFicha(f, repos.requests.setHazardousException(f.peticion._id, base === null ? null : base.trim())),
+    [conFicha],
   );
   const guardarHorario = useCallback((f: Ficha, h: Horario) => cambiar(f, horarioApi(h)), [cambiar]);
   /** «Datos del servicio»: centro, firmante, supuesto, tareas, riesgos, EPIs, carnés, fechas, plazas y responsable. */
@@ -316,6 +341,8 @@ export function usePeticiones() {
     cambiarEstado,
     guardarHorario,
     guardarServicio,
+    declarar,
+    excepcionPeligroso,
     crear,
     duplicar,
     buscarPresupuestos,

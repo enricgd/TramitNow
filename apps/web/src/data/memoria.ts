@@ -7,6 +7,7 @@ import { clientAddresses, memoryClientRepositories } from './memoriaEmpresas';
 import { memoryMiEttRepositories } from './memoriaMiEtt';
 import { memoryCandidateRepositories } from './memoriaCandidatos';
 import { memoryRequestRepositories } from './memoriaPeticiones';
+import { memoryHiringFileRepositories } from './memoriaExpedientes';
 import { seleccionDemo } from './memoriaPeticionesSeleccion';
 import { memoryQuoteRepositories } from './memoriaPresupuestos';
 import type { CatalogRepository, Repositories } from './repositorios';
@@ -107,8 +108,9 @@ const roles: Role[] = [
     'companies.manage', 'branches.manage', 'catalogs.manage', 'users.manage', 'roles.manage', 'addresses.write',
     'labor_catalogs.manage', 'clients.manage', 'quotes.manage', 'quotes.approve_margin', 'quotes.view_costs',
     'requests.manage', 'candidates.manage', 'personal_data.view', 'privacy.manage', 'privacy.audit',
+    'hiring_files.view', 'hiring_files.documentation', 'hiring_files.cpd', 'hiring_files.contract', 'hiring_files.prl', 'hiring_files.ss',
   ]),
-  role(31, 'laboral', 'Laboral', 'tenant', ['module.laboral', 'addresses.write', 'labor_catalogs.manage']),
+  role(31, 'laboral', 'Laboral', 'tenant', ['module.laboral', 'addresses.write', 'labor_catalogs.manage', 'hiring_files.view', 'hiring_files.documentation', 'hiring_files.cpd', 'hiring_files.contract', 'hiring_files.prl', 'hiring_files.ss']),
   role(32, 'director_zona', 'Director de zona', 'branches', ['module.laboral', 'module.seleccion', 'module.comercial', 'addresses.write']),
   role(33, 'seleccion', 'Selección', 'branch', ['module.seleccion', 'addresses.write']),
   role(34, 'comercial', 'Comercial', 'branch', ['module.comercial', 'addresses.write']),
@@ -223,6 +225,7 @@ const contractKeys: ContractKey[] = [
   key('402', 'Temporal por circunstancias de la producción, a tiempo completo', 'temporary', 'full_time'),
   key('410', 'Temporal de sustitución, a tiempo completo', 'temporary', 'full_time'),
   key('502', 'Temporal por circunstancias de la producción, a tiempo parcial', 'temporary', 'part_time'),
+  key('510', 'Temporal de sustitución, a tiempo parcial', 'temporary', 'part_time'),
 ];
 
 const addresses: Address[] = [
@@ -516,6 +519,7 @@ export function memoryRepositories(): Repositories {
     ...memoryQuoteRepositories(miEtt.tenantSettings.get),
     ...memoryRequestRepositories(),
     ...memoryCandidateRepositories(miEtt.tenantSettings.get),
+    ...memoryHiringFileRepositories(),
     // La selección se crea una vez y la pantalla trabaja sobre su copia.
     requestSelection: { get: () => delay(seleccion ??= seleccionDemo()) },
     search: sampleSearch(false),

@@ -84,7 +84,7 @@ const catalogItems: CatalogItem[] = [
   ),
   // Peticiones (fase 5, los siembra su migración): documentos del servicio de una petición.
   ...['Pedido u orden de compra del cliente', 'Evaluación de riesgos del cliente', 'CPD previo (condiciones de la puesta a disposición)', 'Otro documento'].map((n, i) =>
-    item(714 + i, 'document_type', n),
+    ({ ...item(714 + i, 'document_type', n), ...(i === 1 ? { code: 'request_risk_assessment' } : {}) }),
   ),
   // Candidatos (fase 6): documentos de la persona, con su código (los de la migración de la fase 6).
   ...([
@@ -92,6 +92,12 @@ const catalogItems: CatalogItem[] = [
     ['candidate_privacy_consent', 'Consentimiento RGPD'], ['candidate_forklift', 'Carné de carretillero'], ['candidate_driving_license', 'Permiso de conducir'],
     ['candidate_prl', 'Formación PRL'], ['candidate_food_handler', 'Manipulador de alimentos'], ['candidate_medical', 'Reconocimiento médico'], ['candidate_cv', 'CV'],
   ] as const).map(([code, n], i) => ({ ...item(720 + i, 'document_type', n), code })),
+  // Contratos y altas (fase 7, los siembra su migración): del expediente y de la petición. Se conservan todos menos el de EPI.
+  ...([
+    ['hiring_contract', 'Contrato de trabajo firmado'], ['hiring_prl_training', 'Certificado de formación PRL'], ['hiring_health_fitness', 'Certificado de aptitud'],
+    ['hiring_ppe_delivery', 'Entrega de EPI firmada'], ['hiring_ss_registration', 'Justificante de alta en la Seguridad Social'], ['hiring_contrata', 'Comunicación a Contrat@'],
+    ['hiring_basic_copy', 'Copia básica del contrato'], ['request_cpd_signed', 'CPD firmado por la empresa usuaria'], ['request_client_declaration', 'Declaración de la empresa usuaria (art. 8)'],
+  ] as const).map(([code, n], i) => ({ ...item(740 + i, 'document_type', n, code !== 'hiring_ppe_delivery'), code })),
 ];
 const catalogId = (type: CatalogItemType, name: string) => catalogItems.find((i) => i.type === type && i.name === name)!.id;
 
@@ -214,6 +220,7 @@ let alAbrirDocumentoDeCandidato: (d: StoredDocument) => void = () => {};
 export const alDescargarDocumentoDeCandidato = (f: (d: StoredDocument) => void) => { alAbrirDocumentoDeCandidato = f; };
 
 /** Centro y contacto de ejemplo por id (los usan las peticiones de ejemplo, memoriaPeticiones.ts). */
+export const clientePorId = (clientId: string) => clients.find((c) => c.id === clientId);
 export const centroPorId = (centerId: string | null) => (centerId ? centers.find((c) => c.id === centerId) : undefined);
 export const contactoPorId = (contactId: string | null) => (contactId ? contacts.find((c) => c.id === contactId) : undefined);
 
